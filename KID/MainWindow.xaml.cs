@@ -22,6 +22,19 @@ namespace KID
         {
             InitializeComponent();
             codeRunner = new CodeRunner(AppendConsoleOutput);
+
+            CodeEditor.Text =
+@"System.Console.WriteLine(""Hello from KID!"");
+
+KID.Graphics.SetColor(""Red"");
+KID.Graphics.Circle(200, 200, 150);
+
+KID.Graphics.SetColor(""Blue"");
+KID.Graphics.Rectangle(200, 200, 130, 75);
+
+KID.Graphics.SetColor(""White"");
+KID.Graphics.SetFont(""Arial"", 25);
+KID.Graphics.Text(200, 200, ""C# for Kids!"");";
         }
 
         private void AppendConsoleOutput(string text)
@@ -32,6 +45,26 @@ namespace KID
                 ConsoleOutput.ScrollToEnd();
             });
         }
+
+        private void NewFileMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            CodeEditor.Text =
+@"System.Console.WriteLine(""Hello from KID!"");
+
+KID.Graphics.SetColor(""Red"");
+KID.Graphics.Circle(200, 200, 150);
+
+KID.Graphics.SetColor(""Blue"");
+KID.Graphics.Rectangle(200, 200, 130, 75);
+
+KID.Graphics.SetColor(""White"");
+KID.Graphics.SetFont(""Arial"", 25);
+KID.Graphics.Text(200, 200, ""C# for Kids!"");";
+
+            ConsoleOutput.Clear();
+            GraphicsCanvas.Children.Clear();
+        }
+
 
         private void RunButton_Click(object sender, RoutedEventArgs e)
         {
