@@ -20,5 +20,17 @@ namespace KID
         {
             InitializeComponent();
         }
+
+        private void RunButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Здесь будет запуск пользовательского кода
+            MessageBox.Show("Кнопка 'Запустить' нажата!");
+        }
+
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Здесь будет остановка выполнения
+            MessageBox.Show("Кнопка 'Стоп' нажата!");
+        }
     }
 }

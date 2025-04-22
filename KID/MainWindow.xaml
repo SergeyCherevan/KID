@@ -37,8 +37,8 @@
             </Menu>
 
             <!-- Кнопки управления -->
-            <Button Name="RunButton" Content="▶ Запустить" Margin="10,0,0,0"/>
-            <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" IsEnabled="False"/>
+            <Button Name="RunButton" Content="▶ Запустить" Margin="10,0,0,0" Click="RunButton_Click"/>
+            <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" Click="StopButton_Click" IsEnabled="False"/>
         </StackPanel>
 
         <!-- Далее твоя рабочая зона без изменений -->
