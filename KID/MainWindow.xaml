@@ -11,64 +11,77 @@
             <!-- Рабочая зона -->
         </Grid.RowDefinitions>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3*"/>
-            <!-- Код -->
-            <ColumnDefinition Width="2*"/>
-            <!-- Вывод -->
-        </Grid.ColumnDefinitions>
+        <Grid Grid.Row="0" Grid.ColumnSpan="2">
+            <StackPanel Orientation="Horizontal">
+                <Menu>
+                    <MenuItem Header="Файл">
+                        <MenuItem Header="Новый" />
+                        <MenuItem Header="Открыть" />
+                        <MenuItem Header="Сохранить" />
+                    </MenuItem>
+                    <MenuItem Header="Правка">
+                        <MenuItem Header="Отменить" />
+                        <MenuItem Header="Повторить" />
+                    </MenuItem>
+                    <MenuItem Header="Вид">
+                        <MenuItem Header="Тема" />
+                    </MenuItem>
+                </Menu>
 
-        <!-- Верхняя панель: меню + кнопки -->
-        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Top">
-            <!-- Меню -->
-            <Menu>
-                <MenuItem Header="Файл">
-                    <MenuItem Header="Новый" />
-                    <MenuItem Header="Открыть" />
-                    <MenuItem Header="Сохранить" />
-                </MenuItem>
-                <MenuItem Header="Правка">
-                    <MenuItem Header="Отменить" />
-                    <MenuItem Header="Повторить" />
-                </MenuItem>
-                <MenuItem Header="Вид">
-                    <MenuItem Header="Тема" />
-                </MenuItem>
-            </Menu>
+                <Button Name="RunButton" Content="▶️ Запустить" Margin="10,0,0,0" Click="RunButton_Click"/>
+                <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" Click="StopButton_Click" IsEnabled="False"/>
+            </StackPanel>
+        </Grid>
 
-            <!-- Кнопки управления -->
-            <Button Name="RunButton" Content="▶ Запустить" Margin="10,0,0,0" Click="RunButton_Click"/>
-            <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" Click="StopButton_Click" IsEnabled="False"/>
-        </StackPanel>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <!-- Редактор кода -->
+                <ColumnDefinition Width="5"/>
+                <!-- Разделитель -->
+                <ColumnDefinition Width="2*"/>
+                <!-- Вывод -->
+            </Grid.ColumnDefinitions>
 
-        <!-- Далее твоя рабочая зона без изменений -->
-        <!-- Код слева -->
-        <TextBox Grid.Row="1" Grid.Column="0" Margin="5"
-             Name="CodeEditor"
-             AcceptsReturn="True"
-             VerticalScrollBarVisibility="Auto"
-             HorizontalScrollBarVisibility="Auto"
-             FontFamily="Consolas" FontSize="14"
-             Text="Console.WriteLine(&quot;Hello World!&quot;);"/>
+            <!-- Код слева -->
+            <TextBox Grid.Column="0" Margin="5"
+                     Name="CodeEditor"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"
+                     FontFamily="Consolas" FontSize="14"
+                     Text="System.Console.WriteLine(&quot;Hello World!&quot;);"/>
 
-        <!-- Справа вывод -->
-        <Grid Grid.Row="1" Grid.Column="1" Margin="5">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+            <!-- Разделитель -->
+            <GridSplitter Grid.Column="1" Width="5"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"
+                          Background="Gray"/>
 
-            <!-- Консоль -->
-            <TextBox Grid.Row="0" Name="ConsoleOutput"
-                 IsReadOnly="True"
-                 VerticalScrollBarVisibility="Auto"
-                 FontFamily="Consolas" FontSize="13"
-                 Background="Black" Foreground="White"
-                 Text="Console output..."/>
+            <!-- Справа вывод -->
+            <Grid Grid.Column="2" Margin="5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="2*" />
+                    <!-- графика будет побольше консоли -->
+                </Grid.RowDefinitions>
 
-            <!-- Графика -->
-            <Canvas Grid.Row="1" Name="GraphicsCanvas" Background="LightGray"/>
+                <!-- Консоль -->
+                <TextBox Grid.Row="0" Name="ConsoleOutput"
+                         IsReadOnly="True"
+                         VerticalScrollBarVisibility="Auto"
+                         FontFamily="Consolas" FontSize="13"
+                         Background="Black" Foreground="White"
+                         Text="Console output..."/>
+
+                <!-- Графика -->
+                <Canvas Grid.Row="1" Name="GraphicsCanvas"
+                        Background="LightGray"
+                        MinWidth="400" MinHeight="400"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"/>
+            </Grid>
+
         </Grid>
     </Grid>
-
 </Window>
