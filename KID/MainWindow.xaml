@@ -11,35 +11,27 @@
             <!-- Рабочая зона -->
         </Grid.RowDefinitions>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="3*"/>
-            <!-- Код -->
-            <ColumnDefinition Width="2*"/>
-            <!-- Вывод -->
-        </Grid.ColumnDefinitions>
+        <Grid Grid.Row="0" Grid.ColumnSpan="2">
+            <StackPanel Orientation="Horizontal">
+                <Menu>
+                    <MenuItem Header="Файл">
+                        <MenuItem Header="Новый" />
+                        <MenuItem Header="Открыть" />
+                        <MenuItem Header="Сохранить" />
+                    </MenuItem>
+                    <MenuItem Header="Правка">
+                        <MenuItem Header="Отменить" />
+                        <MenuItem Header="Повторить" />
+                    </MenuItem>
+                    <MenuItem Header="Вид">
+                        <MenuItem Header="Тема" />
+                    </MenuItem>
+                </Menu>
 
-        <!-- Верхняя панель: меню + кнопки -->
-        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Top">
-            <!-- Меню -->
-            <Menu>
-                <MenuItem Header="Файл">
-                    <MenuItem Header="Новый" />
-                    <MenuItem Header="Открыть" />
-                    <MenuItem Header="Сохранить" />
-                </MenuItem>
-                <MenuItem Header="Правка">
-                    <MenuItem Header="Отменить" />
-                    <MenuItem Header="Повторить" />
-                </MenuItem>
-                <MenuItem Header="Вид">
-                    <MenuItem Header="Тема" />
-                </MenuItem>
-            </Menu>
-
-            <!-- Кнопки управления -->
-            <Button Name="RunButton" Content="▶ Запустить" Margin="10,0,0,0" Click="RunButton_Click"/>
-            <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" Click="StopButton_Click" IsEnabled="False"/>
-        </StackPanel>
+                <Button Name="RunButton" Content="▶️ Запустить" Margin="10,0,0,0" Click="RunButton_Click"/>
+                <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" Click="StopButton_Click" IsEnabled="False"/>
+            </StackPanel>
+        </Grid>
 
         <!-- Далее твоя рабочая зона без изменений -->
         <!-- Код слева -->
@@ -49,26 +41,32 @@
              VerticalScrollBarVisibility="Auto"
              HorizontalScrollBarVisibility="Auto"
              FontFamily="Consolas" FontSize="14"
-             Text="System.Console.WriteLine(&quot;Hello World!&quot;);"/>
+             Text="Console.WriteLine(&quot;Hello World!&quot;);"/>
 
-        <!-- Справа вывод -->
-        <Grid Grid.Row="1" Grid.Column="1" Margin="5">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+            <!-- Справа вывод -->
+            <Grid Grid.Column="2" Margin="5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="2*" />
+                    <!-- графика будет побольше консоли -->
+                </Grid.RowDefinitions>
 
-            <!-- Консоль -->
-            <TextBox Grid.Row="0" Name="ConsoleOutput"
-                 IsReadOnly="True"
-                 VerticalScrollBarVisibility="Auto"
-                 FontFamily="Consolas" FontSize="13"
-                 Background="Black" Foreground="White"
-                 Text="Console output..."/>
+                <!-- Консоль -->
+                <TextBox Grid.Row="0" Name="ConsoleOutput"
+                         IsReadOnly="True"
+                         VerticalScrollBarVisibility="Auto"
+                         FontFamily="Consolas" FontSize="13"
+                         Background="Black" Foreground="White"
+                         Text="Console output..."/>
 
-            <!-- Графика -->
-            <Canvas Grid.Row="1" Name="GraphicsCanvas" Background="LightGray"/>
+                <!-- Графика -->
+                <Canvas Grid.Row="1" Name="GraphicsCanvas"
+                        Background="LightGray"
+                        MinWidth="400" MinHeight="400"
+                        HorizontalAlignment="Stretch"
+                        VerticalAlignment="Stretch"/>
+            </Grid>
+
         </Grid>
     </Grid>
-
 </Window>
