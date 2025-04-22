@@ -48,10 +48,16 @@ namespace KID
                         .Where(d => d.Severity == DiagnosticSeverity.Error)
                         .Select(d => d.ToString());
 
-                    foreach (var error in errors)
+                    foreach (var diagnostic in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error))
                     {
-                        consoleOutputCallback(error);
+                        var lineSpan = diagnostic.Location.GetLineSpan();
+                        int lineNumber = lineSpan.StartLinePosition.Line + 1; // нумерация с 0, поэтому +1
+
+                        string message = diagnostic.GetMessage();
+
+                        consoleOutputCallback($"Ошибка на строке {lineNumber}: {message}");
                     }
+
 
                     return false;
                 }
