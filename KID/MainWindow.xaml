@@ -33,15 +33,30 @@
             </StackPanel>
         </Grid>
 
-        <!-- Далее твоя рабочая зона без изменений -->
-        <!-- Код слева -->
-        <TextBox Grid.Row="1" Grid.Column="0" Margin="5"
-             Name="CodeEditor"
-             AcceptsReturn="True"
-             VerticalScrollBarVisibility="Auto"
-             HorizontalScrollBarVisibility="Auto"
-             FontFamily="Consolas" FontSize="14"
-             Text="Console.WriteLine(&quot;Hello World!&quot;);"/>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="3*"/>
+                <!-- Редактор кода -->
+                <ColumnDefinition Width="5"/>
+                <!-- Разделитель -->
+                <ColumnDefinition Width="2*"/>
+                <!-- Вывод -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Код слева -->
+            <TextBox Grid.Column="0" Margin="5"
+                     Name="CodeEditor"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"
+                     FontFamily="Consolas" FontSize="14"
+                     Text="System.Console.WriteLine(&quot;Hello World!&quot;);"/>
+
+            <!-- Разделитель -->
+            <GridSplitter Grid.Column="1" Width="5"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Stretch"
+                          Background="Gray"/>
 
             <!-- Справа вывод -->
             <Grid Grid.Column="2" Margin="5">
