@@ -1,12 +1,67 @@
 ﻿<Window x:Class="KID.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:KID"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title=".KID - IDE для детей" Height="600" Width="1000">
 
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <!-- Верхнее меню -->
+            <RowDefinition Height="*"/>
+            <!-- Рабочая зона -->
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <!-- Код -->
+            <ColumnDefinition Width="2*"/>
+            <!-- Вывод -->
+        </Grid.ColumnDefinitions>
+
+        <!-- Меню -->
+        <Menu Grid.Row="0" Grid.ColumnSpan="2">
+            <MenuItem Header="Файл">
+                <MenuItem Header="Новый" />
+                <MenuItem Header="Открыть" />
+                <MenuItem Header="Сохранить" />
+            </MenuItem>
+            <MenuItem Header="Правка">
+                <MenuItem Header="Отменить" />
+                <MenuItem Header="Повторить" />
+            </MenuItem>
+            <MenuItem Header="Вид">
+                <MenuItem Header="Тема" />
+            </MenuItem>
+        </Menu>
+
+        <!-- Код редактор -->
+        <TextBox Grid.Row="1" Grid.Column="0" Margin="5" 
+                 Name="CodeEditor"
+                 AcceptsReturn="True" 
+                 VerticalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" FontSize="14"
+                 Text="Console.WriteLine(&quot;Hello World!&quot;);"/>
+
+        <!-- Справа - Выводы -->
+        <Grid Grid.Row="1" Grid.Column="1" Margin="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <!-- Консоль -->
+                <RowDefinition Height="*"/>
+                <!-- Графика -->
+            </Grid.RowDefinitions>
+
+            <!-- Окно консоли -->
+            <TextBox Grid.Row="0" Name="ConsoleOutput"
+                     IsReadOnly="True"
+                     VerticalScrollBarVisibility="Auto"
+                     FontFamily="Consolas" FontSize="13"
+                     Background="Black" Foreground="White"
+                     Text="Console output..."/>
+
+            <!-- Окно графики -->
+            <Canvas Grid.Row="1" Name="GraphicsCanvas" Background="LightGray"/>
+        </Grid>
     </Grid>
 </Window>
