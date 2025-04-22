@@ -7,6 +7,46 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
+    <Grid.RowDefinitions>
+        <RowDefinition Height="50"/> <!-- Верхняя панель -->
+        <RowDefinition Height="*"/>  <!-- Основная область -->
+    </Grid.RowDefinitions>
 
+    <!-- Верхняя панель -->
+    <StackPanel Orientation="Horizontal" Grid.Row="0" Background="LightGray">
+        <Button Content="Файл" Margin="5"/>
+        <Button Content="Правка" Margin="5"/>
+        <Button Content="Вид" Margin="5"/>
+        <Button Content="▶ Запуск" Margin="5"/>
+        <Button Content="■ Стоп" Margin="5"/>
+    </StackPanel>
+
+    <!-- Основная область -->
+    <Grid Grid.Row="1">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="2*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Редактор кода -->
+        <TextBox Grid.Column="0" Text="Code editor..." AcceptsReturn="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
+
+        <!-- Правая сторона -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Консоль -->
+            <TextBox Grid.Row="0" Text="Console output..." AcceptsReturn="True" IsReadOnly="True" VerticalScrollBarVisibility="Auto"/>
+
+            <!-- Графика -->
+            <Border Grid.Row="1" BorderBrush="Black" BorderThickness="1">
+                <TextBlock Text="Graphics area..." HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+        </Grid>
     </Grid>
+</Grid>
+
 </Window>
