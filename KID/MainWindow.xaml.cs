@@ -36,7 +36,10 @@ namespace KID
         private void RunButton_Click(object sender, RoutedEventArgs e)
         {
             ConsoleOutput.Clear();
-            GraphicsCanvas.Children.Clear(); // Чистим графику на холсте (пока заглушка)
+            GraphicsCanvas.Children.Clear();
+
+            // ИНИЦИАЛИЗАЦИЯ графики
+            Graphics.Init(GraphicsCanvas);
 
             var code = CodeEditor.Text;
             codeRunner.CompileAndRun(code);
