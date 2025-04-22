@@ -16,21 +16,36 @@ namespace KID
     /// </summary>
     public partial class MainWindow : Window
     {
+        private CodeRunner codeRunner;
+
         public MainWindow()
         {
             InitializeComponent();
+            codeRunner = new CodeRunner(AppendConsoleOutput);
+        }
+
+        private void AppendConsoleOutput(string text)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                ConsoleOutput.AppendText(text + Environment.NewLine);
+                ConsoleOutput.ScrollToEnd();
+            });
         }
 
         private void RunButton_Click(object sender, RoutedEventArgs e)
         {
-            // Здесь будет запуск пользовательского кода
-            MessageBox.Show("Кнопка 'Запустить' нажата!");
+            ConsoleOutput.Clear();
+            GraphicsCanvas.Children.Clear(); // Чистим графику на холсте (пока заглушка)
+
+            var code = CodeEditor.Text;
+            codeRunner.CompileAndRun(code);
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            // Здесь будет остановка выполнения
-            MessageBox.Show("Кнопка 'Стоп' нажата!");
+            // Пока оставим пустым, позже сделаем принудительную остановку
         }
+
     }
 }

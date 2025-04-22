@@ -49,7 +49,7 @@
              VerticalScrollBarVisibility="Auto"
              HorizontalScrollBarVisibility="Auto"
              FontFamily="Consolas" FontSize="14"
-             Text="Console.WriteLine(&quot;Hello World!&quot;);"/>
+             Text="System.Console.WriteLine(&quot;Hello World!&quot;);"/>
 
         <!-- Справа вывод -->
         <Grid Grid.Row="1" Grid.Column="1" Margin="5">
