@@ -16,8 +16,8 @@
                 <Menu>
                     <MenuItem Header="Файл">
                         <MenuItem Header="Новый" Click="NewFileMenuItem_Click" />
-                        <MenuItem Header="Открыть" />
-                        <MenuItem Header="Сохранить" />
+                        <MenuItem Header="Открыть" Click="OpenFileMenuItem_Click"/>
+                        <MenuItem Header="Сохранить" Click="SaveFileMenuItem_Click"/>
                     </MenuItem>
                     <MenuItem Header="Правка">
                         <MenuItem Header="Отменить" />

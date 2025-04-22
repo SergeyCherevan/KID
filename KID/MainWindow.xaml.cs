@@ -8,6 +8,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Microsoft.Win32;
+using System.IO;
 
 namespace KID
 {
@@ -65,6 +67,35 @@ KID.Graphics.Text(200, 200, ""C# for Kids!"");";
             GraphicsCanvas.Children.Clear();
         }
 
+        private void OpenFileMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                Filter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string code = File.ReadAllText(openFileDialog.FileName);
+                CodeEditor.Text = code;
+                ConsoleOutput.Clear();
+                GraphicsCanvas.Children.Clear();
+            }
+        }
+
+        private void SaveFileMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*",
+                FileName = "Program.cs"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                File.WriteAllText(saveFileDialog.FileName, CodeEditor.Text);
+            }
+        }
 
         private void RunButton_Click(object sender, RoutedEventArgs e)
         {
