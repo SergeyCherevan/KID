@@ -6,7 +6,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Верхнее меню -->
+            <!-- Верхняя панель -->
             <RowDefinition Height="*"/>
             <!-- Рабочая зона -->
         </Grid.RowDefinitions>
@@ -18,50 +18,57 @@
             <!-- Вывод -->
         </Grid.ColumnDefinitions>
 
-        <!-- Меню -->
-        <Menu Grid.Row="0" Grid.ColumnSpan="2">
-            <MenuItem Header="Файл">
-                <MenuItem Header="Новый" />
-                <MenuItem Header="Открыть" />
-                <MenuItem Header="Сохранить" />
-            </MenuItem>
-            <MenuItem Header="Правка">
-                <MenuItem Header="Отменить" />
-                <MenuItem Header="Повторить" />
-            </MenuItem>
-            <MenuItem Header="Вид">
-                <MenuItem Header="Тема" />
-            </MenuItem>
-        </Menu>
+        <!-- Верхняя панель: меню + кнопки -->
+        <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Top">
+            <!-- Меню -->
+            <Menu>
+                <MenuItem Header="Файл">
+                    <MenuItem Header="Новый" />
+                    <MenuItem Header="Открыть" />
+                    <MenuItem Header="Сохранить" />
+                </MenuItem>
+                <MenuItem Header="Правка">
+                    <MenuItem Header="Отменить" />
+                    <MenuItem Header="Повторить" />
+                </MenuItem>
+                <MenuItem Header="Вид">
+                    <MenuItem Header="Тема" />
+                </MenuItem>
+            </Menu>
 
-        <!-- Код редактор -->
-        <TextBox Grid.Row="1" Grid.Column="0" Margin="5" 
-                 Name="CodeEditor"
-                 AcceptsReturn="True" 
-                 VerticalScrollBarVisibility="Auto"
-                 HorizontalScrollBarVisibility="Auto"
-                 FontFamily="Consolas" FontSize="14"
-                 Text="Console.WriteLine(&quot;Hello World!&quot;);"/>
+            <!-- Кнопки управления -->
+            <Button Name="RunButton" Content="▶ Запустить" Margin="10,0,0,0"/>
+            <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" IsEnabled="False"/>
+        </StackPanel>
 
-        <!-- Справа - Выводы -->
+        <!-- Далее твоя рабочая зона без изменений -->
+        <!-- Код слева -->
+        <TextBox Grid.Row="1" Grid.Column="0" Margin="5"
+             Name="CodeEditor"
+             AcceptsReturn="True"
+             VerticalScrollBarVisibility="Auto"
+             HorizontalScrollBarVisibility="Auto"
+             FontFamily="Consolas" FontSize="14"
+             Text="Console.WriteLine(&quot;Hello World!&quot;);"/>
+
+        <!-- Справа вывод -->
         <Grid Grid.Row="1" Grid.Column="1" Margin="5">
             <Grid.RowDefinitions>
                 <RowDefinition Height="*"/>
-                <!-- Консоль -->
                 <RowDefinition Height="*"/>
-                <!-- Графика -->
             </Grid.RowDefinitions>
 
-            <!-- Окно консоли -->
+            <!-- Консоль -->
             <TextBox Grid.Row="0" Name="ConsoleOutput"
-                     IsReadOnly="True"
-                     VerticalScrollBarVisibility="Auto"
-                     FontFamily="Consolas" FontSize="13"
-                     Background="Black" Foreground="White"
-                     Text="Console output..."/>
+                 IsReadOnly="True"
+                 VerticalScrollBarVisibility="Auto"
+                 FontFamily="Consolas" FontSize="13"
+                 Background="Black" Foreground="White"
+                 Text="Console output..."/>
 
-            <!-- Окно графики -->
+            <!-- Графика -->
             <Canvas Grid.Row="1" Name="GraphicsCanvas" Background="LightGray"/>
         </Grid>
     </Grid>
+
 </Window>
