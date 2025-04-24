@@ -20,8 +20,8 @@
                         <MenuItem Header="Сохранить" Click="SaveFileMenuItem_Click" />
                     </MenuItem>
                     <MenuItem Header="Правка">
-                        <MenuItem Header="Отменить" />
-                        <MenuItem Header="Повторить" />
+                        <MenuItem Header="Отменить" Click="UndoMenuItem_Click" />
+                        <MenuItem Header="Повторить" Click="RedoMenuItem_Click" />
                     </MenuItem>
                     <MenuItem Header="Вид">
                         <MenuItem Header="Тема" />

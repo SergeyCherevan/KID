@@ -114,5 +114,21 @@ KID.Graphics.Text(200, 200, ""C# for Kids!"");";
             // Пока оставим пустым, позже сделаем принудительную остановку
         }
 
+        private void UndoMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (CodeEditor.CanUndo)
+            {
+                CodeEditor.Undo();
+            }
+        }
+
+        private void RedoMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (CodeEditor.CanRedo)
+            {
+                CodeEditor.Redo();
+            }
+        }
+
     }
 }
