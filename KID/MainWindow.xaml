@@ -26,10 +26,9 @@
                     <MenuItem Header="Вид">
                         <MenuItem Header="Тема" />
                     </MenuItem>
+                    <MenuItem Header="▶️ Запустить" Click="RunButton_Click" />
+                    <MenuItem Header="■ Стоп" Click="StopButton_Click" IsEnabled="False" />
                 </Menu>
-
-                <Button Name="RunButton" Content="▶️ Запустить" Margin="10,0,0,0" Click="RunButton_Click"/>
-                <Button Name="StopButton" Content="■ Стоп" Margin="5,0,0,0" Click="StopButton_Click" IsEnabled="False"/>
             </StackPanel>
         </Grid>
 
