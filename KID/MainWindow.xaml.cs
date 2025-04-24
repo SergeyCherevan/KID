@@ -41,6 +41,36 @@ KID.Graphics.Text(200, 200, ""C# for Kids!"");";
             ConsoleOutput.Text = "Консольный вывод...";
         }
 
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+                this.DragMove();
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = WindowState.Minimized;
+        }
+
+        private void Maximize_Click(object sender, RoutedEventArgs e)
+        {
+            if (this.WindowState == WindowState.Maximized)
+            {
+                this.WindowState = WindowState.Normal;
+                this.MaximizeButton.Content = "☐";
+            }
+            else
+            {
+                this.WindowState = WindowState.Maximized;
+                this.MaximizeButton.Content = "❐";
+            }
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
         private void AppendConsoleOutput(string text)
         {
             Dispatcher.Invoke(() =>

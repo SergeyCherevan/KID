@@ -5,10 +5,11 @@
     <Application.Resources>
 
         <!-- Цвета -->
-        <Color x:Key="WindowBackground">#FF40568D</Color>
+        <Color x:Key="WindowBackground">#FFCCD5F0</Color>
         <Color x:Key="MenuBackground">#FFCCD5F0</Color>
         <Color x:Key="SplitterColor">#FF5D6B99</Color>
         <Color x:Key="EditorBackground">White</Color>
+        <Color x:Key="SpecialElementsBackground">#FF40568D</Color>
         <Color x:Key="TextColor">Black</Color>
         <Color x:Key="ConsoleBackground">#FF0972C5</Color>
         <Color x:Key="ConsoleForeground">White</Color>
@@ -18,6 +19,7 @@
         <SolidColorBrush x:Key="WindowBrush" Color="{StaticResource WindowBackground}" />
         <SolidColorBrush x:Key="MenuBrush" Color="{StaticResource MenuBackground}" />
         <SolidColorBrush x:Key="SplitterBrush" Color="{StaticResource SplitterColor}" />
+        <SolidColorBrush x:Key="SpecialElementsBrush" Color="{StaticResource SpecialElementsBackground}" />
         <SolidColorBrush x:Key="EditorBrush" Color="{StaticResource EditorBackground}" />
         <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
         <SolidColorBrush x:Key="ConsoleBrush" Color="{StaticResource ConsoleBackground}" />
@@ -44,6 +46,36 @@
 
         <Style TargetType="GridSplitter">
             <Setter Property="Background" Value="{StaticResource SplitterBrush}" />
+        </Style>
+
+        <!-- Стиль кнопок управления -->
+        <Style x:Key="WindowButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="40"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#bee6fd"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Foreground" Value="#2b3f6c"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
     </Application.Resources>
