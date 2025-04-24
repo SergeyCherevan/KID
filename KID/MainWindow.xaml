@@ -1,18 +1,18 @@
 ﻿<Window x:Class="KID.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title=".KID - C#/.NET IDE для детей" Height="600" Width="1000">
+        Title=".KID - C#/.NET IDE для детей" Height="600" Width="1000"
+        Background="{StaticResource WindowBrush}">
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <!-- Верхняя панель -->
             <RowDefinition Height="*"/>
-            <!-- Рабочая зона -->
         </Grid.RowDefinitions>
 
+        <!-- Меню -->
         <Grid Grid.Row="0" Grid.ColumnSpan="2">
-            <StackPanel Orientation="Horizontal">
+            <StackPanel Orientation="Horizontal" Background="{StaticResource MenuBrush}">
                 <Menu>
                     <MenuItem Header="Файл">
                         <MenuItem Header="Новый" Click="NewFileMenuItem_Click" />
@@ -32,39 +32,36 @@
             </StackPanel>
         </Grid>
 
+        <!-- Рабочая зона -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <!-- Редактор кода -->
                 <ColumnDefinition Width="5" />
-                <!-- Разделитель -->
                 <ColumnDefinition Width="410" MinWidth="410" />
-                <!-- Вывод -->
             </Grid.ColumnDefinitions>
 
-            <!-- Код слева -->
+            <!-- Код -->
             <TextBox Grid.Column="0" Margin="5"
                      Name="CodeEditor"
                      AcceptsReturn="True"
                      VerticalScrollBarVisibility="Auto"
                      HorizontalScrollBarVisibility="Auto"
+                     Background="{StaticResource EditorBrush}"
+                     Foreground="{StaticResource TextBrush}"
                      FontFamily="Consolas" FontSize="14" />
 
             <!-- Разделитель -->
             <GridSplitter Grid.Column="1" Width="5"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Stretch"
-                          Background="Gray"/>
+                          Background="{StaticResource SplitterBrush}" />
 
-            <!-- Справа вывод -->
+            <!-- Вывод -->
             <Grid Grid.Column="2" Margin="5">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
-                    <!-- Консоль -->
                     <RowDefinition Height="5" />
-                    <!-- Разделитель -->
                     <RowDefinition MinHeight="400" />
-                    <!-- Графика -->
                 </Grid.RowDefinitions>
 
                 <!-- Консоль -->
@@ -72,21 +69,21 @@
                          IsReadOnly="True"
                          VerticalScrollBarVisibility="Auto"
                          FontFamily="Consolas" FontSize="13"
-                         Background="Black" Foreground="White" />
+                         Background="{StaticResource ConsoleBrush}"
+                         Foreground="{StaticResource ConsoleTextBrush}" />
 
                 <!-- Вертикальный разделитель -->
                 <GridSplitter Grid.Row="1"
                               Height="5"
                               HorizontalAlignment="Stretch"
                               VerticalAlignment="Center"
-                              Background="Gray" />
+                              Background="{StaticResource SplitterBrush}" />
 
                 <!-- Графика -->
                 <Canvas Grid.Row="2" Name="GraphicsCanvas"
-                        Background="LightGray"
-                        Height="Auto" Width="Auto" />
+                        Height="Auto" Width="Auto"
+                        Background="{StaticResource CanvasBrush}" />
             </Grid>
-
         </Grid>
     </Grid>
 </Window>

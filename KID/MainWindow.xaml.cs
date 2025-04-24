@@ -37,6 +37,8 @@ KID.Graphics.Rectangle(200, 200, 130, 75);
 KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
 KID.Graphics.Text(200, 200, ""C# for Kids!"");";
+
+            ConsoleOutput.Text = "Консольный вывод...";
         }
 
         private void AppendConsoleOutput(string text)
@@ -63,7 +65,8 @@ KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
 KID.Graphics.Text(200, 200, ""C# for Kids!"");";
 
-            ConsoleOutput.Clear();
+
+            ConsoleOutput.Text = "Консольный вывод...";
             GraphicsCanvas.Children.Clear();
         }
 
