@@ -26,17 +26,17 @@ namespace KID
             codeRunner = new CodeRunner(AppendConsoleOutput);
 
             CodeEditor.Text =
-@"System.Console.WriteLine(""Hello from KID!"");
+@"System.Console.WriteLine(""Hello World!"");
 
 KID.Graphics.SetColor(""Red"");
-KID.Graphics.Circle(200, 200, 150);
+KID.Graphics.Circle(150, 150, 125);
 
 KID.Graphics.SetColor(""Blue"");
-KID.Graphics.Rectangle(200, 200, 130, 75);
+KID.Graphics.Rectangle(150, 150, 100, 100);
 
 KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
-KID.Graphics.Text(200, 200, ""C# for Kids!"");";
+KID.Graphics.Text(150, 150, ""C#"");";
 
             ConsoleOutput.Text = "Консольный вывод...";
         }
@@ -83,17 +83,17 @@ KID.Graphics.Text(200, 200, ""C# for Kids!"");";
         private void NewFileMenuItem_Click(object sender, RoutedEventArgs e)
         {
             CodeEditor.Text =
-@"System.Console.WriteLine(""Hello from KID!"");
+@"System.Console.WriteLine(""Hello World!"");
 
 KID.Graphics.SetColor(""Red"");
-KID.Graphics.Circle(200, 200, 150);
+KID.Graphics.Circle(150, 150, 125);
 
 KID.Graphics.SetColor(""Blue"");
-KID.Graphics.Rectangle(200, 200, 130, 75);
+KID.Graphics.Rectangle(150, 150, 100, 100);
 
 KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
-KID.Graphics.Text(200, 200, ""C# for Kids!"");";
+KID.Graphics.Text(150, 150, ""C#"")";
 
 
             ConsoleOutput.Text = "Консольный вывод...";
