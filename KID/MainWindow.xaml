@@ -5,6 +5,7 @@
         WindowStyle="None"
         AllowsTransparency="False" 
         ResizeMode="CanResize"
+        Icon="KID.ico"
         Background="{StaticResource SpecialElementsBrush}">
 
     <Grid>
@@ -18,6 +19,11 @@
                 Background="{StaticResource WindowBrush}"
                 Height="32">
             <DockPanel LastChildFill="True" MouseDown="TitleBar_MouseDown">
+
+                <Image Source="KID.ico"
+                       Width="30" Height="30"
+                       Margin="7.5,0,0,0"
+                       VerticalAlignment="Center" />
 
                 <!-- Кнопки справа -->
                 <StackPanel Orientation="Horizontal"
@@ -35,7 +41,7 @@
                            VerticalAlignment="Center"
                            FontWeight="Bold"
                            FontSize="13"
-                           Margin="10,0,0,0"/>
+                           Margin="7.5,0,0,0"/>
             </DockPanel>
         </Border>
 
