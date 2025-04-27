@@ -25,6 +25,7 @@ namespace KID
             InitializeComponent();
             codeRunner = new CodeRunner(AppendConsoleOutput);
 
+            CodeEditor.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition("C#");
             CodeEditor.Text =
 @"System.Console.WriteLine(""Hello World!"");
 
