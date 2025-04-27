@@ -20,6 +20,17 @@
   <ItemGroup>
     <Resource Include="KID.ico" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Views\" />
+    <Folder Include="Models\" />
+    <Folder Include="Models\ViewModels\" />
+    <Folder Include="Services\" />
+    <Folder Include="CoreGraphicsLib\" />
+    <Folder Include="Resources\" />
+    <Folder Include="ProjectTemplates\" />
+    <Folder Include="UserProjects\" />
+  </ItemGroup>
   
   <PropertyGroup>
     <ApplicationIcon>KID.ico</ApplicationIcon>
