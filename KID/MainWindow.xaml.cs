@@ -11,6 +11,7 @@ using System.Windows.Shapes;
 using Microsoft.Win32;
 using System.IO;
 using KID.Views;
+using KID.Services;
 
 namespace KID
 {
@@ -21,14 +22,10 @@ namespace KID
     {
         public static MainWindow Instance { get; private set; }
 
-        public CodeRunner CodeRunner;
-
         public MainWindow()
         {
             InitializeComponent();
             Instance = this;
-
-            CodeRunner = new CodeRunner(AppendConsoleOutput);
 
             CodeEditorView.SetSyntaxHighlighting("C#");
             CodeEditorView.Text =
@@ -76,14 +73,6 @@ KID.Graphics.Text(150, 150, ""C#"");";
         private void Close_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-        }
-
-        private void AppendConsoleOutput(string text)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                ConsoleOutputView.AppendText(text + Environment.NewLine);
-            });
         }
     }
 }

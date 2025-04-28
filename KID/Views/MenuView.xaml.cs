@@ -72,11 +72,12 @@ KID.Graphics.Text(150, 150, ""C#"");";
             MainWindow.Instance.ConsoleOutputView.Clear();
             MainWindow.Instance.GraphicsOutputView.Clear();
 
-            // ИНИЦИАЛИЗАЦИЯ графики
-            Graphics.Init(MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl);
-
-            var code = MainWindow.Instance.CodeEditorView.Text;
-            MainWindow.Instance.CodeRunner.CompileAndRun(code);
+            new CodeExecutionService(new CSharpCompiler(), new DefaultCodeRunner())
+                .Execute(
+                    MainWindow.Instance.CodeEditorView.Text,
+                    MainWindow.Instance.ConsoleOutputView.AppendText,
+                    MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl
+                );
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
