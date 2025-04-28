@@ -20,6 +20,13 @@ namespace KID.Views
     /// </summary>
     public partial class ConsoleOutputView : UserControl
     {
+        public void Clear() => ConsoleOutputControl.Clear();
+        public void AppendText(string text)
+        {
+            ConsoleOutputControl.AppendText(text + Environment.NewLine);
+            ConsoleOutputControl.ScrollToEnd();
+        }
+
         public ConsoleOutputView()
         {
             InitializeComponent();

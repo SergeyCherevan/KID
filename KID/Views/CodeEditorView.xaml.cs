@@ -20,6 +20,20 @@ namespace KID.Views
     /// </summary>
     public partial class CodeEditorView : UserControl
     {
+        public string GetText() => CodeEditorControl.Text;
+        public string Text
+        {
+            get => CodeEditorControl.Text;
+            set => CodeEditorControl.Text = value;
+        }
+        public bool CanUndo() => CodeEditorControl.CanUndo;
+        public void Undo() => CodeEditorControl.Undo();
+        public bool CanRedo() => CodeEditorControl.CanRedo;
+        public void Redo() => CodeEditorControl.Redo();
+        public void SetSyntaxHighlighting(string settings) =>
+            CodeEditorControl.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(settings);
+
+
         public CodeEditorView()
         {
             InitializeComponent();

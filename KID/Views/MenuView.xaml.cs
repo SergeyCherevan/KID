@@ -29,7 +29,7 @@ namespace KID.Views
 
         private void NewFileMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            MainWindow.Instance.CodeEditor.Text =
+            MainWindow.Instance.CodeEditorView.Text =
 @"System.Console.WriteLine(""Hello World!"");
 
 KID.Graphics.SetColor(""Red"");
@@ -42,9 +42,9 @@ KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
 KID.Graphics.Text(150, 150, ""C#"");";
 
-
-            MainWindow.Instance.ConsoleOutput.Text = "Консольный вывод...";
-            MainWindow.Instance.GraphicsOutput.Children.Clear();
+            MainWindow.Instance.ConsoleOutputView.Clear();
+            MainWindow.Instance.ConsoleOutputView.AppendText("Консольный вывод...");
+            MainWindow.Instance.GraphicsOutputView.Clear();
         }
 
         private void OpenFileMenuItem_Click(object sender, RoutedEventArgs e)
@@ -57,9 +57,9 @@ KID.Graphics.Text(150, 150, ""C#"");";
             if (openFileDialog.ShowDialog() == true)
             {
                 string code = File.ReadAllText(openFileDialog.FileName);
-                MainWindow.Instance.CodeEditor.Text = code;
-                MainWindow.Instance.ConsoleOutput.Clear();
-                MainWindow.Instance.GraphicsOutput.Children.Clear();
+                MainWindow.Instance.CodeEditorView.Text = code;
+                MainWindow.Instance.ConsoleOutputView.Clear();
+                MainWindow.Instance.GraphicsOutputView.Clear();
             }
         }
 
@@ -73,7 +73,7 @@ KID.Graphics.Text(150, 150, ""C#"");";
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                File.WriteAllText(saveFileDialog.FileName, MainWindow.Instance.CodeEditor.Text);
+                File.WriteAllText(saveFileDialog.FileName, MainWindow.Instance.CodeEditorView.Text);
             }
         }
 
@@ -81,13 +81,13 @@ KID.Graphics.Text(150, 150, ""C#"");";
         {
             StopButton.IsEnabled = true;
 
-            MainWindow.Instance.ConsoleOutput.Clear();
-            MainWindow.Instance.GraphicsOutput.Children.Clear();
+            MainWindow.Instance.ConsoleOutputView.Clear();
+            MainWindow.Instance.GraphicsOutputView.Clear();
 
             // ИНИЦИАЛИЗАЦИЯ графики
-            Graphics.Init(MainWindow.Instance.GraphicsOutput);
+            Graphics.Init(MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl);
 
-            var code = MainWindow.Instance.CodeEditor.Text;
+            var code = MainWindow.Instance.CodeEditorView.Text;
             MainWindow.Instance.CodeRunner.CompileAndRun(code);
         }
 
@@ -98,17 +98,17 @@ KID.Graphics.Text(150, 150, ""C#"");";
 
         private void UndoMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (MainWindow.Instance.CodeEditor.CanUndo)
+            if (MainWindow.Instance.CodeEditorView.CanUndo())
             {
-                MainWindow.Instance.CodeEditor.Undo();
+                MainWindow.Instance.CodeEditorView.Undo();
             }
         }
 
         private void RedoMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            if (MainWindow.Instance.CodeEditor.CanRedo)
+            if (MainWindow.Instance.CodeEditorView.CanRedo())
             {
-                MainWindow.Instance.CodeEditor.Redo();
+                MainWindow.Instance.CodeEditorView.Redo();
             }
         }
     }

@@ -21,10 +21,6 @@ namespace KID
     {
         public static MainWindow Instance { get; private set; }
 
-        public ICSharpCode.AvalonEdit.TextEditor CodeEditor => ((CodeEditorView)this.FindName("CodeEditorView")).CodeEditorControl;
-        public TextBox ConsoleOutput => ((ConsoleOutputView)this.FindName("ConsoleOutputView")).ConsoleOutputControl;
-        public Canvas GraphicsOutput => ((GraphicsOutputView)this.FindName("GraphicsOutputView")).GraphicsCanvasControl;
-
         public CodeRunner CodeRunner;
 
         public MainWindow()
@@ -34,8 +30,8 @@ namespace KID
 
             CodeRunner = new CodeRunner(AppendConsoleOutput);
 
-            CodeEditor.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition("C#");
-            CodeEditor.Text =
+            CodeEditorView.SetSyntaxHighlighting("C#");
+            CodeEditorView.Text =
 @"System.Console.WriteLine(""Hello World!"");
 
 KID.Graphics.SetColor(""Red"");
@@ -48,7 +44,8 @@ KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
 KID.Graphics.Text(150, 150, ""C#"");";
 
-            ConsoleOutput.Text = "Консольный вывод...";
+            ConsoleOutputView.Clear();
+            ConsoleOutputView.AppendText("Консольный вывод...");
         }
 
         private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -85,8 +82,7 @@ KID.Graphics.Text(150, 150, ""C#"");";
         {
             Dispatcher.Invoke(() =>
             {
-                ConsoleOutput.AppendText(text + Environment.NewLine);
-                ConsoleOutput.ScrollToEnd();
+                ConsoleOutputView.AppendText(text + Environment.NewLine);
             });
         }
     }

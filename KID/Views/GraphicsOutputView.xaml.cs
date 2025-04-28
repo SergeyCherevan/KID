@@ -20,6 +20,8 @@ namespace KID.Views
     /// </summary>
     public partial class GraphicsOutputView : UserControl
     {
+        public void Clear() => GraphicsCanvasControl.Children.Clear();
+
         public GraphicsOutputView()
         {
             InitializeComponent();
