@@ -55,6 +55,7 @@ KID.Graphics.Text(150, 150, ""C#"");";
             {
                 MainWindow.Instance.CodeEditorView.Text = code;
                 MainWindow.Instance.ConsoleOutputView.Clear();
+                MainWindow.Instance.ConsoleOutputView.AppendText("Консольный вывод...");
                 MainWindow.Instance.GraphicsOutputView.Clear();
             }
         }
