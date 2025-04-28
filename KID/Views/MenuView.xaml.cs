@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using KID.Services;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -49,14 +50,9 @@ KID.Graphics.Text(150, 150, ""C#"");";
 
         private void OpenFileMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog openFileDialog = new OpenFileDialog
+            var code = FileService.OpenCodeFile();
+            if (code != null)
             {
-                Filter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*"
-            };
-
-            if (openFileDialog.ShowDialog() == true)
-            {
-                string code = File.ReadAllText(openFileDialog.FileName);
                 MainWindow.Instance.CodeEditorView.Text = code;
                 MainWindow.Instance.ConsoleOutputView.Clear();
                 MainWindow.Instance.GraphicsOutputView.Clear();
@@ -65,16 +61,8 @@ KID.Graphics.Text(150, 150, ""C#"");";
 
         private void SaveFileMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            SaveFileDialog saveFileDialog = new SaveFileDialog
-            {
-                Filter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*",
-                FileName = "Program.cs"
-            };
-
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                File.WriteAllText(saveFileDialog.FileName, MainWindow.Instance.CodeEditorView.Text);
-            }
+            var code = MainWindow.Instance.CodeEditorView.Text;
+            FileService.SaveCodeFile(code);
         }
 
         private void RunButton_Click(object sender, RoutedEventArgs e)
