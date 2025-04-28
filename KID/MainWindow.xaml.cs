@@ -10,6 +10,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Microsoft.Win32;
 using System.IO;
+using KID.Views;
 
 namespace KID
 {
@@ -18,12 +19,20 @@ namespace KID
     /// </summary>
     public partial class MainWindow : Window
     {
-        private CodeRunner codeRunner;
+        public static MainWindow Instance { get; private set; }
+
+        public ICSharpCode.AvalonEdit.TextEditor CodeEditor => ((CodeEditorView)this.FindName("CodeEditorView")).CodeEditorControl;
+        public TextBox ConsoleOutput => ((ConsoleOutputView)this.FindName("ConsoleOutputView")).ConsoleOutputControl;
+        public Canvas GraphicsOutput => ((GraphicsOutputView)this.FindName("GraphicsOutputView")).GraphicsCanvasControl;
+
+        public CodeRunner CodeRunner;
 
         public MainWindow()
         {
             InitializeComponent();
-            codeRunner = new CodeRunner(AppendConsoleOutput);
+            Instance = this;
+
+            CodeRunner = new CodeRunner(AppendConsoleOutput);
 
             CodeEditor.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition("C#");
             CodeEditor.Text =
@@ -80,89 +89,5 @@ KID.Graphics.Text(150, 150, ""C#"");";
                 ConsoleOutput.ScrollToEnd();
             });
         }
-
-        private void NewFileMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            CodeEditor.Text =
-@"System.Console.WriteLine(""Hello World!"");
-
-KID.Graphics.SetColor(""Red"");
-KID.Graphics.Circle(150, 150, 125);
-
-KID.Graphics.SetColor(""Blue"");
-KID.Graphics.Rectangle(150, 150, 100, 100);
-
-KID.Graphics.SetColor(""White"");
-KID.Graphics.SetFont(""Arial"", 25);
-KID.Graphics.Text(150, 150, ""C#"")";
-
-
-            ConsoleOutput.Text = "Консольный вывод...";
-            GraphicsCanvas.Children.Clear();
-        }
-
-        private void OpenFileMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFileDialog openFileDialog = new OpenFileDialog
-            {
-                Filter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*"
-            };
-
-            if (openFileDialog.ShowDialog() == true)
-            {
-                string code = File.ReadAllText(openFileDialog.FileName);
-                CodeEditor.Text = code;
-                ConsoleOutput.Clear();
-                GraphicsCanvas.Children.Clear();
-            }
-        }
-
-        private void SaveFileMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            SaveFileDialog saveFileDialog = new SaveFileDialog
-            {
-                Filter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*",
-                FileName = "Program.cs"
-            };
-
-            if (saveFileDialog.ShowDialog() == true)
-            {
-                File.WriteAllText(saveFileDialog.FileName, CodeEditor.Text);
-            }
-        }
-
-        private void RunButton_Click(object sender, RoutedEventArgs e)
-        {
-            ConsoleOutput.Clear();
-            GraphicsCanvas.Children.Clear();
-
-            // ИНИЦИАЛИЗАЦИЯ графики
-            Graphics.Init(GraphicsCanvas);
-
-            var code = CodeEditor.Text;
-            codeRunner.CompileAndRun(code);
-        }
-
-        private void StopButton_Click(object sender, RoutedEventArgs e)
-        {
-            // Пока оставим пустым, позже сделаем принудительную остановку
-        }
-
-        private void UndoMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            if (CodeEditor.CanUndo)
-            {
-                CodeEditor.Undo();
-            }
-        }
-
-        private void RedoMenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            if (CodeEditor.CanRedo)
-            {
-                CodeEditor.Redo();
-            }
-        }
-
     }
 }

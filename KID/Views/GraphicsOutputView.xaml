@@ -1,0 +1,8 @@
+<UserControl x:Class="KID.Views.GraphicsOutputView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Height="Auto" Width="Auto">
+
+    <Canvas Name="GraphicsCanvasControl"
+            Background="{StaticResource CanvasBrush}" />
+</UserControl>
