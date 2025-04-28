@@ -17,8 +17,8 @@
             <MenuItem Header="Вид">
                 <MenuItem Header="Тема" />
             </MenuItem>
-            <MenuItem Header="▶️ Запустить" Click="RunButton_Click" />
-            <MenuItem Header="■ Стоп" Click="StopButton_Click" IsEnabled="False" />
+            <MenuItem Header="▶️ Запустить" x:Name="RunButton" Click="RunButton_Click" />
+            <MenuItem Header="■ Стоп" x:Name="StopButton" Click="StopButton_Click" IsEnabled="False" />
         </Menu>
     </StackPanel>
 </UserControl>

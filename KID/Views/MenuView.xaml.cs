@@ -40,7 +40,7 @@ KID.Graphics.Rectangle(150, 150, 100, 100);
 
 KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
-KID.Graphics.Text(150, 150, ""C#"")";
+KID.Graphics.Text(150, 150, ""C#"");";
 
 
             MainWindow.Instance.ConsoleOutput.Text = "Консольный вывод...";
@@ -79,6 +79,8 @@ KID.Graphics.Text(150, 150, ""C#"")";
 
         private void RunButton_Click(object sender, RoutedEventArgs e)
         {
+            StopButton.IsEnabled = true;
+
             MainWindow.Instance.ConsoleOutput.Clear();
             MainWindow.Instance.GraphicsOutput.Children.Clear();
 
@@ -91,7 +93,7 @@ KID.Graphics.Text(150, 150, ""C#"")";
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            // Пока оставим пустым, позже сделаем принудительную остановку
+            StopButton.IsEnabled = false;
         }
 
         private void UndoMenuItem_Click(object sender, RoutedEventArgs e)
