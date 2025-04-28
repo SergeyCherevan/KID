@@ -6,7 +6,7 @@
         WindowStyle="None"
         AllowsTransparency="False" 
         ResizeMode="CanResize"
-        Icon="KID.ico"
+        Icon="Resources/KID.ico"
         Background="{StaticResource SpecialElementsBrush}">
 
     <Grid>
@@ -21,7 +21,7 @@
                 Height="32">
             <DockPanel LastChildFill="True" MouseDown="TitleBar_MouseDown">
 
-                <Image Source="KID.ico"
+                <Image Source="Resources/KID.ico"
                        Width="30" Height="30"
                        Margin="7.5,0,0,0"
                        VerticalAlignment="Center" />

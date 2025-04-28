@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="KID.ico" />
+    <None Remove="Resources\KID.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="KID.ico" />
+    <Resource Include="Resources\KID.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,13 +28,12 @@
     <Folder Include="Models\ViewModels\" />
     <Folder Include="Services\" />
     <Folder Include="CoreGraphicsLib\" />
-    <Folder Include="Resources\" />
     <Folder Include="ProjectTemplates\" />
     <Folder Include="UserProjects\" />
   </ItemGroup>
   
   <PropertyGroup>
-    <ApplicationIcon>KID.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\KID.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>
