@@ -23,7 +23,7 @@ namespace KID.Views
         public void Clear() => ConsoleOutputControl.Clear();
         public void AppendText(string text)
         {
-            ConsoleOutputControl.AppendText(text + Environment.NewLine);
+            ConsoleOutputControl.AppendText(text);
             ConsoleOutputControl.ScrollToEnd();
         }
 

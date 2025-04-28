@@ -15,9 +15,14 @@ namespace KID.Services
 
         public override Encoding Encoding => Encoding.UTF8;
 
-        public override void WriteLine(string value)
+        public override void Write(string value)
         {
             output(value);
+        }
+
+        public override void WriteLine(string value)
+        {
+            output(value + "\n");
         }
 
         public override void Write(char value)
