@@ -7,8 +7,8 @@ namespace KID.Services
 {
     public class ConsoleRedirector : TextWriter
     {
-        private readonly Action<string> output;
-        private readonly Dispatcher dispatcher;
+        public readonly Action<string> output;
+        public readonly Dispatcher dispatcher;
 
         public ConsoleRedirector(Action<string> output)
         {

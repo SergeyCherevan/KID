@@ -11,7 +11,7 @@ using KID.Services.Interfaces;
 
 namespace KID.Services
 {
-    public class CSharpCompiler : ICodeCompiler
+    public class CSharpAssemblyCompiler : ICodeCompiler
     {
         public async Task<CompilationResult> CompileAsync(string code, CancellationToken cancellationToken = default)
         {

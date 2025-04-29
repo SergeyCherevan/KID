@@ -5,13 +5,13 @@ using KID.Services.Interfaces;
 
 namespace KID.Services
 {
-    public class DefaultCodeRunner : ICodeRunner
+    public class TaskCodeRunner : ICodeRunner
     {
-        public async Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default)
+        public async Task RunAsync(CompilationResult compilationResult, CancellationToken cancellationToken = default)
         {
             await Task.Run(() =>
             {
-                var entry = assembly.EntryPoint;
+                var entry = compilationResult.Assembly.EntryPoint;
                 if (entry != null)
                 {
                     var parameters = entry.GetParameters().Length == 0 ? null : new object[] { new string[0] };

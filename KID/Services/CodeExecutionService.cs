@@ -1,62 +1,75 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using KID.Services.Interfaces;
+using KID.Services;
 using System.Windows.Controls;
-using KID.Services.Interfaces;
+using KID;
 
-namespace KID.Services
+public class CodeExecutionService
 {
-    public class CodeExecutionService
+    private readonly ICodeCompiler compiler;
+    private readonly ICodeRunner runner;
+    private CancellationTokenSource? executionCts;
+
+    public bool IsRunning => executionCts != null;
+
+    public CodeExecutionService(ICodeCompiler compiler, ICodeRunner runner)
     {
-        private readonly ICodeCompiler compiler;
-        private readonly ICodeRunner runner;
-        private bool isRunning;
+        this.compiler = compiler;
+        this.runner = runner;
+    }
 
-        public CodeExecutionService(ICodeCompiler compiler, ICodeRunner runner)
+    public async Task ExecuteAsync(
+        string code,
+        Action<string> outputCallback,
+        Canvas graphicsCanvas)
+    {
+        if (executionCts != null)
         {
-            this.compiler = compiler;
-            this.runner = runner;
+            outputCallback?.Invoke("Программа уже запущена.");
+            return;
         }
 
-        public async Task ExecuteAsync(string code, Action<string> consoleOutputCallback, Canvas graphicsCanvas, CancellationToken token = default)
+        executionCts = new CancellationTokenSource();
+        var token = executionCts.Token;
+
+        Graphics.Init(graphicsCanvas);
+
+        var originalConsoleOut = Console.Out;
+        Console.SetOut(new ConsoleRedirector(outputCallback));
+
+        try
         {
-            if (isRunning) return;
-            isRunning = true;
+            var compilationResult = await compiler.CompileAsync(code, token);
 
-            try
+            if (!compilationResult.Success)
             {
-                var result = await compiler.CompileAsync(code, token);
-
-                if (!result.Success)
+                foreach (var error in compilationResult.Errors)
                 {
-                    foreach (var error in result.Errors)
-                        consoleOutputCallback?.Invoke(error);
-                    return;
+                    outputCallback?.Invoke(error);
                 }
 
-                Graphics.Init(graphicsCanvas);
-
-                var originalConsole = Console.Out;
-                Console.SetOut(new ConsoleRedirector(consoleOutputCallback));
-
-                try
-                {
-                    await runner.RunAsync(result.Assembly, token);
-                }
-                catch (Exception ex)
-                {
-                    consoleOutputCallback?.Invoke($"Ошибка выполнения: {ex.Message}");
-                }
-                finally
-                {
-                    Console.SetOut(originalConsole);
-                }
+                return;
             }
-            finally
-            {
-                isRunning = false;
-            }
+
+            await runner.RunAsync(compilationResult, token);
         }
+        catch (OperationCanceledException)
+        {
+            outputCallback?.Invoke("Выполнение остановлено пользователем.");
+        }
+        catch (Exception ex)
+        {
+            outputCallback?.Invoke($"Ошибка выполнения: {ex.Message}");
+        }
+        finally
+        {
+            Console.SetOut(originalConsoleOut);
+            executionCts = null;
+        }
+    }
+
+    public void Cancel()
+    {
+        executionCts?.Cancel();
+        executionCts = null;
     }
 }

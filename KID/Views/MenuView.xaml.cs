@@ -23,9 +23,13 @@ namespace KID.Views
     /// </summary>
     public partial class MenuView : UserControl
     {
+        private readonly CodeExecutionService executionService;
+
         public MenuView()
         {
             InitializeComponent();
+            // executionService = new CodeExecutionService(new CSharpAssemblyCompiler(), new TaskCodeRunner());
+            executionService = new CodeExecutionService(new CSharpTempExeCompiler(), new ProcessCodeRunner());
         }
 
         private void NewFileMenuItem_Click(object sender, RoutedEventArgs e)
@@ -66,35 +70,24 @@ KID.Graphics.Text(150, 150, ""C#"");";
             FileService.SaveCodeFile(code);
         }
 
-        private CancellationTokenSource cancellationSource;
-        private readonly CodeExecutionService codeExecutionService = new(
-            new CSharpCompiler(),
-            new DefaultCodeRunner()
-        );
-
         private async void RunButton_Click(object sender, RoutedEventArgs e)
         {
             StopButton.IsEnabled = true;
-
-            cancellationSource = new CancellationTokenSource();
-
             MainWindow.Instance.ConsoleOutputView.Clear();
             MainWindow.Instance.GraphicsOutputView.Clear();
 
-            await codeExecutionService.ExecuteAsync(
+            await executionService.ExecuteAsync(
                 MainWindow.Instance.CodeEditorView.Text,
                 MainWindow.Instance.ConsoleOutputView.AppendText,
-                MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl,
-                cancellationSource.Token
+                MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl
             );
-
             StopButton.IsEnabled = false;
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
-            cancellationSource?.Cancel();
             StopButton.IsEnabled = false;
+            executionService.Cancel();
         }
 
         private void UndoMenuItem_Click(object sender, RoutedEventArgs e)

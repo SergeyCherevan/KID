@@ -4,6 +4,6 @@ namespace KID.Services.Interfaces
 {
     public interface ICodeRunner
     {
-        Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default);
+        Task RunAsync(CompilationResult compilationResult, CancellationToken cancellationToken = default);
     }
 }
