@@ -66,23 +66,34 @@ KID.Graphics.Text(150, 150, ""C#"");";
             FileService.SaveCodeFile(code);
         }
 
-        private void RunButton_Click(object sender, RoutedEventArgs e)
+        private CancellationTokenSource cancellationSource;
+        private readonly CodeExecutionService codeExecutionService = new(
+            new CSharpCompiler(),
+            new DefaultCodeRunner()
+        );
+
+        private async void RunButton_Click(object sender, RoutedEventArgs e)
         {
             StopButton.IsEnabled = true;
+
+            cancellationSource = new CancellationTokenSource();
 
             MainWindow.Instance.ConsoleOutputView.Clear();
             MainWindow.Instance.GraphicsOutputView.Clear();
 
-            new CodeExecutionService(new CSharpCompiler(), new DefaultCodeRunner())
-                .Execute(
-                    MainWindow.Instance.CodeEditorView.Text,
-                    MainWindow.Instance.ConsoleOutputView.AppendText,
-                    MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl
-                );
+            await codeExecutionService.ExecuteAsync(
+                MainWindow.Instance.CodeEditorView.Text,
+                MainWindow.Instance.ConsoleOutputView.AppendText,
+                MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl,
+                cancellationSource.Token
+            );
+
+            StopButton.IsEnabled = false;
         }
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
+            cancellationSource?.Cancel();
             StopButton.IsEnabled = false;
         }
 

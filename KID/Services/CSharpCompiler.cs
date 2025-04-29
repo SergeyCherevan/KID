@@ -5,58 +5,53 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using KID.Services.Interfaces;
 
 namespace KID.Services
 {
     public class CSharpCompiler : ICodeCompiler
     {
-        public CompilationResult Compile(string code)
+        public async Task<CompilationResult> CompileAsync(string code, CancellationToken cancellationToken = default)
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(code);
-
-            var references = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-                .Select(a => MetadataReference.CreateFromFile(a.Location))
-                .Cast<MetadataReference>();
-
-            var compilation = CSharpCompilation.Create(
-                "UserProgram",
-                new[] { syntaxTree },
-                references,
-                new CSharpCompilationOptions(OutputKind.ConsoleApplication));
-
-            using var ms = new MemoryStream();
-            var result = compilation.Emit(ms);
-
-            if (!result.Success)
+            return await Task.Run(() =>
             {
-                var errors = result.Diagnostics
-                    .Where(d => d.Severity == DiagnosticSeverity.Error)
-                    .Select(diagnostic =>
-                    {
-                        var lineSpan = diagnostic.Location.GetLineSpan();
-                        int lineNumber = lineSpan.StartLinePosition.Line + 1;
-                        string message = diagnostic.GetMessage();
-                        return $"Ошибка на строке {lineNumber}: {message}";
-                    })
-                    .ToList();
+                var syntaxTree = CSharpSyntaxTree.ParseText(code);
 
-                return new CompilationResult
+                var references = AppDomain.CurrentDomain.GetAssemblies()
+                    .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
+                    .Select(a => MetadataReference.CreateFromFile(a.Location));
+
+                var compilation = CSharpCompilation.Create(
+                    "UserProgram",
+                    new[] { syntaxTree },
+                    references,
+                    new CSharpCompilationOptions(OutputKind.ConsoleApplication));
+
+                using var ms = new MemoryStream();
+                var result = compilation.Emit(ms);
+
+                if (!result.Success)
                 {
-                    Success = false,
-                    Errors = errors
-                };
-            }
+                    var errors = result.Diagnostics
+                        .Where(d => d.Severity == DiagnosticSeverity.Error)
+                        .Select(diagnostic =>
+                        {
+                            var lineSpan = diagnostic.Location.GetLineSpan();
+                            int line = lineSpan.StartLinePosition.Line + 1;
+                            string msg = diagnostic.GetMessage();
+                            return $"Ошибка на строке {line}: {msg}";
+                        }).ToList();
 
-            ms.Seek(0, SeekOrigin.Begin);
-            var assembly = Assembly.Load(ms.ToArray());
+                    return new CompilationResult { Success = false, Errors = errors };
+                }
 
-            return new CompilationResult
-            {
-                Success = true,
-                Assembly = assembly
-            };
+                ms.Seek(0, SeekOrigin.Begin);
+                var assembly = Assembly.Load(ms.ToArray());
+
+                return new CompilationResult { Success = true, Assembly = assembly };
+            }, cancellationToken);
         }
     }
 }

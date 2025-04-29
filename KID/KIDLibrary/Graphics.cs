@@ -1,7 +1,9 @@
-﻿using System.Windows.Controls;
+﻿using System;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace KID
 {
@@ -11,86 +13,114 @@ namespace KID
         private static Brush currentBrush = Brushes.Black;
         private static Typeface currentFont = new Typeface("Arial");
         private static double currentFontSize = 20;
+        private static Dispatcher dispatcher;
 
         public static void Init(Canvas targetCanvas)
         {
             canvas = targetCanvas;
+            dispatcher = Dispatcher.CurrentDispatcher;
+        }
+
+        private static void InvokeOnUI(Action action)
+        {
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                action();
+            }
+            else
+            {
+                dispatcher.Invoke(action);
+            }
         }
 
         public static void SetColor(string colorName)
         {
-            try
+            InvokeOnUI(() =>
             {
-                var converter = new BrushConverter();
-                currentBrush = (Brush)converter.ConvertFromString(colorName);
-            }
-            catch
-            {
-                currentBrush = Brushes.Black;
-            }
+                try
+                {
+                    var converter = new BrushConverter();
+                    currentBrush = (Brush)converter.ConvertFromString(colorName);
+                }
+                catch
+                {
+                    currentBrush = Brushes.Black;
+                }
+            });
         }
 
         public static void SetFont(string fontName, double fontSize)
         {
-            currentFont = new Typeface(fontName);
-            currentFontSize = fontSize;
+            InvokeOnUI(() =>
+            {
+                currentFont = new Typeface(fontName);
+                currentFontSize = fontSize;
+            });
         }
 
         public static void Circle(double x, double y, double radius)
         {
-            if (canvas == null) return;
-
-            var ellipse = new Ellipse
+            InvokeOnUI(() =>
             {
-                Width = radius * 2,
-                Height = radius * 2,
-                Stroke = currentBrush,
-                Fill = currentBrush,
-                StrokeThickness = 2
-            };
+                if (canvas == null) return;
 
+                var ellipse = new Ellipse
+                {
+                    Width = radius * 2,
+                    Height = radius * 2,
+                    Stroke = currentBrush,
+                    Fill = currentBrush,
+                    StrokeThickness = 2
+                };
 
-            Canvas.SetLeft(ellipse, x - radius);
-            Canvas.SetTop(ellipse, y - radius);
+                Canvas.SetLeft(ellipse, x - radius);
+                Canvas.SetTop(ellipse, y - radius);
 
-            canvas.Children.Add(ellipse);
+                canvas.Children.Add(ellipse);
+            });
         }
 
         public static void Rectangle(double x, double y, double width, double height)
         {
-            if (canvas == null) return;
-
-            var rectangle = new System.Windows.Shapes.Rectangle
+            InvokeOnUI(() =>
             {
-                Width = width,
-                Height = height,
-                Stroke = currentBrush,
-                Fill = currentBrush,
-                StrokeThickness = 2
-            };
+                if (canvas == null) return;
 
-            Canvas.SetLeft(rectangle, x);
-            Canvas.SetTop(rectangle, y);
+                var rectangle = new System.Windows.Shapes.Rectangle
+                {
+                    Width = width,
+                    Height = height,
+                    Stroke = currentBrush,
+                    Fill = currentBrush,
+                    StrokeThickness = 2
+                };
 
-            canvas.Children.Add(rectangle);
+                Canvas.SetLeft(rectangle, x);
+                Canvas.SetTop(rectangle, y);
+
+                canvas.Children.Add(rectangle);
+            });
         }
 
         public static void Text(double x, double y, string text)
         {
-            if (canvas == null) return;
-
-            var textBlock = new TextBlock
+            InvokeOnUI(() =>
             {
-                Text = text,
-                Foreground = currentBrush,
-                FontFamily = currentFont.FontFamily,
-                FontSize = currentFontSize
-            };
+                if (canvas == null) return;
 
-            Canvas.SetLeft(textBlock, x);
-            Canvas.SetTop(textBlock, y);
+                var textBlock = new TextBlock
+                {
+                    Text = text,
+                    Foreground = currentBrush,
+                    FontFamily = currentFont.FontFamily,
+                    FontSize = currentFontSize
+                };
 
-            canvas.Children.Add(textBlock);
+                Canvas.SetLeft(textBlock, x);
+                Canvas.SetTop(textBlock, y);
+
+                canvas.Children.Add(textBlock);
+            });
         }
     }
 }

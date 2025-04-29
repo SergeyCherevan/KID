@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Controls;
 using KID.Services.Interfaces;
 
@@ -9,6 +11,7 @@ namespace KID.Services
     {
         private readonly ICodeCompiler compiler;
         private readonly ICodeRunner runner;
+        private bool isRunning;
 
         public CodeExecutionService(ICodeCompiler compiler, ICodeRunner runner)
         {
@@ -16,20 +19,30 @@ namespace KID.Services
             this.runner = runner;
         }
 
-        public void Execute(string code, Action<string> consoleOutputCallback, Canvas graphicsCanvas)
+        public async Task ExecuteAsync(string code, Action<string> consoleOutputCallback, Canvas graphicsCanvas, CancellationToken token = default)
         {
-            var compilationResult = compiler.Compile(code);
+            if (isRunning) return;
+            isRunning = true;
 
-            if (compilationResult.Success)
+            try
             {
+                var result = await compiler.CompileAsync(code, token);
+
+                if (!result.Success)
+                {
+                    foreach (var error in result.Errors)
+                        consoleOutputCallback?.Invoke(error);
+                    return;
+                }
+
                 Graphics.Init(graphicsCanvas);
 
-                var originalConsoleOut = Console.Out;
+                var originalConsole = Console.Out;
                 Console.SetOut(new ConsoleRedirector(consoleOutputCallback));
 
                 try
                 {
-                    runner.Run(compilationResult.Assembly);
+                    await runner.RunAsync(result.Assembly, token);
                 }
                 catch (Exception ex)
                 {
@@ -37,15 +50,12 @@ namespace KID.Services
                 }
                 finally
                 {
-                    Console.SetOut(originalConsoleOut);
+                    Console.SetOut(originalConsole);
                 }
             }
-            else
+            finally
             {
-                foreach (var error in compilationResult.Errors)
-                {
-                    consoleOutputCallback?.Invoke(error);
-                }
+                isRunning = false;
             }
         }
     }

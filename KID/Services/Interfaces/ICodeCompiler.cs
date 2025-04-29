@@ -2,6 +2,6 @@
 {
     public interface ICodeCompiler
     {
-        CompilationResult Compile(string code);
+        Task<CompilationResult> CompileAsync(string code, CancellationToken cancellationToken = default);
     }
 }

@@ -1,19 +1,23 @@
-﻿using KID.Services.Interfaces;
-using System;
-using System.Reflection;
+﻿using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using KID.Services.Interfaces;
 
 namespace KID.Services
 {
     public class DefaultCodeRunner : ICodeRunner
     {
-        public void Run(Assembly assembly)
+        public async Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default)
         {
-            var entry = assembly.EntryPoint;
-            if (entry != null)
+            await Task.Run(() =>
             {
-                var parameters = entry.GetParameters().Length == 0 ? null : new object[] { new string[0] };
-                entry.Invoke(null, parameters);
-            }
+                var entry = assembly.EntryPoint;
+                if (entry != null)
+                {
+                    var parameters = entry.GetParameters().Length == 0 ? null : new object[] { new string[0] };
+                    entry.Invoke(null, parameters);
+                }
+            }, cancellationToken);
         }
     }
 }
