@@ -42,7 +42,10 @@ namespace KID.Services
 
                 try
                 {
-                    await runner.RunAsync(result.Assembly, token);
+                    await Task.Run(async () => 
+                    {
+                        await runner.RunAsync(result.Assembly, token);
+                    }, token);
                 }
                 catch (Exception ex)
                 {

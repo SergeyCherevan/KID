@@ -2,6 +2,7 @@
 using System.IO;
 using System.Text;
 using System.Windows.Threading;
+using System.Windows;
 
 namespace KID.Services
 {
@@ -13,7 +14,7 @@ namespace KID.Services
         public ConsoleRedirector(Action<string> output)
         {
             this.output = output;
-            this.dispatcher = Dispatcher.CurrentDispatcher;
+            this.dispatcher = Application.Current.Dispatcher;
         }
 
         public override Encoding Encoding => Encoding.UTF8;
@@ -26,7 +27,7 @@ namespace KID.Services
             }
             else
             {
-                dispatcher.Invoke(() => output(value));
+                dispatcher.BeginInvoke(() => output(value), DispatcherPriority.Background);
             }
         }
 

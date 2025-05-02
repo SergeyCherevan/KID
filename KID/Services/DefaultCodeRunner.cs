@@ -15,7 +15,14 @@ namespace KID.Services
                 if (entry != null)
                 {
                     var parameters = entry.GetParameters().Length == 0 ? null : new object[] { new string[0] };
-                    entry.Invoke(null, parameters);
+                    try 
+                    {
+                        entry.Invoke(null, parameters);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Обработка отмены
+                    }
                 }
             }, cancellationToken);
         }

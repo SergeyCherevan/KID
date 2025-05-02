@@ -18,7 +18,7 @@ namespace KID
         public static void Init(Canvas targetCanvas)
         {
             canvas = targetCanvas;
-            dispatcher = Dispatcher.CurrentDispatcher;
+            dispatcher = Application.Current.Dispatcher;
         }
 
         private static void InvokeOnUI(Action action)
@@ -29,7 +29,7 @@ namespace KID
             }
             else
             {
-                dispatcher.Invoke(action);
+                dispatcher.BeginInvoke(action, DispatcherPriority.Background);
             }
         }
 
@@ -63,19 +63,15 @@ namespace KID
             InvokeOnUI(() =>
             {
                 if (canvas == null) return;
-
                 var ellipse = new Ellipse
                 {
                     Width = radius * 2,
                     Height = radius * 2,
-                    Stroke = currentBrush,
                     Fill = currentBrush,
-                    StrokeThickness = 2
+                    Stroke = currentBrush
                 };
-
                 Canvas.SetLeft(ellipse, x - radius);
                 Canvas.SetTop(ellipse, y - radius);
-
                 canvas.Children.Add(ellipse);
             });
         }
@@ -85,20 +81,16 @@ namespace KID
             InvokeOnUI(() =>
             {
                 if (canvas == null) return;
-
-                var rectangle = new System.Windows.Shapes.Rectangle
+                var rect = new Rectangle
                 {
                     Width = width,
                     Height = height,
-                    Stroke = currentBrush,
                     Fill = currentBrush,
-                    StrokeThickness = 2
+                    Stroke = currentBrush
                 };
-
-                Canvas.SetLeft(rectangle, x);
-                Canvas.SetTop(rectangle, y);
-
-                canvas.Children.Add(rectangle);
+                Canvas.SetLeft(rect, x - width / 2);
+                Canvas.SetTop(rect, y - height / 2);
+                canvas.Children.Add(rect);
             });
         }
 
@@ -107,18 +99,17 @@ namespace KID
             InvokeOnUI(() =>
             {
                 if (canvas == null) return;
-
                 var textBlock = new TextBlock
                 {
                     Text = text,
                     Foreground = currentBrush,
                     FontFamily = currentFont.FontFamily,
-                    FontSize = currentFontSize
+                    FontSize = currentFontSize,
+                    FontWeight = currentFont.Weight,
+                    FontStyle = currentFont.Style
                 };
-
                 Canvas.SetLeft(textBlock, x);
                 Canvas.SetTop(textBlock, y);
-
                 canvas.Children.Add(textBlock);
             });
         }
