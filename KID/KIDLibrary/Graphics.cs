@@ -88,8 +88,8 @@ namespace KID
                     Fill = currentBrush,
                     Stroke = currentBrush
                 };
-                Canvas.SetLeft(rect, x - width / 2);
-                Canvas.SetTop(rect, y - height / 2);
+                Canvas.SetLeft(rect, x);
+                Canvas.SetTop(rect, y);
                 canvas.Children.Add(rect);
             });
         }
