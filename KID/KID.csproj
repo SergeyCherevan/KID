@@ -9,6 +9,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ProjectTemplates\**" />
+    <Compile Remove="UserProjects\**" />
+    <EmbeddedResource Remove="ProjectTemplates\**" />
+    <EmbeddedResource Remove="UserProjects\**" />
+    <None Remove="ProjectTemplates\**" />
+    <None Remove="UserProjects\**" />
+    <Page Remove="ProjectTemplates\**" />
+    <Page Remove="UserProjects\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Resources\KID.ico" />
   </ItemGroup>
 
@@ -24,8 +35,6 @@
 
   <ItemGroup>
     <Folder Include="ViewModels\" />
-    <Folder Include="ProjectTemplates\" />
-    <Folder Include="UserProjects\" />
   </ItemGroup>
   
   <PropertyGroup>

@@ -1,0 +1,9 @@
+KID.Graphics.SetColor("Red");
+KID.Graphics.Circle(150, 150, 125);
+
+KID.Graphics.SetColor("Blue");
+KID.Graphics.Rectangle(150, 150, 100, 100);
+
+KID.Graphics.SetColor("White");
+KID.Graphics.SetFont("Arial", 25);
+KID.Graphics.Text(150, 150, "Hello\nWorld!");
