@@ -49,6 +49,25 @@ namespace KID
             });
         }
 
+        public static void SetColor(byte red, byte green, byte blue)
+        {
+            InvokeOnUI(() =>
+            {
+                currentBrush = new SolidColorBrush(Color.FromRgb(red, green, blue));
+            });
+        }
+
+        public static void SetColor(int rgb)
+        {
+            InvokeOnUI(() =>
+            {
+                byte red = (byte)((rgb >> 16) & 0xFF);
+                byte green = (byte)((rgb >> 8) & 0xFF);
+                byte blue = (byte)(rgb & 0xFF);
+                currentBrush = new SolidColorBrush(Color.FromRgb(red, green, blue));
+            });
+        }
+
         public static void SetFont(string fontName, double fontSize)
         {
             InvokeOnUI(() =>
