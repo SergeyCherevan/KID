@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using KID.Services;
+using KID.ViewModels.Infrastructure;
 using KID.Views;
 
 namespace KID.ViewModels

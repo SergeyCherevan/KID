@@ -32,10 +32,6 @@
   <ItemGroup>
     <Resource Include="Resources\KID.ico" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="ViewModels\" />
-  </ItemGroup>
   
   <PropertyGroup>
     <ApplicationIcon>Resources\KID.ico</ApplicationIcon>

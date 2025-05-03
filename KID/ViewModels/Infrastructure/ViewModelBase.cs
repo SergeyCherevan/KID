@@ -1,7 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace KID.ViewModels
+namespace KID.ViewModels.Infrastructure
 {
     public abstract class ViewModelBase : INotifyPropertyChanged
     {
@@ -20,4 +20,4 @@ namespace KID.ViewModels
             return true;
         }
     }
-} 
+}

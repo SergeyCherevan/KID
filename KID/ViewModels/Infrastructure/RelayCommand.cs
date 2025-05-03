@@ -1,7 +1,7 @@
 using System;
 using System.Windows.Input;
 
-namespace KID.ViewModels
+namespace KID.ViewModels.Infrastructure
 {
     public class RelayCommand : ICommand
     {
@@ -30,4 +30,4 @@ namespace KID.ViewModels
             execute();
         }
     }
-} 
+}
