@@ -1,24 +1,29 @@
 <UserControl x:Class="KID.Views.MenuView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:viewModels="clr-namespace:KID.ViewModels"
              Height="Auto" Width="Auto">
+
+    <UserControl.DataContext>
+        <viewModels:MenuViewModel />
+    </UserControl.DataContext>
 
     <StackPanel Orientation="Horizontal" Background="{StaticResource MenuBrush}">
         <Menu Margin="0,0,0,10">
             <MenuItem Header="Файл">
-                <MenuItem Header="Новый" Click="NewFileMenuItem_Click" />
-                <MenuItem Header="Открыть" Click="OpenFileMenuItem_Click" />
-                <MenuItem Header="Сохранить" Click="SaveFileMenuItem_Click" />
+                <MenuItem Header="Новый" Command="{Binding NewFileCommand}" />
+                <MenuItem Header="Открыть" Command="{Binding OpenFileCommand}" />
+                <MenuItem Header="Сохранить" Command="{Binding SaveFileCommand}" />
             </MenuItem>
             <MenuItem Header="Правка">
-                <MenuItem Header="Отменить" Click="UndoMenuItem_Click" />
-                <MenuItem Header="Повторить" Click="RedoMenuItem_Click" />
+                <MenuItem Header="Отменить" Command="{Binding UndoCommand}" />
+                <MenuItem Header="Повторить" Command="{Binding RedoCommand}" />
             </MenuItem>
             <MenuItem Header="Вид">
                 <MenuItem Header="Тема" />
             </MenuItem>
-            <MenuItem Header="▶️ Запустить" x:Name="RunButton" Click="RunButton_Click" />
-            <MenuItem Header="■ Стоп" x:Name="StopButton" Click="StopButton_Click" IsEnabled="False" />
+            <MenuItem Header="▶️ Запустить" Command="{Binding RunCommand}" />
+            <MenuItem Header="■ Стоп" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />
         </Menu>
     </StackPanel>
 </UserControl>
