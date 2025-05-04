@@ -28,7 +28,11 @@
         <Border Grid.Row="0"
                 Background="{StaticResource WindowBrush}"
                 Height="32">
-            <DockPanel LastChildFill="True" MouseDown="TitleBar_MouseDown">
+            <DockPanel LastChildFill="True">
+                <DockPanel.InputBindings>
+                    <MouseBinding Gesture="LeftClick"
+                                Command="{Binding DragMoveCommand}"/>
+                </DockPanel.InputBindings>
                 <Image Source="Resources/KID.ico"
                        Width="30" Height="30"
                        Margin="7.5,0,0,0"

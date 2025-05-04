@@ -29,6 +29,11 @@ namespace KID
             InitializeComponent();
             Instance = this;
 
+            if (DataContext is MainViewModel vm)
+            {
+                vm.RequestDragMove += () => this.DragMove();
+            }
+
             CodeEditorView.SetSyntaxHighlighting("C#");
             CodeEditorView.Text =
 @"System.Console.WriteLine(""Hello World!"");
@@ -45,12 +50,6 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
 
             ConsoleOutputView.Clear();
             ConsoleOutputView.AppendText("Консольный вывод...");
-        }
-
-        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left)
-                this.DragMove();
         }
 
         void IClosable.Close()
