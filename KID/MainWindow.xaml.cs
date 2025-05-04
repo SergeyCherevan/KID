@@ -13,13 +13,14 @@ using System.IO;
 using KID.Views;
 using KID.Services;
 using KID.ViewModels;
+using KID.ViewModels.Infrastructure;
 
 namespace KID
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window, IClosable
     {
         public static MainWindow Instance { get; private set; }
 
@@ -52,9 +53,9 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
                 this.DragMove();
         }
 
-        private void Close_Click(object sender, RoutedEventArgs e)
+        void IClosable.Close()
         {
-            this.Close();
+            base.Close();
         }
     }
 }

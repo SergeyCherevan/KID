@@ -46,7 +46,8 @@
                             Content="{Binding MaximizeButtonContent}"/>
                     <Button Name="CloseButton" 
                             Style="{StaticResource WindowButtonStyle}" 
-                            Click="Close_Click" 
+                            Command="{Binding CloseCommand}"
+                            CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                             Content="╳"/>
                 </StackPanel>
                 <TextBlock Text=".KID — C#/.NET IDE для детей"

@@ -33,6 +33,7 @@ namespace KID.ViewModels
 
         public ICommand MinimizeCommand { get; }
         public ICommand MaximizeCommand { get; }
+        public ICommand CloseCommand { get; }
 
         public MainViewModel()
         {
@@ -43,6 +44,7 @@ namespace KID.ViewModels
                     ? WindowState.Normal 
                     : WindowState.Maximized;
             });
+            CloseCommand = new RelayCommand<IClosable>(closable => closable?.Close());
         }
     }
 }
