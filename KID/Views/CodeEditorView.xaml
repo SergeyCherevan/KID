@@ -2,12 +2,18 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
-             Height="Auto" Width="Auto">
-
-    <avalonedit:TextEditor Name="CodeEditorControl"
-                           FontFamily="Consolas"
-                           FontSize="14"
-                           ShowLineNumbers="True"
-                           Background="{StaticResource EditorBrush}"
-                           Foreground="{StaticResource TextBrush}" />
+             xmlns:viewModels="clr-namespace:KID.ViewModels">
+    
+    <UserControl.DataContext>
+        <viewModels:CodeEditorViewModel />
+    </UserControl.DataContext>
+    
+    <Grid>
+        <avalonedit:TextEditor x:Name="TextEditor"
+                              ShowLineNumbers="True"
+                              WordWrap="True"
+                              FontFamily="Consolas"
+                              FontSize="14"
+                              SyntaxHighlighting="C#"/>
+    </Grid>
 </UserControl>

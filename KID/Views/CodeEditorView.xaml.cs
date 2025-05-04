@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using KID.ViewModels;
 
 namespace KID.Views
 {
@@ -20,23 +21,29 @@ namespace KID.Views
     /// </summary>
     public partial class CodeEditorView : UserControl
     {
-        public string GetText() => CodeEditorControl.Text;
-        public string Text
-        {
-            get => CodeEditorControl.Text;
-            set => CodeEditorControl.Text = value;
-        }
-        public bool CanUndo() => CodeEditorControl.CanUndo;
-        public void Undo() => CodeEditorControl.Undo();
-        public bool CanRedo() => CodeEditorControl.CanRedo;
-        public void Redo() => CodeEditorControl.Redo();
-        public void SetSyntaxHighlighting(string settings) =>
-            CodeEditorControl.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(settings);
-
-
         public CodeEditorView()
         {
             InitializeComponent();
+            if (DataContext is CodeEditorViewModel vm)
+            {
+                vm.Initialize(TextEditor);
+            }
         }
+
+        public void SetSyntaxHighlighting(string language)
+        {
+            TextEditor.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(language);
+        }
+
+        public string Text
+        {
+            get => TextEditor.Text;
+            set => TextEditor.Text = value;
+        }
+
+        public bool CanUndo() => TextEditor.CanUndo;
+        public bool CanRedo() => TextEditor.CanRedo;
+        public void Undo() => TextEditor.Undo();
+        public void Redo() => TextEditor.Redo();
     }
 }
