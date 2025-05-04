@@ -3,12 +3,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
         xmlns:views="clr-namespace:KID.Views"
-        Title=".KID - C#/.NET IDE для детей" Height="600" Width="800"
+        xmlns:viewModels="clr-namespace:KID.ViewModels"
+        Title=".KID - C#/.NET IDE для детей"
+        Height="600" Width="800"
+        WindowState="{Binding WindowState, Mode=TwoWay}"
         WindowStyle="None"
         AllowsTransparency="False" 
         ResizeMode="CanResize"
         Icon="Resources/KID.ico"
         Background="{StaticResource SpecialElementsBrush}">
+
+    <Window.DataContext>
+        <viewModels:MainViewModel />
+    </Window.DataContext>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -29,9 +36,18 @@
                 <StackPanel Orientation="Horizontal"
                             DockPanel.Dock="Right"
                             VerticalAlignment="Center">
-                    <Button Name="MinimizeButton" Style="{StaticResource WindowButtonStyle}" Click="Minimize_Click" Content="—"/>
-                    <Button Name="MaximizeButton" Style="{StaticResource WindowButtonStyle}" Click="Maximize_Click" Content="☐"/>
-                    <Button Name="CloseButton" Style="{StaticResource WindowButtonStyle}" Click="Close_Click" Content="╳"/>
+                    <Button Name="MinimizeButton" 
+                            Style="{StaticResource WindowButtonStyle}" 
+                            Command="{Binding MinimizeCommand}" 
+                            Content="—"/>
+                    <Button Name="MaximizeButton" 
+                            Style="{StaticResource WindowButtonStyle}" 
+                            Command="{Binding MaximizeCommand}" 
+                            Content="{Binding MaximizeButtonContent}"/>
+                    <Button Name="CloseButton" 
+                            Style="{StaticResource WindowButtonStyle}" 
+                            Click="Close_Click" 
+                            Content="╳"/>
                 </StackPanel>
                 <TextBlock Text=".KID — C#/.NET IDE для детей"
                            DockPanel.Dock="Left"

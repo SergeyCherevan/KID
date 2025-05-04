@@ -12,6 +12,7 @@ using Microsoft.Win32;
 using System.IO;
 using KID.Views;
 using KID.Services;
+using KID.ViewModels;
 
 namespace KID
 {
@@ -49,25 +50,6 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
         {
             if (e.ChangedButton == MouseButton.Left)
                 this.DragMove();
-        }
-
-        private void Minimize_Click(object sender, RoutedEventArgs e)
-        {
-            this.WindowState = WindowState.Minimized;
-        }
-
-        private void Maximize_Click(object sender, RoutedEventArgs e)
-        {
-            if (this.WindowState == WindowState.Maximized)
-            {
-                this.WindowState = WindowState.Normal;
-                this.MaximizeButton.Content = "☐";
-            }
-            else
-            {
-                this.WindowState = WindowState.Maximized;
-                this.MaximizeButton.Content = "❐";
-            }
         }
 
         private void Close_Click(object sender, RoutedEventArgs e)
