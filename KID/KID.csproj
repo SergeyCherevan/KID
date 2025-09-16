@@ -31,6 +31,12 @@
 
   <ItemGroup>
     <Resource Include="Resources\KID.ico" />
+    <None Include="DefaultWindowConfiguration.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="ProjectTemplates\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   
   <PropertyGroup>
