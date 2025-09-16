@@ -13,7 +13,7 @@ namespace KID.Services.Initialize
         public double FontSize { get; set; } = 14;
         public string ConsoleMessage { get; set; } = "Консольный вывод...";
         public string TemplateName { get; set; } = "HelloWorld. Console & Graphics.cs";
-        public string TamplateCode { get; set; } =
+        public string TemplateCode { get; set; } =
 @"System.Console.WriteLine(""Hello World!"");
 
 KID.Graphics.SetColor(255, 0, 0);

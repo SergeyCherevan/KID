@@ -31,12 +31,12 @@ namespace KID.Services.Initialize
         {
             try
             {
-                Settings.TamplateCode = File.ReadAllText(Settings.TemplateName);
+                Settings.TemplateCode = File.ReadAllText(Settings.TemplateName);
             }
             catch (Exception)
             {
                 MessageBox.Show("Не удалось загрузить файл с шаблонным кодом. Будет использован встроенный шаблон.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
-                Settings.TamplateCode = new WindowConfigurationData().TamplateCode;
+                Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
             }
         }
     }

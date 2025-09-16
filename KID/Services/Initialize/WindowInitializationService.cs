@@ -11,10 +11,10 @@ namespace KID.Services.Initialize
 {
     public class WindowInitializationService : IWindowInitializationService
     {
-        private MainWindow mainViewModel;
-        private CodeEditorView codeEditorView;
-        private ConsoleOutputView consoleOutputView;
-        private IWindowConfigurationService windowConfigurationService;
+        private readonly MainWindow mainViewModel;
+        private readonly CodeEditorView codeEditorView;
+        private readonly ConsoleOutputView consoleOutputView;
+        private readonly IWindowConfigurationService windowConfigurationService;
 
         public WindowInitializationService(
             MainWindow mw,
@@ -52,7 +52,7 @@ namespace KID.Services.Initialize
             codeEditorView.SetSyntaxHighlighting(windowConfigurationService.Settings.Language);
             codeEditorView.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
             codeEditorView.FontSize = windowConfigurationService.Settings.FontSize;
-            codeEditorView.Text = windowConfigurationService.Settings.TamplateCode;
+            codeEditorView.Text = windowConfigurationService.Settings.TemplateCode;
         }
 
         private void InitializeConsole(ConsoleOutputView consoleOutputView)

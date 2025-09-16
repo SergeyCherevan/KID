@@ -8,7 +8,7 @@ namespace KID.Services.Initialize.Interfaces
 {
     public interface IWindowConfigurationService
     {
-        public WindowConfigurationData Settings { get; set; }
+        public WindowConfigurationData Settings { get; }
         public void SetConfigurationFromFile();
         public void SetDefaultCode();
     }
