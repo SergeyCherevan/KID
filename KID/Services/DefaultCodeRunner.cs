@@ -9,6 +9,8 @@ namespace KID.Services
     {
         public async Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default)
         {
+            CancellationManager.CurrentToken = cancellationToken;
+
             await Task.Run(() =>
             {
                 var entry = assembly.EntryPoint;
@@ -19,9 +21,22 @@ namespace KID.Services
                     {
                         entry.Invoke(null, parameters);
                     }
+                    catch (TargetInvocationException ex)
+                    {
+                        // Извлекаем внутреннее исключение
+                        if (ex.InnerException is OperationCanceledException)
+                        {
+                            Console.WriteLine("Программа остановленна");
+                        }
+                        else
+                        {
+                            // Пробрасываем другие исключения
+                            throw ex.InnerException ?? ex;
+                        }
+                    }
                     catch (OperationCanceledException)
                     {
-                        // Обработка отмены
+                        Console.WriteLine("Программа остановленна");
                     }
                 }
             }, cancellationToken);
