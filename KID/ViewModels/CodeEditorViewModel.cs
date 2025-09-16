@@ -81,19 +81,5 @@ namespace KID.ViewModels
                 CanRedo = textEditor.CanRedo;
             }
         }
-
-        // Статический экземпляр для доступа из других частей программы
-        private static CodeEditorViewModel instance;
-        public static CodeEditorViewModel Instance
-        {
-            get
-            {
-                if (instance == null)
-                {
-                    instance = new CodeEditorViewModel();
-                }
-                return instance;
-            }
-        }
     }
 } 
