@@ -1,4 +1,5 @@
 ﻿using KID.ViewModels.Infrastructure;
+using KID.ViewModels.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +10,7 @@ using System.Windows.Input;
 
 namespace KID.ViewModels
 {
-    public class MainViewModel : ViewModelBase
+    public class MainViewModel : ViewModelBase, IMainViewModel
     {
         private WindowState windowState = WindowState.Normal;
         public WindowState WindowState

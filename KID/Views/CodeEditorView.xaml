@@ -2,10 +2,12 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
-             xmlns:viewModels="clr-namespace:KID.ViewModels">
+             xmlns:viewModels="clr-namespace:KID.ViewModels"
+             xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
+             xmlns:di="clr-namespace:KID.Services.DI">
     
     <UserControl.DataContext>
-        <viewModels:CodeEditorViewModel />
+        <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:ICodeEditorViewModel}" />
     </UserControl.DataContext>
     
     <Grid>

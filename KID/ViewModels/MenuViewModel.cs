@@ -1,25 +1,25 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 using KID.Services;
 using KID.ViewModels.Infrastructure;
+using KID.ViewModels.Interfaces;
 using KID.Views;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KID.ViewModels
 {
-    public class MenuViewModel : ViewModelBase
+    public class MenuViewModel : ViewModelBase, IMenuViewModel
     {
         private readonly CodeExecutionService codeExecutionService;
-        private CancellationTokenSource cancellationSource;
+        private CancellationTokenSource? cancellationSource;
         private bool isStopButtonEnabled;
 
-        public MenuViewModel()
+        public MenuViewModel(CodeExecutionService codeExecutionService)
         {
-            codeExecutionService = new CodeExecutionService(
-                new CSharpCompiler(),
-                new DefaultCodeRunner()
-            );
+            this.codeExecutionService = codeExecutionService;
 
             NewFileCommand = new RelayCommand(ExecuteNewFile);
             OpenFileCommand = new RelayCommand(ExecuteOpenFile);
@@ -58,10 +58,14 @@ KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
 KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
 
-            MainWindow.Instance.CodeEditorView.Text = code;
-            MainWindow.Instance.ConsoleOutputView.Clear();
-            MainWindow.Instance.ConsoleOutputView.AppendText("Консольный вывод...");
-            MainWindow.Instance.GraphicsOutputView.Clear();
+            var mainWindow = Application.Current.MainWindow as MainWindow;
+            if (mainWindow != null)
+            {
+                mainWindow.CodeEditorView.Text = code;
+                mainWindow.ConsoleOutputView.Clear();
+                mainWindow.ConsoleOutputView.AppendText("Консольный вывод...");
+                mainWindow.GraphicsOutputView.Clear();
+            }
         }
 
         private void ExecuteOpenFile()
@@ -69,17 +73,25 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
             var code = FileService.OpenCodeFile();
             if (code != null)
             {
-                MainWindow.Instance.CodeEditorView.Text = code;
-                MainWindow.Instance.ConsoleOutputView.Clear();
-                MainWindow.Instance.ConsoleOutputView.AppendText("Консольный вывод...");
-                MainWindow.Instance.GraphicsOutputView.Clear();
+                var mainWindow = Application.Current.MainWindow as MainWindow;
+                if (mainWindow != null)
+                {
+                    mainWindow.CodeEditorView.Text = code;
+                    mainWindow.ConsoleOutputView.Clear();
+                    mainWindow.ConsoleOutputView.AppendText("Консольный вывод...");
+                    mainWindow.GraphicsOutputView.Clear();
+                }
             }
         }
 
         private void ExecuteSaveFile()
         {
-            var code = MainWindow.Instance.CodeEditorView.Text;
-            FileService.SaveCodeFile(code);
+            var mainWindow = Application.Current.MainWindow as MainWindow;
+            if (mainWindow != null)
+            {
+                var code = mainWindow.CodeEditorView.Text;
+                FileService.SaveCodeFile(code);
+            }
         }
 
         private async void ExecuteRun()
@@ -87,15 +99,19 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
             IsStopButtonEnabled = true;
             cancellationSource = new CancellationTokenSource();
 
-            MainWindow.Instance.ConsoleOutputView.Clear();
-            MainWindow.Instance.GraphicsOutputView.Clear();
+            var mainWindow = Application.Current.MainWindow as MainWindow;
+            if (mainWindow != null)
+            {
+                mainWindow.ConsoleOutputView.Clear();
+                mainWindow.GraphicsOutputView.Clear();
 
-            await codeExecutionService.ExecuteAsync(
-                MainWindow.Instance.CodeEditorView.Text,
-                MainWindow.Instance.ConsoleOutputView.AppendText,
-                MainWindow.Instance.GraphicsOutputView.GraphicsCanvasControl,
-                cancellationSource.Token
-            );
+                await codeExecutionService.ExecuteAsync(
+                    mainWindow.CodeEditorView.Text,
+                    mainWindow.ConsoleOutputView.AppendText,
+                    mainWindow.GraphicsOutputView.GraphicsCanvasControl,
+                    cancellationSource.Token
+                );
+            }
 
             IsStopButtonEnabled = false;
         }
@@ -108,17 +124,19 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
 
         private void ExecuteUndo()
         {
-            if (MainWindow.Instance.CodeEditorView.CanUndo())
+            var mainWindow = Application.Current.MainWindow as MainWindow;
+            if (mainWindow != null && mainWindow.CodeEditorView.CanUndo())
             {
-                MainWindow.Instance.CodeEditorView.Undo();
+                mainWindow.CodeEditorView.Undo();
             }
         }
 
         private void ExecuteRedo()
         {
-            if (MainWindow.Instance.CodeEditorView.CanRedo())
+            var mainWindow = Application.Current.MainWindow as MainWindow;
+            if (mainWindow != null && mainWindow.CodeEditorView.CanRedo())
             {
-                MainWindow.Instance.CodeEditorView.Redo();
+                mainWindow.CodeEditorView.Redo();
             }
         }
     }

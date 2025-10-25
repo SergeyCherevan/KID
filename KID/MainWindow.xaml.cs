@@ -14,8 +14,10 @@ using KID.Views;
 using KID.Services;
 using KID.ViewModels;
 using KID.ViewModels.Infrastructure;
+using KID.ViewModels.Interfaces;
 using KID.Services.Initialize;
 using KID.Services.Initialize.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KID
 {
@@ -24,23 +26,17 @@ namespace KID
     /// </summary>
     public partial class MainWindow : Window, IClosable
     {
-        public static MainWindow Instance { get; private set; }
+        private readonly IWindowInitializationService _windowInitializationService;
 
         public MainWindow()
         {
             InitializeComponent();
-            Instance = this;
-
-            IWindowConfigurationService windowConfigurationService = new WindowConfigurationService();
-
-            IWindowInitializationService windowInitializationService = new WindowInitializationService(
-                this,
-                CodeEditorView,
-                ConsoleOutputView,
-                windowConfigurationService
-            );
-
-            windowInitializationService.Initialize();
+            
+            // Получаем сервисы из DI контейнера
+            _windowInitializationService = App.ServiceProvider.GetRequiredService<IWindowInitializationService>();
+            
+            // Инициализируем окно
+            _windowInitializationService.Initialize();
         }
 
         void IClosable.Close()

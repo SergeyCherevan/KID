@@ -1,32 +1,23 @@
 ﻿using KID.Services.Initialize.Interfaces;
 using KID.ViewModels;
+using KID.ViewModels.Interfaces;
 using KID.Views;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace KID.Services.Initialize
 {
     public class WindowInitializationService : IWindowInitializationService
     {
-        private readonly MainWindow mainViewModel;
-        private readonly CodeEditorView codeEditorView;
-        private readonly ConsoleOutputView consoleOutputView;
         private readonly IWindowConfigurationService windowConfigurationService;
 
-        public WindowInitializationService(
-            MainWindow mw,
-            CodeEditorView cev,
-            ConsoleOutputView cov,
-            IWindowConfigurationService wcs
-        )
-        { 
-            mainViewModel = mw;
-            codeEditorView = cev;
-            consoleOutputView = cov;
-            windowConfigurationService = wcs;
+        public WindowInitializationService(IWindowConfigurationService windowConfigurationService)
+        {
+            this.windowConfigurationService = windowConfigurationService;
         }
 
         public void Initialize()
@@ -34,14 +25,19 @@ namespace KID.Services.Initialize
             windowConfigurationService.SetConfigurationFromFile();
             windowConfigurationService.SetDefaultCode();
 
-            InitializeMainWindow(mainViewModel);
-            InitializeCodeEditor(codeEditorView);
-            InitializeConsole(consoleOutputView);
+            // Получаем главное окно из Application
+            var mainWindow = Application.Current.MainWindow as MainWindow;
+            if (mainWindow != null)
+            {
+                InitializeMainWindow(mainWindow);
+                InitializeCodeEditor(mainWindow.CodeEditorView);
+                InitializeConsole(mainWindow.ConsoleOutputView);
+            }
         }
 
         private void InitializeMainWindow(MainWindow mainWindow)
         {
-            if (mainWindow.DataContext is MainViewModel vm)
+            if (mainWindow.DataContext is IMainViewModel vm)
             {
                 vm.RequestDragMove += mainWindow.DragMove;
             }

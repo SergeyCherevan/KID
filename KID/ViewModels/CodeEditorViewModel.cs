@@ -1,11 +1,12 @@
 using KID.ViewModels.Infrastructure;
+using KID.ViewModels.Interfaces;
 using System;
 using System.Windows.Input;
 using ICSharpCode.AvalonEdit;
 
 namespace KID.ViewModels
 {
-    public class CodeEditorViewModel : ViewModelBase
+    public class CodeEditorViewModel : ViewModelBase, ICodeEditorViewModel
     {
         private TextEditor textEditor;
         private string text;

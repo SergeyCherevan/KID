@@ -4,6 +4,9 @@
         xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
         xmlns:views="clr-namespace:KID.Views"
         xmlns:viewModels="clr-namespace:KID.ViewModels"
+        xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
+        xmlns:local="clr-namespace:KID"
+        xmlns:di="clr-namespace:KID.Services.DI"
         Title=".KID - C#/.NET IDE для детей"
         Height="600" Width="800"
         WindowState="{Binding WindowState, Mode=TwoWay}"
@@ -14,7 +17,7 @@
         Background="{StaticResource SpecialElementsBrush}">
 
     <Window.DataContext>
-        <viewModels:MainViewModel />
+        <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMainViewModel}" />
     </Window.DataContext>
 
     <Grid>

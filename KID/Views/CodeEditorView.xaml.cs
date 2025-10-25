@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using KID.ViewModels;
+using KID.ViewModels.Interfaces;
 
 namespace KID.Views
 {
@@ -24,7 +25,7 @@ namespace KID.Views
         public CodeEditorView()
         {
             InitializeComponent();
-            if (DataContext is CodeEditorViewModel vm)
+            if (DataContext is ICodeEditorViewModel vm)
             {
                 vm.Initialize(TextEditor);
             }
