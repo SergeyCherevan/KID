@@ -4,7 +4,12 @@
              xmlns:viewModels="clr-namespace:KID.ViewModels"
              xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
              xmlns:di="clr-namespace:KID.Services.DI"
+             xmlns:converters="clr-namespace:KID.Converters"
              Height="Auto" Width="Auto">
+
+    <UserControl.Resources>
+        <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+    </UserControl.Resources>
 
     <UserControl.DataContext>
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMenuViewModel}" />
@@ -24,7 +29,7 @@
             <MenuItem Header="Вид">
                 <MenuItem Header="Тема" />
             </MenuItem>
-            <MenuItem Header="▶️ Запустить" Command="{Binding RunCommand}" />
+            <MenuItem Header="▶️ Запустить" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
             <MenuItem Header="■ Стоп" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />
         </Menu>
     </StackPanel>
