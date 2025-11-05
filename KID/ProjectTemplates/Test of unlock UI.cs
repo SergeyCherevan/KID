@@ -1,11 +1,12 @@
-// Этот код можно вставить в редактор вашей среды KID
-
 // Бесконечный вывод в консоль
 for (int i = 0; i < 100; i++)
 {
+    KID.CancellationManager.CheckCancellation(); // Проверяем, не была ли нажата кнопка Stop
+
     System.Console.WriteLine($"Счётчик: {i}");
     KID.Graphics.SetColor(255, 0, 0);
     KID.Graphics.Circle(50 + i * 2, 100, 20);
+    
     System.Threading.Thread.Sleep(100); // имитируем долгую операцию
 }
 

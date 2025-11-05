@@ -8,9 +8,17 @@ for (int i = 0; i < 1000000; i++)
 
     Console.WriteLine($"Обработка {i}");
     
-    KID.Graphics.SetColor("White");
-	KID.Graphics.SetFont("Arial", 25);
-	KID.Graphics.Text(0, 0 + i * 20, $"Обработка {i}");
+    KID.Graphics.SetColor(
+        (byte)((Math.Sin(2*Math.PI * i/0x100 / 3 + 0 * 2*Math.PI/3) + 1) * 0xFF/2),
+        (byte)((Math.Sin(2*Math.PI * i/0x100 / 3 + 1 * 2*Math.PI/3) + 1) * 0xFF/2),
+        (byte)((Math.Sin(2*Math.PI * i/0x100 / 3 + 2 * 2*Math.PI/3) + 1) * 0xFF/2)
+    );
     
-    Thread.Sleep(100);
+	KID.Graphics.Circle(
+        150 + Math.Sin(2*Math.PI / 3 * i/0x100) * 100,
+        150 + Math.Cos(2*Math.PI / 3 * i/0x100) * 100,
+        10
+    );
+    
+    Thread.Sleep(50);
 }
