@@ -23,9 +23,11 @@ namespace KID.Services.DI
             services.AddSingleton<IWindowInitializationService, WindowInitializationService>();
 
             // ViewModels
-            services.AddTransient<IMainViewModel, MainViewModel>();
-            services.AddTransient<ICodeEditorViewModel, CodeEditorViewModel>();
-            services.AddTransient<IMenuViewModel, MenuViewModel>();
+            services.AddSingleton<IMainViewModel, MainViewModel>();
+            services.AddSingleton<IMenuViewModel, MenuViewModel>();
+            services.AddSingleton<ICodeEditorViewModel, CodeEditorViewModel>();
+            services.AddSingleton<IConsoleOutputViewModel, ConsoleOutputViewModel>();
+            services.AddSingleton<IGraphicsOutputViewModel, GraphicsOutputViewModel>();
 
             return services;
         }

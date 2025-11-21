@@ -35,7 +35,12 @@ namespace KID
             // Получаем сервисы из DI контейнера
             _windowInitializationService = App.ServiceProvider.GetRequiredService<IWindowInitializationService>();
             
-            // Инициализируем окно
+            // Инициализируем окно после загрузки всех элементов
+            Loaded += MainWindow_Loaded;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
             _windowInitializationService.Initialize();
         }
 

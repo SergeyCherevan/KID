@@ -16,10 +16,21 @@ namespace KID.ViewModels
         private readonly CodeExecutionService codeExecutionService;
         private CancellationTokenSource? cancellationSource;
         private bool isStopButtonEnabled;
+        private ICodeEditorViewModel codeEditorViewModel;
+        private IConsoleOutputViewModel consoleOutputViewModel;
+        private IGraphicsOutputViewModel graphicsOutputViewModel;
 
-        public MenuViewModel(CodeExecutionService codeExecutionService)
+        public MenuViewModel(
+            CodeExecutionService codeExecutionService,
+            ICodeEditorViewModel codeEditorViewModel,
+            IConsoleOutputViewModel consoleOutputViewModel,
+            IGraphicsOutputViewModel graphicsOutputViewModel
+        )
         {
             this.codeExecutionService = codeExecutionService;
+            this.codeEditorViewModel = codeEditorViewModel;
+            this.consoleOutputViewModel = consoleOutputViewModel;
+            this.graphicsOutputViewModel = graphicsOutputViewModel;
 
             NewFileCommand = new RelayCommand(ExecuteNewFile);
             OpenFileCommand = new RelayCommand(ExecuteOpenFile);
@@ -58,14 +69,10 @@ KID.Graphics.SetColor(""White"");
 KID.Graphics.SetFont(""Arial"", 25);
 KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
 
-            var mainWindow = Application.Current.MainWindow as MainWindow;
-            if (mainWindow != null)
-            {
-                mainWindow.CodeEditorView.Text = code;
-                mainWindow.ConsoleOutputView.Clear();
-                mainWindow.ConsoleOutputView.AppendText("Консольный вывод...");
-                mainWindow.GraphicsOutputView.Clear();
-            }
+            codeEditorViewModel.Text = code;
+            consoleOutputViewModel.Clear();
+            consoleOutputViewModel.AppendText("Консольный вывод...");
+            graphicsOutputViewModel.Clear();
         }
 
         private void ExecuteOpenFile()
@@ -73,25 +80,17 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
             var code = FileService.OpenCodeFile();
             if (code != null)
             {
-                var mainWindow = Application.Current.MainWindow as MainWindow;
-                if (mainWindow != null)
-                {
-                    mainWindow.CodeEditorView.Text = code;
-                    mainWindow.ConsoleOutputView.Clear();
-                    mainWindow.ConsoleOutputView.AppendText("Консольный вывод...");
-                    mainWindow.GraphicsOutputView.Clear();
-                }
+                codeEditorViewModel.Text = code;
+                consoleOutputViewModel.Clear();
+                consoleOutputViewModel.AppendText("Консольный вывод...");
+                graphicsOutputViewModel.Clear();
             }
         }
 
         private void ExecuteSaveFile()
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
-            if (mainWindow != null)
-            {
-                var code = mainWindow.CodeEditorView.Text;
-                FileService.SaveCodeFile(code);
-            }
+            var code = codeEditorViewModel.Text;
+            FileService.SaveCodeFile(code);
         }
 
         private async void ExecuteRun()
@@ -99,19 +98,15 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
             IsStopButtonEnabled = true;
             cancellationSource = new CancellationTokenSource();
 
-            var mainWindow = Application.Current.MainWindow as MainWindow;
-            if (mainWindow != null)
-            {
-                mainWindow.ConsoleOutputView.Clear();
-                mainWindow.GraphicsOutputView.Clear();
+            consoleOutputViewModel.Clear();
+            graphicsOutputViewModel.Clear();
 
-                await codeExecutionService.ExecuteAsync(
-                    mainWindow.CodeEditorView.Text,
-                    mainWindow.ConsoleOutputView.AppendText,
-                    mainWindow.GraphicsOutputView.GraphicsCanvasControl,
-                    cancellationSource.Token
-                );
-            }
+            await codeExecutionService.ExecuteAsync(
+                codeEditorViewModel.Text,
+                consoleOutputViewModel.AppendText,
+                graphicsOutputViewModel.GraphicsCanvasControl,
+                cancellationSource.Token
+            );
 
             IsStopButtonEnabled = false;
         }
@@ -124,20 +119,12 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
 
         private void ExecuteUndo()
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
-            if (mainWindow != null && mainWindow.CodeEditorView.CanUndo())
-            {
-                mainWindow.CodeEditorView.Undo();
-            }
+            codeEditorViewModel.UndoCommand.Execute(null);
         }
 
         private void ExecuteRedo()
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
-            if (mainWindow != null && mainWindow.CodeEditorView.CanRedo())
-            {
-                mainWindow.CodeEditorView.Redo();
-            }
+            codeEditorViewModel.RedoCommand.Execute(null);
         }
     }
 } 

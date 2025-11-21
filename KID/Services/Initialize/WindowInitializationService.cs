@@ -14,10 +14,21 @@ namespace KID.Services.Initialize
     public class WindowInitializationService : IWindowInitializationService
     {
         private readonly IWindowConfigurationService windowConfigurationService;
+        private readonly IMainViewModel mainViewModel;
+        private readonly ICodeEditorViewModel codeEditorViewModel;
+        private readonly IConsoleOutputViewModel consoleOutputViewModel;
 
-        public WindowInitializationService(IWindowConfigurationService windowConfigurationService)
+        public WindowInitializationService(
+            IWindowConfigurationService windowConfigurationService,
+            IMainViewModel mainViewModel,
+            ICodeEditorViewModel codeEditorViewModel,
+            IConsoleOutputViewModel consoleOutputViewModel
+        )
         {
             this.windowConfigurationService = windowConfigurationService;
+            this.mainViewModel = mainViewModel;
+            this.codeEditorViewModel = codeEditorViewModel;
+            this.consoleOutputViewModel = consoleOutputViewModel;
         }
 
         public void Initialize()
@@ -25,36 +36,29 @@ namespace KID.Services.Initialize
             windowConfigurationService.SetConfigurationFromFile();
             windowConfigurationService.SetDefaultCode();
 
-            // Получаем главное окно из Application
+            InitializeMainWindow();
+            InitializeCodeEditor();
+            InitializeConsole();
+        }
+
+        private void InitializeMainWindow()
+        {
             var mainWindow = Application.Current.MainWindow as MainWindow;
-            if (mainWindow != null)
-            {
-                InitializeMainWindow(mainWindow);
-                InitializeCodeEditor(mainWindow.CodeEditorView);
-                InitializeConsole(mainWindow.ConsoleOutputView);
-            }
+            mainViewModel.RequestDragMove += mainWindow.DragMove;
         }
 
-        private void InitializeMainWindow(MainWindow mainWindow)
+        private void InitializeCodeEditor()
         {
-            if (mainWindow.DataContext is IMainViewModel vm)
-            {
-                vm.RequestDragMove += mainWindow.DragMove;
-            }
+            codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.Language);
+            codeEditorViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
+            codeEditorViewModel.FontSize = windowConfigurationService.Settings.FontSize;
+            codeEditorViewModel.Text = windowConfigurationService.Settings.TemplateCode;
         }
 
-        private void InitializeCodeEditor(CodeEditorView codeEditorView)
+        private void InitializeConsole()
         {
-            codeEditorView.SetSyntaxHighlighting(windowConfigurationService.Settings.Language);
-            codeEditorView.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
-            codeEditorView.FontSize = windowConfigurationService.Settings.FontSize;
-            codeEditorView.Text = windowConfigurationService.Settings.TemplateCode;
-        }
-
-        private void InitializeConsole(ConsoleOutputView consoleOutputView)
-        {
-            consoleOutputView.Clear();
-            consoleOutputView.AppendText(windowConfigurationService.Settings.ConsoleMessage);
+            consoleOutputViewModel.Clear();
+            consoleOutputViewModel.AppendText(windowConfigurationService.Settings.ConsoleMessage);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KID.ViewModels.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,11 +21,14 @@ namespace KID.Views
     /// </summary>
     public partial class GraphicsOutputView : UserControl
     {
-        public void Clear() => GraphicsCanvasControl.Children.Clear();
-
         public GraphicsOutputView()
         {
             InitializeComponent();
+
+            if (DataContext is IGraphicsOutputViewModel vm)
+            {
+                vm.Initialize(GraphicsCanvasControl);
+            }
         }
     }
 }

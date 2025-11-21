@@ -3,15 +3,13 @@ using KID.ViewModels.Interfaces;
 using System;
 using System.Windows.Input;
 using ICSharpCode.AvalonEdit;
+using System.Windows.Media;
 
 namespace KID.ViewModels
 {
     public class CodeEditorViewModel : ViewModelBase, ICodeEditorViewModel
     {
-        private TextEditor textEditor;
-        private string text;
-        private bool canUndo;
-        private bool canRedo;
+        public TextEditor TextEditor { get; private set; }
 
         public CodeEditorViewModel()
         {
@@ -21,66 +19,59 @@ namespace KID.ViewModels
 
         public void Initialize(TextEditor editor)
         {
-            textEditor = editor;
-            textEditor.TextChanged += (s, e) =>
+            TextEditor = editor;
+            TextEditor.TextChanged += (s, e) =>
             {
-                Text = textEditor.Text;
-                UpdateUndoRedoState();
+                OnPropertyChanged(nameof(Text));
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
             };
         }
 
         public string Text
         {
-            get => text;
-            set
-            {
-                if (SetProperty(ref text, value) && textEditor != null && textEditor.Text != value)
-                {
-                    textEditor.Text = value;
-                }
-            }
+            get => TextEditor.Text;
+            set => TextEditor.Text = value;
         }
 
-        public bool CanUndo
+        public FontFamily FontFamily
         {
-            get => canUndo;
-            private set => SetProperty(ref canUndo, value);
+            get => TextEditor.FontFamily;
+            set => TextEditor.FontFamily = value;
         }
 
-        public bool CanRedo
+        public double FontSize
         {
-            get => canRedo;
-            private set => SetProperty(ref canRedo, value);
+            get => TextEditor.FontSize;
+            set => TextEditor.FontSize = value;
         }
+
+        public bool CanUndo => TextEditor.CanUndo;
+
+        public bool CanRedo => TextEditor.CanRedo;
 
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
 
         private void ExecuteUndo()
         {
-            if (textEditor != null && textEditor.CanUndo)
+            if (TextEditor.CanUndo)
             {
-                textEditor.Undo();
-                UpdateUndoRedoState();
+                TextEditor.Undo();
             }
         }
 
         private void ExecuteRedo()
         {
-            if (textEditor != null && textEditor.CanRedo)
+            if (TextEditor.CanRedo)
             {
-                textEditor.Redo();
-                UpdateUndoRedoState();
+                TextEditor.Redo();
             }
         }
 
-        private void UpdateUndoRedoState()
+        public void SetSyntaxHighlighting(string language)
         {
-            if (textEditor != null)
-            {
-                CanUndo = textEditor.CanUndo;
-                CanRedo = textEditor.CanRedo;
-            }
+            TextEditor.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(language);
         }
     }
 } 

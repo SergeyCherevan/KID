@@ -1,4 +1,6 @@
-﻿using System;
+﻿using ICSharpCode.AvalonEdit;
+using KID.ViewModels.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,16 +22,14 @@ namespace KID.Views
     /// </summary>
     public partial class ConsoleOutputView : UserControl
     {
-        public void Clear() => ConsoleOutputControl.Clear();
-        public void AppendText(string text)
-        {
-            ConsoleOutputControl.AppendText(text);
-            ConsoleOutputControl.ScrollToEnd();
-        }
-
         public ConsoleOutputView()
         {
             InitializeComponent();
+
+            if (DataContext is IConsoleOutputViewModel vm)
+            {
+                vm.Initialize(ConsoleOutputControl);
+            }
         }
     }
 }

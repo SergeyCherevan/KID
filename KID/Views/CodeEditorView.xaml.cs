@@ -30,21 +30,5 @@ namespace KID.Views
                 vm.Initialize(TextEditor);
             }
         }
-
-        public void SetSyntaxHighlighting(string language)
-        {
-            TextEditor.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(language);
-        }
-
-        public string Text
-        {
-            get => TextEditor.Text;
-            set => TextEditor.Text = value;
-        }
-
-        public bool CanUndo() => TextEditor.CanUndo;
-        public bool CanRedo() => TextEditor.CanRedo;
-        public void Undo() => TextEditor.Undo();
-        public void Redo() => TextEditor.Redo();
     }
 }
