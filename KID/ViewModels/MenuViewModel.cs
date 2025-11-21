@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -32,13 +33,29 @@ namespace KID.ViewModels
             this.consoleOutputViewModel = consoleOutputViewModel;
             this.graphicsOutputViewModel = graphicsOutputViewModel;
 
+            // Подписываемся на изменения свойств codeEditorViewModel
+            if (codeEditorViewModel is INotifyPropertyChanged notifyPropertyChanged)
+            {
+                notifyPropertyChanged.PropertyChanged += CodeEditorViewModel_PropertyChanged;
+            }
+
             NewFileCommand = new RelayCommand(ExecuteNewFile);
             OpenFileCommand = new RelayCommand(ExecuteOpenFile);
             SaveFileCommand = new RelayCommand(ExecuteSaveFile);
             RunCommand = new RelayCommand(ExecuteRun);
             StopCommand = new RelayCommand(ExecuteStop);
-            UndoCommand = new RelayCommand(ExecuteUndo);
-            RedoCommand = new RelayCommand(ExecuteRedo);
+            UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
+            RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
+        }
+
+        private void CodeEditorViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ICodeEditorViewModel.CanUndo) || 
+                e.PropertyName == nameof(ICodeEditorViewModel.CanRedo))
+            {
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
+            }
         }
 
         public bool IsStopButtonEnabled
@@ -46,6 +63,8 @@ namespace KID.ViewModels
             get => isStopButtonEnabled;
             set => SetProperty(ref isStopButtonEnabled, value);
         }
+        public bool CanUndo => codeEditorViewModel.CanUndo;
+        public bool CanRedo => codeEditorViewModel.CanRedo;
 
         public ICommand NewFileCommand { get; }
         public ICommand OpenFileCommand { get; }

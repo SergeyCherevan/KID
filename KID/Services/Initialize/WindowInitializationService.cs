@@ -17,6 +17,7 @@ namespace KID.Services.Initialize
         private readonly IMainViewModel mainViewModel;
         private readonly ICodeEditorViewModel codeEditorViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
+        private readonly MainWindow mainWindow;
 
         public WindowInitializationService(
             IWindowConfigurationService windowConfigurationService,
@@ -29,6 +30,8 @@ namespace KID.Services.Initialize
             this.mainViewModel = mainViewModel;
             this.codeEditorViewModel = codeEditorViewModel;
             this.consoleOutputViewModel = consoleOutputViewModel;
+
+            this.mainWindow = Application.Current.MainWindow as MainWindow;
         }
 
         public void Initialize()
@@ -39,11 +42,12 @@ namespace KID.Services.Initialize
             InitializeMainWindow();
             InitializeCodeEditor();
             InitializeConsole();
+
+            mainWindow.UpdateLayout();
         }
 
         private void InitializeMainWindow()
         {
-            var mainWindow = Application.Current.MainWindow as MainWindow;
             mainViewModel.RequestDragMove += mainWindow.DragMove;
         }
 

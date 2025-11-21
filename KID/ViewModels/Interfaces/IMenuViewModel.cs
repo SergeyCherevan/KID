@@ -5,6 +5,8 @@ namespace KID.ViewModels.Interfaces
     public interface IMenuViewModel
     {
         bool IsStopButtonEnabled { get; set; }
+        bool CanUndo { get; }
+        bool CanRedo { get; }
 
         ICommand NewFileCommand { get; }
         ICommand OpenFileCommand { get; }

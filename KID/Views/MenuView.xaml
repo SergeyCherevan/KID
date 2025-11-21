@@ -23,8 +23,8 @@
                 <MenuItem Header="Сохранить" Command="{Binding SaveFileCommand}" />
             </MenuItem>
             <MenuItem Header="Правка">
-                <MenuItem Header="Отменить" Command="{Binding UndoCommand}" />
-                <MenuItem Header="Повторить" Command="{Binding RedoCommand}" />
+                <MenuItem Header="Отменить" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
+                <MenuItem Header="Повторить" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
             </MenuItem>
             <MenuItem Header="Вид">
                 <MenuItem Header="Тема" />
