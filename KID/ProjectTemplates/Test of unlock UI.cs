@@ -4,16 +4,16 @@ for (int i = 0; i < 100; i++)
     KID.CancellationManager.CheckCancellation(); // Проверяем, не была ли нажата кнопка Stop
 
     System.Console.WriteLine($"Счётчик: {i}");
-    KID.Graphics.SetColor(255, 0, 0);
+    KID.Graphics.Color = (255, 0, 0);
     KID.Graphics.Circle(50 + i * 2, 100, 20);
     
     System.Threading.Thread.Sleep(100); // имитируем долгую операцию
 }
 
 System.Console.WriteLine("Готово!");
-KID.Graphics.SetColor(0xFFFF00);
+KID.Graphics.Color = 0xFFFF00;
 KID.Graphics.Rectangle(150, 150, 100, 100);
 
-KID.Graphics.SetColor("White");
+KID.Graphics.Color = "White";
 KID.Graphics.SetFont("Arial", 30);
 KID.Graphics.Text(50, 80, "Тест окончен!");
