@@ -42,7 +42,7 @@ namespace KID.ViewModels
             NewFileCommand = new RelayCommand(ExecuteNewFile);
             OpenFileCommand = new RelayCommand(ExecuteOpenFile);
             SaveFileCommand = new RelayCommand(ExecuteSaveFile);
-            RunCommand = new RelayCommand(ExecuteRun);
+            RunCommand = new RelayCommand(ExecuteRun, () => !IsStopButtonEnabled);
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
