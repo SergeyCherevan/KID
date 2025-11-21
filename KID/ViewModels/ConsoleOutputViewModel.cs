@@ -1,4 +1,5 @@
-﻿using KID.ViewModels.Interfaces;
+﻿using KID.ViewModels.Infrastructure;
+using KID.ViewModels.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using System.Windows.Controls;
 
 namespace KID.ViewModels
 {
-    public class ConsoleOutputViewModel : IConsoleOutputViewModel
+    public class ConsoleOutputViewModel : ViewModelBase, IConsoleOutputViewModel
     {
         public TextBox ConsoleOutputControl { get; private set; }
 
