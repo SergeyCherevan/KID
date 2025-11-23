@@ -1,4 +1,5 @@
 using KID.Services;
+using KID.Services.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
@@ -9,7 +10,7 @@ namespace KID.ViewModels
 {
     public class MenuViewModel : ViewModelBase, IMenuViewModel
     {
-        private readonly CodeExecutionService codeExecutionService;
+        private readonly ICodeExecutionService codeExecutionService;
         private CancellationTokenSource? cancellationSource;
         private bool isStopButtonEnabled;
 
@@ -21,7 +22,7 @@ namespace KID.ViewModels
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
-            CodeExecutionService codeExecutionService,
+            ICodeExecutionService codeExecutionService,
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel

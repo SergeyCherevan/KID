@@ -16,7 +16,7 @@ namespace KID.Services.DI
             // Services
             services.AddSingleton<ICodeCompiler, CSharpCompiler>();
             services.AddSingleton<ICodeRunner, DefaultCodeRunner>();
-            services.AddSingleton<CodeExecutionService>();
+            services.AddSingleton<ICodeExecutionService, CodeExecutionService>();
             services.AddSingleton<ConsoleRedirector>();
 
             // Window Configuration Services

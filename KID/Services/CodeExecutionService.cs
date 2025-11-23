@@ -7,7 +7,7 @@ using KID.Services.Interfaces;
 
 namespace KID.Services
 {
-    public class CodeExecutionService
+    public class CodeExecutionService : ICodeExecutionService
     {
         private readonly ICodeCompiler compiler;
         private readonly ICodeRunner runner;
