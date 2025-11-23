@@ -1,10 +1,11 @@
 using KID.Services;
+using KID.Services.CodeExecution;
+using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 using System.ComponentModel;
 using System.Windows.Input;
-using KID.Services.CodeExecution.Interfaces;
 
 namespace KID.ViewModels
 {
@@ -112,12 +113,14 @@ namespace KID.ViewModels
             consoleOutputViewModel.Clear();
             graphicsOutputViewModel.Clear();
 
-            await codeExecutionService.ExecuteAsync(
-                codeEditorViewModel.Text,
-                consoleOutputViewModel.AppendText,
-                graphicsOutputViewModel.GraphicsCanvasControl,
-                cancellationSource.Token
-            );
+            CodeExecutionContext context = new CodeExecutionContext()
+            {
+                ConsoleOutputCallback = consoleOutputViewModel.AppendText,
+                GraphicsCanvas = graphicsOutputViewModel.GraphicsCanvasControl,
+                CancellationToken = cancellationSource.Token
+            };
+
+            await codeExecutionService.ExecuteAsync(codeEditorViewModel.Text, context);
 
             IsStopButtonEnabled = false;
         }

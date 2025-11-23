@@ -7,7 +7,7 @@ namespace KID.Services.CodeExecution.Interfaces
 {
     public interface ICodeExecutionService
     {
-        Task ExecuteAsync(string code, Action<string> consoleOutputCallback, Canvas graphicsCanvas, CancellationToken token = default);
+        Task ExecuteAsync(string code, CodeExecutionContext context);
     }
 }
 

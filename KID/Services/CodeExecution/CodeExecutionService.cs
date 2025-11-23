@@ -19,37 +19,37 @@ namespace KID.Services.CodeExecution
             this.runner = runner;
         }
 
-        public async Task ExecuteAsync(string code, Action<string> consoleOutputCallback, Canvas graphicsCanvas, CancellationToken token = default)
+        public async Task ExecuteAsync(string code, CodeExecutionContext context)
         {
             if (isRunning) return;
             isRunning = true;
 
             try
             {
-                var result = await compiler.CompileAsync(code, token);
+                var result = await compiler.CompileAsync(code, context.CancellationToken);
 
                 if (!result.Success)
                 {
                     foreach (var error in result.Errors)
-                        consoleOutputCallback?.Invoke(error);
+                        context.ConsoleOutputCallback?.Invoke(error);
                     return;
                 }
 
-                Graphics.Init(graphicsCanvas);
+                Graphics.Init(context.GraphicsCanvas);
 
                 var originalConsole = Console.Out;
-                Console.SetOut(new ConsoleRedirector(consoleOutputCallback));
+                Console.SetOut(new ConsoleRedirector(context.ConsoleOutputCallback));
 
                 try
                 {
                     await Task.Run(async () => 
                     {
-                        await runner.RunAsync(result.Assembly, token);
-                    }, token);
+                        await runner.RunAsync(result.Assembly, context.CancellationToken);
+                    }, context.CancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    consoleOutputCallback?.Invoke($"Ошибка выполнения: {ex.Message}");
+                    context.ConsoleOutputCallback?.Invoke($"Ошибка выполнения: {ex.Message}");
                 }
                 finally
                 {
