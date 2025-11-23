@@ -9,7 +9,7 @@ namespace KID
         {
             InvokeOnUI(() =>
             {
-                if (canvas == null) return;
+                if (Canvas == null) return;
                 var ellipse = new Ellipse
                 {
                     Width = radius * 2,
@@ -19,7 +19,7 @@ namespace KID
                 };
                 Canvas.SetLeft(ellipse, x - radius);
                 Canvas.SetTop(ellipse, y - radius);
-                canvas.Children.Add(ellipse);
+                Canvas.Children.Add(ellipse);
             });
         }
 
@@ -27,7 +27,7 @@ namespace KID
         {
             InvokeOnUI(() =>
             {
-                if (canvas == null) return;
+                if (Canvas == null) return;
                 var rect = new Rectangle
                 {
                     Width = width,
@@ -37,7 +37,7 @@ namespace KID
                 };
                 Canvas.SetLeft(rect, x);
                 Canvas.SetTop(rect, y);
-                canvas.Children.Add(rect);
+                Canvas.Children.Add(rect);
             });
         }
     }

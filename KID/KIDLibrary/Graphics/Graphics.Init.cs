@@ -7,7 +7,8 @@ namespace KID
 {
     public static partial class Graphics
     {
-        private static Canvas canvas;
+        private static Canvas Canvas { get; set; }
+
         private static Brush fillBrush = Brushes.Black;
         private static Brush strokeBrush = Brushes.Black;
         private static Typeface currentFont = new Typeface("Arial");
@@ -16,7 +17,7 @@ namespace KID
 
         public static void Init(Canvas targetCanvas)
         {
-            canvas = targetCanvas;
+            Canvas = targetCanvas;
             dispatcher = Application.Current.Dispatcher;
         }
 

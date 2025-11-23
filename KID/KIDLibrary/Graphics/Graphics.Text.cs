@@ -18,7 +18,7 @@ namespace KID
         {
             InvokeOnUI(() =>
             {
-                if (canvas == null) return;
+                if (Canvas == null) return;
                 var textBlock = new TextBlock
                 {
                     Text = text,
@@ -30,7 +30,7 @@ namespace KID
                 };
                 Canvas.SetLeft(textBlock, x);
                 Canvas.SetTop(textBlock, y);
-                canvas.Children.Add(textBlock);
+                Canvas.Children.Add(textBlock);
             });
         }
     }
