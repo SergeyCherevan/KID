@@ -7,9 +7,9 @@ using System.Reflection;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using KID.Services.Interfaces;
+using KID.Services.CodeExecution.Interfaces;
 
-namespace KID.Services
+namespace KID.Services.CodeExecution
 {
     public class CSharpCompiler : ICodeCompiler
     {

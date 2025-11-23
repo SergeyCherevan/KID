@@ -4,7 +4,7 @@ using System.Text;
 using System.Windows.Threading;
 using System.Windows;
 
-namespace KID.Services
+namespace KID.Services.CodeExecution
 {
     public class ConsoleRedirector : TextWriter
     {
@@ -14,7 +14,7 @@ namespace KID.Services
         public ConsoleRedirector(Action<string> output)
         {
             this.output = output;
-            this.dispatcher = Application.Current.Dispatcher;
+            dispatcher = Application.Current.Dispatcher;
         }
 
         public override Encoding Encoding => Encoding.UTF8;

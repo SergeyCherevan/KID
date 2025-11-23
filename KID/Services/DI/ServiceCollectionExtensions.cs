@@ -1,11 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-using KID.Services;
-using KID.Services.Interfaces;
 using KID.Services.Initialize;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels;
 using KID.ViewModels.Interfaces;
 using System.Windows;
+using KID.Services.CodeExecution.Interfaces;
+using KID.Services.CodeExecution;
 
 namespace KID.Services.DI
 {

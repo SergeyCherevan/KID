@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
-namespace KID.Services.Interfaces
+namespace KID.Services.CodeExecution.Interfaces
 {
     public interface ICodeExecutionService
     {

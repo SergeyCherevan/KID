@@ -1,4 +1,4 @@
-﻿namespace KID.Services.Interfaces
+﻿namespace KID.Services.CodeExecution.Interfaces
 {
     public interface ICodeCompiler
     {
