@@ -25,6 +25,7 @@ namespace KID.Services.CodeExecution
             if (dispatcher.CheckAccess())
             {
                 textBox.AppendText(value);
+                textBox.ScrollToEnd();
             }
             else
             {

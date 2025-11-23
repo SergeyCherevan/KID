@@ -65,8 +65,7 @@ namespace KID.Services.Initialize
 
         private void InitializeConsole()
         {
-            consoleOutputViewModel.Clear();
-            consoleOutputViewModel.AppendText(windowConfigurationService.Settings.ConsoleMessage);
+            consoleOutputViewModel.Text = windowConfigurationService.Settings.ConsoleMessage;
         }
     }
 }

@@ -14,6 +14,6 @@ namespace KID.ViewModels.Interfaces
         void Initialize(TextBox consoleOutputControl);
 
         void Clear();
-        void AppendText(string text);
+        string Text { get; set; }
     }
 }

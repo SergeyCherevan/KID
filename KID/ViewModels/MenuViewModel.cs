@@ -85,8 +85,7 @@ namespace KID.ViewModels
             var code = windowConfigurationService.Settings.TemplateCode;
 
             codeEditorViewModel.Text = code;
-            consoleOutputViewModel.Clear();
-            consoleOutputViewModel.AppendText("Консольный вывод...");
+            consoleOutputViewModel.Text = "Консольный вывод...";
             graphicsOutputViewModel.Clear();
         }
 
@@ -96,8 +95,7 @@ namespace KID.ViewModels
             if (code != null)
             {
                 codeEditorViewModel.Text = code;
-                consoleOutputViewModel.Clear();
-                consoleOutputViewModel.AppendText("Консольный вывод...");
+                consoleOutputViewModel.Text = "Консольный вывод...";
                 graphicsOutputViewModel.Clear();
             }
         }

@@ -19,10 +19,15 @@ namespace KID.ViewModels
         }
 
         public void Clear() => ConsoleOutputControl.Clear();
-        public void AppendText(string text)
+        
+        public string Text
         {
-            ConsoleOutputControl.AppendText(text);
-            ConsoleOutputControl.ScrollToEnd();
+            get => ConsoleOutputControl.Text;
+            set
+            {
+                ConsoleOutputControl.Text = value;
+                ConsoleOutputControl.ScrollToEnd();
+            }
         }
     }
 }
