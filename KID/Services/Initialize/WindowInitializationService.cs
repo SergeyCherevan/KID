@@ -14,24 +14,28 @@ namespace KID.Services.Initialize
     public class WindowInitializationService : IWindowInitializationService
     {
         private readonly IWindowConfigurationService windowConfigurationService;
+
         private readonly IMainViewModel mainViewModel;
         private readonly ICodeEditorViewModel codeEditorViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
+
         private readonly MainWindow mainWindow;
 
         public WindowInitializationService(
             IWindowConfigurationService windowConfigurationService,
             IMainViewModel mainViewModel,
             ICodeEditorViewModel codeEditorViewModel,
-            IConsoleOutputViewModel consoleOutputViewModel
+            IConsoleOutputViewModel consoleOutputViewModel,
+            MainWindow mainWindow
         )
         {
             this.windowConfigurationService = windowConfigurationService;
+
             this.mainViewModel = mainViewModel;
             this.codeEditorViewModel = codeEditorViewModel;
             this.consoleOutputViewModel = consoleOutputViewModel;
 
-            this.mainWindow = Application.Current.MainWindow as MainWindow;
+            this.mainWindow = mainWindow;
         }
 
         public void Initialize()

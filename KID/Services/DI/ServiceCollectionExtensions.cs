@@ -5,6 +5,7 @@ using KID.Services.Initialize;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels;
 using KID.ViewModels.Interfaces;
+using System.Windows;
 
 namespace KID.Services.DI
 {
@@ -28,6 +29,9 @@ namespace KID.Services.DI
             services.AddSingleton<ICodeEditorViewModel, CodeEditorViewModel>();
             services.AddSingleton<IConsoleOutputViewModel, ConsoleOutputViewModel>();
             services.AddSingleton<IGraphicsOutputViewModel, GraphicsOutputViewModel>();
+
+            // MainWindow
+            services.AddTransient<MainWindow>(sp => Application.Current.MainWindow as MainWindow);
 
             return services;
         }
