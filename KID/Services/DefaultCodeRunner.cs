@@ -26,7 +26,7 @@ namespace KID.Services
                         // Извлекаем внутреннее исключение
                         if (ex.InnerException is OperationCanceledException)
                         {
-                            Console.WriteLine("Программа остановленна");
+                            Console.WriteLine("Программа остановлена");
                         }
                         else
                         {
