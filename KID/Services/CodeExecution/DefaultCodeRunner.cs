@@ -17,7 +17,7 @@ namespace KID.Services.CodeExecution
                 if (entry != null)
                 {
                     var parameters = entry.GetParameters().Length == 0 ? null : new object[] { new string[0] };
-                    try 
+                    try
                     {
                         entry.Invoke(null, parameters);
                     }
@@ -30,16 +30,19 @@ namespace KID.Services.CodeExecution
                         }
                         else
                         {
-                            // Пробрасываем другие исключения
-                            throw ex.InnerException ?? ex;
+                            var innerEx = ex.InnerException;
+                            var errorMessage = innerEx?.Message ?? ex.Message;
+                            var stackTrace = innerEx?.StackTrace ?? ex.StackTrace;
+                            Console.WriteLine($"Ошибка выполнения: {errorMessage}\nСтек: {stackTrace}");
                         }
                     }
                     catch (OperationCanceledException)
                     {
-                        Console.WriteLine("Программа остановленна");
+                        Console.WriteLine("Программа остановлена");
                     }
                 }
-            }, cancellationToken);
+            },
+            cancellationToken);
         }
     }
 }

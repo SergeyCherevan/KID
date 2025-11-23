@@ -26,30 +26,27 @@ namespace KID.Services.CodeExecution
 
             try
             {
+                var originalConsole = Console.Out;
+                Console.SetOut(new ConsoleRedirector(context.ConsoleOutputCallback));
+
+                Graphics.Init(context.GraphicsCanvas);
+
                 var result = await compiler.CompileAsync(code, context.CancellationToken);
 
                 if (!result.Success)
                 {
                     foreach (var error in result.Errors)
-                        context.ConsoleOutputCallback?.Invoke(error);
+                        Console.WriteLine(error);
                     return;
                 }
 
-                Graphics.Init(context.GraphicsCanvas);
-
-                var originalConsole = Console.Out;
-                Console.SetOut(new ConsoleRedirector(context.ConsoleOutputCallback));
-
                 try
                 {
-                    await Task.Run(async () => 
-                    {
-                        await runner.RunAsync(result.Assembly, context.CancellationToken);
-                    }, context.CancellationToken);
+                    await runner.RunAsync(result.Assembly, context.CancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    context.ConsoleOutputCallback?.Invoke($"Ошибка выполнения: {ex.Message}");
+                    Console.WriteLine($"Ошибка выполнения: {ex.Message}\nСтек: {ex.StackTrace}");
                 }
                 finally
                 {
