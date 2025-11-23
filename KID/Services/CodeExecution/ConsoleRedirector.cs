@@ -29,7 +29,11 @@ namespace KID.Services.CodeExecution
             }
             else
             {
-                dispatcher.BeginInvoke(() => textBox.AppendText(value), DispatcherPriority.Background);
+                dispatcher.BeginInvoke(() =>
+                {
+                    textBox.AppendText(value);
+                    textBox.ScrollToEnd();
+                }, DispatcherPriority.Background);
             }
         }
 
