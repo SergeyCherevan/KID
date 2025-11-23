@@ -1,14 +1,9 @@
-using System;
-using System.ComponentModel;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Input;
 using KID.Services;
+using KID.Services.Initialize.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
-using KID.Views;
-using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
+using System.Windows.Input;
 
 namespace KID.ViewModels
 {
@@ -17,17 +12,23 @@ namespace KID.ViewModels
         private readonly CodeExecutionService codeExecutionService;
         private CancellationTokenSource? cancellationSource;
         private bool isStopButtonEnabled;
-        private ICodeEditorViewModel codeEditorViewModel;
-        private IConsoleOutputViewModel consoleOutputViewModel;
-        private IGraphicsOutputViewModel graphicsOutputViewModel;
+
+        private readonly IWindowConfigurationService windowConfigurationService;
+
+        private readonly ICodeEditorViewModel codeEditorViewModel;
+        private readonly IConsoleOutputViewModel consoleOutputViewModel;
+        private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
 
         public MenuViewModel(
+            IWindowConfigurationService windowConfigurationService,
             CodeExecutionService codeExecutionService,
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel
         )
         {
+            this.windowConfigurationService = windowConfigurationService;
+
             this.codeExecutionService = codeExecutionService;
             this.codeEditorViewModel = codeEditorViewModel;
             this.consoleOutputViewModel = consoleOutputViewModel;
@@ -50,7 +51,7 @@ namespace KID.ViewModels
 
         private void CodeEditorViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ICodeEditorViewModel.CanUndo) || 
+            if (e.PropertyName == nameof(ICodeEditorViewModel.CanUndo) ||
                 e.PropertyName == nameof(ICodeEditorViewModel.CanRedo))
             {
                 OnPropertyChanged(nameof(CanUndo));
@@ -76,17 +77,7 @@ namespace KID.ViewModels
 
         private void ExecuteNewFile()
         {
-            var code = @"System.Console.WriteLine(""Hello World!"");
-
-KID.Graphics.SetColor(255, 0, 0);
-KID.Graphics.Circle(150, 150, 125);
-
-KID.Graphics.SetColor(0x0000FF);
-KID.Graphics.Rectangle(150, 150, 100, 100);
-
-KID.Graphics.SetColor(""White"");
-KID.Graphics.SetFont(""Arial"", 25);
-KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
+            var code = windowConfigurationService.Settings.TemplateCode;
 
             codeEditorViewModel.Text = code;
             consoleOutputViewModel.Clear();
@@ -146,4 +137,4 @@ KID.Graphics.Text(150, 150, ""Hello\nWorld!"");";
             codeEditorViewModel.RedoCommand.Execute(null);
         }
     }
-} 
+}
