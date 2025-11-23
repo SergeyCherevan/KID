@@ -9,12 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="KIDLibrary\Graphics - Копировать\**" />
     <Compile Remove="ProjectTemplates\**" />
     <Compile Remove="UserProjects\**" />
+    <EmbeddedResource Remove="KIDLibrary\Graphics - Копировать\**" />
     <EmbeddedResource Remove="ProjectTemplates\**" />
     <EmbeddedResource Remove="UserProjects\**" />
+    <None Remove="KIDLibrary\Graphics - Копировать\**" />
     <None Remove="ProjectTemplates\**" />
     <None Remove="UserProjects\**" />
+    <Page Remove="KIDLibrary\Graphics - Копировать\**" />
     <Page Remove="ProjectTemplates\**" />
     <Page Remove="UserProjects\**" />
   </ItemGroup>
