@@ -3,17 +3,18 @@ using System.IO;
 using System.Text;
 using System.Windows.Threading;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace KID.Services.CodeExecution
 {
     public class ConsoleRedirector : TextWriter
     {
-        private readonly Action<string> output;
+        private readonly TextBox textBox;
         private readonly Dispatcher dispatcher;
 
-        public ConsoleRedirector(Action<string> output)
+        public ConsoleRedirector(TextBox textBox)
         {
-            this.output = output;
+            this.textBox = textBox;
             dispatcher = Application.Current.Dispatcher;
         }
 
@@ -23,11 +24,11 @@ namespace KID.Services.CodeExecution
         {
             if (dispatcher.CheckAccess())
             {
-                output(value);
+                textBox.AppendText(value);
             }
             else
             {
-                dispatcher.BeginInvoke(() => output(value), DispatcherPriority.Background);
+                dispatcher.BeginInvoke(() => textBox.AppendText(value), DispatcherPriority.Background);
             }
         }
 

@@ -18,6 +18,7 @@ namespace KID.Services.DI
             services.AddSingleton<ICodeRunner, DefaultCodeRunner>();
             services.AddSingleton<ICodeExecutionService, CodeExecutionService>();
             services.AddSingleton<ConsoleRedirector>();
+            services.AddSingleton<CanvasTextBoxContextFabric>();
 
             // Window Configuration Services
             services.AddSingleton<IWindowConfigurationService, WindowConfigurationService>();

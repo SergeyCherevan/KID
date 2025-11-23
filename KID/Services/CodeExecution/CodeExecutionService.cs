@@ -27,9 +27,9 @@ namespace KID.Services.CodeExecution
             try
             {
                 var originalConsole = Console.Out;
-                Console.SetOut(new ConsoleRedirector(context.ConsoleOutputCallback));
+                Console.SetOut(new ConsoleRedirector(context.ConsoleContext.ConsoleTarget as TextBox));
 
-                Graphics.Init(context.GraphicsCanvas);
+                Graphics.Init(context.GraphicsContext.GraphicsTarget as Canvas);
 
                 var result = await compiler.CompileAsync(code, context.CancellationToken);
 

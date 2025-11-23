@@ -12,6 +12,7 @@ namespace KID.ViewModels
     public class MenuViewModel : ViewModelBase, IMenuViewModel
     {
         private readonly ICodeExecutionService codeExecutionService;
+        private readonly CanvasTextBoxContextFabric canvasTextBoxContextFabric;
         private CancellationTokenSource? cancellationSource;
         private bool isStopButtonEnabled;
 
@@ -24,14 +25,16 @@ namespace KID.ViewModels
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
             ICodeExecutionService codeExecutionService,
+            CanvasTextBoxContextFabric canvasTextBoxContextFabric,
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel
         )
         {
             this.windowConfigurationService = windowConfigurationService;
-
             this.codeExecutionService = codeExecutionService;
+            this.canvasTextBoxContextFabric = canvasTextBoxContextFabric;
+
             this.codeEditorViewModel = codeEditorViewModel;
             this.consoleOutputViewModel = consoleOutputViewModel;
             this.graphicsOutputViewModel = graphicsOutputViewModel;
@@ -113,12 +116,11 @@ namespace KID.ViewModels
             consoleOutputViewModel.Clear();
             graphicsOutputViewModel.Clear();
 
-            CodeExecutionContext context = new CodeExecutionContext()
-            {
-                ConsoleOutputCallback = consoleOutputViewModel.AppendText,
-                GraphicsCanvas = graphicsOutputViewModel.GraphicsCanvasControl,
-                CancellationToken = cancellationSource.Token
-            };
+            CodeExecutionContext context = canvasTextBoxContextFabric.Create(
+                graphicsOutputViewModel.GraphicsCanvasControl,
+                consoleOutputViewModel.ConsoleOutputControl,
+                cancellationSource.Token
+            );
 
             await codeExecutionService.ExecuteAsync(codeEditorViewModel.Text, context);
 
