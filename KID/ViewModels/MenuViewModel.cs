@@ -32,9 +32,9 @@ namespace KID.ViewModels
         )
         {
             this.windowConfigurationService = windowConfigurationService;
-
             this.codeExecutionService = codeExecutionService;
             this.contextFactory = contextFactory;
+
             this.codeEditorViewModel = codeEditorViewModel;
             this.consoleOutputViewModel = consoleOutputViewModel;
             this.graphicsOutputViewModel = graphicsOutputViewModel;
@@ -118,8 +118,7 @@ namespace KID.ViewModels
 
             var context = contextFactory.Create(
                 graphicsCanvas: graphicsOutputViewModel.GraphicsCanvasControl,
-                consoleOutput: consoleOutputViewModel.AppendText,
-                errorOutput: consoleOutputViewModel.AppendText,
+                consoleTextBox: consoleOutputViewModel.ConsoleOutputControl,
                 cancellationToken: cancellationSource.Token
             );
 

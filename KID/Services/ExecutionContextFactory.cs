@@ -11,34 +11,29 @@ namespace KID.Services
     public class ExecutionContextFactory
     {
         private readonly IGraphicsContext graphicsContext;
+        private readonly IConsoleContext consoleContext;
 
-        public ExecutionContextFactory(IGraphicsContext graphicsContext)
+        public ExecutionContextFactory(
+            IGraphicsContext graphicsContext,
+            IConsoleContext consoleContext)
         {
             this.graphicsContext = graphicsContext ?? throw new ArgumentNullException(nameof(graphicsContext));
+            this.consoleContext = consoleContext ?? throw new ArgumentNullException(nameof(consoleContext));
         }
 
         public IExecutionContext Create(
             Canvas graphicsCanvas,
-            Action<string> consoleOutput = null,
-            Action<string> errorOutput = null,
-            Func<string> inputProvider = null, // Для поддержки ReadLine
-            Func<ConsoleKeyInfo> keyProvider = null, // Для поддержки ReadKey
+            TextBox consoleTextBox,
             CancellationToken cancellationToken = default)
         {
-            var console = new WpfConsole(
-                outputCallback: consoleOutput,
-                inputProvider: inputProvider,
-                keyProvider: keyProvider
-            );
-            
             var context = new ExecutionContext(
                 graphicsContext,
-                console,
-                cancellationToken,
-                errorOutput ?? consoleOutput
+                consoleContext,
+                cancellationToken
             );
             
             context.SetGraphicsTarget(graphicsCanvas);
+            context.SetConsoleTarget(consoleTextBox);
             
             return context;
         }

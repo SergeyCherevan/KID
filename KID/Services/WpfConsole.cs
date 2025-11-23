@@ -1,7 +1,9 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using KID.Services.Interfaces;
 
@@ -12,10 +14,16 @@ namespace KID.Services
     /// </summary>
     public class WpfConsole : IConsole, IDisposable
     {
-        private readonly Action<string> outputCallback;
-        private readonly Func<string> inputProvider; // Для ReadLine
-        private readonly Func<ConsoleKeyInfo> keyProvider; // Для ReadKey
+        private readonly System.Windows.Controls.TextBox textBox;
         private readonly Dispatcher dispatcher;
+        
+        // Для синхронизации ввода
+        private readonly ManualResetEventSlim inputWaitHandle = new ManualResetEventSlim(false);
+        private string pendingInput = string.Empty;
+        private ConsoleKeyInfo? pendingKey;
+        private bool isWaitingForLine = false;
+        private bool isWaitingForKey = false;
+        private int inputStartPosition = 0;
         
         private ConsoleColor foregroundColor = ConsoleColor.Gray;
         private ConsoleColor backgroundColor = ConsoleColor.Black;
@@ -36,15 +44,14 @@ namespace KID.Services
         
         public event EventHandler<string> OutputReceived;
 
-        public WpfConsole(
-            Action<string> outputCallback,
-            Func<string> inputProvider = null,
-            Func<ConsoleKeyInfo> keyProvider = null)
+        public WpfConsole(System.Windows.Controls.TextBox textBox)
         {
-            this.outputCallback = outputCallback ?? throw new ArgumentNullException(nameof(outputCallback));
-            this.inputProvider = inputProvider;
-            this.keyProvider = keyProvider;
+            this.textBox = textBox ?? throw new ArgumentNullException(nameof(textBox));
             this.dispatcher = Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
+            
+            // Подписываемся на события TextBox для обработки ввода
+            textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
+            textBox.TextChanged += TextBox_TextChanged;
             
             // Сохраняем оригинальные потоки
             originalOut = System.Console.Out;
@@ -66,19 +73,110 @@ namespace KID.Services
             System.Console.SetError(Error);
         }
 
+        private void TextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (isWaitingForLine)
+            {
+                // Режим ReadLine - ждем Enter
+                if (e.Key == Key.Enter)
+                {
+                    // Читаем ввод от позиции inputStartPosition до конца
+                    var currentText = textBox.Text;
+                    if (currentText.Length >= inputStartPosition)
+                    {
+                        pendingInput = currentText.Substring(inputStartPosition);
+                        inputWaitHandle.Set();
+                        e.Handled = true;
+                    }
+                }
+                else if (e.Key == Key.Escape)
+                {
+                    pendingInput = string.Empty;
+                    inputWaitHandle.Set();
+                    e.Handled = true;
+                }
+            }
+            else if (isWaitingForKey)
+            {
+                // Режим ReadKey - сохраняем информацию о клавише
+                var key = ConvertWpfKeyToConsoleKey(e.Key);
+                var keyChar = GetKeyChar(e.Key, e.KeyboardDevice.Modifiers);
+                pendingKey = new ConsoleKeyInfo(keyChar, key, 
+                    (e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0,
+                    (e.KeyboardDevice.Modifiers & ModifierKeys.Alt) != 0,
+                    (e.KeyboardDevice.Modifiers & ModifierKeys.Control) != 0);
+                inputWaitHandle.Set();
+                e.Handled = true;
+            }
+        }
+
+        private void TextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            // Обновляем позицию курсора для отслеживания ввода
+            // Можно добавить дополнительную логику если нужно
+        }
+
+        private ConsoleKey ConvertWpfKeyToConsoleKey(Key wpfKey)
+        {
+            // Простое преобразование основных клавиш
+            if (wpfKey >= Key.A && wpfKey <= Key.Z)
+                return (ConsoleKey)((int)ConsoleKey.A + (wpfKey - Key.A));
+            if (wpfKey >= Key.D0 && wpfKey <= Key.D9)
+                return (ConsoleKey)((int)ConsoleKey.D0 + (wpfKey - Key.D0));
+            
+            // Специальные клавиши
+            return wpfKey switch
+            {
+                Key.Enter => ConsoleKey.Enter,
+                Key.Escape => ConsoleKey.Escape,
+                Key.Space => ConsoleKey.Spacebar,
+                Key.Back => ConsoleKey.Backspace,
+                Key.Delete => ConsoleKey.Delete,
+                Key.Left => ConsoleKey.LeftArrow,
+                Key.Right => ConsoleKey.RightArrow,
+                Key.Up => ConsoleKey.UpArrow,
+                Key.Down => ConsoleKey.DownArrow,
+                _ => ConsoleKey.NoName
+            };
+        }
+
+        private char GetKeyChar(Key key, ModifierKeys modifiers)
+        {
+            // Упрощенное преобразование клавиши в символ
+            if (key >= Key.A && key <= Key.Z)
+            {
+                var isShift = (modifiers & ModifierKeys.Shift) != 0;
+                var baseChar = (char)('a' + (key - Key.A));
+                return isShift ? char.ToUpper(baseChar) : baseChar;
+            }
+            if (key >= Key.D0 && key <= Key.D9)
+            {
+                return (char)('0' + (key - Key.D0));
+            }
+            return key switch
+            {
+                Key.Space => ' ',
+                Key.Enter => '\r',
+                Key.Tab => '\t',
+                _ => '\0'
+            };
+        }
+
         // === Вывод ===
         public void Write(string value)
         {
             if (dispatcher.CheckAccess())
             {
-                outputCallback(value);
+                textBox.AppendText(value);
+                textBox.ScrollToEnd();
                 OutputReceived?.Invoke(this, value);
             }
             else
             {
                 dispatcher.BeginInvoke(() => 
                 {
-                    outputCallback(value);
+                    textBox.AppendText(value);
+                    textBox.ScrollToEnd();
                     OutputReceived?.Invoke(this, value);
                 }, DispatcherPriority.Background);
             }
@@ -97,19 +195,50 @@ namespace KID.Services
         // === Ввод ===
         public int Read()
         {
-            if (inputProvider == null)
-                throw new NotSupportedException("Ввод не поддерживается. Укажите inputProvider при создании WpfConsole.");
-            
-            var input = inputProvider();
-            return input.Length > 0 ? input[0] : -1;
+            var line = ReadLine();
+            return line.Length > 0 ? line[0] : -1;
         }
 
         public string ReadLine()
         {
-            if (inputProvider == null)
-                throw new NotSupportedException("ReadLine не поддерживается. Укажите inputProvider при создании WpfConsole.");
+            isWaitingForLine = true;
+            inputStartPosition = textBox.Text.Length;
+            inputWaitHandle.Reset();
+            pendingInput = string.Empty;
             
-            return inputProvider();
+            // Делаем TextBox доступным для редактирования
+            if (dispatcher.CheckAccess())
+            {
+                textBox.IsReadOnly = false;
+                textBox.Focus();
+            }
+            else
+            {
+                dispatcher.BeginInvoke(() =>
+                {
+                    textBox.IsReadOnly = false;
+                    textBox.Focus();
+                }, DispatcherPriority.Normal);
+            }
+            
+            // Ждем ввода (блокирующий вызов)
+            inputWaitHandle.Wait();
+            
+            isWaitingForLine = false;
+            var result = pendingInput;
+            pendingInput = string.Empty;
+            
+            // Возвращаем TextBox в режим только для чтения
+            if (dispatcher.CheckAccess())
+            {
+                textBox.IsReadOnly = true;
+            }
+            else
+            {
+                dispatcher.BeginInvoke(() => textBox.IsReadOnly = true, DispatcherPriority.Normal);
+            }
+            
+            return result;
         }
 
         public ConsoleKeyInfo ReadKey()
@@ -119,10 +248,43 @@ namespace KID.Services
 
         public ConsoleKeyInfo ReadKey(bool intercept)
         {
-            if (keyProvider == null)
-                throw new NotSupportedException("ReadKey не поддерживается. Укажите keyProvider при создании WpfConsole.");
+            isWaitingForKey = true;
+            inputWaitHandle.Reset();
+            pendingKey = null;
             
-            return keyProvider();
+            // Делаем TextBox доступным для редактирования
+            if (dispatcher.CheckAccess())
+            {
+                textBox.IsReadOnly = false;
+                textBox.Focus();
+            }
+            else
+            {
+                dispatcher.BeginInvoke(() =>
+                {
+                    textBox.IsReadOnly = false;
+                    textBox.Focus();
+                }, DispatcherPriority.Normal);
+            }
+            
+            // Ждем нажатия клавиши (блокирующий вызов)
+            inputWaitHandle.Wait();
+            
+            isWaitingForKey = false;
+            var result = pendingKey ?? new ConsoleKeyInfo('\0', ConsoleKey.NoName, false, false, false);
+            pendingKey = null;
+            
+            // Возвращаем TextBox в режим только для чтения
+            if (dispatcher.CheckAccess())
+            {
+                textBox.IsReadOnly = true;
+            }
+            else
+            {
+                dispatcher.BeginInvoke(() => textBox.IsReadOnly = true, DispatcherPriority.Normal);
+            }
+            
+            return result;
         }
 
         // === Потоки ===
@@ -196,8 +358,14 @@ namespace KID.Services
         // === Другие методы ===
         public void Clear()
         {
-            // Можно добавить событие для очистки UI
-            Write("\f"); // Form feed - символ очистки, или специальная команда
+            if (dispatcher.CheckAccess())
+            {
+                textBox.Clear();
+            }
+            else
+            {
+                dispatcher.BeginInvoke(() => textBox.Clear(), DispatcherPriority.Background);
+            }
         }
 
         public void Beep()
@@ -212,9 +380,17 @@ namespace KID.Services
 
         public void Dispose()
         {
+            // Отписываемся от событий
+            textBox.PreviewKeyDown -= TextBox_PreviewKeyDown;
+            textBox.TextChanged -= TextBox_TextChanged;
+            
+            // Восстанавливаем оригинальные потоки
             System.Console.SetOut(originalOut);
             System.Console.SetIn(originalIn);
             System.Console.SetError(originalError);
+            
+            // Освобождаем ресурсы
+            inputWaitHandle?.Dispose();
         }
     }
 

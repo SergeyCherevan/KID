@@ -10,27 +10,26 @@ namespace KID.Services
     public class ExecutionContext : IExecutionContext, IDisposable
     {
         public IGraphicsContext Graphics { get; }
-        public IConsole Console { get; }
+        public IConsole Console { get; private set; }
         public CancellationToken CancellationToken { get; }
         
-        private readonly Action<string> errorHandler;
+        private readonly IConsoleContext consoleContext;
         private object graphicsTarget;
+        private IConsole originalConsole;
 
         public ExecutionContext(
             IGraphicsContext graphicsContext,
-            IConsole console,
-            CancellationToken cancellationToken,
-            Action<string> errorHandler = null)
+            IConsoleContext consoleContext,
+            CancellationToken cancellationToken)
         {
             Graphics = graphicsContext ?? throw new ArgumentNullException(nameof(graphicsContext));
-            Console = console ?? throw new ArgumentNullException(nameof(console));
+            this.consoleContext = consoleContext ?? throw new ArgumentNullException(nameof(consoleContext));
             CancellationToken = cancellationToken;
-            this.errorHandler = errorHandler;
         }
 
         public void ReportError(string message)
         {
-            errorHandler?.Invoke(message);
+            Console?.WriteLine(message);
         }
 
         public void SetGraphicsTarget(object graphicsTarget)
@@ -39,6 +38,20 @@ namespace KID.Services
             if (graphicsTarget != null)
             {
                 Graphics.Initialize(graphicsTarget);
+            }
+        }
+
+        public void SetConsoleTarget(object consoleTarget)
+        {
+            // Освобождаем предыдущий консоль, если был
+            if (Console is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+            
+            if (consoleTarget != null)
+            {
+                Console = consoleContext.CreateConsole(consoleTarget);
             }
         }
 

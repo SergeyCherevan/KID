@@ -31,6 +31,11 @@ namespace KID.Services.Interfaces
         /// Устанавливает цель для графики (например, Canvas)
         /// </summary>
         void SetGraphicsTarget(object graphicsTarget);
+        
+        /// <summary>
+        /// Устанавливает цель для консоли (например, TextBox)
+        /// </summary>
+        void SetConsoleTarget(object consoleTarget);
     }
 }
 

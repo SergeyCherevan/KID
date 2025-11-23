@@ -21,6 +21,7 @@ namespace KID.Services.DI
             
             // Новые сервисы для контекста выполнения
             services.AddSingleton<IGraphicsContext, WpfGraphicsContext>();
+            services.AddSingleton<IConsoleContext, WpfConsoleContext>();
             services.AddSingleton<ExecutionContextFactory>();
 
             // Window Configuration Services
