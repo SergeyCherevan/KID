@@ -18,6 +18,10 @@ namespace KID.Services.DI
             services.AddSingleton<ICodeRunner, DefaultCodeRunner>();
             services.AddSingleton<ICodeExecutionService, CodeExecutionService>();
             services.AddSingleton<ConsoleRedirector>();
+            
+            // Новые сервисы для контекста выполнения
+            services.AddSingleton<IGraphicsContext, WpfGraphicsContext>();
+            services.AddSingleton<ExecutionContextFactory>();
 
             // Window Configuration Services
             services.AddSingleton<IWindowConfigurationService, WindowConfigurationService>();

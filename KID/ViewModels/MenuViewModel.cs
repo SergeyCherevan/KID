@@ -3,6 +3,7 @@ using KID.Services.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
+using System;
 using System.ComponentModel;
 using System.Windows.Input;
 
@@ -11,6 +12,7 @@ namespace KID.ViewModels
     public class MenuViewModel : ViewModelBase, IMenuViewModel
     {
         private readonly ICodeExecutionService codeExecutionService;
+        private readonly ExecutionContextFactory contextFactory;
         private CancellationTokenSource? cancellationSource;
         private bool isStopButtonEnabled;
 
@@ -23,6 +25,7 @@ namespace KID.ViewModels
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
             ICodeExecutionService codeExecutionService,
+            ExecutionContextFactory contextFactory,
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel
@@ -31,6 +34,7 @@ namespace KID.ViewModels
             this.windowConfigurationService = windowConfigurationService;
 
             this.codeExecutionService = codeExecutionService;
+            this.contextFactory = contextFactory;
             this.codeEditorViewModel = codeEditorViewModel;
             this.consoleOutputViewModel = consoleOutputViewModel;
             this.graphicsOutputViewModel = graphicsOutputViewModel;
@@ -112,14 +116,28 @@ namespace KID.ViewModels
             consoleOutputViewModel.Clear();
             graphicsOutputViewModel.Clear();
 
-            await codeExecutionService.ExecuteAsync(
-                codeEditorViewModel.Text,
-                consoleOutputViewModel.AppendText,
-                graphicsOutputViewModel.GraphicsCanvasControl,
-                cancellationSource.Token
+            var context = contextFactory.Create(
+                graphicsCanvas: graphicsOutputViewModel.GraphicsCanvasControl,
+                consoleOutput: consoleOutputViewModel.AppendText,
+                errorOutput: consoleOutputViewModel.AppendText,
+                cancellationToken: cancellationSource.Token
             );
 
-            IsStopButtonEnabled = false;
+            try
+            {
+                await codeExecutionService.ExecuteAsync(
+                    codeEditorViewModel.Text,
+                    context
+                );
+            }
+            finally
+            {
+                if (context is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+                IsStopButtonEnabled = false;
+            }
         }
 
         private void ExecuteStop()

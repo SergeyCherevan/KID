@@ -1,8 +1,6 @@
 ﻿using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Controls;
 using KID.Services.Interfaces;
 
 namespace KID.Services
@@ -15,45 +13,41 @@ namespace KID.Services
 
         public CodeExecutionService(ICodeCompiler compiler, ICodeRunner runner)
         {
-            this.compiler = compiler;
-            this.runner = runner;
+            this.compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
+            this.runner = runner ?? throw new ArgumentNullException(nameof(runner));
         }
 
-        public async Task ExecuteAsync(string code, Action<string> consoleOutputCallback, Canvas graphicsCanvas, CancellationToken token = default)
+        public async Task ExecuteAsync(string code, IExecutionContext context)
         {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
             if (isRunning) return;
             isRunning = true;
 
             try
             {
-                var result = await compiler.CompileAsync(code, token);
+                var result = await compiler.CompileAsync(code, context.CancellationToken);
 
                 if (!result.Success)
                 {
                     foreach (var error in result.Errors)
-                        consoleOutputCallback?.Invoke(error);
+                        context.ReportError(error);
                     return;
                 }
 
-                Graphics.Init(graphicsCanvas);
-
-                var originalConsole = Console.Out;
-                Console.SetOut(new ConsoleRedirector(consoleOutputCallback));
+                // Инициализация графики уже выполнена в ExecutionContextFactory.Create()
 
                 try
                 {
                     await Task.Run(async () => 
                     {
-                        await runner.RunAsync(result.Assembly, token);
-                    }, token);
+                        await runner.RunAsync(result.Assembly, context);
+                    }, context.CancellationToken);
                 }
                 catch (Exception ex)
                 {
-                    consoleOutputCallback?.Invoke($"Ошибка выполнения: {ex.Message}");
-                }
-                finally
-                {
-                    Console.SetOut(originalConsole);
+                    context.ReportError($"Ошибка выполнения: {ex.Message}");
                 }
             }
             finally
