@@ -17,7 +17,6 @@ namespace KID.Services.DI
             services.AddSingleton<ICodeCompiler, CSharpCompiler>();
             services.AddSingleton<ICodeRunner, DefaultCodeRunner>();
             services.AddSingleton<ICodeExecutionService, CodeExecutionService>();
-            services.AddSingleton<ConsoleRedirector>();
             services.AddSingleton<CanvasTextBoxContextFabric>();
 
             // Window Configuration Services
