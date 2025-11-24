@@ -1,13 +1,10 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Threading;
 using KID.Services.Interfaces;
 
@@ -22,8 +19,6 @@ namespace KID.Services.CodeExecution
         private readonly Dispatcher dispatcher;
         private readonly ConcurrentQueue<string> inputQueue;
         private readonly AutoResetEvent inputAvailable;
-        private ConsoleColor foregroundColor;
-        private ConsoleColor backgroundColor;
         private TextWriter textWriter;
         private TextReader textReader;
 
@@ -40,7 +35,6 @@ namespace KID.Services.CodeExecution
             
             // Настройка TextBox для ввода
             textBox.KeyDown += TextBox_KeyDown;
-            textBox.TextChanged += TextBox_TextChanged;
         }
 
         // === Вывод ===
@@ -126,107 +120,6 @@ namespace KID.Services.CodeExecution
             set => textWriter = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        // === Цвета ===
-        public ConsoleColor ForegroundColor
-        {
-            get => foregroundColor;
-            set
-            {
-                foregroundColor = value;
-                InvokeOnUIThread(() =>
-                {
-                    textBox.Foreground = new SolidColorBrush(ConvertConsoleColorToColor(value));
-                });
-            }
-        }
-
-        public ConsoleColor BackgroundColor
-        {
-            get => backgroundColor;
-            set
-            {
-                backgroundColor = value;
-                InvokeOnUIThread(() =>
-                {
-                    textBox.Background = new SolidColorBrush(ConvertConsoleColorToColor(value));
-                });
-            }
-        }
-
-        public void ResetColor()
-        {
-            ForegroundColor = ConsoleColor.Gray;
-            BackgroundColor = ConsoleColor.Black;
-        }
-
-        // === Позиция курсора ===
-        public int CursorLeft
-        {
-            get => InvokeOnUIThread(() => GetCursorPosition().left);
-            set => InvokeOnUIThread(() => SetCursorPosition(value, CursorTop));
-        }
-
-        public int CursorTop
-        {
-            get => InvokeOnUIThread(() => GetCursorPosition().top);
-            set => InvokeOnUIThread(() => SetCursorPosition(CursorLeft, value));
-        }
-
-        public void SetCursorPosition(int left, int top)
-        {
-            InvokeOnUIThread(() =>
-            {
-                // В WPF TextBox нет прямого аналога, используем CaretIndex
-                int position = Math.Min(left, textBox.Text.Length);
-                textBox.CaretIndex = position;
-                textBox.Focus();
-            });
-        }
-
-        // === Размеры окна ===
-        public int WindowWidth
-        {
-            get => InvokeOnUIThread(() => (int)textBox.ActualWidth);
-            set { /* WPF TextBox не поддерживает установку ширины напрямую */ }
-        }
-
-        public int WindowHeight
-        {
-            get => InvokeOnUIThread(() => (int)textBox.ActualHeight);
-            set { /* WPF TextBox не поддерживает установку высоты напрямую */ }
-        }
-
-        public int BufferWidth
-        {
-            get => WindowWidth;
-            set => WindowWidth = value;
-        }
-
-        public int BufferHeight
-        {
-            get => WindowHeight;
-            set => WindowHeight = value;
-        }
-
-        // === Другие методы ===
-        public void Clear()
-        {
-            InvokeOnUIThread(() =>
-            {
-                textBox.Clear();
-            });
-        }
-
-        public void Beep()
-        {
-            System.Console.Beep();
-        }
-
-        public void Beep(int frequency, int duration)
-        {
-            System.Console.Beep(frequency, duration);
-        }
-
         // === События ===
         public event EventHandler<string>? OutputReceived;
 
@@ -241,122 +134,6 @@ namespace KID.Services.CodeExecution
             {
                 dispatcher.BeginInvoke(action, DispatcherPriority.Background);
             }
-        }
-
-        private T InvokeOnUIThread<T>(Func<T> func)
-        {
-            if (dispatcher.CheckAccess())
-            {
-                return func();
-            }
-            else
-            {
-                T result = default(T)!;
-                dispatcher.Invoke(() => result = func(), DispatcherPriority.Background);
-                return result;
-            }
-        }
-
-        private (int left, int top) GetCursorPosition()
-        {
-            int caretIndex = textBox.CaretIndex;
-            string text = textBox.Text;
-            
-            int left = 0;
-            int top = 0;
-            
-            for (int i = 0; i < caretIndex && i < text.Length; i++)
-            {
-                if (text[i] == '\n')
-                {
-                    top++;
-                    left = 0;
-                }
-                else
-                {
-                    left++;
-                }
-            }
-            
-            return (left, top);
-        }
-
-        private Color ConvertConsoleColorToColor(ConsoleColor consoleColor)
-        {
-            return consoleColor switch
-            {
-                ConsoleColor.Black => Colors.Black,
-                ConsoleColor.DarkBlue => Colors.DarkBlue,
-                ConsoleColor.DarkGreen => Colors.DarkGreen,
-                ConsoleColor.DarkCyan => Colors.DarkCyan,
-                ConsoleColor.DarkRed => Colors.DarkRed,
-                ConsoleColor.DarkMagenta => Colors.DarkMagenta,
-                ConsoleColor.DarkYellow => Colors.Orange,
-                ConsoleColor.Gray => Colors.Gray,
-                ConsoleColor.DarkGray => Colors.DarkGray,
-                ConsoleColor.Blue => Colors.Blue,
-                ConsoleColor.Green => Colors.Green,
-                ConsoleColor.Cyan => Colors.Cyan,
-                ConsoleColor.Red => Colors.Red,
-                ConsoleColor.Magenta => Colors.Magenta,
-                ConsoleColor.Yellow => Colors.Yellow,
-                ConsoleColor.White => Colors.White,
-                _ => Colors.Gray
-            };
-        }
-
-        private ConsoleColor ConvertColorToConsoleColor(Color color)
-        {
-            // Карта соответствий ConsoleColor -> Color
-            var consoleColorMap = new Dictionary<ConsoleColor, Color>
-            {
-                { ConsoleColor.Black, Colors.Black },
-                { ConsoleColor.DarkBlue, Colors.DarkBlue },
-                { ConsoleColor.DarkGreen, Colors.DarkGreen },
-                { ConsoleColor.DarkCyan, Colors.DarkCyan },
-                { ConsoleColor.DarkRed, Colors.DarkRed },
-                { ConsoleColor.DarkMagenta, Colors.DarkMagenta },
-                { ConsoleColor.DarkYellow, Colors.Orange },
-                { ConsoleColor.Gray, Colors.Gray },
-                { ConsoleColor.DarkGray, Colors.DarkGray },
-                { ConsoleColor.Blue, Colors.Blue },
-                { ConsoleColor.Green, Colors.Green },
-                { ConsoleColor.Cyan, Colors.Cyan },
-                { ConsoleColor.Red, Colors.Red },
-                { ConsoleColor.Magenta, Colors.Magenta },
-                { ConsoleColor.Yellow, Colors.Yellow },
-                { ConsoleColor.White, Colors.White }
-            };
-
-            ConsoleColor closestColor = ConsoleColor.Gray;
-            double minDistance = double.MaxValue;
-
-            // Вычисляем расстояние до каждого ConsoleColor
-            foreach (var kvp in consoleColorMap)
-            {
-                double distance = CalculateColorDistance(color, kvp.Value);
-                if (distance < minDistance)
-                {
-                    minDistance = distance;
-                    closestColor = kvp.Key;
-                }
-            }
-
-            return closestColor;
-        }
-
-        /// <summary>
-        /// Вычисляет евклидово расстояние между двумя цветами в RGB пространстве
-        /// </summary>
-        private double CalculateColorDistance(Color color1, Color color2)
-        {
-            double deltaR = color1.R - color2.R;
-            double deltaG = color1.G - color2.G;
-            double deltaB = color1.B - color2.B;
-            
-            // Используем квадрат расстояния (без корня) для оптимизации
-            // Корень не нужен, так как мы только сравниваем значения
-            return deltaR * deltaR + deltaG * deltaG + deltaB * deltaB;
         }
 
         private ConsoleKey ConvertCharToConsoleKey(char c)
@@ -404,11 +181,6 @@ namespace KID.Services.CodeExecution
                 inputQueue.Enqueue(line);
                 inputAvailable.Set();
             }
-        }
-
-        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            // Можно добавить дополнительную логику при изменении текста
         }
 
         // === Внутренние классы для потоков ===
