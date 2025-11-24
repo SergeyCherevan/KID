@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -21,8 +22,8 @@ namespace KID.Services.CodeExecution
         private readonly Dispatcher dispatcher;
         private readonly ConcurrentQueue<string> inputQueue;
         private readonly AutoResetEvent inputAvailable;
-        private ConsoleColor foregroundColor = ConsoleColor.Gray;
-        private ConsoleColor backgroundColor = ConsoleColor.Black;
+        private ConsoleColor foregroundColor;
+        private ConsoleColor backgroundColor;
         private TextWriter textWriter;
         private TextReader textReader;
 
@@ -302,6 +303,60 @@ namespace KID.Services.CodeExecution
                 ConsoleColor.White => Colors.White,
                 _ => Colors.Gray
             };
+        }
+
+        private ConsoleColor ConvertColorToConsoleColor(Color color)
+        {
+            // Карта соответствий ConsoleColor -> Color
+            var consoleColorMap = new Dictionary<ConsoleColor, Color>
+            {
+                { ConsoleColor.Black, Colors.Black },
+                { ConsoleColor.DarkBlue, Colors.DarkBlue },
+                { ConsoleColor.DarkGreen, Colors.DarkGreen },
+                { ConsoleColor.DarkCyan, Colors.DarkCyan },
+                { ConsoleColor.DarkRed, Colors.DarkRed },
+                { ConsoleColor.DarkMagenta, Colors.DarkMagenta },
+                { ConsoleColor.DarkYellow, Colors.Orange },
+                { ConsoleColor.Gray, Colors.Gray },
+                { ConsoleColor.DarkGray, Colors.DarkGray },
+                { ConsoleColor.Blue, Colors.Blue },
+                { ConsoleColor.Green, Colors.Green },
+                { ConsoleColor.Cyan, Colors.Cyan },
+                { ConsoleColor.Red, Colors.Red },
+                { ConsoleColor.Magenta, Colors.Magenta },
+                { ConsoleColor.Yellow, Colors.Yellow },
+                { ConsoleColor.White, Colors.White }
+            };
+
+            ConsoleColor closestColor = ConsoleColor.Gray;
+            double minDistance = double.MaxValue;
+
+            // Вычисляем расстояние до каждого ConsoleColor
+            foreach (var kvp in consoleColorMap)
+            {
+                double distance = CalculateColorDistance(color, kvp.Value);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestColor = kvp.Key;
+                }
+            }
+
+            return closestColor;
+        }
+
+        /// <summary>
+        /// Вычисляет евклидово расстояние между двумя цветами в RGB пространстве
+        /// </summary>
+        private double CalculateColorDistance(Color color1, Color color2)
+        {
+            double deltaR = color1.R - color2.R;
+            double deltaG = color1.G - color2.G;
+            double deltaB = color1.B - color2.B;
+            
+            // Используем квадрат расстояния (без корня) для оптимизации
+            // Корень не нужен, так как мы только сравниваем значения
+            return deltaR * deltaR + deltaG * deltaG + deltaB * deltaB;
         }
 
         private ConsoleKey ConvertCharToConsoleKey(char c)
