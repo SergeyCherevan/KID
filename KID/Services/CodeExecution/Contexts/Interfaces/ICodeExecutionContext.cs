@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace KID.Services.CodeExecution.Interfaces
+namespace KID.Services.CodeExecution.Contexts.Interfaces
 {
     public interface ICodeExecutionContext : IDisposable
     {

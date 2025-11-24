@@ -1,4 +1,4 @@
-﻿namespace KID.Services.CodeExecution.Interfaces
+﻿namespace KID.Services.CodeExecution.Contexts.Interfaces
 {
     public interface IConsoleContext : IDisposable
     {

@@ -1,10 +1,10 @@
-﻿using KID.Services.CodeExecution.Interfaces;
+﻿using KID.Services.CodeExecution.Contexts.Interfaces;
 using KID.Services.Interfaces;
 using System;
 using System.IO;
 using System.Windows.Controls;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Contexts
 {
     public class TextBoxConsoleContext : IConsoleContext
     {

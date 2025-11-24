@@ -1,7 +1,7 @@
-﻿using KID.Services.CodeExecution.Interfaces;
+﻿using KID.Services.CodeExecution.Contexts.Interfaces;
 using System.Windows.Controls;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Contexts
 {
     public class CanvasGraphicsContext : IGraphicsContext
     {
