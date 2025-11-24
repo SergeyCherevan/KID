@@ -7,7 +7,7 @@ namespace KID.Services.CodeExecution.Interfaces
 {
     public interface ICodeExecutionService
     {
-        Task ExecuteAsync(string code, CodeExecutionContext context);
+        Task ExecuteAsync(string code, ICodeExecutionContext context);
     }
 }
 

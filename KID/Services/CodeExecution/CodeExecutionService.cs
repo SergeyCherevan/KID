@@ -19,17 +19,14 @@ namespace KID.Services.CodeExecution
             this.runner = runner;
         }
 
-        public async Task ExecuteAsync(string code, CodeExecutionContext context)
+        public async Task ExecuteAsync(string code, ICodeExecutionContext context)
         {
             if (isRunning) return;
             isRunning = true;
 
             try
             {
-                var originalConsole = Console.Out;
-                Console.SetOut(new ConsoleRedirector(context.ConsoleContext.ConsoleTarget as TextBox));
-
-                Graphics.Init(context.GraphicsContext.GraphicsTarget as Canvas);
+                context.Init();
 
                 var result = await compiler.CompileAsync(code, context.CancellationToken);
 
@@ -50,7 +47,7 @@ namespace KID.Services.CodeExecution
                 }
                 finally
                 {
-                    Console.SetOut(originalConsole);
+                    context.Dispose();
                 }
             }
             finally

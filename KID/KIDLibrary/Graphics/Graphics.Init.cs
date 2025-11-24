@@ -7,7 +7,7 @@ namespace KID
 {
     public static partial class Graphics
     {
-        private static Canvas Canvas { get; set; }
+        public static Canvas Canvas { get; private set; }
 
         private static Brush fillBrush = Brushes.Black;
         private static Brush strokeBrush = Brushes.Black;

@@ -11,5 +11,12 @@ namespace KID.Services.CodeExecution
         { 
             GraphicsTarget = graphicsCanvas;
         }
+
+        public void Init()
+        {
+            Graphics.Init(GraphicsTarget as Canvas);
+        }
+
+        public void Dispose() { }
     }
 }

@@ -8,10 +8,22 @@ using System.Windows.Controls;
 
 namespace KID.Services.CodeExecution
 {
-    public class CodeExecutionContext
+    public class CodeExecutionContext : ICodeExecutionContext
     {
         public IGraphicsContext GraphicsContext {  get; set; }
         public IConsoleContext ConsoleContext { get; set; }
         public CancellationToken CancellationToken { get; set; } = default;
+
+        public void Init()
+        {
+            GraphicsContext.Init();
+            ConsoleContext.Init();
+        }
+
+        public void Dispose()
+        {
+            GraphicsContext.Dispose();
+            ConsoleContext.Dispose();
+        }
     }
 }
