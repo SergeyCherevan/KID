@@ -34,7 +34,9 @@ namespace KID.Services.CodeExecution
                 if (!result.Success)
                 {
                     foreach (var error in result.Errors)
+                    {
                         Console.WriteLine(error);
+                    }
                     return;
                 }
 
