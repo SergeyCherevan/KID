@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
 using System.Reflection;
@@ -5,19 +6,44 @@ using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.Localization
 {
-    public class LocalizationService : ILocalizationService
+    public class LocalizationService : ILocalizationService, INotifyPropertyChanged
     {
         private ResourceManager _resourceManager;
         private CultureInfo _currentCulture;
 
-        public string CurrentCulture => _currentCulture.Name;
+        public string CurrentCulture
+        {
+            get => _currentCulture.Name;
+            private set
+            {
+                try
+                {
+                    var newCulture = new CultureInfo(value);
+                    if (_currentCulture.Name != newCulture.Name)
+                    {
+                        _currentCulture = newCulture;
+                        OnPropertyChanged(nameof(CurrentCulture));
+                    }
+                }
+                catch
+                {
+                    // Если культура не найдена, игнорируем
+                }
+            }
+        }
         
         public event EventHandler? CultureChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public LocalizationService()
         {
             _resourceManager = new ResourceManager("KID.Resources.Strings", Assembly.GetExecutingAssembly());
             _currentCulture = CultureInfo.CurrentUICulture;
+        }
+
+        protected virtual void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         public string GetString(string key)
@@ -49,7 +75,7 @@ namespace KID.Services.Localization
         {
             try
             {
-                _currentCulture = new CultureInfo(cultureCode);
+                CurrentCulture = cultureCode;
                 CultureChanged?.Invoke(this, EventArgs.Empty);
             }
             catch

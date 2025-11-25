@@ -1,4 +1,5 @@
 using System;
+using System.Windows.Data;
 using System.Windows.Markup;
 using KID.Services.Localization.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,11 +25,44 @@ namespace KID.Services.Localization
             try
             {
                 var service = App.ServiceProvider?.GetRequiredService<ILocalizationService>();
-                return service?.GetString(Key) ?? $"[{Key}]";
+                if (service == null)
+                    return $"[{Key}]";
+
+                // Создаем Binding, которое будет обновляться при смене культуры
+                var binding = new Binding(nameof(ILocalizationService.CurrentCulture))
+                {
+                    Source = service,
+                    Converter = new LocalizationValueConverter(service, Key),
+                    Mode = BindingMode.OneWay
+                };
+
+                return binding.ProvideValue(serviceProvider);
             }
             catch
             {
                 return $"[{Key}]";
+            }
+        }
+
+        private class LocalizationValueConverter : IValueConverter
+        {
+            private readonly ILocalizationService _service;
+            private readonly string _key;
+
+            public LocalizationValueConverter(ILocalizationService service, string key)
+            {
+                _service = service;
+                _key = key;
+            }
+
+            public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+            {
+                return _service.GetString(_key);
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+            {
+                throw new NotImplementedException();
             }
         }
     }

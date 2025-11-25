@@ -59,6 +59,11 @@ namespace KID.ViewModels
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
+            ChangeLanguageToRussianCommand = new RelayCommand(() => ChangeLanguage("ru-RU"));
+            ChangeLanguageToEnglishCommand = new RelayCommand(() => ChangeLanguage("en-US"));
+
+            // Подписываемся на изменение культуры для обновления UI
+            localizationService.CultureChanged += (s, e) => OnPropertyChanged(string.Empty);
         }
 
         private void CodeEditorViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -86,6 +91,8 @@ namespace KID.ViewModels
         public ICommand StopCommand { get; }
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
+        public ICommand ChangeLanguageToRussianCommand { get; }
+        public ICommand ChangeLanguageToEnglishCommand { get; }
 
         private void ExecuteNewFile()
         {
@@ -151,6 +158,11 @@ namespace KID.ViewModels
         private void ExecuteRedo()
         {
             codeEditorViewModel.RedoCommand.Execute(null);
+        }
+
+        private void ChangeLanguage(string cultureCode)
+        {
+            localizationService.SetCulture(cultureCode);
         }
     }
 }

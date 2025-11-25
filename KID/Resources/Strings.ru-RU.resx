@@ -124,5 +124,14 @@
   <data name="Error_FilePathEmpty" xml:space="preserve">
     <value>Путь к файлу не может быть пустым</value>
   </data>
+  <data name="Menu_ChangeLanguage" xml:space="preserve">
+    <value>Сменить язык</value>
+  </data>
+  <data name="Language_Russian" xml:space="preserve">
+    <value>Русский</value>
+  </data>
+  <data name="Language_English" xml:space="preserve">
+    <value>Английский</value>
+  </data>
 </root>
 
