@@ -5,6 +5,7 @@
              xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
              xmlns:di="clr-namespace:KID.Services.DI"
              xmlns:converters="clr-namespace:KID.Converters"
+             xmlns:localization="clr-namespace:KID.Services.Localization"
              Height="Auto" Width="Auto">
 
     <UserControl.Resources>
@@ -17,20 +18,20 @@
 
     <StackPanel Orientation="Horizontal" Background="{StaticResource MenuBrush}">
         <Menu Margin="0,0,0,10">
-            <MenuItem Header="Файл">
-                <MenuItem Header="Новый" Command="{Binding NewFileCommand}" />
-                <MenuItem Header="Открыть" Command="{Binding OpenFileCommand}" />
-                <MenuItem Header="Сохранить" Command="{Binding SaveFileCommand}" />
+            <MenuItem Header="{localization:Localization Menu_File}">
+                <MenuItem Header="{localization:Localization Menu_New}" Command="{Binding NewFileCommand}" />
+                <MenuItem Header="{localization:Localization Menu_Open}" Command="{Binding OpenFileCommand}" />
+                <MenuItem Header="{localization:Localization Menu_Save}" Command="{Binding SaveFileCommand}" />
             </MenuItem>
-            <MenuItem Header="Правка">
-                <MenuItem Header="Отменить" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
-                <MenuItem Header="Повторить" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
+            <MenuItem Header="{localization:Localization Menu_Edit}">
+                <MenuItem Header="{localization:Localization Menu_Undo}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
+                <MenuItem Header="{localization:Localization Menu_Redo}" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
             </MenuItem>
-            <MenuItem Header="Вид">
-                <MenuItem Header="Тема" />
+            <MenuItem Header="{localization:Localization Menu_View}">
+                <MenuItem Header="{localization:Localization Menu_Theme}" />
             </MenuItem>
-            <MenuItem Header="▶️ Запустить" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
-            <MenuItem Header="■ Стоп" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />
+            <MenuItem Header="{localization:Localization Menu_Run}" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
+            <MenuItem Header="{localization:Localization Menu_Stop}" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />
         </Menu>
     </StackPanel>
 </UserControl>

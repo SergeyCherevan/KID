@@ -7,7 +7,8 @@
         xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
         xmlns:local="clr-namespace:KID"
         xmlns:di="clr-namespace:KID.Services.DI"
-        Title=".KID - C#/.NET IDE для детей"
+        xmlns:localization="clr-namespace:KID.Services.Localization"
+        Title="{localization:Localization Window_Title}"
         Height="600" Width="800"
         WindowState="{Binding WindowState, Mode=TwoWay}"
         WindowStyle="None"
@@ -57,7 +58,7 @@
                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                             Content="╳"/>
                 </StackPanel>
-                <TextBlock Text=".KID — C#/.NET IDE для детей"
+                <TextBlock Text="{localization:Localization Window_Title}"
                            DockPanel.Dock="Left"
                            Foreground="{StaticResource SpecialElementsBrush}"
                            VerticalAlignment="Center"

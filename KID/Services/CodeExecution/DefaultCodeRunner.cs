@@ -2,11 +2,19 @@
 using System.Threading;
 using System.Threading.Tasks;
 using KID.Services.CodeExecution.Interfaces;
+using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.CodeExecution
 {
     public class DefaultCodeRunner : ICodeRunner
     {
+        private readonly ILocalizationService _localizationService;
+
+        public DefaultCodeRunner(ILocalizationService localizationService)
+        {
+            _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+        }
+
         public async Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default)
         {
             CancellationManager.CurrentToken = cancellationToken;
@@ -26,19 +34,23 @@ namespace KID.Services.CodeExecution
                         // Извлекаем внутреннее исключение
                         if (ex.InnerException is OperationCanceledException)
                         {
-                            Console.WriteLine("Программа остановлена");
+                            Console.WriteLine(_localizationService.GetString("Error_ProgramStopped"));
                         }
                         else
                         {
                             var innerEx = ex.InnerException;
                             var errorMessage = innerEx?.Message ?? ex.Message;
                             var stackTrace = innerEx?.StackTrace ?? ex.StackTrace;
-                            Console.WriteLine($"Ошибка выполнения: {errorMessage}\nСтек: {stackTrace}");
+                            Console.WriteLine(_localizationService.GetString("Error_Execution", errorMessage));
+                            if (!string.IsNullOrEmpty(stackTrace))
+                            {
+                                Console.WriteLine(_localizationService.GetString("Error_StackTrace", stackTrace));
+                            }
                         }
                     }
                     catch (OperationCanceledException)
                     {
-                        Console.WriteLine("Программа остановлена");
+                        Console.WriteLine(_localizationService.GetString("Error_ProgramStopped"));
                     }
                 }
             },

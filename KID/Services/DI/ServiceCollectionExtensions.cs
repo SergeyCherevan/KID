@@ -9,6 +9,8 @@ using KID.Services.CodeExecution;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.Files;
 using KID.Services.Files.Interfaces;
+using KID.Services.Localization;
+using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.DI
 {
@@ -30,6 +32,9 @@ namespace KID.Services.DI
             // Window Configuration Services
             services.AddSingleton<IWindowConfigurationService, WindowConfigurationService>();
             services.AddSingleton<IWindowInitializationService, WindowInitializationService>();
+
+            // Localization Service
+            services.AddSingleton<ILocalizationService, LocalizationService>();
 
             // ViewModels
             services.AddSingleton<IMainViewModel, MainViewModel>();

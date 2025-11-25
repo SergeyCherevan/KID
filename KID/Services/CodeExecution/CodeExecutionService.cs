@@ -44,9 +44,11 @@ namespace KID.Services.CodeExecution
                 {
                     await runner.RunAsync(result.Assembly, context.CancellationToken);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    Console.WriteLine($"Ошибка выполнения: {ex.Message}\nСтек: {ex.StackTrace}");
+                    // Ошибки выполнения обрабатываются в DefaultCodeRunner через Console
+                    // Здесь просто пробрасываем исключение дальше
+                    throw;
                 }
                 finally
                 {

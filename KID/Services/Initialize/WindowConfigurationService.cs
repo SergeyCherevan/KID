@@ -1,4 +1,5 @@
 ﻿using KID.Services.Initialize.Interfaces;
+using KID.Services.Localization.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +13,15 @@ namespace KID.Services.Initialize
 {
     public class WindowConfigurationService : IWindowConfigurationService
     {
+        private readonly ILocalizationService _localizationService;
+
         public WindowConfigurationData Settings { get; set; } = new WindowConfigurationData();
+
+        public WindowConfigurationService(ILocalizationService localizationService)
+        {
+            _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+        }
+
         public void SetConfigurationFromFile()
         {
             try
@@ -22,7 +31,11 @@ namespace KID.Services.Initialize
             }
             catch (Exception)
             {
-                MessageBox.Show("Не удалось загрузить конфигурационный файл. Будут использованы настройки по умолчанию.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    _localizationService.GetString("Error_ConfigLoadFailed"),
+                    _localizationService.GetString("Error_Title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 Settings = new WindowConfigurationData();
             }
         }
@@ -35,7 +48,11 @@ namespace KID.Services.Initialize
             }
             catch (Exception)
             {
-                MessageBox.Show("Не удалось загрузить файл с шаблонным кодом. Будет использован встроенный шаблон.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(
+                    _localizationService.GetString("Error_TemplateLoadFailed"),
+                    _localizationService.GetString("Error_Title"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
                 Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
             }
         }

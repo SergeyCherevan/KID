@@ -2,6 +2,7 @@ using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
+using KID.Services.Localization.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 using System.ComponentModel;
@@ -22,6 +23,7 @@ namespace KID.ViewModels
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
         private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
         private readonly ICodeFileService codeFileService;
+        private readonly ILocalizationService localizationService;
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -30,7 +32,8 @@ namespace KID.ViewModels
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel,
-            ICodeFileService codeFileService
+            ICodeFileService codeFileService,
+            ILocalizationService localizationService
         )
         {
             this.windowConfigurationService = windowConfigurationService;
@@ -41,6 +44,7 @@ namespace KID.ViewModels
             this.consoleOutputViewModel = consoleOutputViewModel;
             this.graphicsOutputViewModel = graphicsOutputViewModel;
             this.codeFileService = codeFileService;
+            this.localizationService = localizationService;
 
             // Подписываемся на изменения свойств codeEditorViewModel
             if (codeEditorViewModel is INotifyPropertyChanged notifyPropertyChanged)
@@ -88,19 +92,22 @@ namespace KID.ViewModels
             var code = windowConfigurationService.Settings.TemplateCode;
 
             codeEditorViewModel.Text = code;
-            consoleOutputViewModel.Text = "Консольный вывод...";
+            consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
             graphicsOutputViewModel.Clear();
         }
 
-        static private string fileFilter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*";
+        private string GetFileFilter()
+        {
+            return localizationService.GetString("FileFilter_CSharp");
+        }
 
         private async void ExecuteOpenFile()
         {
-            var code = await codeFileService.OpenCodeFileAsync(fileFilter);
+            var code = await codeFileService.OpenCodeFileAsync(GetFileFilter());
             if (code != null)
             {
                 codeEditorViewModel.Text = code;
-                consoleOutputViewModel.Text = "Консольный вывод...";
+                consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
             }
         }
@@ -108,7 +115,7 @@ namespace KID.ViewModels
         private async void ExecuteSaveFile()
         {
             var code = codeEditorViewModel.Text;
-            await codeFileService.SaveCodeFileAsync(code, fileFilter);
+            await codeFileService.SaveCodeFileAsync(code, GetFileFilter());
         }
 
         private async void ExecuteRun()

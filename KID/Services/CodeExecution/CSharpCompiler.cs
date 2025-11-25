@@ -8,11 +8,19 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using KID.Services.CodeExecution.Interfaces;
+using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.CodeExecution
 {
     public class CSharpCompiler : ICodeCompiler
     {
+        private readonly ILocalizationService _localizationService;
+
+        public CSharpCompiler(ILocalizationService localizationService)
+        {
+            _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+        }
+
         public async Task<CompilationResult> CompileAsync(string code, CancellationToken cancellationToken = default)
         {
             return await Task.Run(() =>
@@ -41,7 +49,7 @@ namespace KID.Services.CodeExecution
                             var lineSpan = diagnostic.Location.GetLineSpan();
                             int line = lineSpan.StartLinePosition.Line + 1;
                             string msg = diagnostic.GetMessage();
-                            return $"Ошибка на строке {line}: {msg}";
+                            return _localizationService.GetString("Error_Compilation", line, msg);
                         }).ToList();
 
                     return new CompilationResult { Success = false, Errors = errors };
