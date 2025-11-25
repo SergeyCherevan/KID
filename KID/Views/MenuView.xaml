@@ -29,10 +29,15 @@
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_View}">
                 <MenuItem Header="{localization:Localization Menu_Theme}" />
-                <MenuItem Header="{localization:Localization Menu_ChangeLanguage}">
-                    <MenuItem Header="{localization:Localization Language_Russian}" Command="{Binding ChangeLanguageToRussianCommand}" />
-                    <MenuItem Header="{localization:Localization Language_English}" Command="{Binding ChangeLanguageToEnglishCommand}" />
-                    <MenuItem Header="{localization:Localization Language_Ukrainian}" Command="{Binding ChangeLanguageToUkrainianCommand}" />
+                <MenuItem Header="{localization:Localization Menu_ChangeLanguage}" 
+                         ItemsSource="{Binding AvailableLanguages}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Command" Value="{Binding DataContext.ChangeLanguageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_Run}" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
