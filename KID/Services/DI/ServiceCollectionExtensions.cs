@@ -7,6 +7,8 @@ using System.Windows;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.CodeExecution;
 using KID.Services.CodeExecution.Contexts;
+using KID.Services.Files;
+using KID.Services.Files.Interfaces;
 
 namespace KID.Services.DI
 {
@@ -19,6 +21,11 @@ namespace KID.Services.DI
             services.AddSingleton<ICodeRunner, DefaultCodeRunner>();
             services.AddSingleton<ICodeExecutionService, CodeExecutionService>();
             services.AddSingleton<CanvasTextBoxContextFabric>();
+
+            // File Services
+            services.AddSingleton<IFileDialogService, FileDialogService>();
+            services.AddSingleton<IFileService, FileService>();
+            services.AddSingleton<ICodeFileService, CodeFileService>();
 
             // Window Configuration Services
             services.AddSingleton<IWindowConfigurationService, WindowConfigurationService>();

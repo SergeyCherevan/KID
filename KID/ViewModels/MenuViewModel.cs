@@ -1,6 +1,6 @@
-using KID.Services;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
+using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
@@ -21,6 +21,7 @@ namespace KID.ViewModels
         private readonly ICodeEditorViewModel codeEditorViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
         private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
+        private readonly ICodeFileService codeFileService;
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -28,7 +29,8 @@ namespace KID.ViewModels
             CanvasTextBoxContextFabric canvasTextBoxContextFabric,
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
-            IGraphicsOutputViewModel graphicsOutputViewModel
+            IGraphicsOutputViewModel graphicsOutputViewModel,
+            ICodeFileService codeFileService
         )
         {
             this.windowConfigurationService = windowConfigurationService;
@@ -38,6 +40,7 @@ namespace KID.ViewModels
             this.codeEditorViewModel = codeEditorViewModel;
             this.consoleOutputViewModel = consoleOutputViewModel;
             this.graphicsOutputViewModel = graphicsOutputViewModel;
+            this.codeFileService = codeFileService;
 
             // Подписываемся на изменения свойств codeEditorViewModel
             if (codeEditorViewModel is INotifyPropertyChanged notifyPropertyChanged)
@@ -89,9 +92,9 @@ namespace KID.ViewModels
             graphicsOutputViewModel.Clear();
         }
 
-        private void ExecuteOpenFile()
+        private async void ExecuteOpenFile()
         {
-            var code = FileService.OpenCodeFile();
+            var code = await codeFileService.OpenCodeFileAsync();
             if (code != null)
             {
                 codeEditorViewModel.Text = code;
@@ -100,10 +103,10 @@ namespace KID.ViewModels
             }
         }
 
-        private void ExecuteSaveFile()
+        private async void ExecuteSaveFile()
         {
             var code = codeEditorViewModel.Text;
-            FileService.SaveCodeFile(code);
+            await codeFileService.SaveCodeFileAsync(code);
         }
 
         private async void ExecuteRun()
