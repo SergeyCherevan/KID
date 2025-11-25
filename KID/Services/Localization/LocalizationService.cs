@@ -51,7 +51,15 @@ namespace KID.Services.Localization
             if (string.IsNullOrEmpty(key))
                 return string.Empty;
 
+            // Пытаемся получить строку для текущей культуры
             var value = _resourceManager.GetString(key, _currentCulture);
+            
+            // Если не найдено и текущая культура не en-US, пробуем en-US как fallback
+            if (value == null && _currentCulture.Name != "en-US")
+            {
+                value = _resourceManager.GetString(key, new CultureInfo("en-US"));
+            }
+            
             return value ?? $"[{key}]";
         }
 
