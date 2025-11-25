@@ -1,3 +1,4 @@
+using KID.Models;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Files.Interfaces;
@@ -5,6 +6,7 @@ using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Input;
 
@@ -24,6 +26,8 @@ namespace KID.ViewModels
         private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
         private readonly ICodeFileService codeFileService;
         private readonly ILocalizationService localizationService;
+
+        public ObservableCollection<AvailableLanguage> AvailableLanguages { get; }
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -46,6 +50,13 @@ namespace KID.ViewModels
             this.codeFileService = codeFileService;
             this.localizationService = localizationService;
 
+            // Инициализируем список доступных языков
+            var languages = localizationService.GetAvailableLanguages();
+            AvailableLanguages = new ObservableCollection<AvailableLanguage>(languages);
+            
+            // Обновляем локализованные имена для всех языков
+            UpdateLanguageDisplayNames();
+
             // Подписываемся на изменения свойств codeEditorViewModel
             if (codeEditorViewModel is INotifyPropertyChanged notifyPropertyChanged)
             {
@@ -59,12 +70,14 @@ namespace KID.ViewModels
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
-            ChangeLanguageToRussianCommand = new RelayCommand(() => ChangeLanguage("ru-RU"));
-            ChangeLanguageToEnglishCommand = new RelayCommand(() => ChangeLanguage("en-US"));
-            ChangeLanguageToUkrainianCommand = new RelayCommand(() => ChangeLanguage("uk-UA"));
+            ChangeLanguageCommand = new RelayCommand<AvailableLanguage>(lang => ChangeLanguage(lang.CultureCode));
 
             // Подписываемся на изменение культуры для обновления UI
-            localizationService.CultureChanged += (s, e) => OnPropertyChanged(string.Empty);
+            localizationService.CultureChanged += (s, e) =>
+            {
+                OnPropertyChanged(string.Empty);
+                UpdateLanguageDisplayNames();
+            };
         }
 
         private void CodeEditorViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -92,9 +105,7 @@ namespace KID.ViewModels
         public ICommand StopCommand { get; }
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
-        public ICommand ChangeLanguageToRussianCommand { get; }
-        public ICommand ChangeLanguageToEnglishCommand { get; }
-        public ICommand ChangeLanguageToUkrainianCommand { get; }
+        public ICommand ChangeLanguageCommand { get; }
 
         private void ExecuteNewFile()
         {
@@ -165,6 +176,27 @@ namespace KID.ViewModels
         private void ChangeLanguage(string cultureCode)
         {
             localizationService.SetCulture(cultureCode);
+        }
+
+        private void UpdateLanguageDisplayNames()
+        {
+            foreach (var language in AvailableLanguages)
+            {
+                // Получаем локализованное название языка
+                var key = $"Language_{GetLanguageKey(language.CultureCode)}";
+                language.LocalizedDisplayName = localizationService.GetString(key);
+            }
+        }
+
+        private string GetLanguageKey(string cultureCode)
+        {
+            return cultureCode switch
+            {
+                "ru-RU" => "Russian",
+                "uk-UA" => "Ukrainian",
+                "en-US" => "English",
+                _ => cultureCode
+            };
         }
     }
 }

@@ -136,5 +136,8 @@
   <data name="Language_Ukrainian" xml:space="preserve">
     <value>Ukrainian</value>
   </data>
+  <data name="Language_SelfName" xml:space="preserve">
+    <value>English</value>
+  </data>
 </root>
 
