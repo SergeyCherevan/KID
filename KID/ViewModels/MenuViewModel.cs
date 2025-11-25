@@ -93,7 +93,14 @@ namespace KID.ViewModels
         public bool IsStopButtonEnabled
         {
             get => isStopButtonEnabled;
-            set => SetProperty(ref isStopButtonEnabled, value);
+            set
+            {
+                if (SetProperty(ref isStopButtonEnabled, value))
+                {
+                    // Принудительно обновляем состояние команд после изменения IsStopButtonEnabled
+                    CommandManager.InvalidateRequerySuggested();
+                }
+            }
         }
         public bool CanUndo => codeEditorViewModel.CanUndo;
         public bool CanRedo => codeEditorViewModel.CanRedo;
