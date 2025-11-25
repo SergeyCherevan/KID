@@ -92,9 +92,11 @@ namespace KID.ViewModels
             graphicsOutputViewModel.Clear();
         }
 
+        static private string fileFilter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*";
+
         private async void ExecuteOpenFile()
         {
-            var code = await codeFileService.OpenCodeFileAsync();
+            var code = await codeFileService.OpenCodeFileAsync(fileFilter);
             if (code != null)
             {
                 codeEditorViewModel.Text = code;
@@ -106,7 +108,7 @@ namespace KID.ViewModels
         private async void ExecuteSaveFile()
         {
             var code = codeEditorViewModel.Text;
-            await codeFileService.SaveCodeFileAsync(code);
+            await codeFileService.SaveCodeFileAsync(code, fileFilter);
         }
 
         private async void ExecuteRun()

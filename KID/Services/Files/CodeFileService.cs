@@ -5,7 +5,6 @@ namespace KID.Services.Files
 {
     public class CodeFileService : ICodeFileService
     {
-        private const string CSharpFileFilter = "C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*";
         private const string DefaultFileName = "Program.cs";
 
         private readonly IFileService fileService;
@@ -17,21 +16,21 @@ namespace KID.Services.Files
             this.fileDialogService = fileDialogService ?? throw new System.ArgumentNullException(nameof(fileDialogService));
         }
 
-        public async Task<string?> OpenCodeFileAsync()
+        public async Task<string?> OpenCodeFileAsync(string fileFilter)
         {
-            var filePath = fileDialogService.ShowOpenDialog(CSharpFileFilter);
+            var filePath = fileDialogService.ShowOpenDialog(fileFilter);
             if (filePath == null)
                 return null;
 
             return await fileService.ReadFileAsync(filePath);
         }
 
-        public async Task SaveCodeFileAsync(string code)
+        public async Task SaveCodeFileAsync(string code, string fileFilter)
         {
             if (string.IsNullOrWhiteSpace(code))
                 return;
 
-            var filePath = fileDialogService.ShowSaveDialog(CSharpFileFilter, DefaultFileName);
+            var filePath = fileDialogService.ShowSaveDialog(fileFilter, DefaultFileName);
             if (filePath == null)
                 return;
 

@@ -4,8 +4,8 @@ namespace KID.Services.Files.Interfaces
 {
     public interface ICodeFileService
     {
-        Task<string?> OpenCodeFileAsync();
-        Task SaveCodeFileAsync(string code);
+        Task<string?> OpenCodeFileAsync(string fileFilter);
+        Task SaveCodeFileAsync(string code, string fileFilter);
     }
 }
 
