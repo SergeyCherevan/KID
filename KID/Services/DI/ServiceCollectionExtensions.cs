@@ -6,6 +6,7 @@ using KID.ViewModels.Interfaces;
 using System.Windows;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.CodeExecution;
+using KID.Services.CodeExecution.Contexts;
 
 namespace KID.Services.DI
 {

@@ -1,12 +1,11 @@
-﻿using KID.Services.CodeExecution.Contexts;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Contexts
 {
     public class CanvasTextBoxContextFabric
     {
