@@ -71,70 +71,70 @@
     <value>Тема</value>
   </data>
   <data name="Menu_New" xml:space="preserve">
-    <value>Новый</value>
+    <value>Новий</value>
   </data>
   <data name="Menu_Open" xml:space="preserve">
-    <value>Открыть</value>
+    <value>Відкрити</value>
   </data>
   <data name="Menu_Save" xml:space="preserve">
-    <value>Сохранить</value>
+    <value>Зберегти</value>
   </data>
   <data name="Menu_Undo" xml:space="preserve">
-    <value>Отменить</value>
+    <value>Скасувати</value>
   </data>
   <data name="Menu_Redo" xml:space="preserve">
-    <value>Повторить</value>
+    <value>Повторити</value>
   </data>
   <data name="Menu_Run" xml:space="preserve">
-    <value>▶️ Запустить</value>
+    <value>▶️ Запустити</value>
   </data>
   <data name="Menu_Stop" xml:space="preserve">
     <value>■ Стоп</value>
   </data>
   <data name="Window_Title" xml:space="preserve">
-    <value>.KID - C#/.NET IDE для детей</value>
+    <value>.KID - C#/.NET IDE для дітей</value>
   </data>
   <data name="Console_Output" xml:space="preserve">
-    <value>Консольный вывод...</value>
+    <value>Консольний вивід...</value>
   </data>
   <data name="Error_Compilation" xml:space="preserve">
-    <value>Ошибка на строке {0}: {1}</value>
+    <value>Помилка на рядку {0}: {1}</value>
   </data>
   <data name="Error_Execution" xml:space="preserve">
-    <value>Ошибка выполнения: {0}</value>
+    <value>Помилка виконання: {0}</value>
   </data>
   <data name="Error_StackTrace" xml:space="preserve">
     <value>Стек: {0}</value>
   </data>
   <data name="Error_ProgramStopped" xml:space="preserve">
-    <value>Программа остановлена</value>
+    <value>Програму зупинено</value>
   </data>
   <data name="FileFilter_CSharp" xml:space="preserve">
-    <value>C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*</value>
+    <value>C# файли (*.cs)|*.cs|Всі файли (*.*)|*.*</value>
   </data>
   <data name="Error_ConfigLoadFailed" xml:space="preserve">
-    <value>Не удалось загрузить конфигурационный файл. Будут использованы настройки по умолчанию.</value>
+    <value>Не вдалося завантажити конфігураційний файл. Будуть використані налаштування за замовчуванням.</value>
   </data>
   <data name="Error_TemplateLoadFailed" xml:space="preserve">
-    <value>Не удалось загрузить файл с шаблонным кодом. Будет использован встроенный шаблон.</value>
+    <value>Не вдалося завантажити файл з шаблонним кодом. Буде використано вбудований шаблон.</value>
   </data>
   <data name="Error_Title" xml:space="preserve">
-    <value>Ошибка</value>
+    <value>Помилка</value>
   </data>
   <data name="Error_FilePathEmpty" xml:space="preserve">
-    <value>Путь к файлу не может быть пустым</value>
+    <value>Шлях до файлу не може бути порожнім</value>
   </data>
   <data name="Menu_ChangeLanguage" xml:space="preserve">
-    <value>Сменить язык</value>
+    <value>Змінити мову</value>
   </data>
   <data name="Language_Russian" xml:space="preserve">
-    <value>Русский</value>
+    <value>Російська</value>
   </data>
   <data name="Language_English" xml:space="preserve">
-    <value>Английский</value>
+    <value>Англійська</value>
   </data>
   <data name="Language_Ukrainian" xml:space="preserve">
-    <value>Украинский</value>
+    <value>Українська</value>
   </data>
 </root>
 

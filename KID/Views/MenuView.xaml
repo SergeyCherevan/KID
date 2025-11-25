@@ -32,6 +32,7 @@
                 <MenuItem Header="{localization:Localization Menu_ChangeLanguage}">
                     <MenuItem Header="{localization:Localization Language_Russian}" Command="{Binding ChangeLanguageToRussianCommand}" />
                     <MenuItem Header="{localization:Localization Language_English}" Command="{Binding ChangeLanguageToEnglishCommand}" />
+                    <MenuItem Header="{localization:Localization Language_Ukrainian}" Command="{Binding ChangeLanguageToUkrainianCommand}" />
                 </MenuItem>
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_Run}" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />

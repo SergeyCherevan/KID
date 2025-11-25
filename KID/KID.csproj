@@ -52,6 +52,9 @@
     <EmbeddedResource Update="Resources\Strings.ru-RU.resx">
       <Generator>ResXFileCodeGenerator</Generator>
     </EmbeddedResource>
+    <EmbeddedResource Update="Resources\Strings.uk-UA.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+    </EmbeddedResource>
   </ItemGroup>
   
   <PropertyGroup>

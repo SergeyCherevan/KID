@@ -61,6 +61,7 @@ namespace KID.ViewModels
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             ChangeLanguageToRussianCommand = new RelayCommand(() => ChangeLanguage("ru-RU"));
             ChangeLanguageToEnglishCommand = new RelayCommand(() => ChangeLanguage("en-US"));
+            ChangeLanguageToUkrainianCommand = new RelayCommand(() => ChangeLanguage("uk-UA"));
 
             // Подписываемся на изменение культуры для обновления UI
             localizationService.CultureChanged += (s, e) => OnPropertyChanged(string.Empty);
@@ -93,6 +94,7 @@ namespace KID.ViewModels
         public ICommand RedoCommand { get; }
         public ICommand ChangeLanguageToRussianCommand { get; }
         public ICommand ChangeLanguageToEnglishCommand { get; }
+        public ICommand ChangeLanguageToUkrainianCommand { get; }
 
         private void ExecuteNewFile()
         {
