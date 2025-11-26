@@ -116,9 +116,11 @@ namespace KID.Services.CodeExecution
                 char symbol;
                 do
                 {
-                    // Ждем события (блокируем поток)
                     keyDownReadEvent.WaitOne();
 
+                    CancellationManager.CheckCancellation();
+                    
+                    // Ждем события (блокируем поток)
                     symbol = (char)lastReadChar;
                     lastReadChar = -1; // Очищаем сразу после чтения
 
