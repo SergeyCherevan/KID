@@ -14,6 +14,9 @@ namespace KID.Services.Interfaces
 
         // === Ввод ===
         int Read();
+
+        // === Очистка ===
+        void Clear();
         
         // === Потоки ===
         TextWriter Out { get; set; }

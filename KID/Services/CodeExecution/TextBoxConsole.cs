@@ -106,6 +106,15 @@ namespace KID.Services.CodeExecution
             }
         }
 
+        // Очистка вывода
+        public void Clear()
+        {
+            InvokeOnUIThread(() =>
+            {
+                textBox.Clear();
+            });
+        }
+
         public string ReadLine()
         {
             lock (readLock)
@@ -241,6 +250,11 @@ namespace KID.Services.CodeExecution
             public override void Write(string? value)
             {
                 console.Write(value);
+            }
+
+            public virtual void Clear()
+            {
+                console.Clear();
             }
         }
 
