@@ -10,7 +10,8 @@ namespace KID.Services.Interfaces
     {
         // === Вывод ===
         void Write(char symbol);
-        
+        void Write(string? value);
+
         // === Ввод ===
         int Read();
         
