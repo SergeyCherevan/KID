@@ -9,15 +9,10 @@ namespace KID.Services.Interfaces
     public interface IConsole
     {
         // === Вывод ===
-        void Write(string value);
-        void WriteLine(string value);
-        void WriteLine();
+        void Write(char symbol);
         
         // === Ввод ===
         int Read();
-        string ReadLine();
-        ConsoleKeyInfo ReadKey();
-        ConsoleKeyInfo ReadKey(bool intercept);
         
         // === Потоки ===
         TextWriter Out { get; set; }

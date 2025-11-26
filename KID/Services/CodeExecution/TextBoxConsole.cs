@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -17,17 +16,19 @@ namespace KID.Services.CodeExecution
     {
         private readonly TextBox textBox;
         private readonly Dispatcher dispatcher;
-        private readonly ConcurrentQueue<string> inputQueue;
-        private readonly AutoResetEvent inputAvailable;
         private TextWriter textWriter;
         private TextReader textReader;
+        
+        // === Поля для ввода ===
+        private volatile bool isReading = false;
+        private readonly AutoResetEvent keyDownReadEvent = new AutoResetEvent(false);
+        private volatile int lastReadChar = -1;
+        private readonly object readLock = new object();
 
         public TextBoxConsole(TextBox textBox)
         {
             this.textBox = textBox ?? throw new ArgumentNullException(nameof(textBox));
             dispatcher = Application.Current.Dispatcher;
-            inputQueue = new ConcurrentQueue<string>();
-            inputAvailable = new AutoResetEvent(false);
             
             // Инициализация потоков
             textWriter = new TextBoxTextWriter(this);
@@ -35,70 +36,6 @@ namespace KID.Services.CodeExecution
             
             // Настройка TextBox для ввода
             textBox.KeyDown += TextBox_KeyDown;
-        }
-
-        // === Вывод ===
-        public void Write(string value)
-        {
-            if (string.IsNullOrEmpty(value)) return;
-            
-            InvokeOnUIThread(() =>
-            {
-                textBox.AppendText(value);
-                textBox.ScrollToEnd();
-                OutputReceived?.Invoke(this, value);
-            });
-        }
-
-        public void WriteLine(string value)
-        {
-            Write(value + Environment.NewLine);
-        }
-
-        public void WriteLine()
-        {
-            Write(Environment.NewLine);
-        }
-
-        // === Ввод ===
-        public int Read()
-        {
-            string line = ReadLine();
-            if (string.IsNullOrEmpty(line)) return -1;
-            return line.Length > 0 ? line[0] : -1;
-        }
-
-        public string ReadLine()
-        {
-            // Ожидаем ввода
-            inputAvailable.WaitOne();
-            
-            if (inputQueue.TryDequeue(out string? result))
-            {
-                return result ?? string.Empty;
-            }
-            
-            return string.Empty;
-        }
-
-        public ConsoleKeyInfo ReadKey()
-        {
-            return ReadKey(false);
-        }
-
-        public ConsoleKeyInfo ReadKey(bool intercept)
-        {
-            // Упрощенная реализация - возвращаем первую клавишу из очереди
-            inputAvailable.WaitOne();
-            
-            if (inputQueue.TryDequeue(out string? keyStr) && keyStr != null && keyStr.Length > 0)
-            {
-                char keyChar = keyStr[0];
-                ConsoleKey key = ConvertCharToConsoleKey(keyChar);
-                return new ConsoleKeyInfo(keyChar, key, false, false, false);
-            }
-            
-            return new ConsoleKeyInfo('\0', ConsoleKey.NoName, false, false, false);
         }
 
         // === Потоки ===
@@ -120,6 +57,36 @@ namespace KID.Services.CodeExecution
             set => textWriter = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+        // === Вывод ===
+        public void Write(char symbol)
+        {
+            InvokeOnUIThread(() =>
+            {
+                textBox.AppendText(symbol.ToString());
+                textBox.ScrollToEnd();
+                OutputReceived?.Invoke(this, symbol.ToString());
+            });
+        }
+
+        // === Ввод ===
+        public int Read()
+        {
+            lock (readLock)
+            {
+                isReading = true;
+                
+                // Ждем события (блокируем поток)
+                keyDownReadEvent.WaitOne();
+                
+                isReading = false;
+                
+                int result = lastReadChar;
+                lastReadChar = -1; // Очищаем
+                
+                return result;
+            }
+        }
+
         // === События ===
         public event EventHandler<string>? OutputReceived;
 
@@ -136,51 +103,110 @@ namespace KID.Services.CodeExecution
             }
         }
 
-        private ConsoleKey ConvertCharToConsoleKey(char c)
-        {
-            if (char.IsLetter(c))
-            {
-                return (ConsoleKey)char.ToUpper(c);
-            }
-            if (char.IsDigit(c))
-            {
-                return (ConsoleKey)((int)ConsoleKey.D0 + (c - '0'));
-            }
-            
-            return c switch
-            {
-                ' ' => ConsoleKey.Spacebar,
-                '\r' => ConsoleKey.Enter,
-                '\t' => ConsoleKey.Tab,
-                '\b' => ConsoleKey.Backspace,
-                _ => ConsoleKey.NoName
-            };
-        }
-
         private void TextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (e.Key == System.Windows.Input.Key.Enter)
+            if (!isReading) return; // Игнорируем, если не ждем ввода
+            
+            // Преобразуем клавишу в символ
+            char? symbol = ConvertKeyToChar(e.Key, e.KeyboardDevice.Modifiers);
+            
+            if (symbol.HasValue)
             {
-                // Получаем текущую строку от последнего перевода строки до курсора
-                int caretIndex = textBox.CaretIndex;
-                string text = textBox.Text;
+                // Показываем символ в TextBox (уже в UI потоке)
+                textBox.AppendText(symbol.Value.ToString());
+                textBox.ScrollToEnd();
                 
-                int lineStart = 0;
-                for (int i = caretIndex - 1; i >= 0; i--)
-                {
-                    if (text[i] == '\n')
-                    {
-                        lineStart = i + 1;
-                        break;
-                    }
-                }
+                // Сохраняем символ и сигналим
+                lastReadChar = symbol.Value;
+                keyDownReadEvent.Set(); // "Будим" Read()
                 
-                int lineLength = caretIndex - lineStart;
-                string line = lineLength > 0 ? text.Substring(lineStart, lineLength) : string.Empty;
-                
-                inputQueue.Enqueue(line);
-                inputAvailable.Set();
+                e.Handled = true; // Предотвращаем стандартную обработку
             }
+        }
+        
+        /// <summary>
+        /// Преобразует клавишу в символ
+        /// </summary>
+        private char? ConvertKeyToChar(System.Windows.Input.Key key, System.Windows.Input.ModifierKeys modifiers)
+        {
+            // Обработка Enter
+            if (key == System.Windows.Input.Key.Enter)
+            {
+                return '\n';
+            }
+            
+            // Обработка Backspace (опционально, можно вернуть '\b')
+            if (key == System.Windows.Input.Key.Back)
+            {
+                return '\b';
+            }
+            
+            // Пропускаем служебные клавиши
+            if (key >= System.Windows.Input.Key.LeftShift && key <= System.Windows.Input.Key.RightAlt)
+                return null;
+            
+            if (key >= System.Windows.Input.Key.LeftCtrl && key <= System.Windows.Input.Key.RightCtrl)
+                return null;
+            
+            // Преобразуем клавишу в символ
+            bool isShift = modifiers.HasFlag(System.Windows.Input.ModifierKeys.Shift);
+            bool isCapsLock = System.Windows.Input.Keyboard.IsKeyToggled(System.Windows.Input.Key.CapsLock);
+            
+            // Базовые символы
+            if (key >= System.Windows.Input.Key.A && key <= System.Windows.Input.Key.Z)
+            {
+                bool upper = (isShift && !isCapsLock) || (!isShift && isCapsLock);
+                return (char)(upper ? (int)key - (int)System.Windows.Input.Key.A + 'A' 
+                                    : (int)key - (int)System.Windows.Input.Key.A + 'a');
+            }
+            
+            // Цифры
+            if (key >= System.Windows.Input.Key.D0 && key <= System.Windows.Input.Key.D9)
+            {
+                char digit = (char)((int)key - (int)System.Windows.Input.Key.D0 + '0');
+                if (isShift)
+                {
+                    // Символы с Shift для цифр
+                    return digit switch
+                    {
+                        '0' => ')',
+                        '1' => '!',
+                        '2' => '@',
+                        '3' => '#',
+                        '4' => '$',
+                        '5' => '%',
+                        '6' => '^',
+                        '7' => '&',
+                        '8' => '*',
+                        '9' => '(',
+                        _ => digit
+                    };
+                }
+                return digit;
+            }
+            
+            // Пробел
+            if (key == System.Windows.Input.Key.Space)
+            {
+                return ' ';
+            }
+            
+            // Специальные символы (упрощенная версия)
+            return key switch
+            {
+                System.Windows.Input.Key.OemMinus => isShift ? '_' : '-',
+                System.Windows.Input.Key.OemPlus => isShift ? '+' : '=',
+                System.Windows.Input.Key.OemOpenBrackets => isShift ? '{' : '[',
+                System.Windows.Input.Key.OemCloseBrackets => isShift ? '}' : ']',
+                System.Windows.Input.Key.OemPipe => isShift ? '|' : '\\',
+                System.Windows.Input.Key.OemSemicolon => isShift ? ':' : ';',
+                System.Windows.Input.Key.OemQuotes => isShift ? '"' : '\'',
+                System.Windows.Input.Key.OemComma => isShift ? '<' : ',',
+                System.Windows.Input.Key.OemPeriod => isShift ? '>' : '.',
+                System.Windows.Input.Key.OemQuestion => isShift ? '?' : '/',
+                System.Windows.Input.Key.Tab => '\t',
+                _ => null
+            };
         }
 
         // === Внутренние классы для потоков ===
@@ -195,17 +221,9 @@ namespace KID.Services.CodeExecution
 
             public override Encoding Encoding => Encoding.UTF8;
 
-            public override void Write(string? value)
+            public override void Write(char symbol)
             {
-                if (value != null)
-                {
-                    console.Write(value);
-                }
-            }
-
-            public override void Write(char value)
-            {
-                console.Write(value.ToString());
+                console.Write(symbol);
             }
         }
 
@@ -221,11 +239,6 @@ namespace KID.Services.CodeExecution
             public override int Read()
             {
                 return console.Read();
-            }
-
-            public override string? ReadLine()
-            {
-                return console.ReadLine();
             }
         }
     }
