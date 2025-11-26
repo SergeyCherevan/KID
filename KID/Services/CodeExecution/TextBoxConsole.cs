@@ -22,6 +22,7 @@ namespace KID.Services.CodeExecution
         // === Поля для ввода ===
         private volatile bool isReading = false;
         private readonly AutoResetEvent keyDownReadEvent = new AutoResetEvent(false);
+        public event EventHandler<string>? OutputReceived;
         private volatile int lastReadChar = -1;
         private readonly object readLock = new object();
 
@@ -37,6 +38,8 @@ namespace KID.Services.CodeExecution
             // Настройка TextBox для ввода
             textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
             textBox.PreviewTextInput += TextBox_PreviewTextInput;
+
+            StaticConsole.Init(this);
         }
 
         // === Потоки ===
@@ -174,9 +177,6 @@ namespace KID.Services.CodeExecution
             }
         }
 
-        // === События ===
-        public event EventHandler<string>? OutputReceived;
-
         // === Вспомогательные методы ===
         private void InvokeOnUIThread(Action action)
         {
@@ -275,6 +275,20 @@ namespace KID.Services.CodeExecution
             public override string? ReadLine()
             {
                 return console.ReadLine();
+            }
+        }
+
+        public static class StaticConsole
+        {
+            private static TextBoxConsole? textBoxConsole;
+            public static void Init(TextBoxConsole textBoxConsole)
+            {
+                StaticConsole.textBoxConsole = textBoxConsole;
+            }
+
+            public static void Clear()
+            {
+                textBoxConsole?.Clear();
             }
         }
     }

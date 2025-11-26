@@ -25,6 +25,6 @@ string name = Console.ReadLine();
 
 Console.WriteLine($"Thank you {name}!");
     
-Thread.Sleep(50);
+Thread.Sleep(5000);
 
 Console.Clear();
