@@ -191,6 +191,12 @@ namespace KID.Services.CodeExecution
                 keyDownReadEvent.Set();
                 e.Handled = true;
             }
+            if (e.Key == System.Windows.Input.Key.Space)
+            {
+                lastReadChar = ' ';
+                keyDownReadEvent.Set();
+                e.Handled = true;
+            }
             else if (e.Key == System.Windows.Input.Key.Back)
             {
                 lastReadChar = '\b';
