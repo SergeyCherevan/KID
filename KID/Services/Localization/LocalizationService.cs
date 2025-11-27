@@ -117,12 +117,12 @@ namespace KID.Services.Localization
                         
                         // Получаем английское название языка из ресурса
                         // Сначала пробуем получить из ресурса для этой культуры
-                        var englishName = tempResourceManager.GetString("Language_SelfName", culture);
+                        var englishName = tempResourceManager.GetString("Language_EnglishName", culture);
                         
                         // Если не найдено, пробуем из английского ресурса
                         if (string.IsNullOrEmpty(englishName))
                         {
-                            englishName = tempResourceManager.GetString("Language_SelfName", new CultureInfo("en-US"));
+                            englishName = tempResourceManager.GetString("Language_EnglishName", new CultureInfo("en-US"));
                         }
                         
                         // Если всё ещё не найдено, используем стандартное название культуры
@@ -157,8 +157,8 @@ namespace KID.Services.Localization
                     {
                         var culture = new CultureInfo(cultureCode);
                         var tempResourceManager = new ResourceManager("KID.Resources.Strings", assembly);
-                        var englishName = tempResourceManager.GetString("Language_SelfName", culture)
-                                        ?? tempResourceManager.GetString("Language_SelfName", new CultureInfo("en-US"))
+                        var englishName = tempResourceManager.GetString("Language_EnglishName", culture)
+                                        ?? tempResourceManager.GetString("Language_EnglishName", new CultureInfo("en-US"))
                                         ?? culture.EnglishName;
 
                         languages.Add(new AvailableLanguage

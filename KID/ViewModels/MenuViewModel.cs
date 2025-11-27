@@ -72,7 +72,7 @@ namespace KID.ViewModels
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
-            ChangeLanguageCommand = new RelayCommand<AvailableLanguage>(lang => ChangeLanguage(lang.CultureCode));
+            ChangeLanguageCommand = new RelayCommand<AvailableLanguage>(lang => ChangeLanguage(lang));
 
             // Подписываемся на изменение культуры для обновления UI
             localizationService.CultureChanged += (s, e) =>
@@ -222,17 +222,17 @@ namespace KID.ViewModels
             }
         }
 
-        private void ChangeLanguage(string cultureCode)
+        private void ChangeLanguage(AvailableLanguage language)
         {
-            if (string.IsNullOrEmpty(cultureCode) || 
+            if (language == null || 
                 localizationService == null || 
                 windowConfigurationService?.Settings == null)
                 return;
             
-            localizationService.SetCulture(cultureCode);
+            localizationService.SetCulture(language.CultureCode);
             
             // Сохраняем выбранный язык в настройках
-            windowConfigurationService.Settings.UILanguage = cultureCode;
+            windowConfigurationService.Settings.UILanguage = language.CultureCode;
             windowConfigurationService.SaveSettings();
         }
 
@@ -247,20 +247,9 @@ namespace KID.ViewModels
                     continue;
                 
                 // Получаем локализованное название языка
-                var key = $"Language_{GetLanguageKey(language.CultureCode)}";
+                var key = $"Language_{language.EnglishName}";
                 language.LocalizedDisplayName = localizationService.GetString(key);
             }
-        }
-
-        private string GetLanguageKey(string cultureCode)
-        {
-            return cultureCode switch
-            {
-                "ru-RU" => "Russian",
-                "uk-UA" => "Ukrainian",
-                "en-US" => "English",
-                _ => cultureCode
-            };
         }
     }
 }
