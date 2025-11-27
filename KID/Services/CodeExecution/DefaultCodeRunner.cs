@@ -34,7 +34,7 @@ namespace KID.Services.CodeExecution
                         // Извлекаем внутреннее исключение
                         if (ex.InnerException is OperationCanceledException)
                         {
-                            Console.WriteLine(_localizationService.GetString("Error_ProgramStopped"));
+                            Console.WriteLine(_localizationService.GetString("Notification_ProgramStopped"));
                         }
                         else
                         {
@@ -50,7 +50,11 @@ namespace KID.Services.CodeExecution
                     }
                     catch (OperationCanceledException)
                     {
-                        Console.WriteLine(_localizationService.GetString("Error_ProgramStopped"));
+                        Console.WriteLine(_localizationService.GetString("Notification_ProgramStopped"));
+                    }
+                    finally
+                    {
+                        Console.WriteLine(_localizationService.GetString("Notification_ProgramFinished"));
                     }
                 }
             },

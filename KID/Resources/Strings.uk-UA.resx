@@ -106,8 +106,11 @@
   <data name="Error_StackTrace" xml:space="preserve">
     <value>Стек: {0}</value>
   </data>
-  <data name="Error_ProgramStopped" xml:space="preserve">
+  <data name="Notification_ProgramStopped" xml:space="preserve">
     <value>Програму зупинено</value>
+  </data>
+  <data name="Notification_ProgramFinished" xml:space="preserve">
+    <value>Програма закінчила виконання</value>
   </data>
   <data name="FileFilter_CSharp" xml:space="preserve">
     <value>C# файли (*.cs)|*.cs|Всі файли (*.*)|*.*</value>

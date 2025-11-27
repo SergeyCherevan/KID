@@ -108,9 +108,9 @@ namespace KID.Resources {
         /// <summary>
         ///   Ищет локализованную строку, похожую на Программа остановлена.
         /// </summary>
-        internal static string Error_ProgramStopped {
+        internal static string Notification_ProgramStopped {
             get {
-                return ResourceManager.GetString("Error_ProgramStopped", resourceCulture);
+                return ResourceManager.GetString("Notification_ProgramStopped", resourceCulture);
             }
         }
         
