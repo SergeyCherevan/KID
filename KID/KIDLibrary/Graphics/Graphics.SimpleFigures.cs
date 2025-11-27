@@ -105,6 +105,9 @@ namespace KID
 
         public static void Polygon((double x, double y)[] points)
         {
+            if (points == null || points.Length == 0)
+                return;
+            
             InvokeOnUI(() =>
             {
                 if (Canvas == null) return;
@@ -120,6 +123,9 @@ namespace KID
 
         public static void Polygon(Point[] points)
         {
+            if (points == null || points.Length == 0)
+                return;
+            
             Polygon(points.Select(p => (p.X, p.Y)).ToArray());
         }
     }

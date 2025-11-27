@@ -7,6 +7,9 @@ namespace KID.Services.Files
     {
         public string? ShowOpenDialog(string filter, string? defaultFileName = null)
         {
+            if (string.IsNullOrEmpty(filter))
+                throw new ArgumentException("Filter cannot be null or empty", nameof(filter));
+            
             var openFileDialog = new OpenFileDialog
             {
                 Filter = filter
@@ -24,6 +27,11 @@ namespace KID.Services.Files
 
         public string? ShowSaveDialog(string filter, string defaultFileName)
         {
+            if (string.IsNullOrEmpty(filter))
+                throw new ArgumentException("Filter cannot be null or empty", nameof(filter));
+            if (defaultFileName == null)
+                throw new ArgumentNullException(nameof(defaultFileName));
+            
             var saveFileDialog = new SaveFileDialog
             {
                 Filter = filter,

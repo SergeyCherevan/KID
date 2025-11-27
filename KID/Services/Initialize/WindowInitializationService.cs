@@ -32,14 +32,14 @@ namespace KID.Services.Initialize
             MainWindow mainWindow
         )
         {
-            this.windowConfigurationService = windowConfigurationService;
-            this.localizationService = localizationService;
+            this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
+            this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
 
-            this.mainViewModel = mainViewModel;
-            this.codeEditorViewModel = codeEditorViewModel;
-            this.consoleOutputViewModel = consoleOutputViewModel;
+            this.mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
+            this.codeEditorViewModel = codeEditorViewModel ?? throw new ArgumentNullException(nameof(codeEditorViewModel));
+            this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
 
-            this.mainWindow = mainWindow;
+            this.mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
         }
 
         public void Initialize()
@@ -68,20 +68,44 @@ namespace KID.Services.Initialize
 
         private void InitializeMainWindow()
         {
-            mainViewModel.RequestDragMove += mainWindow.DragMove;
+            if (mainViewModel != null && mainWindow != null)
+            {
+                mainViewModel.RequestDragMove += mainWindow.DragMove;
+            }
         }
 
         private void InitializeCodeEditor()
         {
-            codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.Language);
-            codeEditorViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
-            codeEditorViewModel.FontSize = windowConfigurationService.Settings.FontSize;
-            codeEditorViewModel.Text = windowConfigurationService.Settings.TemplateCode;
+            if (codeEditorViewModel == null || windowConfigurationService?.Settings == null)
+                return;
+            
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.Language))
+            {
+                codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.Language);
+            }
+            
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
+            {
+                codeEditorViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
+            }
+            
+            if (windowConfigurationService.Settings.FontSize > 0)
+            {
+                codeEditorViewModel.FontSize = windowConfigurationService.Settings.FontSize;
+            }
+            
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.TemplateCode))
+            {
+                codeEditorViewModel.Text = windowConfigurationService.Settings.TemplateCode;
+            }
         }
 
         private void InitializeConsole()
         {
-            consoleOutputViewModel.Text = windowConfigurationService.Settings.ConsoleMessage;
+            if (consoleOutputViewModel != null && windowConfigurationService?.Settings != null)
+            {
+                consoleOutputViewModel.Text = windowConfigurationService.Settings.ConsoleMessage ?? string.Empty;
+            }
         }
     }
 }

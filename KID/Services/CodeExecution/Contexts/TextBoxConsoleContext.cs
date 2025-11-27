@@ -33,9 +33,12 @@ namespace KID.Services.CodeExecution.Contexts
             textBoxConsole = new TextBoxConsole(textBox);
 
             // Перенаправляем потоки Console
-            Console.SetOut(textBoxConsole.Out);
-            Console.SetIn(textBoxConsole.In);
-            Console.SetError(textBoxConsole.Error);
+            if (textBoxConsole != null)
+            {
+                Console.SetOut(textBoxConsole.Out);
+                Console.SetIn(textBoxConsole.In);
+                Console.SetError(textBoxConsole.Error);
+            }
         }
 
         public void Dispose()

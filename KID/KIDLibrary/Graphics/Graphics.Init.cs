@@ -17,12 +17,18 @@ namespace KID
 
         public static void Init(Canvas targetCanvas)
         {
+            if (targetCanvas == null)
+                throw new ArgumentNullException(nameof(targetCanvas));
+            
             Canvas = targetCanvas;
-            dispatcher = Application.Current.Dispatcher;
+            dispatcher = Application.Current?.Dispatcher;
         }
 
         private static void InvokeOnUI(Action action)
         {
+            if (action == null)
+                return;
+            
             if (dispatcher == null || dispatcher.CheckAccess())
             {
                 action();

@@ -16,14 +16,14 @@ namespace KID.Services.CodeExecution.Contexts
 
         public void Init()
         {
-            GraphicsContext.Init();
-            ConsoleContext.Init();
+            GraphicsContext?.Init();
+            ConsoleContext?.Init();
         }
 
         public void Dispose()
         {
-            GraphicsContext.Dispose();
-            ConsoleContext.Dispose();
+            GraphicsContext?.Dispose();
+            ConsoleContext?.Dispose();
         }
     }
 }

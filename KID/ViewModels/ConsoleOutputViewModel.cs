@@ -15,18 +15,24 @@ namespace KID.ViewModels
 
         void IConsoleOutputViewModel.Initialize(TextBox consoleOutputControl)
         {
-            ConsoleOutputControl = consoleOutputControl;
+            ConsoleOutputControl = consoleOutputControl ?? throw new ArgumentNullException(nameof(consoleOutputControl));
         }
 
-        public void Clear() => ConsoleOutputControl.Clear();
+        public void Clear()
+        {
+            ConsoleOutputControl?.Clear();
+        }
         
         public string Text
         {
-            get => ConsoleOutputControl.Text;
+            get => ConsoleOutputControl?.Text ?? string.Empty;
             set
             {
-                ConsoleOutputControl.Text = value;
-                ConsoleOutputControl.ScrollToEnd();
+                if (ConsoleOutputControl != null)
+                {
+                    ConsoleOutputControl.Text = value;
+                    ConsoleOutputControl.ScrollToEnd();
+                }
             }
         }
     }

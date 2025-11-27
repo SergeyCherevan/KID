@@ -17,6 +17,9 @@ namespace KID.Services.CodeExecution
 
         public async Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default)
         {
+            if (assembly == null)
+                throw new ArgumentNullException(nameof(assembly));
+            
             CancellationManager.CurrentToken = cancellationToken;
 
             await Task.Run(() =>

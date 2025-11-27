@@ -15,9 +15,12 @@ namespace KID.ViewModels
 
         public void Initialize(Canvas graphicsCanvasControl)
         {
-            GraphicsCanvasControl = graphicsCanvasControl;
+            GraphicsCanvasControl = graphicsCanvasControl ?? throw new ArgumentNullException(nameof(graphicsCanvasControl));
         }
 
-        public void Clear() => GraphicsCanvasControl.Children.Clear();
+        public void Clear()
+        {
+            GraphicsCanvasControl?.Children.Clear();
+        }
     }
 }

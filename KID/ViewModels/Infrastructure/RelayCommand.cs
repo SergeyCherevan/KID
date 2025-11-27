@@ -50,11 +50,27 @@ namespace KID.ViewModels.Infrastructure
 
         public bool CanExecute(object parameter)
         {
-            return canExecute == null || canExecute((T)parameter);
+            if (canExecute == null)
+                return true;
+            
+            if (parameter == null && default(T) != null)
+                return false;
+            
+            try
+            {
+                return canExecute((T)parameter);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public void Execute(object parameter)
         {
+            if (parameter == null && default(T) != null)
+                throw new ArgumentNullException(nameof(parameter));
+            
             execute((T)parameter);
         }
     }

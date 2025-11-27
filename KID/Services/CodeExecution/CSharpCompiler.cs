@@ -24,6 +24,9 @@ namespace KID.Services.CodeExecution
 
         public async Task<CompilationResult> CompileAsync(string code, CancellationToken cancellationToken = default)
         {
+            if (code == null)
+                throw new ArgumentNullException(nameof(code));
+            
             return await Task.Run(() =>
             {
                 var syntaxTree = CSharpSyntaxTree.ParseText(code);

@@ -33,6 +33,9 @@ namespace KID
             InitializeComponent();
             
             // Получаем сервисы из DI контейнера
+            if (App.ServiceProvider == null)
+                throw new InvalidOperationException("ServiceProvider is not initialized");
+            
             _windowInitializationService = App.ServiceProvider.GetRequiredService<IWindowInitializationService>();
             
             // Инициализируем окно после загрузки всех элементов
@@ -41,7 +44,7 @@ namespace KID
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            _windowInitializationService.Initialize();
+            _windowInitializationService?.Initialize();
         }
 
         void IClosable.Close()

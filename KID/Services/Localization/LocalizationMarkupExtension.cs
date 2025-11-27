@@ -51,12 +51,15 @@ namespace KID.Services.Localization
 
             public LocalizationValueConverter(ILocalizationService service, string key)
             {
-                _service = service;
-                _key = key;
+                _service = service ?? throw new ArgumentNullException(nameof(service));
+                _key = key ?? throw new ArgumentNullException(nameof(key));
             }
 
             public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
             {
+                if (_service == null || string.IsNullOrEmpty(_key))
+                    return $"[{_key}]";
+                
                 return _service.GetString(_key);
             }
 

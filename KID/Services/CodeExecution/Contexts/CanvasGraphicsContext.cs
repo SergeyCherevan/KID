@@ -8,13 +8,19 @@ namespace KID.Services.CodeExecution.Contexts
         public object GraphicsTarget { get; set; }
 
         public CanvasGraphicsContext(Canvas graphicsCanvas)
-        { 
+        {
+            if (graphicsCanvas == null)
+                throw new ArgumentNullException(nameof(graphicsCanvas));
+            
             GraphicsTarget = graphicsCanvas;
         }
 
         public void Init()
         {
-            Graphics.Init(GraphicsTarget as Canvas);
+            if (GraphicsTarget is Canvas canvas)
+            {
+                Graphics.Init(canvas);
+            }
         }
 
         public void Dispose() { }

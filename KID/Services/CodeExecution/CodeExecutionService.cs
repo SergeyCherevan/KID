@@ -16,12 +16,17 @@ namespace KID.Services.CodeExecution
 
         public CodeExecutionService(ICodeCompiler compiler, ICodeRunner runner)
         {
-            this.compiler = compiler;
-            this.runner = runner;
+            this.compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
+            this.runner = runner ?? throw new ArgumentNullException(nameof(runner));
         }
 
         public async Task ExecuteAsync(string code, ICodeExecutionContext context)
         {
+            if (code == null)
+                throw new ArgumentNullException(nameof(code));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+            
             if (isRunning) return;
             isRunning = true;
 
@@ -30,15 +35,25 @@ namespace KID.Services.CodeExecution
                 context.Init();
 
                 var result = await compiler.CompileAsync(code, context.CancellationToken);
+                
+                if (result == null)
+                    throw new InvalidOperationException("Compilation result is null");
 
                 if (!result.Success)
                 {
-                    foreach (var error in result.Errors)
+                    if (result.Errors != null)
                     {
-                        Console.WriteLine(error);
+                        foreach (var error in result.Errors)
+                        {
+                            if (error != null)
+                                Console.WriteLine(error);
+                        }
                     }
                     return;
                 }
+
+                if (result.Assembly == null)
+                    throw new InvalidOperationException("Compiled assembly is null");
 
                 try
                 {

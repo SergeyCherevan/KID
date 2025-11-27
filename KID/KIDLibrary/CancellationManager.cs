@@ -8,7 +8,10 @@ namespace KID
         
         public static void CheckCancellation()
         {
-            CurrentToken.ThrowIfCancellationRequested();
+            if (CurrentToken != default)
+            {
+                CurrentToken.ThrowIfCancellationRequested();
+            }
         }
     }
 }

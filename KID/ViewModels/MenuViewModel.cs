@@ -6,8 +6,10 @@ using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows.Input;
 
 namespace KID.ViewModels
@@ -40,19 +42,19 @@ namespace KID.ViewModels
             ILocalizationService localizationService
         )
         {
-            this.windowConfigurationService = windowConfigurationService;
-            this.codeExecutionService = codeExecutionService;
-            this.canvasTextBoxContextFabric = canvasTextBoxContextFabric;
+            this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
+            this.codeExecutionService = codeExecutionService ?? throw new ArgumentNullException(nameof(codeExecutionService));
+            this.canvasTextBoxContextFabric = canvasTextBoxContextFabric ?? throw new ArgumentNullException(nameof(canvasTextBoxContextFabric));
 
-            this.codeEditorViewModel = codeEditorViewModel;
-            this.consoleOutputViewModel = consoleOutputViewModel;
-            this.graphicsOutputViewModel = graphicsOutputViewModel;
-            this.codeFileService = codeFileService;
-            this.localizationService = localizationService;
+            this.codeEditorViewModel = codeEditorViewModel ?? throw new ArgumentNullException(nameof(codeEditorViewModel));
+            this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
+            this.graphicsOutputViewModel = graphicsOutputViewModel ?? throw new ArgumentNullException(nameof(graphicsOutputViewModel));
+            this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
+            this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
 
             // Инициализируем список доступных языков
             var languages = localizationService.GetAvailableLanguages();
-            AvailableLanguages = new ObservableCollection<AvailableLanguage>(languages);
+            AvailableLanguages = new ObservableCollection<AvailableLanguage>(languages ?? Array.Empty<AvailableLanguage>());
             
             // Обновляем локализованные имена для всех языков
             UpdateLanguageDisplayNames();
@@ -116,20 +118,32 @@ namespace KID.ViewModels
 
         private void ExecuteNewFile()
         {
+            if (windowConfigurationService?.Settings == null || 
+                codeEditorViewModel == null || 
+                consoleOutputViewModel == null || 
+                graphicsOutputViewModel == null ||
+                localizationService == null)
+                return;
+            
             var code = windowConfigurationService.Settings.TemplateCode;
 
-            codeEditorViewModel.Text = code;
+            codeEditorViewModel.Text = code ?? string.Empty;
             consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
             graphicsOutputViewModel.Clear();
         }
 
         private string GetFileFilter()
         {
-            return localizationService.GetString("FileFilter_CSharp");
+            return localizationService?.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs";
         }
 
         private async void ExecuteOpenFile()
         {
+            if (codeFileService == null || codeEditorViewModel == null || 
+                consoleOutputViewModel == null || graphicsOutputViewModel == null ||
+                localizationService == null)
+                return;
+            
             var code = await codeFileService.OpenCodeFileAsync(GetFileFilter());
             if (code != null)
             {
@@ -141,17 +155,35 @@ namespace KID.ViewModels
 
         private async void ExecuteSaveFile()
         {
+            if (codeEditorViewModel == null || codeFileService == null)
+                return;
+            
             var code = codeEditorViewModel.Text;
-            await codeFileService.SaveCodeFileAsync(code, GetFileFilter());
+            if (!string.IsNullOrEmpty(code))
+            {
+                await codeFileService.SaveCodeFileAsync(code, GetFileFilter());
+            }
         }
 
         private async void ExecuteRun()
         {
+            if (codeEditorViewModel == null || consoleOutputViewModel == null || 
+                graphicsOutputViewModel == null || canvasTextBoxContextFabric == null ||
+                codeExecutionService == null)
+                return;
+            
             IsStopButtonEnabled = true;
             cancellationSource = new CancellationTokenSource();
 
             consoleOutputViewModel.Clear();
             graphicsOutputViewModel.Clear();
+
+            if (graphicsOutputViewModel.GraphicsCanvasControl == null || 
+                consoleOutputViewModel.ConsoleOutputControl == null)
+            {
+                IsStopButtonEnabled = false;
+                return;
+            }
 
             CodeExecutionContext context = canvasTextBoxContextFabric.Create(
                 graphicsOutputViewModel.GraphicsCanvasControl,
@@ -159,7 +191,11 @@ namespace KID.ViewModels
                 cancellationSource.Token
             );
 
-            await codeExecutionService.ExecuteAsync(codeEditorViewModel.Text, context);
+            var code = codeEditorViewModel.Text;
+            if (!string.IsNullOrEmpty(code))
+            {
+                await codeExecutionService.ExecuteAsync(code, context);
+            }
 
             IsStopButtonEnabled = false;
         }
@@ -172,16 +208,27 @@ namespace KID.ViewModels
 
         private void ExecuteUndo()
         {
-            codeEditorViewModel.UndoCommand.Execute(null);
+            if (codeEditorViewModel?.UndoCommand != null)
+            {
+                codeEditorViewModel.UndoCommand.Execute(null);
+            }
         }
 
         private void ExecuteRedo()
         {
-            codeEditorViewModel.RedoCommand.Execute(null);
+            if (codeEditorViewModel?.RedoCommand != null)
+            {
+                codeEditorViewModel.RedoCommand.Execute(null);
+            }
         }
 
         private void ChangeLanguage(string cultureCode)
         {
+            if (string.IsNullOrEmpty(cultureCode) || 
+                localizationService == null || 
+                windowConfigurationService?.Settings == null)
+                return;
+            
             localizationService.SetCulture(cultureCode);
             
             // Сохраняем выбранный язык в настройках
@@ -191,8 +238,14 @@ namespace KID.ViewModels
 
         private void UpdateLanguageDisplayNames()
         {
+            if (AvailableLanguages == null || localizationService == null)
+                return;
+            
             foreach (var language in AvailableLanguages)
             {
+                if (language == null)
+                    continue;
+                
                 // Получаем локализованное название языка
                 var key = $"Language_{GetLanguageKey(language.CultureCode)}";
                 language.LocalizedDisplayName = localizationService.GetString(key);

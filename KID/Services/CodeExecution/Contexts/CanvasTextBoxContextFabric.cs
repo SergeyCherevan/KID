@@ -11,6 +11,11 @@ namespace KID.Services.CodeExecution.Contexts
     {
         public CodeExecutionContext Create(Canvas canvas, TextBox textBox, CancellationToken cancellationToken)
         {
+            if (canvas == null)
+                throw new ArgumentNullException(nameof(canvas));
+            if (textBox == null)
+                throw new ArgumentNullException(nameof(textBox));
+            
             return new CodeExecutionContext
             {
                 GraphicsContext = new CanvasGraphicsContext(canvas),

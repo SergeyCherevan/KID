@@ -19,7 +19,7 @@ namespace KID.ViewModels
 
         public void Initialize(TextEditor editor)
         {
-            TextEditor = editor;
+            TextEditor = editor ?? throw new ArgumentNullException(nameof(editor));
             TextEditor.TextChanged += (s, e) =>
             {
                 OnPropertyChanged(nameof(Text));
@@ -30,32 +30,44 @@ namespace KID.ViewModels
 
         public string Text
         {
-            get => TextEditor.Text;
-            set => TextEditor.Text = value;
+            get => TextEditor?.Text ?? string.Empty;
+            set
+            {
+                if (TextEditor != null)
+                    TextEditor.Text = value;
+            }
         }
 
         public FontFamily FontFamily
         {
-            get => TextEditor.FontFamily;
-            set => TextEditor.FontFamily = value;
+            get => TextEditor?.FontFamily;
+            set
+            {
+                if (TextEditor != null)
+                    TextEditor.FontFamily = value;
+            }
         }
 
         public double FontSize
         {
-            get => TextEditor.FontSize;
-            set => TextEditor.FontSize = value;
+            get => TextEditor?.FontSize ?? 12.0;
+            set
+            {
+                if (TextEditor != null)
+                    TextEditor.FontSize = value;
+            }
         }
 
-        public bool CanUndo => TextEditor.CanUndo;
+        public bool CanUndo => TextEditor?.CanUndo ?? false;
 
-        public bool CanRedo => TextEditor.CanRedo;
+        public bool CanRedo => TextEditor?.CanRedo ?? false;
 
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
 
         private void ExecuteUndo()
         {
-            if (TextEditor.CanUndo)
+            if (TextEditor?.CanUndo == true)
             {
                 TextEditor.Undo();
             }
@@ -63,7 +75,7 @@ namespace KID.ViewModels
 
         private void ExecuteRedo()
         {
-            if (TextEditor.CanRedo)
+            if (TextEditor?.CanRedo == true)
             {
                 TextEditor.Redo();
             }
@@ -71,6 +83,11 @@ namespace KID.ViewModels
 
         public void SetSyntaxHighlighting(string language)
         {
+            if (TextEditor == null)
+                return;
+            if (string.IsNullOrEmpty(language))
+                return;
+            
             TextEditor.SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(language);
         }
     }
