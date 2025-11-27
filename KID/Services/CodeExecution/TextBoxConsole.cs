@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using KID.Services.Interfaces;
 
@@ -90,6 +91,13 @@ namespace KID.Services.CodeExecution
             {
                 isReading = true;
                 
+                // Устанавливаем фокус и курсор для визуальной обратной связи
+                InvokeOnUIThread(() =>
+                {
+                    textBox.IsReadOnly = false; // Разрешаем ввод
+                    FocusTextBox(); // Устанавливаем фокус с использованием нескольких методов
+                });
+                
                 // Ждем события (блокируем поток)
                 keyDownReadEvent.WaitOne();
                 
@@ -101,6 +109,8 @@ namespace KID.Services.CodeExecution
                 {
                     textBox.AppendText(result.ToString());
                     textBox.ScrollToEnd();
+                    textBox.CaretIndex = textBox.Text.Length;
+                    textBox.IsReadOnly = true; // Блокируем ввод после чтения
                 });
 
                 lastReadChar = -1; // Очищаем
@@ -109,21 +119,19 @@ namespace KID.Services.CodeExecution
             }
         }
 
-        // Очистка вывода
-        public void Clear()
-        {
-            InvokeOnUIThread(() =>
-            {
-                textBox.Clear();
-            });
-        }
-
         public string ReadLine()
         {
             lock (readLock)
             {
                 StringBuilder result = new StringBuilder();
                 isReading = true;
+                
+                // Устанавливаем фокус и курсор для визуальной обратной связи
+                InvokeOnUIThread(() =>
+                {
+                    textBox.IsReadOnly = false; // Разрешаем ввод
+                    FocusTextBox(); // Устанавливаем фокус с использованием нескольких методов
+                });
                 
                 char symbol;
                 do
@@ -161,6 +169,7 @@ namespace KID.Services.CodeExecution
                         {
                             textBox.AppendText(symbol.ToString());
                             textBox.ScrollToEnd();
+                            textBox.CaretIndex = textBox.Text.Length; // Обновляем позицию курсора
                         });
 
                         if (symbol != '\n')
@@ -173,8 +182,23 @@ namespace KID.Services.CodeExecution
 
                 isReading = false;
 
+                // Блокируем ввод после завершения чтения
+                InvokeOnUIThread(() =>
+                {
+                    textBox.IsReadOnly = true;
+                });
+
                 return result.ToString();
             }
+        }
+
+        // Очистка вывода
+        public void Clear()
+        {
+            InvokeOnUIThread(() =>
+            {
+                textBox.Clear();
+            });
         }
 
         // === Вспомогательные методы ===
@@ -188,6 +212,31 @@ namespace KID.Services.CodeExecution
             {
                 dispatcher.BeginInvoke(action, DispatcherPriority.Background);
             }
+        }
+
+        /// <summary>
+        /// Устанавливает фокус на TextBox с использованием нескольких методов для надежности
+        /// </summary>
+        private void FocusTextBox()
+        {
+            // Метод 1: Стандартный Focus()
+            textBox.Focus();
+            
+            // Метод 2: Keyboard.Focus() - более надежный для элементов ввода
+            Keyboard.Focus(textBox);
+            
+            // Метод 3: FocusManager - устанавливает фокус на уровне окна
+            if (textBox.IsLoaded)
+            {
+                FocusManager.SetFocusedElement(FocusManager.GetFocusScope(textBox), textBox);
+            }
+            
+            // Устанавливаем курсор в конец текста
+            textBox.CaretIndex = textBox.Text.Length;
+            
+            // Делаем TextBox видимым и прокручиваем к концу
+            textBox.ScrollToEnd();
+            textBox.BringIntoView();
         }
 
         private void TextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
