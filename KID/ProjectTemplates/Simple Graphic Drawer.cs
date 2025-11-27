@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using KID;
 
-int x, y, radius, width, heigth;
+int x, y, x2, y2, radius, width, heigth;
 string type;
 
 for (int i = 1; true; i++)
@@ -30,6 +30,15 @@ for (int i = 1; true; i++)
 			Console.Write($"heigth: "); heigth = Int32.Parse(Console.ReadLine());
 		
 			KID.Graphics.Rectangle(x, y, width, heigth);
+			break;
+
+		case "Line":
+			Console.Write($"x1: "); x = Int32.Parse(Console.ReadLine());
+			Console.Write($"y1: "); y = Int32.Parse(Console.ReadLine());
+			Console.Write($"x2: "); x2 = Int32.Parse(Console.ReadLine());
+			Console.Write($"y2: "); y2 = Int32.Parse(Console.ReadLine());
+		
+			KID.Graphics.Line(x, y, x2, y2);
 			break;
 	}
 
