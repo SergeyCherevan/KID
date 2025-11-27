@@ -31,6 +31,8 @@ namespace KID.Services.CodeExecution
                     try
                     {
                         entry.Invoke(null, parameters);
+
+                        Console.WriteLine(_localizationService.GetString("Notification_ProgramFinished"));
                     }
                     catch (TargetInvocationException ex)
                     {
@@ -54,10 +56,6 @@ namespace KID.Services.CodeExecution
                     catch (OperationCanceledException)
                     {
                         Console.WriteLine(_localizationService.GetString("Notification_ProgramStopped"));
-                    }
-                    finally
-                    {
-                        Console.WriteLine(_localizationService.GetString("Notification_ProgramFinished"));
                     }
                 }
             },

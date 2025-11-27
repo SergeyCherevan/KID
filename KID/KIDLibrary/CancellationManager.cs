@@ -4,13 +4,38 @@ namespace KID
 {
     public static class CancellationManager
     {
-        public static CancellationToken CurrentToken { get; set; }
+        private static readonly object _lockObject = new object();
+        private static CancellationToken _currentToken;
+
+        public static CancellationToken CurrentToken
+        {
+            get
+            {
+                lock (_lockObject)
+                {
+                    return _currentToken;
+                }
+            }
+            set
+            {
+                lock (_lockObject)
+                {
+                    _currentToken = value;
+                }
+            }
+        }
         
         public static void CheckCancellation()
         {
-            if (CurrentToken != default)
+            CancellationToken token;
+            lock (_lockObject)
             {
-                CurrentToken.ThrowIfCancellationRequested();
+                token = _currentToken;
+            }
+
+            if (token != default)
+            {
+                token.ThrowIfCancellationRequested();
             }
         }
     }
