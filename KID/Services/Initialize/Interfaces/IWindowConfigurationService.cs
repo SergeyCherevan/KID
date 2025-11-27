@@ -11,5 +11,6 @@ namespace KID.Services.Initialize.Interfaces
         public WindowConfigurationData Settings { get; }
         public void SetConfigurationFromFile();
         public void SetDefaultCode();
+        public void SaveSettings();
     }
 }

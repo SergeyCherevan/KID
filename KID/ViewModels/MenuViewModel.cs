@@ -183,6 +183,10 @@ namespace KID.ViewModels
         private void ChangeLanguage(string cultureCode)
         {
             localizationService.SetCulture(cultureCode);
+            
+            // Сохраняем выбранный язык в настройках
+            windowConfigurationService.Settings.UILanguage = cultureCode;
+            windowConfigurationService.SaveSettings();
         }
 
         private void UpdateLanguageDisplayNames()

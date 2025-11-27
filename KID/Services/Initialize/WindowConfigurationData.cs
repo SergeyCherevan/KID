@@ -8,6 +8,13 @@ namespace KID.Services.Initialize
 {
     public class WindowConfigurationData
     {
+        // Цветовая тема
+        public string ColorTheme { get; set; } = "Light"; // Light, Dark
+        
+        // Язык интерфейса
+        public string UILanguage { get; set; } = "ru-RU"; // ru-RU, en-US, uk-UA
+        
+        // Настройки редактора кода
         public string Language { get; set; } = "C#";
         public string FontFamily { get; set; } = "Consolas";
         public double FontSize { get; set; } = 14;

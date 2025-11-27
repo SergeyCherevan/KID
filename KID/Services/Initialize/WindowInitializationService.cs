@@ -1,4 +1,5 @@
 ﻿using KID.Services.Initialize.Interfaces;
+using KID.Services.Localization.Interfaces;
 using KID.ViewModels;
 using KID.ViewModels.Interfaces;
 using KID.Views;
@@ -14,6 +15,7 @@ namespace KID.Services.Initialize
     public class WindowInitializationService : IWindowInitializationService
     {
         private readonly IWindowConfigurationService windowConfigurationService;
+        private readonly ILocalizationService localizationService;
 
         private readonly IMainViewModel mainViewModel;
         private readonly ICodeEditorViewModel codeEditorViewModel;
@@ -23,6 +25,7 @@ namespace KID.Services.Initialize
 
         public WindowInitializationService(
             IWindowConfigurationService windowConfigurationService,
+            ILocalizationService localizationService,
             IMainViewModel mainViewModel,
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
@@ -30,6 +33,7 @@ namespace KID.Services.Initialize
         )
         {
             this.windowConfigurationService = windowConfigurationService;
+            this.localizationService = localizationService;
 
             this.mainViewModel = mainViewModel;
             this.codeEditorViewModel = codeEditorViewModel;
@@ -43,11 +47,23 @@ namespace KID.Services.Initialize
             windowConfigurationService.SetConfigurationFromFile();
             windowConfigurationService.SetDefaultCode();
 
+            // Применяем язык интерфейса из настроек
+            InitializeLanguage();
+            
             InitializeMainWindow();
             InitializeCodeEditor();
             InitializeConsole();
 
             mainWindow.UpdateLayout();
+        }
+
+        private void InitializeLanguage()
+        {
+            // Устанавливаем язык интерфейса из настроек
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.UILanguage))
+            {
+                localizationService.SetCulture(windowConfigurationService.Settings.UILanguage);
+            }
         }
 
         private void InitializeMainWindow()

@@ -3,6 +3,7 @@ using System.Data;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using KID.Services.DI;
+using KID.Services.Initialize.Interfaces;
 
 namespace KID
 {
@@ -24,6 +25,17 @@ namespace KID
 
         protected override void OnExit(ExitEventArgs e)
         {
+            // Сохраняем настройки перед выходом
+            try
+            {
+                var settingsService = ServiceProvider.GetRequiredService<IWindowConfigurationService>();
+                settingsService.SaveSettings();
+            }
+            catch
+            {
+                // Игнорируем ошибки при сохранении при выходе
+            }
+            
             if (ServiceProvider is IDisposable disposable)
             {
                 disposable.Dispose();
