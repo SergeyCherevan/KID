@@ -9,9 +9,9 @@ for (int i = 1; true; i++)
 {
 	Console.WriteLine($"Figure {i}:");
 	
-	Console.Write($"color: "); KID.Graphics.Color = Console.ReadLine();
-	
 	Console.Write($"type: "); type = Console.ReadLine();
+	
+	Console.Write($"color: "); KID.Graphics.Color = Console.ReadLine();
 	
 	switch (type)
 	{
