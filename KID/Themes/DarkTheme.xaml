@@ -7,7 +7,7 @@
     <Color x:Key="SplitterColor">#1F1F1F</Color>
     <Color x:Key="EditorBackground">#505050</Color>
     <Color x:Key="EditorForeground">White</Color>
-    <Color x:Key="SpecialElementsBackground">#1F1F1F</Color>
+    <Color x:Key="SpecialElementsBackground">#424242</Color>
     <Color x:Key="TextColor">White</Color>
     <Color x:Key="ConsoleBackground">Black</Color>
     <Color x:Key="ConsoleForeground">White</Color>
