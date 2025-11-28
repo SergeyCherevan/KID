@@ -1,5 +1,6 @@
 ﻿using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
+using KID.Services.Themes.Interfaces;
 using KID.ViewModels;
 using KID.ViewModels.Interfaces;
 using KID.Views;
@@ -16,6 +17,7 @@ namespace KID.Services.Initialize
     {
         private readonly IWindowConfigurationService windowConfigurationService;
         private readonly ILocalizationService localizationService;
+        private readonly IThemeService themeService;
 
         private readonly IMainViewModel mainViewModel;
         private readonly ICodeEditorViewModel codeEditorViewModel;
@@ -26,6 +28,7 @@ namespace KID.Services.Initialize
         public WindowInitializationService(
             IWindowConfigurationService windowConfigurationService,
             ILocalizationService localizationService,
+            IThemeService themeService,
             IMainViewModel mainViewModel,
             ICodeEditorViewModel codeEditorViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
@@ -34,6 +37,7 @@ namespace KID.Services.Initialize
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
             this.mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
             this.codeEditorViewModel = codeEditorViewModel ?? throw new ArgumentNullException(nameof(codeEditorViewModel));
@@ -47,6 +51,9 @@ namespace KID.Services.Initialize
             windowConfigurationService.SetConfigurationFromFile();
             windowConfigurationService.SetDefaultCode();
 
+            // Применяем тему из настроек
+            InitializeTheme();
+            
             // Применяем язык интерфейса из настроек
             InitializeLanguage();
             
@@ -55,6 +62,20 @@ namespace KID.Services.Initialize
             InitializeConsole();
 
             mainWindow.UpdateLayout();
+        }
+
+        private void InitializeTheme()
+        {
+            // Применяем тему из настроек
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.ColorTheme))
+            {
+                themeService.ApplyTheme(windowConfigurationService.Settings.ColorTheme);
+            }
+            else
+            {
+                // Если тема не указана, используем светлую по умолчанию
+                themeService.ApplyTheme("Light");
+            }
         }
 
         private void InitializeLanguage()

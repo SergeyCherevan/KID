@@ -4,6 +4,7 @@ using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
+using KID.Services.Themes.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 using System;
@@ -28,8 +29,10 @@ namespace KID.ViewModels
         private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
         private readonly ICodeFileService codeFileService;
         private readonly ILocalizationService localizationService;
+        private readonly IThemeService themeService;
 
         public ObservableCollection<AvailableLanguage> AvailableLanguages { get; }
+        public ObservableCollection<AvailableTheme> AvailableThemes { get; }
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -39,7 +42,8 @@ namespace KID.ViewModels
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel,
             ICodeFileService codeFileService,
-            ILocalizationService localizationService
+            ILocalizationService localizationService,
+            IThemeService themeService
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
@@ -51,6 +55,7 @@ namespace KID.ViewModels
             this.graphicsOutputViewModel = graphicsOutputViewModel ?? throw new ArgumentNullException(nameof(graphicsOutputViewModel));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
             // Инициализируем список доступных языков
             var languages = localizationService.GetAvailableLanguages();
@@ -58,6 +63,13 @@ namespace KID.ViewModels
             
             // Обновляем локализованные имена для всех языков
             UpdateLanguageDisplayNames();
+
+            // Инициализируем список доступных тем
+            var themes = themeService.GetAvailableThemes();
+            AvailableThemes = new ObservableCollection<AvailableTheme>(themes ?? Array.Empty<AvailableTheme>());
+            
+            // Обновляем локализованные имена для всех тем
+            UpdateThemeDisplayNames();
 
             // Подписываемся на изменения свойств codeEditorViewModel
             if (codeEditorViewModel is INotifyPropertyChanged notifyPropertyChanged)
@@ -73,12 +85,14 @@ namespace KID.ViewModels
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             ChangeLanguageCommand = new RelayCommand<AvailableLanguage>(lang => ChangeLanguage(lang));
+            ChangeThemeCommand = new RelayCommand<AvailableTheme>(theme => ChangeTheme(theme));
 
             // Подписываемся на изменение культуры для обновления UI
             localizationService.CultureChanged += (s, e) =>
             {
                 OnPropertyChanged(string.Empty);
                 UpdateLanguageDisplayNames();
+                UpdateThemeDisplayNames();
             };
         }
 
@@ -115,6 +129,7 @@ namespace KID.ViewModels
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
+        public ICommand ChangeThemeCommand { get; }
 
         private void ExecuteNewFile()
         {
@@ -249,6 +264,36 @@ namespace KID.ViewModels
                 // Получаем локализованное название языка
                 var key = $"Language_{language.EnglishName}";
                 language.LocalizedDisplayName = localizationService.GetString(key);
+            }
+        }
+
+        private void ChangeTheme(AvailableTheme theme)
+        {
+            if (theme == null || 
+                themeService == null || 
+                windowConfigurationService?.Settings == null)
+                return;
+            
+            themeService.ApplyTheme(theme.ThemeKey);
+            
+            // Сохраняем выбранную тему в настройках
+            windowConfigurationService.Settings.ColorTheme = theme.ThemeKey;
+            windowConfigurationService.SaveSettings();
+        }
+
+        private void UpdateThemeDisplayNames()
+        {
+            if (AvailableThemes == null || localizationService == null)
+                return;
+            
+            foreach (var theme in AvailableThemes)
+            {
+                if (theme == null)
+                    continue;
+                
+                // Получаем локализованное название темы
+                var key = $"Theme_{theme.EnglishName}";
+                theme.LocalizedDisplayName = localizationService.GetString(key);
             }
         }
     }

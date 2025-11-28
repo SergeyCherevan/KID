@@ -28,7 +28,16 @@
                 <MenuItem Header="{localization:Localization Menu_Redo}" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_View}">
-                <MenuItem Header="{localization:Localization Menu_Theme}" />
+                <MenuItem Header="{localization:Localization Menu_Theme}" 
+                         ItemsSource="{Binding AvailableThemes}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Command" Value="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
                 <MenuItem Header="{localization:Localization Menu_ChangeLanguage}" 
                          ItemsSource="{Binding AvailableLanguages}">
                     <MenuItem.ItemContainerStyle>

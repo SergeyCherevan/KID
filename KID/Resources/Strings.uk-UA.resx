@@ -145,5 +145,11 @@
   <data name="Language_Ukrainian" xml:space="preserve">
     <value>Українська</value>
   </data>
+  <data name="Theme_Light" xml:space="preserve">
+    <value>Світла</value>
+  </data>
+  <data name="Theme_Dark" xml:space="preserve">
+    <value>Темна</value>
+  </data>
 </root>
 

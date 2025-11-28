@@ -11,6 +11,8 @@ using KID.Services.Files;
 using KID.Services.Files.Interfaces;
 using KID.Services.Localization;
 using KID.Services.Localization.Interfaces;
+using KID.Services.Themes;
+using KID.Services.Themes.Interfaces;
 
 namespace KID.Services.DI
 {
@@ -35,6 +37,9 @@ namespace KID.Services.DI
 
             // Localization Service
             services.AddSingleton<ILocalizationService, LocalizationService>();
+
+            // Theme Service
+            services.AddSingleton<IThemeService, ThemeService>();
 
             // ViewModels
             services.AddSingleton<IMainViewModel, MainViewModel>();
