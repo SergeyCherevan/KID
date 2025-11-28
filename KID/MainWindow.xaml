@@ -60,7 +60,7 @@
                 </StackPanel>
                 <TextBlock Text="{localization:Localization Window_Title}"
                            DockPanel.Dock="Left"
-                           Foreground="{StaticResource SpecialElementsBrush}"
+                           Foreground="{StaticResource TitleBrush}"
                            VerticalAlignment="Center"
                            FontWeight="Bold"
                            FontSize="13"

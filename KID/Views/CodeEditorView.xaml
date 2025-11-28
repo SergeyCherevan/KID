@@ -12,10 +12,9 @@
     
     <Grid>
         <avalonedit:TextEditor x:Name="TextEditor"
-                              ShowLineNumbers="True"
-                              WordWrap="True"
-                              FontFamily="Consolas"
-                              FontSize="14"
-                              SyntaxHighlighting="C#"/>
+                               ShowLineNumbers="True"
+                               WordWrap="True"
+                               Background="{StaticResource EditorBackgroundBrush}"
+                               Foreground="{StaticResource EditorForegroundBrush}"/>
     </Grid>
 </UserControl>
