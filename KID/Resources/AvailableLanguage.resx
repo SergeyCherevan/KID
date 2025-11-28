@@ -58,91 +58,25 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Metadata_EnglishName" xml:space="preserve">
-    <value>English</value>
+  <data name="Language_Count" xml:space="preserve">
+    <value>3</value>
   </data>
-  <data name="Metadata_CultureCode" xml:space="preserve">
+  <data name="Language_0_CultureCode" xml:space="preserve">
     <value>en-US</value>
   </data>
-  <data name="Menu_File" xml:space="preserve">
-    <value>File</value>
-  </data>
-  <data name="Menu_Edit" xml:space="preserve">
-    <value>Edit</value>
-  </data>
-  <data name="Menu_View" xml:space="preserve">
-    <value>View</value>
-  </data>
-  <data name="Menu_Theme" xml:space="preserve">
-    <value>Theme</value>
-  </data>
-  <data name="Menu_New" xml:space="preserve">
-    <value>New</value>
-  </data>
-  <data name="Menu_Open" xml:space="preserve">
-    <value>Open</value>
-  </data>
-  <data name="Menu_Save" xml:space="preserve">
-    <value>Save</value>
-  </data>
-  <data name="Menu_Undo" xml:space="preserve">
-    <value>Undo</value>
-  </data>
-  <data name="Menu_Redo" xml:space="preserve">
-    <value>Redo</value>
-  </data>
-  <data name="Menu_Run" xml:space="preserve">
-    <value>▶️ Run</value>
-  </data>
-  <data name="Menu_Stop" xml:space="preserve">
-    <value>■ Stop</value>
-  </data>
-  <data name="Window_Title" xml:space="preserve">
-    <value>.KID - C#/.NET IDE for Kids</value>
-  </data>
-  <data name="Console_Output" xml:space="preserve">
-    <value>Console output...</value>
-  </data>
-  <data name="Error_Compilation" xml:space="preserve">
-    <value>Error on line {0}: {1}</value>
-  </data>
-  <data name="Error_Execution" xml:space="preserve">
-    <value>Execution error: {0}</value>
-  </data>
-  <data name="Error_StackTrace" xml:space="preserve">
-    <value>Stack: {0}</value>
-  </data>
-  <data name="Notification_ProgramStopped" xml:space="preserve">
-    <value>Program stopped</value>
-  </data>
-  <data name="Notification_ProgramFinished" xml:space="preserve">
-    <value>Program finished execution</value>
-  </data>
-  <data name="FileFilter_CSharp" xml:space="preserve">
-    <value>C# Files (*.cs)|*.cs|All Files (*.*)|*.*</value>
-  </data>
-  <data name="Error_ConfigLoadFailed" xml:space="preserve">
-    <value>Failed to load configuration file. Default settings will be used.</value>
-  </data>
-  <data name="Error_TemplateLoadFailed" xml:space="preserve">
-    <value>Failed to load template code file. Built-in template will be used.</value>
-  </data>
-  <data name="Error_Title" xml:space="preserve">
-    <value>Error</value>
-  </data>
-  <data name="Error_FilePathEmpty" xml:space="preserve">
-    <value>File path cannot be empty</value>
-  </data>
-  <data name="Menu_ChangeLanguage" xml:space="preserve">
-    <value>Change Language</value>
-  </data>
-  <data name="Language_Russian" xml:space="preserve">
-    <value>Russian</value>
-  </data>
-  <data name="Language_English" xml:space="preserve">
+  <data name="Language_0_EnglishName" xml:space="preserve">
     <value>English</value>
   </data>
-  <data name="Language_Ukrainian" xml:space="preserve">
+  <data name="Language_1_CultureCode" xml:space="preserve">
+    <value>ru-RU</value>
+  </data>
+  <data name="Language_1_EnglishName" xml:space="preserve">
+    <value>Russian</value>
+  </data>
+  <data name="Language_2_CultureCode" xml:space="preserve">
+    <value>uk-UA</value>
+  </data>
+  <data name="Language_2_EnglishName" xml:space="preserve">
     <value>Ukrainian</value>
   </data>
 </root>

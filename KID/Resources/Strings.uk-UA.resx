@@ -58,6 +58,12 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="Metadata_EnglishName" xml:space="preserve">
+    <value>Ukrainian</value>
+  </data>
+  <data name="Metadata_CultureCode" xml:space="preserve">
+    <value>uk-UA</value>
+  </data>
   <data name="Menu_File" xml:space="preserve">
     <value>Файл</value>
   </data>
@@ -138,9 +144,6 @@
   </data>
   <data name="Language_Ukrainian" xml:space="preserve">
     <value>Українська</value>
-  </data>
-  <data name="Language_EnglishName" xml:space="preserve">
-    <value>Ukrainian</value>
   </data>
 </root>
 

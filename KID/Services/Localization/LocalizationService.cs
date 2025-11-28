@@ -1,51 +1,44 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
-using System.Reflection;
-using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 using KID.Models;
+using KID.Resources;
 using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.Localization
 {
     public class LocalizationService : ILocalizationService, INotifyPropertyChanged
     {
-        private ResourceManager _resourceManager;
+        private readonly ResourceManager _resourceManager;
+        private readonly ResourceManager _availableLanguageResourceManager;
         private CultureInfo _currentCulture;
+        private List<AvailableLanguage>? _cachedAvailableLanguages;
+        private string _currentCultureName;
 
         public string CurrentCulture
         {
-            get => _currentCulture.Name;
+            get => _currentCultureName;
             private set
             {
-                try
+                if (_currentCultureName != value)
                 {
-                    var newCulture = new CultureInfo(value);
-                    if (_currentCulture.Name != newCulture.Name)
-                    {
-                        _currentCulture = newCulture;
-                        OnPropertyChanged(nameof(CurrentCulture));
-                    }
-                }
-                catch
-                {
-                    // Если культура не найдена, игнорируем
+                    _currentCultureName = value;
+                    OnPropertyChanged();
                 }
             }
         }
-        
+
         public event EventHandler? CultureChanged;
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public LocalizationService()
         {
-            _resourceManager = new ResourceManager("KID.Resources.Strings", Assembly.GetExecutingAssembly());
+            _resourceManager = new ResourceManager("KID.Resources.Strings", typeof(Strings).Assembly);
+            _availableLanguageResourceManager = new ResourceManager("KID.Resources.AvailableLanguage", typeof(Strings).Assembly);
             _currentCulture = CultureInfo.CurrentUICulture;
-        }
-
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         public string GetString(string key)
@@ -53,131 +46,116 @@ namespace KID.Services.Localization
             if (string.IsNullOrEmpty(key))
                 return string.Empty;
 
-            // Пытаемся получить строку для текущей культуры
-            var value = _resourceManager.GetString(key, _currentCulture);
-            
-            // Если не найдено и текущая культура не en-US, пробуем en-US как fallback
-            if (value == null && _currentCulture.Name != "en-US")
+            try
             {
-                value = _resourceManager.GetString(key, new CultureInfo("en-US"));
+                return _resourceManager.GetString(key, _currentCulture)
+                    ?? _resourceManager.GetString(key, new CultureInfo("en-US"))
+                    ?? $"[{key}]";
             }
-            
-            return value ?? $"[{key}]";
+            catch
+            {
+                return $"[{key}]";
+            }
         }
 
         public string GetString(string key, params object[] args)
         {
-            var format = GetString(key);
-            if (args == null || args.Length == 0)
-                return format;
-            
+            if (string.IsNullOrEmpty(key))
+                return string.Empty;
+
             try
             {
-                return string.Format(format, args);
+                var format = _resourceManager.GetString(key, _currentCulture) ?? $"[{key}]";
+                return args != null && args.Length > 0 
+                    ? string.Format(format, args) 
+                    : format;
             }
             catch
             {
-                return format;
+                return $"[{key}]";
             }
         }
 
         public void SetCulture(string cultureCode)
         {
+            if (string.IsNullOrEmpty(cultureCode))
+                return;
+
             try
             {
-                CurrentCulture = cultureCode;
-                CultureChanged?.Invoke(this, EventArgs.Empty);
+                var newCulture = CultureInfo.GetCultureInfo(cultureCode);
+                if (_currentCulture.Name != newCulture.Name)
+                {
+                    _currentCulture = newCulture;
+                    CultureInfo.CurrentUICulture = newCulture;
+                    CultureInfo.CurrentCulture = newCulture;
+                    
+                    // Обновляем свойство CurrentCulture и вызываем PropertyChanged
+                    CurrentCulture = newCulture.Name;
+                    
+                    // Сбрасываем кэш доступных языков, чтобы обновить локализованные названия
+                    _cachedAvailableLanguages = null;
+                    
+                    CultureChanged?.Invoke(this, EventArgs.Empty);
+                }
             }
             catch
             {
-                // Если культура не найдена, используем текущую
+                // Игнорируем ошибки при установке культуры
             }
         }
 
         public IEnumerable<AvailableLanguage> GetAvailableLanguages()
         {
-            var assembly = Assembly.GetExecutingAssembly();
-            var resourceNames = assembly.GetManifestResourceNames();
+            // Используем кэш, если он уже создан
+            if (_cachedAvailableLanguages != null)
+                return _cachedAvailableLanguages;
+
             var languages = new List<AvailableLanguage>();
 
-            // Ищем все ресурсы вида "KID.Resources.Strings.<culture>.resources"
-            // Также проверяем вариант без расширения .resources
-            var pattern = new Regex(@"KID\.Resources\.Strings\.([a-z]{2}-[A-Z]{2})(?:\.resources)?$", RegexOptions.IgnoreCase);
-            
-            foreach (var resourceName in resourceNames)
+            try
             {
-                var match = pattern.Match(resourceName);
-                if (match.Success)
-                {
-                    var cultureCode = match.Groups[1].Value;
-                    try
-                    {
-                        var culture = new CultureInfo(cultureCode);
-                        var tempResourceManager = new ResourceManager("KID.Resources.Strings", assembly);
-                        
-                        // Получаем английское название языка из ресурса
-                        // Сначала пробуем получить из ресурса для этой культуры
-                        var englishName = tempResourceManager.GetString("Language_EnglishName", culture);
-                        
-                        // Если не найдено, пробуем из английского ресурса
-                        if (string.IsNullOrEmpty(englishName))
-                        {
-                            englishName = tempResourceManager.GetString("Language_EnglishName", new CultureInfo("en-US"));
-                        }
-                        
-                        // Если всё ещё не найдено, используем стандартное название культуры
-                        if (string.IsNullOrEmpty(englishName))
-                        {
-                            englishName = culture.EnglishName;
-                        }
+                // Получаем количество языков из ресурсов
+                var countStr = _availableLanguageResourceManager.GetString("Language_Count", CultureInfo.InvariantCulture);
+                if (string.IsNullOrEmpty(countStr) || !int.TryParse(countStr, out int count))
+                    return languages;
 
+                // Читаем данные о каждом языке
+                for (int i = 0; i < count; i++)
+                {
+                    var cultureCode = _availableLanguageResourceManager.GetString($"Language_{i}_CultureCode", CultureInfo.InvariantCulture);
+                    var englishName = _availableLanguageResourceManager.GetString($"Language_{i}_EnglishName", CultureInfo.InvariantCulture);
+
+                    if (!string.IsNullOrEmpty(cultureCode) && !string.IsNullOrEmpty(englishName))
+                    {
                         var language = new AvailableLanguage
                         {
                             CultureCode = cultureCode,
-                            EnglishName = englishName ?? cultureCode,
-                            LocalizedDisplayName = englishName ?? cultureCode // Будет обновлено позже
+                            EnglishName = englishName
                         };
+
+                        // Получаем локализованное название языка из основного файла ресурсов
+                        var localizedKey = $"Language_{englishName}";
+                        language.LocalizedDisplayName = GetString(localizedKey);
 
                         languages.Add(language);
                     }
-                    catch
-                    {
-                        // Пропускаем некорректные культуры
-                    }
                 }
             }
-
-            // Если языки не найдены через ресурсы, пробуем найти известные культуры
-            if (languages.Count == 0)
+            catch
             {
-                var knownCultures = new[] { "en-US", "ru-RU", "uk-UA" };
-                foreach (var cultureCode in knownCultures)
-                {
-                    try
-                    {
-                        var culture = new CultureInfo(cultureCode);
-                        var tempResourceManager = new ResourceManager("KID.Resources.Strings", assembly);
-                        var englishName = tempResourceManager.GetString("Language_EnglishName", culture)
-                                        ?? tempResourceManager.GetString("Language_EnglishName", new CultureInfo("en-US"))
-                                        ?? culture.EnglishName;
-
-                        languages.Add(new AvailableLanguage
-                        {
-                            CultureCode = cultureCode,
-                            EnglishName = englishName ?? cultureCode,
-                            LocalizedDisplayName = englishName ?? cultureCode
-                        });
-                    }
-                    catch
-                    {
-                        // Пропускаем
-                    }
-                }
+                // В случае ошибки возвращаем пустой список
+                return languages;
             }
 
-            // Сортируем по английскому названию
-            return languages.OrderBy(l => l.EnglishName);
+            // Кэшируем результат
+            _cachedAvailableLanguages = languages;
+            return languages;
+        }
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }
-
