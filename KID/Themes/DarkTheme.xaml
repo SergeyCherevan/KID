@@ -36,8 +36,6 @@
     <Style TargetType="Menu">
         <Setter Property="Background" Value="{StaticResource MenuBrush}" />
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-        <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="13"/>
     </Style>
 
     <Style TargetType="MenuItem">
