@@ -1,4 +1,4 @@
-﻿using KID.Services.CodeExecution.Contexts.Interfaces;
+using KID.Services.CodeExecution.Contexts.Interfaces;
 using System.Windows.Controls;
 
 namespace KID.Services.CodeExecution.Contexts
@@ -20,6 +20,7 @@ namespace KID.Services.CodeExecution.Contexts
             if (GraphicsTarget is Canvas canvas)
             {
                 Graphics.Init(canvas);
+                Mouse.Init(canvas);
             }
         }
 
