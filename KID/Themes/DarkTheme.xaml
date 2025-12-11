@@ -40,6 +40,19 @@
         <Setter Property="FontSize" Value="13"/>
     </Style>
 
+    <Style TargetType="MenuItem">
+        <Setter Property="Background" Value="{StaticResource MenuBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Style.Resources>
+            <Style TargetType="Separator">
+                <Setter Property="Background" Value="{StaticResource SplitterBrush}"/>
+                <Setter Property="Height" Value="1"/>
+                <Setter Property="Margin" Value="2,0,2,0"/>
+            </Style>
+        </Style.Resources>
+    </Style>
+
     <Style TargetType="TextBox">
         <Setter Property="FontFamily" Value="Consolas"/>
         <Setter Property="FontSize" Value="14"/>
