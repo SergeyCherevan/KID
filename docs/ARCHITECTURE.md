@@ -290,10 +290,15 @@
 - Генерация тонов заданной частоты и длительности
 - Поддержка пауз (частота = 0)
 
+**Music.SoundNote.cs**
+- Структура `SoundNote` — представление звука с частотой, длительностью и громкостью
+- Свойства: `Frequency`, `DurationMs`, `Volume`
+- Утилиты: `IsSilence`, `GetEffectiveVolume()`
+
 **Music.Sound.cs**
 - `Music.Sound(frequency, durationMs)` — базовое воспроизведение тона
-- `Music.Sound(params double[])` — последовательность звуков
-- `Music.Sound(double[,])` — полифоническое воспроизведение
+- `Music.Sound(params SoundNote[] notes)` — последовательность звуков
+- `Music.Sound(params SoundNote[][] tracks)` — полифоническое воспроизведение
 
 **Music.Polyphony.cs**
 - Полифоническое воспроизведение с микшированием

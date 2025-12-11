@@ -15,32 +15,23 @@ namespace KID
         /// Воспроизводит полифоническую музыку - несколько дорожек одновременно с микшированием.
         /// Улучшенная версия, которая действительно воспроизводит дорожки одновременно.
         /// </summary>
-        /// <param name="polyphonicSounds">Двумерный массив: [дорожка][частота, длительность, частота, длительность, ...]</param>
-        internal static void PlayPolyphonic(double[,] polyphonicSounds)
+        /// <param name="tracks">Массив дорожек, каждая дорожка - массив звуков.</param>
+        internal static void PlayPolyphonic(SoundNote[][] tracks)
         {
-            if (polyphonicSounds == null)
+            if (tracks == null || tracks.Length == 0)
                 return;
-
-            int trackCount = polyphonicSounds.GetLength(0);
-            if (trackCount == 0)
-                return;
-
-            // Проверяем, что все дорожки имеют чётное количество элементов
-            for (int i = 0; i < trackCount; i++)
-            {
-                int length = polyphonicSounds.GetLength(1);
-                if (length % 2 != 0)
-                    throw new ArgumentException($"Дорожка {i} должна содержать чётное количество элементов (пары: частота, длительность).", nameof(polyphonicSounds));
-            }
 
             // Находим максимальную длительность среди всех дорожек
             double maxDuration = 0;
-            for (int track = 0; track < trackCount; track++)
+            foreach (var track in tracks)
             {
+                if (track == null)
+                    continue;
+
                 double trackDuration = 0;
-                for (int i = 1; i < polyphonicSounds.GetLength(1); i += 2)
+                foreach (var note in track)
                 {
-                    trackDuration += polyphonicSounds[track, i];
+                    trackDuration += note.DurationMs;
                 }
                 maxDuration = Math.Max(maxDuration, trackDuration);
             }
@@ -48,7 +39,6 @@ namespace KID
             if (maxDuration <= 0)
                 return;
 
-            var volume = VolumeToAmplitude(Volume);
             var sampleRate = 44100;
             var duration = TimeSpan.FromMilliseconds(maxDuration);
             var totalSamples = (int)(sampleRate * duration.TotalSeconds);
@@ -56,20 +46,24 @@ namespace KID
             // Создаём список провайдеров для каждой дорожки
             var trackProviders = new List<ISampleProvider>();
 
-            for (int track = 0; track < trackCount; track++)
+            foreach (var track in tracks)
             {
+                if (track == null || track.Length == 0)
+                    continue;
+
                 var trackSamples = new List<float>();
                 double currentTime = 0;
 
-                for (int i = 0; i < polyphonicSounds.GetLength(1); i += 2)
+                foreach (var note in track)
                 {
                     CheckStopRequested();
 
-                    double frequency = polyphonicSounds[track, i];
-                    double durationMs = polyphonicSounds[track, i + 1];
-                    int sampleCount = (int)(sampleRate * durationMs / 1000.0);
+                    if (note.DurationMs <= 0)
+                        continue;
 
-                    if (frequency == 0)
+                    int sampleCount = (int)(sampleRate * note.DurationMs / 1000.0);
+
+                    if (note.IsSilence)
                     {
                         // Пауза - добавляем тишину
                         for (int j = 0; j < sampleCount; j++)
@@ -79,16 +73,17 @@ namespace KID
                     }
                     else
                     {
-                        // Генерируем тон
+                        // Генерируем тон с индивидуальной громкостью
+                        var volume = note.GetEffectiveVolume();
                         for (int j = 0; j < sampleCount; j++)
                         {
                             double time = currentTime + (j / (double)sampleRate);
-                            double sample = Math.Sin(2.0 * Math.PI * frequency * time) * volume;
+                            double sample = Math.Sin(2.0 * Math.PI * note.Frequency * time) * volume;
                             trackSamples.Add((float)sample);
                         }
                     }
 
-                    currentTime += durationMs / 1000.0;
+                    currentTime += note.DurationMs / 1000.0;
                 }
 
                 // Дополняем до максимальной длительности тишиной, если нужно

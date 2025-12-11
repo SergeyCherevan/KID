@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace KID
 {
@@ -34,96 +36,118 @@ namespace KID
 
         /// <summary>
         /// Воспроизводит последовательность звуков без пауз между ними.
-        /// Параметры должны идти парами: частота, длительность, частота, длительность, ...
-        /// Количество параметров должно быть чётным.
         /// </summary>
-        /// <param name="frequencyAndDuration">Пары значений: частота, длительность, частота, длительность, ...</param>
+        /// <param name="notes">Массив звуков для воспроизведения.</param>
         /// <example>
         /// <code>
         /// // Воспроизвести три ноты: До (262 Hz), Ре (294 Hz), Ми (330 Hz)
-        /// Music.Sound(262, 500, 294, 500, 330, 500);
+        /// Music.Sound(
+        ///     new SoundNote(262, 500),
+        ///     new SoundNote(294, 500),
+        ///     new SoundNote(330, 500)
+        /// );
         /// </code>
         /// </example>
-        public static void Sound(params double[] frequencyAndDuration)
+        public static void Sound(params SoundNote[] notes)
         {
-            if (frequencyAndDuration == null || frequencyAndDuration.Length == 0)
+            if (notes == null || notes.Length == 0)
                 return;
 
-            if (frequencyAndDuration.Length % 2 != 0)
-                throw new ArgumentException("Количество элементов должно быть чётным (пары: частота, длительность).", nameof(frequencyAndDuration));
+            Sound((IEnumerable<SoundNote>)notes);
+        }
 
-            var volume = VolumeToAmplitude(Volume);
+        /// <summary>
+        /// Воспроизводит последовательность звуков без пауз между ними.
+        /// </summary>
+        /// <param name="notes">Коллекция звуков для воспроизведения.</param>
+        /// <example>
+        /// <code>
+        /// var melody = new[]
+        /// {
+        ///     new SoundNote(262, 500),
+        ///     new SoundNote(294, 500),
+        ///     new SoundNote(330, 500)
+        /// };
+        /// Music.Sound(melody);
+        /// </code>
+        /// </example>
+        public static void Sound(IEnumerable<SoundNote> notes)
+        {
+            if (notes == null)
+                return;
 
-            for (int i = 0; i < frequencyAndDuration.Length; i += 2)
+            foreach (var note in notes)
             {
                 CheckStopRequested();
 
-                double frequency = frequencyAndDuration[i];
-                double duration = frequencyAndDuration[i + 1];
+                if (note.DurationMs <= 0)
+                    continue;
 
-                if (frequency == 0)
+                if (note.IsSilence)
                 {
-                    PlaySilence(duration);
+                    PlaySilence(note.DurationMs);
                 }
                 else
                 {
-                    PlayTone(frequency, duration, volume);
+                    var volume = note.GetEffectiveVolume();
+                    PlayTone(note.Frequency, note.DurationMs, volume);
                 }
             }
         }
 
-        // Примечание: перегрузка Sound(double[]) удалена, так как она конфликтует с Sound(params double[]).
-        // Используйте Sound(params double[]) для передачи массива - он работает и с массивами, и с отдельными параметрами.
+        /// <summary>
+        /// Воспроизводит полифоническую музыку - несколько дорожек одновременно.
+        /// </summary>
+        /// <param name="tracks">Массив дорожек, каждая дорожка - массив звуков.</param>
+        /// <example>
+        /// <code>
+        /// var track1 = new[]
+        /// {
+        ///     new SoundNote(262, 1000),
+        ///     new SoundNote(0, 500)  // Пауза
+        /// };
+        /// var track2 = new[]
+        /// {
+        ///     new SoundNote(330, 1500),
+        ///     new SoundNote(392, 500)
+        /// };
+        /// Music.Sound(track1, track2); // Оба голоса звучат одновременно
+        /// </code>
+        /// </example>
+        public static void Sound(params SoundNote[][] tracks)
+        {
+            if (tracks == null || tracks.Length == 0)
+                return;
+
+            Sound((IEnumerable<IEnumerable<SoundNote>>)tracks);
+        }
 
         /// <summary>
         /// Воспроизводит полифоническую музыку - несколько дорожек одновременно.
-        /// Двумерный массив: первый индекс - номер дорожки, второй - пары частота/длительность.
-        /// Каждая строка массива должна содержать чётное количество элементов.
         /// </summary>
-        /// <param name="polyphonicSounds">Двумерный массив: [дорожка][частота, длительность, частота, длительность, ...]</param>
+        /// <param name="tracks">Коллекция дорожек, каждая дорожка - коллекция звуков.</param>
         /// <example>
         /// <code>
-        /// double[,] chord = {
-        ///     { 262, 1000, 0, 500 },  // Голос 1: До на 1 сек, пауза 0.5 сек
-        ///     { 330, 1500, 392, 500 } // Голос 2: Ми на 1.5 сек, Соль на 0.5 сек
+        /// var tracks = new[]
+        /// {
+        ///     new[] { new SoundNote(262, 1000), new SoundNote(0, 500) },
+        ///     new[] { new SoundNote(330, 1500), new SoundNote(392, 500) }
         /// };
-        /// Music.Sound(chord); // Оба голоса звучат одновременно
+        /// Music.Sound(tracks);
         /// </code>
         /// </example>
-        public static void Sound(double[,] polyphonicSounds)
+        public static void Sound(IEnumerable<IEnumerable<SoundNote>> tracks)
         {
-            if (polyphonicSounds == null)
+            if (tracks == null)
                 return;
 
-            int trackCount = polyphonicSounds.GetLength(0);
-            if (trackCount == 0)
+            var tracksList = tracks.ToList();
+            if (tracksList.Count == 0)
                 return;
 
-            // Проверяем, что все дорожки имеют чётное количество элементов
-            for (int i = 0; i < trackCount; i++)
-            {
-                int length = polyphonicSounds.GetLength(1);
-                if (length % 2 != 0)
-                    throw new ArgumentException($"Дорожка {i} должна содержать чётное количество элементов (пары: частота, длительность).", nameof(polyphonicSounds));
-            }
-
-            // Находим максимальную длительность среди всех дорожек
-            double maxDuration = 0;
-            for (int track = 0; track < trackCount; track++)
-            {
-                double trackDuration = 0;
-                for (int i = 1; i < polyphonicSounds.GetLength(1); i += 2)
-                {
-                    trackDuration += polyphonicSounds[track, i];
-                }
-                maxDuration = Math.Max(maxDuration, trackDuration);
-            }
-
-            if (maxDuration <= 0)
-                return;
-
-            // Используем правильную реализацию полифонии с микшированием
-            PlayPolyphonic(polyphonicSounds);
+            // Преобразуем в массив массивов для внутренней обработки
+            var tracksArray = tracksList.Select(track => track.ToArray()).ToArray();
+            PlayPolyphonic(tracksArray);
         }
     }
 }
