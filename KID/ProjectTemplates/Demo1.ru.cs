@@ -40,3 +40,6 @@ var smilePoints = new Point[]
     new Point(190, 180)   // Конец улыбки (справа)
 };
 Graphics.QuadraticBezier(smilePoints);
+
+// Приветственная мелодия: "Привет, я запустился!" (до-ми-соль-ми)
+Music.Sound(262, 150, 0, 30, 330, 150, 0, 30, 392, 150, 0, 30, 330, 250);

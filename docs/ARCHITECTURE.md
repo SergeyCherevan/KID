@@ -274,6 +274,45 @@
 - Управление остановкой выполнения программы
 - Проверка CancellationToken для остановки
 
+#### Music API
+
+**Расположение:** `KID/KIDLibrary/Music/`
+
+**Music.System.cs**
+- Инициализация и базовые утилиты
+- `InvokeOnUI()` — выполнение действий в UI потоке
+- Интеграция с `StopManager`
+
+**Music.Volume.cs**
+- `Music.Volume` — управление громкостью (0-10, по умолчанию 5)
+
+**Music.ToneGeneration.cs**
+- Генерация тонов заданной частоты и длительности
+- Поддержка пауз (частота = 0)
+
+**Music.Sound.cs**
+- `Music.Sound(frequency, durationMs)` — базовое воспроизведение тона
+- `Music.Sound(params double[])` — последовательность звуков
+- `Music.Sound(double[,])` — полифоническое воспроизведение
+
+**Music.Polyphony.cs**
+- Полифоническое воспроизведение с микшированием
+- Одновременное воспроизведение нескольких дорожек
+
+**Music.FilePlayback.cs**
+- `Music.Sound(string filePath)` — проигрывание аудиофайлов
+- Поддержка локальных путей и URL
+- Поддержка форматов WAV, MP3 и других (зависит от кодеков ОС)
+
+**Music.Advanced.cs**
+- Расширенное API для асинхронного управления:
+  - `SoundPlay()`, `SoundLoad()` — загрузка и воспроизведение
+  - `SoundPause()`, `SoundStop()`, `SoundWait()` — управление воспроизведением
+  - `SoundVolume()`, `SoundLoop()` — настройка звука
+  - `SoundLength()`, `SoundPosition()`, `SoundState()` — информация о звуке
+  - `SoundSeek()`, `SoundFade()` — дополнительные возможности
+  - `SoundPlayerOFF()` — остановка всех звуков
+
 ## Потоки данных
 
 ### Выполнение кода

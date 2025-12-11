@@ -15,6 +15,8 @@ namespace HelloWorldKID
 			HelloName(name);
 
 			DrawSmile();
+
+			PlayWelcomeMelody();
 		}
 
 		// Приветствие в консоли и окне графического вывода
@@ -70,6 +72,12 @@ namespace HelloWorldKID
 				new Point(190, 180)   // Конец улыбки (справа)
 			};
 			Graphics.QuadraticBezier(smilePoints);
+		}
+
+		public static void PlayWelcomeMelody()
+		{
+			// Приветственная мелодия: "Привет, я запустился!" (до-ми-соль-ми)
+			Music.Sound(262, 150, 0, 30, 330, 150, 0, 30, 392, 150, 0, 30, 330, 250);
 		}
 	}
 }
