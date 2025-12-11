@@ -15,14 +15,14 @@ namespace KID
             });
         }
 
-        public static void Text(double x, double y, string text)
+        public static TextBlock? Text(double x, double y, string text)
         {
             if (text == null)
-                return;
+                return null;
             
-            InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
-                if (Canvas == null) return;
+                if (Canvas == null) return null;
                 var textBlock = new TextBlock
                 {
                     Text = text,
@@ -35,6 +35,22 @@ namespace KID
                 Canvas.SetLeft(textBlock, x);
                 Canvas.SetTop(textBlock, y);
                 Canvas.Children.Add(textBlock);
+
+                return textBlock;
+            });
+        }
+        public static TextBlock? Text(Point position, string text)
+        {
+            return Text(position.X, position.Y, text);
+        }
+
+        public static TextBlock? SetText(this TextBlock textBlock, string text)
+        {
+            return InvokeOnUI(() =>
+            {
+                if (Canvas == null) return null;
+                textBlock.Text = text;
+                return textBlock;
             });
         }
     }

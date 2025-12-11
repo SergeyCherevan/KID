@@ -4,7 +4,7 @@ using KID;
 
 for (int i = 0; i < 1000000; i++)
 {
-    CancellationManager.CheckCancellation();
+    StopManager.StopIfButtonPressed();
 
     Console.WriteLine($"Обработка {i}");
     

@@ -138,7 +138,7 @@ namespace KID.Services.CodeExecution
                 {
                     keyDownReadEvent.WaitOne();
 
-                    CancellationManager.CheckCancellation();
+                    StopManager.StopIfButtonPressed();
                     
                     // Ждем события (блокируем поток)
                     symbol = (char)lastReadChar;

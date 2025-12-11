@@ -2,7 +2,7 @@ using System.Threading;
 
 namespace KID
 {
-    public static class CancellationManager
+    public static class StopManager
     {
         private static readonly object _lockObject = new object();
         private static CancellationToken _currentToken;
@@ -25,7 +25,7 @@ namespace KID
             }
         }
         
-        public static void CheckCancellation()
+        public static void StopIfButtonPressed()
         {
             CancellationToken token;
             lock (_lockObject)
