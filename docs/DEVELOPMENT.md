@@ -100,7 +100,25 @@ public static Shape? MyNewMethod(double x, double y)
 }
 ```
 
-3. Обновите документацию в `docs/GRAPHICS-API.md`
+3. Обновите документацию в `docs/Graphics-API.md`
+
+### Добавление нового метода Music API
+
+1. Определите, в какой файл добавить метод (Sound.cs, Advanced.cs, и т.д.)
+2. Добавьте метод с использованием `CheckStopRequested()` для поддержки отмены:
+
+```csharp
+public static void MyNewMethod(SoundNote note)
+{
+    CheckStopRequested();
+    // Ваш код
+    PlayTone(note.Frequency, note.DurationMs, note.GetEffectiveVolume());
+}
+```
+
+3. Для работы с тонами используйте `PlayTone()` или `PlaySilence()`
+4. Для работы с файлами используйте методы из `Music.FilePlayback.cs`
+5. Обновите документацию в `docs/Music-API.md`
 
 ### Добавление нового языка
 
@@ -369,7 +387,8 @@ public async Task DoSomethingAsync()
 
 - **ARCHITECTURE.md** — архитектурные изменения
 - **SUBSYSTEMS.md** — новые подсистемы или изменения в существующих
-- **GRAPHICS-API.md** — новые методы Graphics API
+- **Graphics-API.md** — новые методы Graphics API
+- **Music-API.md** — новые методы Music API
 - **FEATURES.md** — новые функции
 - **DEVELOPMENT.md** — изменения в процессе разработки
 

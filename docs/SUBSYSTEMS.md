@@ -327,14 +327,93 @@
 6. Инициализация редактора кода
 7. Инициализация консоли
 
-## 6. Подсистема Graphics API
+## 6. Подсистема Music API
+
+### Назначение
+Предоставление API для воспроизведения звуков и музыки в пользовательском коде.
+
+### Компоненты
+
+#### 6.1. Структура данных
+**Файл:** `KIDLibrary/Music/Music.SoundNote.cs`
+
+**SoundNote:**
+- Структура для представления одного звука
+- Свойства: `Frequency` (частота в Hz), `DurationMs` (длительность в мс), `Volume` (громкость 0.0-1.0, опционально)
+- Утилиты: `IsSilence` (проверка паузы), `GetEffectiveVolume()` (эффективная громкость)
+
+#### 6.2. Базовое воспроизведение
+**Файл:** `KIDLibrary/Music/Music.Sound.cs`
+
+**Методы:**
+- `Sound(frequency, durationMs)` — воспроизведение одного тона
+- `Sound(params SoundNote[] notes)` — последовательность звуков
+- `Sound(IEnumerable<SoundNote> notes)` — последовательность из коллекции
+- `Sound(params SoundNote[][] tracks)` — полифоническое воспроизведение
+- `Sound(IEnumerable<IEnumerable<SoundNote>> tracks)` — полифония из коллекций
+- `Sound(string filePath)` — проигрывание аудиофайлов
+
+**Особенности:**
+- Блокирующее воспроизведение (программа ждёт окончания)
+- Поддержка пауз (Frequency = 0)
+- Индивидуальная громкость для каждого звука
+- Интеграция с StopManager для отмены
+
+#### 6.3. Управление громкостью
+**Файл:** `KIDLibrary/Music/Music.Volume.cs`
+
+**Свойство:**
+- `Music.Volume` — глобальная громкость (0-10, по умолчанию 5)
+
+#### 6.4. Генерация тонов
+**Файл:** `KIDLibrary/Music/Music.ToneGeneration.cs`
+
+**Функции:**
+- Генерация синусоидальных тонов через NAudio
+- Поддержка частотного диапазона 50-7000 Hz
+- Генерация пауз (тишины)
+
+#### 6.5. Полифония
+**Файл:** `KIDLibrary/Music/Music.Polyphony.cs`
+
+**Функции:**
+- Одновременное воспроизведение нескольких дорожек
+- Микширование дорожек через NAudio
+- Поддержка индивидуальной громкости для каждой дорожки
+
+#### 6.6. Проигрывание файлов
+**Файл:** `KIDLibrary/Music/Music.FilePlayback.cs`
+
+**Функции:**
+- Воспроизведение аудиофайлов (WAV, MP3 и др.)
+- Поддержка локальных путей и URL
+- Автоматическая загрузка и удаление временных файлов для URL
+
+#### 6.7. Расширенное API
+**Файл:** `KIDLibrary/Music/Music.Advanced.cs`
+
+**Методы управления:**
+- `SoundPlay()`, `SoundLoad()` — асинхронное воспроизведение
+- `SoundPause()`, `SoundStop()`, `SoundWait()` — управление воспроизведением
+- `SoundVolume()`, `SoundLoop()` — настройка звука
+- `SoundLength()`, `SoundPosition()`, `SoundState()` — информация о звуке
+- `SoundSeek()`, `SoundFade()` — дополнительные возможности
+- `SoundPlayerOFF()` — остановка всех звуков
+
+**Особенности:**
+- Асинхронное воспроизведение (не блокирует программу)
+- Управление несколькими звуками одновременно через ID
+- Зацикливание звуков
+- Плавное изменение громкости
+
+## 7. Подсистема Graphics API
 
 ### Назначение
 Предоставление упрощённого API для рисования в пользовательском коде.
 
 ### Компоненты
 
-#### 6.1. Системные функции
+#### 7.1. Системные функции
 **Файл:** `KIDLibrary/Graphics/Graphics.System.cs`
 
 **Функции:**
@@ -347,7 +426,7 @@
 - Все операции с UI выполняются в UI потоке
 - Использует Dispatcher для синхронизации
 
-#### 6.2. Работа с цветами
+#### 7.2. Работа с цветами
 **Файл:** `KIDLibrary/Graphics/Graphics.Color.cs`
 
 **Свойства:**
@@ -366,7 +445,7 @@
 - Неявные преобразования из различных типов
 - Создание Brush в UI потоке
 
-#### 6.3. Простые фигуры
+#### 7.3. Простые фигуры
 **Файл:** `KIDLibrary/Graphics/Graphics.SimpleFigures.cs`
 
 **Фигуры:**
@@ -383,7 +462,7 @@
 - Поддержка перегрузок с Point
 - Все операции выполняются в UI потоке
 
-#### 6.4. Работа с текстом
+#### 7.4. Работа с текстом
 **Файл:** `KIDLibrary/Graphics/Graphics.Text.cs`
 
 **Функции:**
@@ -395,7 +474,7 @@
 - Возвращает TextBlock для дальнейшей модификации
 - Использует текущий FillColor для цвета текста
 
-#### 6.5. Методы расширения для фигур
+#### 7.5. Методы расширения для фигур
 **Файл:** `KIDLibrary/Graphics/Graphics.ShapeMethodes.cs`
 
 **Методы позиционирования:**
@@ -424,14 +503,14 @@
 - Все методы возвращают фигуру для цепочки вызовов
 - Все операции выполняются в UI потоке
 
-## 7. Подсистема Dependency Injection
+## 8. Подсистема Dependency Injection
 
 ### Назначение
 Управление зависимостями и жизненным циклом объектов.
 
 ### Компоненты
 
-#### 7.1. ServiceCollectionExtensions
+#### 8.1. ServiceCollectionExtensions
 **Файл:** `Services/DI/ServiceCollectionExtensions.cs`
 
 **Ответственность:**
@@ -446,7 +525,7 @@
 - Все ViewModels регистрируются как Singleton
 - MainWindow регистрируется как Transient (специальный случай)
 
-#### 7.2. ServiceProviderExtension
+#### 8.2. ServiceProviderExtension
 **Файл:** `Services/DI/ServiceProviderExtension.cs`
 
 **Ответственность:**
@@ -490,6 +569,7 @@
    - MenuViewModel → CodeExecutionService → CSharpCompiler → DefaultCodeRunner
    - DefaultCodeRunner → Graphics API → Canvas
    - DefaultCodeRunner → Console API → TextBox
+   - DefaultCodeRunner → Music API → NAudio → Звуковая карта
 
 2. **Работа с файлами:**
    - MenuViewModel → CodeFileService → FileDialogService → FileService
@@ -515,4 +595,5 @@
 3. **Localization:** Добавление новых языков через .resx файлы
 4. **Themes:** Добавление новых тем через XAML файлы
 5. **Graphics API:** Добавление новых методов рисования
+6. **Music API:** Добавление новых методов воспроизведения звуков
 
