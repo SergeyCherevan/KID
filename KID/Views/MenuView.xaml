@@ -16,7 +16,7 @@
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMenuViewModel}" />
     </UserControl.DataContext>
 
-    <StackPanel Orientation="Horizontal" Background="{StaticResource MenuBrush}">
+    <StackPanel Orientation="Horizontal" Background="{DynamicResource MenuBrush}">
         <Menu Margin="0,0,0,10">
             <MenuItem Header="{localization:Localization Menu_File}">
                 <MenuItem Header="{localization:Localization Menu_New}" Command="{Binding NewFileCommand}" />

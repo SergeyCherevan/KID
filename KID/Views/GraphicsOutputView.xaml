@@ -10,5 +10,5 @@
     </UserControl.DataContext>
 
     <Canvas Name="GraphicsCanvasControl"
-            Background="{StaticResource CanvasBrush}" />
+            Background="{DynamicResource CanvasBrush}" />
 </UserControl>

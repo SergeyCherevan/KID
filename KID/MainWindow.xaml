@@ -15,7 +15,7 @@
         AllowsTransparency="False" 
         ResizeMode="CanResize"
         Icon="Resources/KID.ico"
-        Background="{StaticResource SpecialElementsBrush}">
+        Background="{DynamicResource SpecialElementsBrush}">
 
     <Window.DataContext>
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMainViewModel}" />
@@ -30,7 +30,7 @@
 
         <!-- Заголовок -->
         <Border Grid.Row="0"
-                Background="{StaticResource WindowBrush}"
+                Background="{DynamicResource WindowBrush}"
                 Height="32">
             <DockPanel LastChildFill="True">
                 <DockPanel.InputBindings>
@@ -45,22 +45,22 @@
                             DockPanel.Dock="Right"
                             VerticalAlignment="Center">
                     <Button Name="MinimizeButton" 
-                            Style="{StaticResource WindowButtonStyle}" 
+                            Style="{DynamicResource WindowButtonStyle}" 
                             Command="{Binding MinimizeCommand}" 
                             Content="—"/>
                     <Button Name="MaximizeButton" 
-                            Style="{StaticResource WindowButtonStyle}" 
+                            Style="{DynamicResource WindowButtonStyle}" 
                             Command="{Binding MaximizeCommand}" 
                             Content="{Binding MaximizeButtonContent}"/>
                     <Button Name="CloseButton" 
-                            Style="{StaticResource WindowButtonStyle}" 
+                            Style="{DynamicResource WindowButtonStyle}" 
                             Command="{Binding CloseCommand}"
                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                             Content="╳"/>
                 </StackPanel>
                 <TextBlock Text="{localization:Localization Window_Title}"
                            DockPanel.Dock="Left"
-                           Foreground="{StaticResource TitleBrush}"
+                           Foreground="{DynamicResource TitleBrush}"
                            VerticalAlignment="Center"
                            FontWeight="Bold"
                            FontSize="13"
@@ -86,7 +86,7 @@
             <GridSplitter Grid.Column="1" Width="5"
                           HorizontalAlignment="Center"
                           VerticalAlignment="Stretch"
-                          Background="{StaticResource SplitterBrush}" />
+                          Background="{DynamicResource SplitterBrush}" />
 
             <!-- Вывод -->
             <Grid Grid.Column="2" Margin="5">
@@ -104,7 +104,7 @@
                               Height="5"
                               HorizontalAlignment="Stretch"
                               VerticalAlignment="Center"
-                              Background="{StaticResource SplitterBrush}" />
+                              Background="{DynamicResource SplitterBrush}" />
 
                 <!-- Графика -->
                 <views:GraphicsOutputView x:Name="GraphicsOutputView" Grid.Row="2" />

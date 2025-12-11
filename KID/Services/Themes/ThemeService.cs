@@ -12,12 +12,14 @@ namespace KID.Services.Themes
     {
         private readonly ILocalizationService _localizationService;
         private string _currentTheme = "Light";
+        private readonly App _app;
 
         public string CurrentTheme => _currentTheme;
 
-        public ThemeService(ILocalizationService localizationService)
+        public ThemeService(ILocalizationService localizationService, App app)
         {
             _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            _app = app ?? throw new ArgumentNullException(nameof(app));
         }
 
         public void ApplyTheme(string themeKey)
@@ -27,12 +29,11 @@ namespace KID.Services.Themes
 
             try
             {
-                var app = Application.Current;
-                if (app?.Resources == null)
+                if (_app?.Resources == null)
                     return;
 
                 // Очищаем текущие темы
-                app.Resources.MergedDictionaries.Clear();
+                _app.Resources.MergedDictionaries.Clear();
 
                 // Загружаем новую тему
                 var themePath = themeKey switch
@@ -44,7 +45,7 @@ namespace KID.Services.Themes
 
                 var themeUri = new Uri($"/{themePath}", UriKind.Relative);
                 var themeDictionary = new ResourceDictionary { Source = themeUri };
-                app.Resources.MergedDictionaries.Add(themeDictionary);
+                _app.Resources.MergedDictionaries.Add(themeDictionary);
 
                 _currentTheme = themeKey;
             }
@@ -81,4 +82,3 @@ namespace KID.Services.Themes
         }
     }
 }
-

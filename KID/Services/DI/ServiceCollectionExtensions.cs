@@ -50,6 +50,7 @@ namespace KID.Services.DI
 
             // MainWindow
             services.AddTransient<MainWindow>(sp => Application.Current.MainWindow as MainWindow);
+            services.AddSingleton<App>(sp => Application.Current as App);
 
             return services;
         }

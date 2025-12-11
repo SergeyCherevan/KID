@@ -14,7 +14,7 @@
         <avalonedit:TextEditor x:Name="TextEditor"
                                ShowLineNumbers="True"
                                WordWrap="True"
-                               Background="{StaticResource EditorBackgroundBrush}"
-                               Foreground="{StaticResource EditorForegroundBrush}"/>
+                               Background="{DynamicResource EditorBackgroundBrush}"
+                               Foreground="{DynamicResource EditorForegroundBrush}"/>
     </Grid>
 </UserControl>
