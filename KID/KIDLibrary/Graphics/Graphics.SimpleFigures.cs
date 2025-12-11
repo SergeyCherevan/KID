@@ -7,11 +7,11 @@ namespace KID
 {
     public static partial class Graphics
     {
-        public static void Circle(double x, double y, double radius)
+        public static Ellipse? Circle(double x, double y, double radius)
         {
-            InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
-                if (Canvas == null) return;
+                if (Canvas == null) return null;
                 var ellipse = new Ellipse
                 {
                     Width = radius * 2,
@@ -22,19 +22,19 @@ namespace KID
                 Canvas.SetLeft(ellipse, x - radius);
                 Canvas.SetTop(ellipse, y - radius);
                 Canvas.Children.Add(ellipse);
+                return ellipse;
             });
         }
-
-        public static void Circle(Point center, double radius)
+        public static Ellipse? Circle(Point center, double radius)
         {
-            Circle(center.X, center.Y, radius);
+            return Circle(center.X, center.Y, radius);
         }
 
-        public static void Ellipse(double x, double y, double radiusX, double radiusY)
+        public static Ellipse? Ellipse(double x, double y, double radiusX, double radiusY)
         {
-            InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
-                if (Canvas == null) return;
+                if (Canvas == null) return null;
                 var ellipse = new Ellipse
                 {
                     Width = radiusX * 2,
@@ -45,19 +45,19 @@ namespace KID
                 Canvas.SetLeft(ellipse, x - radiusX);
                 Canvas.SetTop(ellipse, y - radiusY);
                 Canvas.Children.Add(ellipse);
+                return ellipse;
             });
         }
-
-        public static void Ellipse(Point center, double radiusX, double radiusY)
+        public static Ellipse? Ellipse(Point center, double radiusX, double radiusY)
         {
-            Ellipse(center.X, center.Y, radiusX, radiusY);
+            return Ellipse(center.X, center.Y, radiusX, radiusY);
         }
 
-        public static void Rectangle(double x, double y, double width, double height)
+        public static Rectangle? Rectangle(double x, double y, double width, double height)
         {
-            InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
-                if (Canvas == null) return;
+                if (Canvas == null) return null;
                 var rect = new Rectangle
                 {
                     Width = width,
@@ -68,24 +68,23 @@ namespace KID
                 Canvas.SetLeft(rect, x);
                 Canvas.SetTop(rect, y);
                 Canvas.Children.Add(rect);
+                return rect;
             });
         }
-
-        public static void Rectangle(Point topLeft, double width, double height)
+        public static Rectangle? Rectangle(Point topLeft, double width, double height)
         {
-            Rectangle(topLeft.X, topLeft.Y, width, height);
+            return Rectangle(topLeft.X, topLeft.Y, width, height);
+        }
+        public static Rectangle? Rectangle(Point topLeft, Point size)
+        {
+            return Rectangle(topLeft.X, topLeft.Y, size.X, size.Y);
         }
 
-        public static void Rectangle(Point topLeft, Point size)
+        public static Line? Line(double x1, double y1, double x2, double y2)
         {
-            Rectangle(topLeft.X, topLeft.Y, size.X, size.Y);
-        }
-
-        public static void Line(double x1, double y1, double x2, double y2)
-        {
-            InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
-                if (Canvas == null) return;
+                if (Canvas == null) return null;
                 var line = new Line
                 {
                     X1 = x1,
@@ -95,38 +94,111 @@ namespace KID
                     Stroke = strokeBrush
                 };
                 Canvas.Children.Add(line);
+                return line;
             });
         }
-
-        public static void Line(Point p1, Point p2)
+        public static Line? Line(Point p1, Point p2)
         {
-            Line(p1.X, p1.Y, p2.X, p2.Y);
+            return Line(p1.X, p1.Y, p2.X, p2.Y);
         }
 
-        public static void Polygon((double x, double y)[] points)
+        public static Path? QuadraticBezier(Point[] points)
         {
             if (points == null || points.Length == 0)
-                return;
+                return null;
             
-            InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
-                if (Canvas == null) return;
+                if (Canvas == null) return null;
+                var path = new Path
+                {
+                    Stroke = strokeBrush,
+                    StrokeThickness = 1
+                };
+                
+                var figure = new PathFigure
+                {
+                    StartPoint = points[0]
+                };
+
+                var bezier = new QuadraticBezierSegment
+                {
+                    Point1 = points[1],
+                    Point2 = points[2],
+                    IsStroked = true
+                };
+
+                figure.Segments.Add(bezier);
+
+                var geometry = new PathGeometry();
+                geometry.Figures.Add(figure);
+
+                path.Data = geometry;
+
+                Canvas.Children.Add(path);
+                return path;
+            });
+        }
+        public static Path? CubicBezier(Point[] points)
+        {
+            if (points == null || points.Length == 0)
+                return null;
+            
+            return InvokeOnUI(() =>
+            {
+                if (Canvas == null) return null;
+                var path = new Path
+                {
+                    Stroke = strokeBrush,
+                    StrokeThickness = 1
+                };
+                
+                var figure = new PathFigure
+                {
+                    StartPoint = points[0]
+                };
+
+                var bezier = new BezierSegment
+                {
+                    Point1 = points[1],
+                    Point2 = points[2],
+                    Point3 = points[3],
+                    IsStroked = true
+                };
+
+                figure.Segments.Add(bezier);
+
+                var geometry = new PathGeometry();
+                geometry.Figures.Add(figure);
+
+                path.Data = geometry;
+
+                    Canvas.Children.Add(path);
+                    return path;
+                });
+        }
+        
+        public static Polygon? Polygon(Point[] points)
+        {
+            if (points == null || points.Length == 0)
+                return null;
+            
+            return InvokeOnUI(() =>
+            {
+                if (Canvas == null) return null;
                 var polygon = new Polygon
                 {
-                    Points = [.. points.Select(p => new Point(p.x, p.y))],
+                    Points = [.. points],
                     Fill = fillBrush,
                     Stroke = strokeBrush
                 };
                 Canvas.Children.Add(polygon);
+                return polygon;
             });
         }
-
-        public static void Polygon(Point[] points)
+        public static Polygon? Polygon((double x, double y)[] points)
         {
-            if (points == null || points.Length == 0)
-                return;
-            
-            Polygon(points.Select(p => (p.X, p.Y)).ToArray());
+            return Polygon(points.Select(p => new Point(p.x, p.y)).ToArray());
         }
     }
 }
