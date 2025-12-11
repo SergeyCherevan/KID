@@ -262,13 +262,18 @@
 - `Graphics.SetFont(fontName, fontSize)` — установка шрифта
 - `Graphics.Text(x, y, text)` — вывод текста
 
-**Graphics.ShapeMethodes.cs**
-- Методы расширения для фигур:
-  - `SetLeftX()`, `SetTopY()`, `SetLeftTopXY()` — позиционирование
-  - `SetCenterX()`, `SetCenterY()`, `SetCenterXY()` — центрирование
-  - `SetWidth()`, `SetHeight()`, `SetSize()` — размеры
-  - `SetStrokeColor()`, `SetFillColor()`, `SetColor()` — цвета
-  - `AddToCanvas()`, `RemoveFromCanvas()` — управление на холсте
+**Graphics.Image.cs**
+- `Graphics.Image(x, y, path, width?, height?)` — загрузка и отрисовка изображений из файлов
+- `Graphics.Image(Point, path, width?, height?)` — перегрузки с Point
+- `SetSource()` — изменение источника изображения
+
+**Graphics.ExtensionMethods.cs**
+- Методы расширения для всех UI элементов (UIElement/FrameworkElement):
+  - `SetLeftX()`, `SetTopY()`, `SetLeftTopXY()` — позиционирование (для UIElement)
+  - `SetCenterX()`, `SetCenterY()`, `SetCenterXY()` — центрирование (для FrameworkElement)
+  - `SetWidth()`, `SetHeight()`, `SetSize()` — размеры (для FrameworkElement)
+  - `AddToCanvas()`, `RemoveFromCanvas()` — управление на холсте (для UIElement)
+  - `SetStrokeColor()`, `SetFillColor()`, `SetColor()` — цвета (только для Shape)
 
 **StopManager** (`StopManager.cs`)
 - Управление остановкой выполнения программы

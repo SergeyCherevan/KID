@@ -232,6 +232,75 @@ Point[] bezier = new Point[]
 Graphics.CubicBezier(bezier);
 ```
 
+## Работа с изображениями
+
+### Image (Загрузка и отрисовка изображений)
+
+**Сигнатуры:**
+```csharp
+Image? Image(double x, double y, string path, double? width = null, double? height = null)
+Image? Image(Point position, string path, double? width = null, double? height = null)
+Image? Image(Point position, string path, Point size)
+```
+
+**Параметры:**
+- `x, y` — координаты позиции изображения (левый верхний угол)
+- `position` — точка позиции изображения
+- `path` — путь к файлу изображения
+- `width` — ширина изображения (опционально, если не указано — оригинальный размер)
+- `height` — высота изображения (опционально, если не указано — оригинальный размер)
+- `size` — размер изображения (Point с X=width, Y=height)
+
+**Примеры:**
+```csharp
+// Загрузка изображения с оригинальным размером
+Graphics.Image(50, 50, "image.png");
+
+// Загрузка изображения с указанием размеров
+Graphics.Image(100, 100, "image.png", 200, 150);
+
+// Использование Point для позиции
+Point pos = new Point(200, 200);
+Graphics.Image(pos, "image.png", 150, 100);
+
+// Использование Point для размера
+Graphics.Image(new Point(300, 300), "image.png", new Point(120, 80));
+```
+
+**Поддерживаемые форматы:**
+- PNG, JPG, BMP, GIF, TIFF, ICO и другие форматы, поддерживаемые WPF BitmapImage
+
+**Примечания:**
+- Если файл не существует или путь некорректен, метод возвращает `null`
+- Все операции выполняются в UI потоке
+- Изображение автоматически добавляется на Canvas
+
+### SetSource (Изменение источника изображения)
+
+**Сигнатуры:**
+```csharp
+Image? SetSource(this Image image, string path, double? width = null, double? height = null)
+Image? SetSource(this Image image, string path, Point size)
+```
+
+**Параметры:**
+- `image` — объект Image, созданный методом `Image()`
+- `path` — путь к новому файлу изображения
+- `width` — новая ширина (опционально)
+- `height` — новая высота (опционально)
+- `size` — новый размер (Point)
+
+**Примеры:**
+```csharp
+var img = Graphics.Image(50, 50, "image1.png", 100, 100);
+// Позже можно изменить изображение
+img.SetSource("image2.png");
+// Или изменить изображение и размер
+img.SetSource("image3.png", 150, 150);
+```
+
+**Примечание:** Метод возвращает `Image?` для цепочки вызовов.
+
 ## Работа с текстом
 
 ### SetFont (Установка шрифта)
@@ -294,50 +363,73 @@ var textBlock = Graphics.Text(100, 100, "Старый текст");
 textBlock.SetText("Новый текст");
 ```
 
-## Методы расширения для фигур
+## Методы расширения для элементов
 
-Все методы расширения возвращают фигуру для цепочки вызовов (method chaining).
+Все методы расширения возвращают элемент для цепочки вызовов (method chaining). После рефакторинга методы работают для всех элементов, наследуемых от `UIElement`/`FrameworkElement`: `Shape`, `Image`, `TextBlock` и других.
 
 ### Позиционирование
 
 #### SetLeftX, SetTopY, SetLeftTopXY
-Устанавливают позицию фигуры относительно левого верхнего угла.
+Устанавливают позицию элемента относительно левого верхнего угла. Работают для всех `UIElement`.
 
 ```csharp
+// Для фигур
 var rect = Graphics.Rectangle(0, 0, 100, 50);
 rect.SetLeftX(200);           // Переместить в X=200
 rect.SetTopY(100);             // Переместить в Y=100
 rect.SetLeftTopXY(200, 100);   // Переместить в (200, 100)
 rect.SetLeftTopXY(new Point(200, 100));  // То же самое
+
+// Для изображений
+var img = Graphics.Image(0, 0, "image.png");
+img.SetLeftX(300);
+img.SetTopY(200);
+
+// Для текста
+var text = Graphics.Text(0, 0, "Hello");
+text.SetLeftX(100);
+text.SetTopY(50);
 ```
 
 #### SetCenterX, SetCenterY, SetCenterXY
-Устанавливают позицию центра фигуры.
+Устанавливают позицию центра элемента. Работают для всех `FrameworkElement`.
 
 ```csharp
+// Для фигур
 var circle = Graphics.Circle(0, 0, 50);
 circle.SetCenterX(150);        // Центр по X=150
 circle.SetCenterY(150);        // Центр по Y=150
 circle.SetCenterXY(150, 150);  // Центр в (150, 150)
+
+// Для изображений
+var img = Graphics.Image(0, 0, "image.png", 100, 100);
+img.SetCenterXY(200, 200);     // Центр изображения в (200, 200)
 ```
 
 ### Размеры
 
 #### SetWidth, SetHeight, SetSize
-Изменяют размеры фигуры.
+Изменяют размеры элемента. Работают для всех `FrameworkElement`.
 
 ```csharp
+// Для фигур
 var rect = Graphics.Rectangle(0, 0, 100, 50);
 rect.SetWidth(200);            // Ширина = 200
 rect.SetHeight(100);            // Высота = 100
 rect.SetSize(200, 100);         // Размер = 200x100
 rect.SetSize(new Point(200, 100));  // То же самое
+
+// Для изображений
+var img = Graphics.Image(0, 0, "image.png");
+img.SetWidth(150);              // Ширина = 150
+img.SetHeight(100);             // Высота = 100
+img.SetSize(200, 150);          // Размер = 200x150
 ```
 
 ### Цвета
 
 #### SetStrokeColor, SetFillColor, SetColor
-Изменяют цвета фигуры.
+Изменяют цвета фигуры. Работают только для `Shape` (фигуры имеют свойства Stroke и Fill).
 
 ```csharp
 var circle = Graphics.Circle(150, 150, 50);
@@ -346,15 +438,23 @@ circle.SetStrokeColor("Blue");     // Обводка синяя
 circle.SetColor("Green");           // И заливка, и обводка зелёные
 ```
 
+**Примечание:** Эти методы не применимы к `Image` и `TextBlock`, так как они не имеют свойств `Stroke` и `Fill`.
+
 ### Управление на холсте
 
 #### AddToCanvas, RemoveFromCanvas
-Добавляют или удаляют фигуру с холста.
+Добавляют или удаляют элемент с холста. Работают для всех `UIElement`.
 
 ```csharp
+// Для фигур
 var rect = Graphics.Rectangle(0, 0, 100, 50);
 rect.RemoveFromCanvas();  // Удалить с холста
 rect.AddToCanvas();        // Вернуть на холст
+
+// Для изображений
+var img = Graphics.Image(0, 0, "image.png");
+img.RemoveFromCanvas();    // Удалить изображение
+img.AddToCanvas();          // Вернуть изображение
 ```
 
 ## Очистка холста
@@ -368,13 +468,32 @@ Graphics.Clear();
 
 ## Цепочки вызовов (Method Chaining)
 
-Все методы расширения возвращают фигуру, что позволяет создавать цепочки вызовов:
+Все методы расширения возвращают элемент, что позволяет создавать цепочки вызовов:
 
 ```csharp
+// Для фигур
 Graphics.Circle(150, 150, 50)
     .SetColor("Red")
     .SetCenterXY(200, 200)
-    .SetWidth(100);
+    .SetSize(100, 100);
+
+// Для изображений
+Graphics.Image(50, 50, "image.png", 100, 100)
+    .SetLeftX(200)
+    .SetTopY(150)
+    .SetSize(150, 150);
+
+// Для текста
+Graphics.Text(0, 0, "Hello")
+    .SetLeftX(100)
+    .SetTopY(50);
+```
+
+**Примечание:** При использовании методов, возвращающих разные типы (`UIElement` vs `FrameworkElement`), может потребоваться приведение типов:
+
+```csharp
+var img = Graphics.Image(0, 0, "image.png");
+(img.SetLeftTopXY(500, 300) as FrameworkElement)?.SetSize(80, 80);
 ```
 
 ## Примеры использования
@@ -440,6 +559,27 @@ Graphics.Rectangle(170, 220, 30, 30);
 // Дверь
 Graphics.Color = "DarkBrown";
 Graphics.Rectangle(210, 250, 20, 50);
+```
+
+### Работа с изображениями
+```csharp
+using System;
+using KID;
+
+// Загрузка изображения с оригинальным размером
+var img1 = Graphics.Image(50, 50, "logo.png");
+
+// Загрузка изображения с указанием размеров
+var img2 = Graphics.Image(200, 50, "photo.jpg", 200, 150);
+
+// Использование методов расширения
+var img3 = Graphics.Image(400, 50, "icon.png", 100, 100);
+img3.SetLeftX(450)
+    .SetTopY(200)
+    .SetSize(150, 150);
+
+// Изменение источника изображения
+img3.SetSource("new_icon.png", 120, 120);
 ```
 
 ## Важные замечания
