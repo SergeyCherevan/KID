@@ -1,0 +1,342 @@
+# Архитектура проекта .KID
+
+## Общая архитектура
+
+**.KID** построен на основе архитектурного паттерна **MVVM (Model-View-ViewModel)** с использованием **Dependency Injection** для управления зависимостями. Проект разделён на несколько основных слоёв:
+
+```
+┌─────────────────────────────────────────┐
+│           Presentation Layer             │
+│  (Views, XAML, User Interface)          │
+└─────────────────────────────────────────┘
+                    ↕
+┌─────────────────────────────────────────┐
+│         ViewModel Layer                  │
+│  (Business Logic, Commands)             │
+└─────────────────────────────────────────┘
+                    ↕
+┌─────────────────────────────────────────┐
+│          Service Layer                  │
+│  (Code Execution, Files, Localization)  │
+└─────────────────────────────────────────┘
+                    ↕
+┌─────────────────────────────────────────┐
+│          Model Layer                    │
+│  (Data Models, Domain Objects)           │
+└─────────────────────────────────────────┘
+                    ↕
+┌─────────────────────────────────────────┐
+│        KIDLibrary Layer                 │
+│  (Graphics API для пользовательского    │
+│   кода)                                 │
+└─────────────────────────────────────────┘
+```
+
+## Основные компоненты
+
+### 1. Presentation Layer (Слой представления)
+
+**Расположение:** `KID/Views/`
+
+Компоненты:
+- **MainWindow.xaml** — главное окно приложения
+- **MenuView.xaml** — меню приложения
+- **CodeEditorView.xaml** — редактор кода на базе AvalonEdit
+- **ConsoleOutputView.xaml** — панель консольного вывода
+- **GraphicsOutputView.xaml** — панель графического вывода
+
+**Особенности:**
+- Использование WPF для UI
+- Кастомное окно без стандартных рамок Windows
+- Разделяемые панели (GridSplitter) для изменения размеров
+- Динамические ресурсы для тем оформления
+
+### 2. ViewModel Layer (Слой бизнес-логики)
+
+**Расположение:** `KID/ViewModels/`
+
+#### Основные ViewModels:
+
+**MainViewModel** (`MainViewModel.cs`)
+- Управление состоянием главного окна (WindowState)
+- Команды для управления окном (Minimize, Maximize, Close, DragMove)
+- Содержимое кнопки максимизации
+
+**MenuViewModel** (`MenuViewModel.cs`)
+- Управление меню приложения
+- Команды: NewFile, OpenFile, SaveFile, Run, Stop, Undo, Redo
+- Управление темами и языками интерфейса
+- Состояние кнопок (IsStopButtonEnabled, CanUndo, CanRedo)
+
+**CodeEditorViewModel** (`CodeEditorViewModel.cs`)
+- Управление редактором кода
+- Свойства: Text, FontFamily, FontSize
+- Команды: Undo, Redo
+- Интеграция с AvalonEdit TextEditor
+
+**ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
+- Управление консольным выводом
+- Свойство Text для отображения текста
+
+**GraphicsOutputViewModel** (`GraphicsOutputViewModel.cs`)
+- Управление графическим выводом
+- Предоставляет Canvas для рисования
+- Метод Clear() для очистки
+
+**Инфраструктура:**
+- **ViewModelBase** — базовый класс с реализацией INotifyPropertyChanged
+- **RelayCommand** — реализация ICommand для команд
+- **IClosable** — интерфейс для закрытия окон
+
+### 3. Service Layer (Слой сервисов)
+
+**Расположение:** `KID/Services/`
+
+#### 3.1. Code Execution (Выполнение кода)
+
+**Расположение:** `KID/Services/CodeExecution/`
+
+**CodeExecutionService** (`CodeExecutionService.cs`)
+- Координирует процесс выполнения кода
+- Использует ICodeCompiler для компиляции
+- Использует ICodeRunner для выполнения
+- Управляет жизненным циклом контекста выполнения
+
+**CSharpCompiler** (`CSharpCompiler.cs`)
+- Компилирует C# код в сборку
+- Использует Microsoft.CodeAnalysis для парсинга и компиляции
+- Применяет реврайтер для замены `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()`
+- Обрабатывает ошибки компиляции и возвращает их в локализованном виде
+
+**DefaultCodeRunner** (`DefaultCodeRunner.cs`)
+- Выполняет скомпилированную сборку
+- Обрабатывает исключения выполнения
+- Поддерживает отмену выполнения через CancellationToken
+- Выводит сообщения об ошибках в консоль
+
+**Контексты выполнения:**
+- **CodeExecutionContext** — контекст выполнения, объединяющий графический и консольный контексты
+- **CanvasGraphicsContext** — инициализирует Graphics API с Canvas
+- **TextBoxConsoleContext** — инициализирует консоль с TextBox
+- **CanvasTextBoxContextFabric** — фабрика для создания контекстов
+
+**TextBoxConsole** (`TextBoxConsole.cs`)
+- Реализация IConsole для WPF TextBox
+- Перенаправляет Console.WriteLine/Write в TextBox
+- Поддерживает Console.ReadLine для ввода данных
+- Обрабатывает ввод с клавиатуры (включая кириллицу)
+- Статический класс StaticConsole для замены Console.Clear()
+
+#### 3.2. Files (Работа с файлами)
+
+**Расположение:** `KID/Services/Files/`
+
+**CodeFileService** (`CodeFileService.cs`)
+- Открытие и сохранение .cs файлов
+- Использует FileDialogService для диалогов
+- Использует FileService для чтения/записи
+
+**FileDialogService** (`FileDialogService.cs`)
+- Диалоги открытия/сохранения файлов
+- Работа с OpenFileDialog и SaveFileDialog
+
+**FileService** (`FileService.cs`)
+- Чтение и запись файлов
+- Асинхронные операции
+
+#### 3.3. Localization (Локализация)
+
+**Расположение:** `KID/Services/Localization/`
+
+**LocalizationService** (`LocalizationService.cs`)
+- Управление локализацией интерфейса
+- Загрузка строк из .resx файлов
+- Поддержка множественных языков (ru-RU, en-US, uk-UA)
+- Событие CultureChanged для обновления UI
+- Кэширование списка доступных языков
+
+**LocalizationMarkupExtension** (`LocalizationMarkupExtension.cs`)
+- XAML расширение для привязки локализованных строк
+- Использование: `{localization:Localization KeyName}`
+
+**Ресурсы:**
+- `Resources/Strings.ru-RU.resx` — русские строки
+- `Resources/Strings.en-US.resx` — английские строки
+- `Resources/Strings.uk-UA.resx` — украинские строки
+
+#### 3.4. Themes (Темы оформления)
+
+**Расположение:** `KID/Services/Themes/`
+
+**ThemeService** (`ThemeService.cs`)
+- Управление темами оформления
+- Применение тем (Light, Dark)
+- Загрузка ResourceDictionary из XAML файлов
+- Локализация названий тем
+
+**Файлы тем:**
+- `Themes/LightTheme.xaml` — светлая тема
+- `Themes/DarkTheme.xaml` — тёмная тема
+
+#### 3.5. Initialize (Инициализация)
+
+**Расположение:** `KID/Services/Initialize/`
+
+**WindowConfigurationService** (`WindowConfigurationService.cs`)
+- Загрузка и сохранение настроек приложения
+- Хранение настроек в JSON файле в AppData
+- Управление шаблонным кодом
+- Настройки: язык, тема, шрифт, размер окна
+
+**WindowInitializationService** (`WindowInitializationService.cs`)
+- Инициализация всех компонентов при запуске
+- Применение настроек из конфигурации
+- Инициализация редактора, консоли, графики
+
+**WindowConfigurationData** (`WindowConfigurationData.cs`)
+- Модель данных для настроек
+- Свойства: Language, FontFamily, FontSize, ColorTheme, UILanguage, TemplateCode, TemplateName
+
+#### 3.6. Dependency Injection (DI)
+
+**Расположение:** `KID/Services/DI/`
+
+**ServiceCollectionExtensions** (`ServiceCollectionExtensions.cs`)
+- Расширение для регистрации всех сервисов
+- Метод `AddKIDServices()` регистрирует:
+  - Сервисы выполнения кода
+  - Сервисы работы с файлами
+  - Сервисы локализации и тем
+  - Все ViewModels
+  - Конфигурационные сервисы
+
+**ServiceProviderExtension** (`ServiceProviderExtension.cs`)
+- XAML расширение для получения сервисов из DI контейнера
+- Использование: `<di:ServiceProviderExtension ServiceType="{x:Type ...}" />`
+
+### 4. Model Layer (Слой моделей)
+
+**Расположение:** `KID/Models/`
+
+**CompilationResult** (`CompilationResult.cs`)
+- Результат компиляции кода
+- Свойства: Success, Errors, Assembly
+
+**AvailableLanguage** (`AvailableLanguage.cs`)
+- Модель доступного языка
+- Свойства: CultureCode, EnglishName, LocalizedDisplayName
+
+**AvailableTheme** (`AvailableTheme.cs`)
+- Модель доступной темы
+- Свойства: ThemeKey, EnglishName, LocalizedDisplayName
+
+### 5. KIDLibrary Layer (Библиотека для пользовательского кода)
+
+**Расположение:** `KID/KIDLibrary/`
+
+Этот слой предоставляет API, доступный в пользовательском коде.
+
+#### Graphics API
+
+**Graphics.System.cs**
+- `Graphics.Init(Canvas)` — инициализация с Canvas
+- `Graphics.Clear()` — очистка холста
+- `InvokeOnUI()` — выполнение действий в UI потоке
+
+**Graphics.Color.cs**
+- `Graphics.FillColor` — цвет заливки
+- `Graphics.StrokeColor` — цвет обводки
+- `Graphics.Color` — общий цвет (заливка + обводка)
+- Поддержка различных форматов: строки ("Red"), RGB кортежи, целые числа, Brush
+
+**Graphics.SimpleFigures.cs**
+- `Graphics.Circle(x, y, radius)` — круг
+- `Graphics.Ellipse(x, y, radiusX, radiusY)` — эллипс
+- `Graphics.Rectangle(x, y, width, height)` — прямоугольник
+- `Graphics.Line(x1, y1, x2, y2)` — линия
+- `Graphics.Polygon(Point[] points)` — многоугольник
+- `Graphics.QuadraticBezier(Point[] points)` — квадратичная кривая Безье
+- `Graphics.CubicBezier(Point[] points)` — кубическая кривая Безье
+
+**Graphics.Text.cs**
+- `Graphics.SetFont(fontName, fontSize)` — установка шрифта
+- `Graphics.Text(x, y, text)` — вывод текста
+
+**Graphics.ShapeMethodes.cs**
+- Методы расширения для фигур:
+  - `SetLeftX()`, `SetTopY()`, `SetLeftTopXY()` — позиционирование
+  - `SetCenterX()`, `SetCenterY()`, `SetCenterXY()` — центрирование
+  - `SetWidth()`, `SetHeight()`, `SetSize()` — размеры
+  - `SetStrokeColor()`, `SetFillColor()`, `SetColor()` — цвета
+  - `AddToCanvas()`, `RemoveFromCanvas()` — управление на холсте
+
+**StopManager** (`StopManager.cs`)
+- Управление остановкой выполнения программы
+- Проверка CancellationToken для остановки
+
+## Потоки данных
+
+### Выполнение кода
+
+```
+Пользователь нажимает "Запустить"
+         ↓
+MenuViewModel.ExecuteRun()
+         ↓
+CodeExecutionService.ExecuteAsync()
+         ↓
+CSharpCompiler.CompileAsync()
+         ↓
+DefaultCodeRunner.RunAsync()
+         ↓
+Выполнение пользовательского кода
+         ↓
+Graphics API → Canvas (UI поток)
+Console API → TextBox (UI поток)
+```
+
+### Инициализация приложения
+
+```
+App.OnStartup()
+         ↓
+ServiceCollection.AddKIDServices()
+         ↓
+MainWindow загружается
+         ↓
+WindowInitializationService.Initialize()
+         ↓
+Загрузка настроек → Применение темы → Применение языка
+         ↓
+Инициализация редактора, консоли, графики
+```
+
+## Dependency Injection
+
+Все зависимости регистрируются в `ServiceCollectionExtensions.AddKIDServices()`:
+
+- **Singleton** сервисы: все сервисы и ViewModels
+- **Transient** сервисы: MainWindow (специальный случай)
+
+Сервисы получаются через:
+- Конструкторы ViewModels и сервисов
+- `ServiceProviderExtension` в XAML
+- `App.ServiceProvider` в коде
+
+## Потокобезопасность
+
+- Все операции с UI выполняются через `Dispatcher.Invoke()` или `Dispatcher.BeginInvoke()`
+- Graphics API использует `InvokeOnUI()` для безопасного доступа к Canvas
+- TextBoxConsole использует `InvokeOnUIThread()` для работы с TextBox
+- Выполнение кода происходит в отдельном потоке (Task.Run)
+- CancellationToken используется для безопасной отмены выполнения
+
+## Расширяемость
+
+Архитектура позволяет легко добавлять:
+- Новые сервисы через DI
+- Новые ViewModels для дополнительных функций
+- Новые методы в Graphics API
+- Новые темы оформления
+- Новые языки интерфейса
+
