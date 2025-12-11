@@ -53,18 +53,16 @@ namespace KID
                 }
             });
         }
-
-        public static Image? Image(Point position, string path, double width, double height)
+        public static Image? Image(Point position, string path, double? width = null, double? height = null)
         {
             return Image(position.X, position.Y, path, width, height);
         }
-
         public static Image? Image(Point position, string path, Point size)
         {
             return Image(position, path, size.X, size.Y);
         }
 
-        public static Image? SetSource(this Image image, string path)
+        public static Image? SetSource(this Image image, string path, double? width = null, double? height = null)
         {
             if (image == null || string.IsNullOrWhiteSpace(path))
                 return null;
@@ -85,6 +83,8 @@ namespace KID
                     bitmap.EndInit();
 
                     image.Source = bitmap;
+                    if (width != null) image.Width = width.Value;
+                    if (height != null) image.Height = height.Value;
                     return image;
                 }
                 catch
@@ -92,6 +92,10 @@ namespace KID
                     return null;
                 }
             });
+        }
+        public static Image? SetSource(this Image image, string path, Point size)
+        {
+            return SetSource(image, path, size.X, size.Y);
         }
     }
 }
