@@ -521,7 +521,81 @@
 - Все методы возвращают элемент для цепочки вызовов
 - Все операции выполняются в UI потоке
 
-## 8. Подсистема Dependency Injection
+## 8. Подсистема Mouse API
+
+### Назначение
+Предоставление API для получения информации о позиции курсора и кликах мыши на Canvas в пользовательском коде.
+
+### Компоненты
+
+#### 8.1. Структуры данных
+**Файлы:** `KIDLibrary/Mouse/ClickStatus.cs`, `KIDLibrary/Mouse/MouseClickInfo.cs`, `KIDLibrary/Mouse/PressButtonStatus.cs`
+
+**ClickStatus:**
+- Enum для статуса клика мыши
+- Значения: NoClick, OneLeftClick, OneRightClick, DoubleLeftClick, DoubleRightClick
+
+**MouseClickInfo:**
+- Структура с информацией о клике
+- Свойства: Status (ClickStatus), Position (Point?)
+
+**PressButtonStatus:**
+- Enum с флагами для состояния нажатых кнопок
+- Значения: NoButton (0b000), LeftButton (0b001), RightButton (0b010), OutOfArea (0b100)
+- Поддержка комбинаций флагов
+
+#### 8.2. Системные функции
+**Файл:** `KIDLibrary/Mouse/Mouse.System.cs`
+
+**Функции:**
+- `Init(Canvas)` — инициализация с Canvas
+- `InvokeOnUI(Action)` — выполнение в UI потоке
+- `InvokeOnUI<T>(Func<T>)` — выполнение с возвратом значения
+
+**Особенности:**
+- Все операции с UI выполняются в UI потоке
+- Использует Dispatcher для синхронизации
+- Подписка на события Canvas: MouseMove, MouseLeave, MouseLeftButtonDown, MouseRightButtonDown, MouseLeftButtonUp, MouseRightButtonUp
+
+#### 8.3. Работа с позицией курсора
+**Файл:** `KIDLibrary/Mouse/Mouse.Position.cs`
+
+**Свойства:**
+- `CurrentPosition` (Point?) — текущая координата курсора относительно Canvas (null если курсор вне Canvas)
+- `LastActualPosition` (Point) — последняя актуальная позиция курсора на Canvas
+
+**Особенности:**
+- CurrentPosition вычисляется динамически на основе IsMouseOver
+- LastActualPosition обновляется при перемещении мыши по Canvas
+- Обработка OutOfArea флага при выходе курсора за пределы Canvas
+
+#### 8.4. Работа с кликами
+**Файл:** `KIDLibrary/Mouse/Mouse.Click.cs`
+
+**Свойства:**
+- `CurrentClick` (MouseClickInfo) — информация о текущем клике
+- `LastClick` (MouseClickInfo) — информация о последнем клике
+- `CurrentPressedButton` (PressButtonStatus) — текущее состояние нажатых кнопок
+- `LastActualPressedButton` (PressButtonStatus) — последнее состояние нажатых кнопок на Canvas
+
+**Особенности:**
+- Обработка одиночных и двойных кликов для левой и правой кнопок
+- Отслеживание состояния нажатых кнопок с поддержкой комбинаций
+- Использование таймеров для определения двойных кликов правой кнопки
+- Обновление состояния при нажатии/отпускании кнопок
+
+#### 8.5. События мыши
+**Файл:** `KIDLibrary/Mouse/Mouse.Events.cs`
+
+**События:**
+- `MouseMoveEvent` (EventHandler<Point>) — событие перемещения мыши по Canvas
+- `MouseClickEvent` (EventHandler<MouseClickInfo>) — событие клика мыши по Canvas
+
+**Особенности:**
+- События вызываются в UI потоке
+- Параметр sender всегда null
+
+## 9. Подсистема Dependency Injection
 
 ### Назначение
 Управление зависимостями и жизненным циклом объектов.
@@ -586,6 +660,7 @@
 1. **Выполнение кода:**
    - MenuViewModel → CodeExecutionService → CSharpCompiler → DefaultCodeRunner
    - DefaultCodeRunner → Graphics API → Canvas
+   - DefaultCodeRunner → Mouse API → Canvas (события мыши)
    - DefaultCodeRunner → Console API → TextBox
    - DefaultCodeRunner → Music API → NAudio → Звуковая карта
 
@@ -614,4 +689,5 @@
 4. **Themes:** Добавление новых тем через XAML файлы
 5. **Graphics API:** Добавление новых методов рисования
 6. **Music API:** Добавление новых методов воспроизведения звуков
+7. **Mouse API:** Добавление новых методов для работы с мышью
 

@@ -173,7 +173,42 @@
   - Метод `Graphics.Clear()` для очистки
   - Автоматическая очистка перед запуском программы
 
-## 5. Консольный ввод/вывод
+## 5. Работа с мышью
+
+### Mouse API
+
+Полный набор функций для получения информации о позиции курсора и кликах мыши (см. [Mouse API](Mouse-API.md) для подробностей):
+
+- **Позиция курсора**
+  - `CurrentPosition` - текущая координата курсора относительно Canvas (null если курсор вне Canvas)
+  - `LastActualPosition` - последняя актуальная позиция курсора на Canvas
+
+- **Информация о кликах**
+  - `CurrentClick` - структура с информацией о текущем клике
+  - `LastClick` - структура с информацией о последнем клике
+  - Поддержка одиночных и двойных кликов для левой и правой кнопок мыши
+
+- **Состояние нажатых кнопок**
+  - `CurrentPressedButton` - код с информацией о текущей нажатой кнопке мыши (с флагами)
+  - `LastActualPressedButton` - код с информацией о последней нажатой кнопке на Canvas
+  - Поддержка комбинаций флагов (LeftButton, RightButton, OutOfArea)
+
+- **События мыши**
+  - `MouseMoveEvent` - событие перемещения мыши по Canvas
+  - `MouseClickEvent` - событие клика мыши по Canvas
+
+### Особенности
+
+- **Автоматическая синхронизация с UI**
+  - Все операции выполняются в UI потоке
+  - Безопасность при работе из разных потоков
+
+- **Интерактивность**
+  - Отслеживание позиции курсора в реальном времени
+  - Обработка всех типов кликов (одиночные, двойные, левая/правая кнопка)
+  - Отслеживание состояния нажатых кнопок для drag-and-drop операций
+
+## 6. Консольный ввод/вывод
 
 ### Вывод
 
@@ -457,6 +492,11 @@
   - Следование паттерну InvokeOnUI
   - Документирование в Graphics-API.md
 
+- **Новые методы Mouse API**
+  - Добавление в соответствующие файлы
+  - Следование паттерну InvokeOnUI
+  - Документирование в Mouse-API.md
+
 - **Новые языки**
   - Создание .resx файла
   - Добавление в AvailableLanguage
@@ -553,6 +593,50 @@ Music.Sound(track1, track2, track3);
 // Асинхронное воспроизведение файла
 int soundId = Music.SoundPlay("background.mp3");
 Music.SoundLoop(soundId, true);
+```
+
+### Работа с мышью
+```csharp
+using System;
+using System.Threading;
+using KID;
+
+// Отслеживание позиции курсора
+while (true)
+{
+    StopManager.StopIfButtonPressed();
+    
+    var position = Mouse.CurrentPosition;
+    if (position.HasValue)
+    {
+        Graphics.Color = "Green";
+        Graphics.Circle(position.Value.X, position.Value.Y, 1);
+    }
+    
+    Thread.Sleep(10);
+}
+
+// Обработка кликов
+var click = Mouse.CurrentClick;
+if (click.Status == ClickStatus.OneLeftClick)
+{
+    Console.WriteLine($"Клик на позиции: {click.Position.Value.X}, {click.Position.Value.Y}");
+}
+
+// Отслеживание нажатых кнопок
+if ((Mouse.CurrentPressedButton & PressButtonStatus.LeftButton) != 0)
+{
+    Console.WriteLine("Левая кнопка нажата");
+}
+
+// Подписка на события
+Mouse.MouseMoveEvent += (sender, position) => {
+    Console.WriteLine($"Мышь на позиции: {position}");
+};
+
+Mouse.MouseClickEvent += (sender, clickInfo) => {
+    Console.WriteLine($"Клик: {clickInfo.Status} на {clickInfo.Position}");
+};
 ```
 
 ## Заключение

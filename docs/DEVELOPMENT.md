@@ -120,6 +120,27 @@ public static void MyNewMethod(SoundNote note)
 4. Для работы с файлами используйте методы из `Music.FilePlayback.cs`
 5. Обновите документацию в `docs/Music-API.md`
 
+### Добавление нового метода Mouse API
+
+1. Определите, в какой файл добавить метод (Position.cs, Click.cs, Events.cs, и т.д.)
+2. Добавьте метод с использованием `InvokeOnUI()` для потокобезопасности:
+
+```csharp
+public static Point? MyNewMethod()
+{
+    return InvokeOnUI<Point?>(() =>
+    {
+        if (_canvas == null) return null;
+        // Ваш код
+        return result;
+    });
+}
+```
+
+3. Для работы с событиями мыши используйте существующие обработчики или добавьте новые в `Mouse.System.cs`
+4. Для работы с состоянием кнопок используйте битовые операции с `PressButtonStatus`
+5. Обновите документацию в `docs/Mouse-API.md`
+
 ### Добавление нового языка
 
 1. Создайте файл `Resources/Strings.XX-XX.resx` (например, `Strings.de-DE.resx`)
@@ -350,6 +371,7 @@ public async Task DoSomethingAsync()
 - Переключение языков
 - Переключение тем
 - Работа с графикой
+- Работа с мышью (позиция, клики, нажатые кнопки)
 - Консольный ввод/вывод
 
 ## Отладка
@@ -357,8 +379,9 @@ public async Task DoSomethingAsync()
 ### Типичные проблемы
 
 1. **Canvas не инициализирован**
-   - Проверьте, что `Graphics.Init()` вызывается перед использованием
+   - Проверьте, что `Graphics.Init()` и `Mouse.Init()` вызываются перед использованием
    - Проверьте, что Canvas передан в контекст выполнения
+   - Проверьте, что `CanvasGraphicsContext.Init()` вызывается при создании контекста
 
 2. **Ошибки компиляции**
    - Проверьте версию .NET
@@ -389,6 +412,7 @@ public async Task DoSomethingAsync()
 - **SUBSYSTEMS.md** — новые подсистемы или изменения в существующих
 - **Graphics-API.md** — новые методы Graphics API
 - **Music-API.md** — новые методы Music API
+- **Mouse-API.md** — новые методы Mouse API
 - **FEATURES.md** — новые функции
 - **DEVELOPMENT.md** — изменения в процессе разработки
 
