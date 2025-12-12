@@ -13,6 +13,10 @@ namespace KID
         private static MouseClickInfo _currentClick = new MouseClickInfo { Status = ClickStatus.NoClick, Position = null };
         private static MouseClickInfo _lastClick = new MouseClickInfo { Status = ClickStatus.NoClick, Position = null };
 
+        // Для отслеживания состояния нажатых кнопок
+        private static PressButtonStatus _currentPressedButton = PressButtonStatus.NoButton;
+        private static PressButtonStatus _lastActualPressedButton = PressButtonStatus.NoButton;
+
         // Для отслеживания двойных кликов правой кнопкой
         private static DateTime? _lastRightClickTime = null;
         private static Point? _lastRightClickPosition = null;
@@ -47,6 +51,39 @@ namespace KID
         }
 
         /// <summary>
+        /// Код с информацией о текущей нажатой кнопке мыши.
+        /// Может включать комбинации флагов LeftButton, RightButton и OutOfArea.
+        /// </summary>
+        public static PressButtonStatus CurrentPressedButton
+        {
+            get
+            {
+                return InvokeOnUI<PressButtonStatus>(() =>
+                {
+                    // Если курсор не на Canvas, добавляем OutOfArea (сохраняя флаги кнопок)
+                    if (_canvas == null || !_canvas.IsMouseOver)
+                    {
+                        return _currentPressedButton | PressButtonStatus.OutOfArea;
+                    }
+                    // Если курсор на Canvas, возвращаем только флаги кнопок (без OutOfArea)
+                    return _currentPressedButton & ~PressButtonStatus.OutOfArea;
+                });
+            }
+        }
+
+        /// <summary>
+        /// Код с информацией о последней нажатой кнопке мыши на Canvas.
+        /// Никогда не содержит флаг OutOfArea.
+        /// </summary>
+        public static PressButtonStatus LastActualPressedButton
+        {
+            get
+            {
+                return InvokeOnUI<PressButtonStatus>(() => _lastActualPressedButton);
+            }
+        }
+
+        /// <summary>
         /// Обработчик события нажатия левой кнопки мыши.
         /// </summary>
         static partial void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -58,6 +95,12 @@ namespace KID
             {
                 var position = e.GetPosition(_canvas);
                 var now = DateTime.Now;
+
+                // Добавляем LeftButton к состоянию нажатых кнопок
+                _currentPressedButton |= PressButtonStatus.LeftButton;
+                
+                // Обновляем последнее состояние на Canvas (без OutOfArea)
+                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
 
                 // Проверяем, не был ли это двойной клик
                 if (_lastLeftClickTime.HasValue && 
@@ -96,6 +139,12 @@ namespace KID
                 var position = e.GetPosition(_canvas);
                 var now = DateTime.Now;
 
+                // Добавляем RightButton к состоянию нажатых кнопок
+                _currentPressedButton |= PressButtonStatus.RightButton;
+                
+                // Обновляем последнее состояние на Canvas (без OutOfArea)
+                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+
                 // Проверяем, не был ли это двойной клик
                 if (_lastRightClickTime.HasValue && 
                     _lastRightClickPosition.HasValue &&
@@ -125,7 +174,24 @@ namespace KID
         /// </summary>
         static partial void OnMouseLeftButtonUp(MouseButtonEventArgs e)
         {
-            // Обработка в таймере
+            if (_canvas == null)
+                return;
+
+            try
+            {
+                // Убираем LeftButton из состояния нажатых кнопок
+                _currentPressedButton &= ~PressButtonStatus.LeftButton;
+                
+                // Если курсор на Canvas, обновляем последнее состояние
+                if (_canvas.IsMouseOver)
+                {
+                    _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+                }
+            }
+            catch
+            {
+                // Игнорируем ошибки
+            }
         }
 
         /// <summary>
@@ -133,7 +199,24 @@ namespace KID
         /// </summary>
         static partial void OnMouseRightButtonUp(MouseButtonEventArgs e)
         {
-            // Обработка в таймере
+            if (_canvas == null)
+                return;
+
+            try
+            {
+                // Убираем RightButton из состояния нажатых кнопок
+                _currentPressedButton &= ~PressButtonStatus.RightButton;
+                
+                // Если курсор на Canvas, обновляем последнее состояние
+                if (_canvas.IsMouseOver)
+                {
+                    _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+                }
+            }
+            catch
+            {
+                // Игнорируем ошибки
+            }
         }
 
 

@@ -61,6 +61,12 @@ namespace KID
                 var position = e.GetPosition(_canvas);
                 _lastActualPosition = position;
 
+                // Убираем OutOfArea из состояния (если был установлен)
+                _currentPressedButton &= ~PressButtonStatus.OutOfArea;
+                
+                // Обновляем последнее состояние на Canvas (без OutOfArea)
+                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+
                 // Вызываем событие перемещения
                 OnMouseMove(position);
             }
@@ -75,8 +81,21 @@ namespace KID
         /// </summary>
         static partial void OnMouseLeave(MouseEventArgs e)
         {
-            // CurrentPosition автоматически вернет null, так как IsMouseOver станет false
-            // Ничего дополнительного делать не нужно
+            if (_canvas == null)
+                return;
+
+            try
+            {
+                // Сохраняем последнее состояние на Canvas перед установкой OutOfArea
+                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+                
+                // Устанавливаем OutOfArea (сохраняя флаги нажатых кнопок)
+                _currentPressedButton |= PressButtonStatus.OutOfArea;
+            }
+            catch
+            {
+                // Игнорируем ошибки
+            }
         }
     }
 }
