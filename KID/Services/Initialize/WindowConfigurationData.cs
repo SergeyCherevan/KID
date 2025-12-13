@@ -19,19 +19,22 @@ namespace KID.Services.Initialize
         public string FontFamily { get; set; } = "Consolas";
         public double FontSize { get; set; } = 14;
         public string ConsoleMessage { get; set; } = "Консольный вывод...";
-        public string TemplateName { get; set; } = "HelloWorld. Console & Graphics.cs";
+        public string TemplateName { get; set; } = "HelloWorld.cs";
         public string TemplateCode { get; set; } =
-@"System.Console.WriteLine(""Hello World!"");
+@"using System;
+using KID;
 
-KID.Graphics.SetColor(255, 0, 0);
-KID.Graphics.Circle(150, 150, 125);
+Console.WriteLine(""Hello World!"");
 
-KID.Graphics.SetColor(0x0000FF);
-KID.Graphics.Rectangle(150, 150, 100, 100);
+Graphics.Color = (255, 0, 0);
+Graphics.Circle(150, 150, 125);
 
-KID.Graphics.SetColor(""White"");
-KID.Graphics.SetFont(""Arial"", 25);
-KID.Graphics.Text(150, 150, ""Hello\nWorld!"");"
+Graphics.Color = 0x0000FF;
+Graphics.Rectangle(150, 150, 100, 100);
+
+Graphics.Color = ""White"";
+Graphics.SetFont(""Arial"", 25);
+Graphics.Text(150, 150, ""Hello\nWorld!"");"
         ;
     }
 }
