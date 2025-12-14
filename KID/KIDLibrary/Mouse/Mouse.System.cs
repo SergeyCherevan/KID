@@ -15,6 +15,10 @@ namespace KID
         private static Canvas? _canvas;
         private static Dispatcher? _dispatcher;
 
+        // Константы для обработки кликов
+        internal const int DoubleClickDelayMs = 500; // Интервал для определения двойного клика в миллисекундах
+        internal const double DoubleClickPositionTolerance = 5.0; // Допуск для определения двойного клика в пикселях
+
         /// <summary>
         /// Canvas, на котором отслеживаются события мыши.
         /// </summary>

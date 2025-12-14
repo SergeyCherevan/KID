@@ -28,8 +28,9 @@ namespace KID
                         var mousePosition = System.Windows.Input.Mouse.GetPosition(_canvas);
                         return mousePosition;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        System.Diagnostics.Debug.WriteLine($"Mouse position error: {ex.Message}");
                         return null;
                     }
                 });
@@ -62,17 +63,14 @@ namespace KID
                 _lastActualPosition = position;
 
                 // Убираем OutOfArea из состояния (если был установлен)
-                _currentPressedButton &= ~PressButtonStatus.OutOfArea;
-                
-                // Обновляем последнее состояние на Canvas (без OutOfArea)
-                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+                SetOutOfArea(false);
 
                 // Вызываем событие перемещения
                 OnMouseMove(position);
             }
-            catch
+            catch (Exception ex)
             {
-                // Игнорируем ошибки
+                System.Diagnostics.Debug.WriteLine($"Mouse move error: {ex.Message}");
             }
         }
 
@@ -86,15 +84,12 @@ namespace KID
 
             try
             {
-                // Сохраняем последнее состояние на Canvas перед установкой OutOfArea
-                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
-                
                 // Устанавливаем OutOfArea (сохраняя флаги нажатых кнопок)
-                _currentPressedButton |= PressButtonStatus.OutOfArea;
+                SetOutOfArea(true);
             }
-            catch
+            catch (Exception ex)
             {
-                // Игнорируем ошибки
+                System.Diagnostics.Debug.WriteLine($"Mouse leave error: {ex.Message}");
             }
         }
     }
