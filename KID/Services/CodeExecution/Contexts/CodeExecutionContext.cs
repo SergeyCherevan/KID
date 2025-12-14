@@ -15,15 +15,11 @@ namespace KID.Services.CodeExecution.Contexts
         public IGraphicsContext GraphicsContext { get; set; }
         public IConsoleContext ConsoleContext { get; set; }
         public CancellationToken CancellationToken { get; set; } = default;
-        public Dispatcher? Dispatcher { get; set; }
+        public Dispatcher Dispatcher { get; set; }
 
         public void Init()
         {
-            if (Dispatcher != null)
-            {
-                DispatcherManager.Init(Dispatcher);
-            }
-            
+            DispatcherManager.Init(Dispatcher);
             GraphicsContext?.Init();
             ConsoleContext?.Init();
         }
