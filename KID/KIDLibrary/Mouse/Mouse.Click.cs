@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using KID;
 
 namespace KID
 {
@@ -13,20 +15,18 @@ namespace KID
         private static MouseClickInfo _currentClick = new MouseClickInfo { Status = ClickStatus.NoClick, Position = null };
         private static MouseClickInfo _lastClick = new MouseClickInfo { Status = ClickStatus.NoClick, Position = null };
 
-        // Для отслеживания состояния нажатых кнопок
-        private static PressButtonStatus _currentPressedButton = PressButtonStatus.NoButton;
-        private static PressButtonStatus _lastActualPressedButton = PressButtonStatus.NoButton;
+        // Для отслеживания двойных кликов
+        private static DoubleClickTracker _leftClickTracker = new DoubleClickTracker
+        {
+            SingleClickStatus = ClickStatus.OneLeftClick,
+            DoubleClickStatus = ClickStatus.DoubleLeftClick
+        };
 
-        // Для отслеживания двойных кликов правой кнопкой
-        private static DateTime? _lastRightClickTime = null;
-        private static Point? _lastRightClickPosition = null;
-        private static DispatcherTimer? _rightClickTimer = null;
-        private const int DoubleClickDelayMs = 500; // Интервал для определения двойного клика
-
-        // Для отслеживания двойных кликов левой кнопкой (если MouseDoubleClick не сработает)
-        private static DateTime? _lastLeftClickTime = null;
-        private static Point? _lastLeftClickPosition = null;
-        private static DispatcherTimer? _leftClickTimer = null;
+        private static DoubleClickTracker _rightClickTracker = new DoubleClickTracker
+        {
+            SingleClickStatus = ClickStatus.OneRightClick,
+            DoubleClickStatus = ClickStatus.DoubleRightClick
+        };
 
         /// <summary>
         /// Структура с информацией о текущем клике по Canvas.
@@ -35,7 +35,7 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI(() => _currentClick);
+                return DispatcherManager.InvokeOnUI(() => _currentClick);
             }
         }
 
@@ -46,40 +46,7 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI(() => _lastClick);
-            }
-        }
-
-        /// <summary>
-        /// Код с информацией о текущей нажатой кнопке мыши.
-        /// Может включать комбинации флагов LeftButton, RightButton и OutOfArea.
-        /// </summary>
-        public static PressButtonStatus CurrentPressedButton
-        {
-            get
-            {
-                return InvokeOnUI<PressButtonStatus>(() =>
-                {
-                    // Если курсор не на Canvas, добавляем OutOfArea (сохраняя флаги кнопок)
-                    if (_canvas == null || !_canvas.IsMouseOver)
-                    {
-                        return _currentPressedButton | PressButtonStatus.OutOfArea;
-                    }
-                    // Если курсор на Canvas, возвращаем только флаги кнопок (без OutOfArea)
-                    return _currentPressedButton & ~PressButtonStatus.OutOfArea;
-                });
-            }
-        }
-
-        /// <summary>
-        /// Код с информацией о последней нажатой кнопке мыши на Canvas.
-        /// Никогда не содержит флаг OutOfArea.
-        /// </summary>
-        public static PressButtonStatus LastActualPressedButton
-        {
-            get
-            {
-                return InvokeOnUI<PressButtonStatus>(() => _lastActualPressedButton);
+                return DispatcherManager.InvokeOnUI(() => _lastClick);
             }
         }
 
@@ -88,42 +55,7 @@ namespace KID
         /// </summary>
         static partial void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
-            if (_canvas == null)
-                return;
-
-            try
-            {
-                var position = e.GetPosition(_canvas);
-                var now = DateTime.Now;
-
-                // Добавляем LeftButton к состоянию нажатых кнопок
-                _currentPressedButton |= PressButtonStatus.LeftButton;
-                
-                // Обновляем последнее состояние на Canvas (без OutOfArea)
-                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
-
-                // Проверяем, не был ли это двойной клик
-                if (_lastLeftClickTime.HasValue && 
-                    _lastLeftClickPosition.HasValue &&
-                    (now - _lastLeftClickTime.Value).TotalMilliseconds < DoubleClickDelayMs &&
-                    IsSamePosition(_lastLeftClickPosition.Value, position))
-                {
-                    // Это двойной клик
-                    StopLeftClickTimer();
-                    RegisterClick(ClickStatus.DoubleLeftClick, position);
-                }
-                else
-                {
-                    // Возможно, это начало двойного клика
-                    _lastLeftClickTime = now;
-                    _lastLeftClickPosition = position;
-                    StartLeftClickTimer(position);
-                }
-            }
-            catch
-            {
-                // Игнорируем ошибки
-            }
+            HandleButtonDown(e, PressButtonStatus.LeftButton, ref _leftClickTracker);
         }
 
         /// <summary>
@@ -131,42 +63,7 @@ namespace KID
         /// </summary>
         static partial void OnMouseRightButtonDown(MouseButtonEventArgs e)
         {
-            if (_canvas == null)
-                return;
-
-            try
-            {
-                var position = e.GetPosition(_canvas);
-                var now = DateTime.Now;
-
-                // Добавляем RightButton к состоянию нажатых кнопок
-                _currentPressedButton |= PressButtonStatus.RightButton;
-                
-                // Обновляем последнее состояние на Canvas (без OutOfArea)
-                _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
-
-                // Проверяем, не был ли это двойной клик
-                if (_lastRightClickTime.HasValue && 
-                    _lastRightClickPosition.HasValue &&
-                    (now - _lastRightClickTime.Value).TotalMilliseconds < DoubleClickDelayMs &&
-                    IsSamePosition(_lastRightClickPosition.Value, position))
-                {
-                    // Это двойной клик
-                    StopRightClickTimer();
-                    RegisterClick(ClickStatus.DoubleRightClick, position);
-                }
-                else
-                {
-                    // Возможно, это начало двойного клика
-                    _lastRightClickTime = now;
-                    _lastRightClickPosition = position;
-                    StartRightClickTimer(position);
-                }
-            }
-            catch
-            {
-                // Игнорируем ошибки
-            }
+            HandleButtonDown(e, PressButtonStatus.RightButton, ref _rightClickTracker);
         }
 
         /// <summary>
@@ -174,24 +71,7 @@ namespace KID
         /// </summary>
         static partial void OnMouseLeftButtonUp(MouseButtonEventArgs e)
         {
-            if (_canvas == null)
-                return;
-
-            try
-            {
-                // Убираем LeftButton из состояния нажатых кнопок
-                _currentPressedButton &= ~PressButtonStatus.LeftButton;
-                
-                // Если курсор на Canvas, обновляем последнее состояние
-                if (_canvas.IsMouseOver)
-                {
-                    _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
-                }
-            }
-            catch
-            {
-                // Игнорируем ошибки
-            }
+            HandleButtonUp(e, PressButtonStatus.LeftButton);
         }
 
         /// <summary>
@@ -199,26 +79,88 @@ namespace KID
         /// </summary>
         static partial void OnMouseRightButtonUp(MouseButtonEventArgs e)
         {
-            if (_canvas == null)
+            HandleButtonUp(e, PressButtonStatus.RightButton);
+        }
+
+        /// <summary>
+        /// Унифицированная обработка нажатия кнопки мыши.
+        /// </summary>
+        private static void HandleButtonDown(MouseButtonEventArgs e, PressButtonStatus buttonFlag, ref DoubleClickTracker tracker)
+        {
+            if (Canvas == null)
                 return;
 
             try
             {
-                // Убираем RightButton из состояния нажатых кнопок
-                _currentPressedButton &= ~PressButtonStatus.RightButton;
-                
-                // Если курсор на Canvas, обновляем последнее состояние
-                if (_canvas.IsMouseOver)
+                var position = e.GetPosition(Canvas);
+                var now = DateTime.Now;
+
+                // Обновление состояния кнопки
+                UpdateButtonState(buttonFlag, true);
+
+                // Проверка двойного клика
+                if (ProcessDoubleClick(position, now, ref tracker))
                 {
-                    _lastActualPressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+                    return; // Двойной клик обработан
                 }
+
+                // Сохраняем статус в локальную переменную для использования в лямбде
+                var singleClickStatus = tracker.SingleClickStatus;
+                
+                // Запуск таймера для одиночного клика
+                tracker.StartTimer(position, (pos) => RegisterClick(singleClickStatus, pos));
             }
-            catch
+            catch (Exception ex)
             {
-                // Игнорируем ошибки
+                Debug.WriteLine($"Mouse button down error: {ex.Message}");
             }
         }
 
+        /// <summary>
+        /// Унифицированная обработка отпускания кнопки мыши.
+        /// </summary>
+        private static void HandleButtonUp(MouseButtonEventArgs e, PressButtonStatus buttonFlag)
+        {
+            if (Canvas == null)
+                return;
+
+            try
+            {
+                // Убираем кнопку из состояния нажатых кнопок
+                UpdateButtonState(buttonFlag, false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Mouse button up error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Обрабатывает потенциальный двойной клик.
+        /// </summary>
+        /// <param name="position">Позиция текущего клика.</param>
+        /// <param name="now">Текущее время.</param>
+        /// <param name="tracker">Трекер для отслеживания двойных кликов.</param>
+        /// <returns>true если это был двойной клик, false иначе.</returns>
+        private static bool ProcessDoubleClick(Point position, DateTime now, ref DoubleClickTracker tracker)
+        {
+            if (tracker.LastClickTime.HasValue &&
+                tracker.LastClickPosition.HasValue &&
+                (now - tracker.LastClickTime.Value).TotalMilliseconds < DoubleClickDelayMs &&
+                IsSamePosition(tracker.LastClickPosition.Value, position))
+            {
+                // Это двойной клик
+                tracker.StopTimer();
+                RegisterClick(tracker.DoubleClickStatus, position);
+                tracker.Reset();
+                return true;
+            }
+
+            // Сохраняем информацию о клике для возможного двойного клика
+            tracker.LastClickTime = now;
+            tracker.LastClickPosition = position;
+            return false;
+        }
 
         /// <summary>
         /// Регистрирует клик.
@@ -239,79 +181,73 @@ namespace KID
         }
 
         /// <summary>
-        /// Запускает таймер для определения одиночного клика левой кнопкой.
-        /// </summary>
-        private static void StartLeftClickTimer(Point position)
-        {
-            StopLeftClickTimer();
-
-            _leftClickTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(DoubleClickDelayMs)
-            };
-
-            _leftClickTimer.Tick += (s, e) =>
-            {
-                StopLeftClickTimer();
-                // Если таймер сработал, значит это был одиночный клик
-                RegisterClick(ClickStatus.OneLeftClick, position);
-            };
-
-            _leftClickTimer.Start();
-        }
-
-        /// <summary>
-        /// Останавливает таймер для левой кнопки.
-        /// </summary>
-        private static void StopLeftClickTimer()
-        {
-            if (_leftClickTimer != null)
-            {
-                _leftClickTimer.Stop();
-                _leftClickTimer = null;
-            }
-        }
-
-        /// <summary>
-        /// Запускает таймер для определения одиночного клика правой кнопкой.
-        /// </summary>
-        private static void StartRightClickTimer(Point position)
-        {
-            StopRightClickTimer();
-
-            _rightClickTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(DoubleClickDelayMs)
-            };
-
-            _rightClickTimer.Tick += (s, e) =>
-            {
-                StopRightClickTimer();
-                // Если таймер сработал, значит это был одиночный клик
-                RegisterClick(ClickStatus.OneRightClick, position);
-            };
-
-            _rightClickTimer.Start();
-        }
-
-        /// <summary>
-        /// Останавливает таймер для правой кнопки.
-        /// </summary>
-        private static void StopRightClickTimer()
-        {
-            if (_rightClickTimer != null)
-            {
-                _rightClickTimer.Stop();
-                _rightClickTimer = null;
-            }
-        }
-
-        /// <summary>
         /// Проверяет, находятся ли две позиции в одном месте (с учетом небольшой погрешности).
         /// </summary>
-        private static bool IsSamePosition(Point p1, Point p2, double tolerance = 5.0)
+        private static bool IsSamePosition(Point p1, Point p2)
         {
-            return Math.Abs(p1.X - p2.X) < tolerance && Math.Abs(p1.Y - p2.Y) < tolerance;
+            return Math.Abs(p1.X - p2.X) < DoubleClickPositionTolerance &&
+                   Math.Abs(p1.Y - p2.Y) < DoubleClickPositionTolerance;
+        }
+
+        /// <summary>
+        /// Структура для отслеживания двойных кликов.
+        /// </summary>
+        private struct DoubleClickTracker
+        {
+            public DateTime? LastClickTime;
+            public Point? LastClickPosition;
+            public DispatcherTimer? Timer;
+            public ClickStatus SingleClickStatus;
+            public ClickStatus DoubleClickStatus;
+
+            /// <summary>
+            /// Сбрасывает состояние трекера.
+            /// </summary>
+            public void Reset()
+            {
+                LastClickTime = null;
+                LastClickPosition = null;
+                StopTimer();
+            }
+
+            /// <summary>
+            /// Останавливает таймер.
+            /// </summary>
+            public void StopTimer()
+            {
+                if (Timer != null)
+                {
+                    Timer.Stop();
+                    Timer = null;
+                }
+            }
+
+            /// <summary>
+            /// Запускает таймер для определения одиночного клика.
+            /// </summary>
+            public void StartTimer(Point position, Action<Point> onSingleClick)
+            {
+                StopTimer();
+
+                var timer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(DoubleClickDelayMs)
+                };
+
+                // Сохраняем ссылку на таймер и позицию в локальные переменные для лямбды
+                var savedPosition = position;
+                
+                timer.Tick += (s, e) =>
+                {
+                    timer.Stop();
+                    timer = null;
+                    // Если таймер сработал, значит это был одиночный клик
+                    onSingleClick(savedPosition);
+                };
+
+                Timer = timer;
+                timer.Start();
+            }
         }
     }
 }

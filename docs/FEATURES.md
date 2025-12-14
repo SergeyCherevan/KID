@@ -489,12 +489,12 @@
 
 - **Новые методы Graphics API**
   - Добавление в соответствующие файлы
-  - Следование паттерну InvokeOnUI
+  - Следование паттерну `DispatcherManager.InvokeOnUI()`
   - Документирование в Graphics-API.md
 
 - **Новые методы Mouse API**
   - Добавление в соответствующие файлы
-  - Следование паттерну InvokeOnUI
+  - Следование паттерну `DispatcherManager.InvokeOnUI()`
   - Документирование в Mouse-API.md
 
 - **Новые языки**

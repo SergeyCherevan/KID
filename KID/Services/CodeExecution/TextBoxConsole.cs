@@ -5,7 +5,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Threading;
+using KID;
 using KID.Services.Interfaces;
 
 namespace KID.Services.CodeExecution
@@ -16,7 +16,6 @@ namespace KID.Services.CodeExecution
     public class TextBoxConsole : IConsole
     {
         private readonly TextBox textBox;
-        private readonly Dispatcher dispatcher;
         private TextWriter textWriter;
         private TextReader textReader;
         
@@ -30,7 +29,6 @@ namespace KID.Services.CodeExecution
         public TextBoxConsole(TextBox textBox)
         {
             this.textBox = textBox ?? throw new ArgumentNullException(nameof(textBox));
-            dispatcher = Application.Current.Dispatcher;
             
             // Инициализация потоков
             textWriter = new TextBoxTextWriter(this);
@@ -65,7 +63,7 @@ namespace KID.Services.CodeExecution
         // === Вывод ===
         public void Write(char value)
         {
-            InvokeOnUIThread(() =>
+            DispatcherManager.InvokeOnUI(() =>
             {
                 textBox.AppendText(value.ToString());
                 textBox.ScrollToEnd();
@@ -76,7 +74,7 @@ namespace KID.Services.CodeExecution
         {
             if (value == null) return;
             
-            InvokeOnUIThread(() =>
+            DispatcherManager.InvokeOnUI(() =>
             {
                 textBox.AppendText(value);
                 textBox.ScrollToEnd();
@@ -92,7 +90,7 @@ namespace KID.Services.CodeExecution
                 isReading = true;
                 
                 // Устанавливаем фокус и курсор для визуальной обратной связи
-                InvokeOnUIThread(() =>
+                DispatcherManager.InvokeOnUI(() =>
                 {
                     textBox.IsReadOnly = false; // Разрешаем ввод
                     FocusTextBox(); // Устанавливаем фокус с использованием нескольких методов
@@ -105,7 +103,7 @@ namespace KID.Services.CodeExecution
                 
                 char result = (char)lastReadChar;
 
-                InvokeOnUIThread(() =>
+                DispatcherManager.InvokeOnUI(() =>
                 {
                     textBox.AppendText(result.ToString());
                     textBox.ScrollToEnd();
@@ -127,7 +125,7 @@ namespace KID.Services.CodeExecution
                 isReading = true;
                 
                 // Устанавливаем фокус и курсор для визуальной обратной связи
-                InvokeOnUIThread(() =>
+                DispatcherManager.InvokeOnUI(() =>
                 {
                     textBox.IsReadOnly = false; // Разрешаем ввод
                     FocusTextBox(); // Устанавливаем фокус с использованием нескольких методов
@@ -149,7 +147,7 @@ namespace KID.Services.CodeExecution
                         // Обработка Backspace
                         if (result.Length > 0)
                         {
-                            InvokeOnUIThread(() =>
+                            DispatcherManager.InvokeOnUI(() =>
                             {
                                 if (textBox.Text.Length > 0)
                                 {
@@ -165,7 +163,7 @@ namespace KID.Services.CodeExecution
                     else
                     {
                         // Обычный символ (не Enter и не Backspace)
-                        InvokeOnUIThread(() =>
+                        DispatcherManager.InvokeOnUI(() =>
                         {
                             textBox.AppendText(symbol.ToString());
                             textBox.ScrollToEnd();
@@ -183,7 +181,7 @@ namespace KID.Services.CodeExecution
                 isReading = false;
 
                 // Блокируем ввод после завершения чтения
-                InvokeOnUIThread(() =>
+                DispatcherManager.InvokeOnUI(() =>
                 {
                     textBox.IsReadOnly = true;
                 });
@@ -195,25 +193,13 @@ namespace KID.Services.CodeExecution
         // Очистка вывода
         public void Clear()
         {
-            InvokeOnUIThread(() =>
+            DispatcherManager.InvokeOnUI(() =>
             {
                 textBox.Clear();
             });
         }
 
         // === Вспомогательные методы ===
-        private void InvokeOnUIThread(Action action)
-        {
-            if (dispatcher.CheckAccess())
-            {
-                action();
-            }
-            else
-            {
-                dispatcher.BeginInvoke(action, DispatcherPriority.Background);
-            }
-        }
-
         /// <summary>
         /// Устанавливает фокус на TextBox с использованием нескольких методов для надежности
         /// </summary>

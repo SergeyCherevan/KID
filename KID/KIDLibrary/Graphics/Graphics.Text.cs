@@ -1,6 +1,7 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using KID;
 
 namespace KID
 {
@@ -8,7 +9,7 @@ namespace KID
     {
         public static void SetFont(string fontName, double fontSize)
         {
-            InvokeOnUI(() =>
+            DispatcherManager.InvokeOnUI(() =>
             {
                 currentFont = new Typeface(fontName);
                 currentFontSize = fontSize;
@@ -20,7 +21,7 @@ namespace KID
             if (text == null)
                 return null;
             
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var textBlock = new TextBlock
@@ -46,7 +47,7 @@ namespace KID
 
         public static TextBlock? SetText(this TextBlock textBlock, string text)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 textBlock.Text = text;
