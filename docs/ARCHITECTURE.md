@@ -27,8 +27,8 @@
                     ↕
 ┌─────────────────────────────────────────┐
 │        KIDLibrary Layer                 │
-│  (Graphics API для пользовательского    │
-│   кода)                                 │
+│  (Graphics, Mouse, Music API и другие   │
+│   API для пользовательского кода)       │
 └─────────────────────────────────────────┘
 ```
 
@@ -250,6 +250,15 @@
 - `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
 - Используется всеми API (Graphics, Mouse, Music, TextBoxConsole) для потокобезопасной работы с UI
 
+#### StopManager
+
+**StopManager.cs**
+- Статический класс для управления остановкой выполнения программы
+- `CurrentToken` (CancellationToken) — текущий токен отмены выполнения
+- `StopIfButtonPressed()` — проверяет, была ли нажата кнопка остановки, и выбрасывает исключение при необходимости
+- Используется API (Music и другими) для проверки отмены выполнения
+- Потокобезопасная работа с CancellationToken через блокировку
+
 #### Graphics API
 
 **Graphics.System.cs**
@@ -288,10 +297,6 @@
   - `SetWidth()`, `SetHeight()`, `SetSize()` — размеры (для FrameworkElement)
   - `AddToCanvas()`, `RemoveFromCanvas()` — управление на холсте (для UIElement)
   - `SetStrokeColor()`, `SetFillColor()`, `SetColor()` — цвета (только для Shape)
-
-**StopManager** (`StopManager.cs`)
-- Управление остановкой выполнения программы
-- Проверка CancellationToken для остановки
 
 #### Music API
 

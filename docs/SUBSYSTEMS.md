@@ -120,7 +120,63 @@
 - Инициализируется при создании TextBoxConsole
 - Используется компилятором для замены вызовов
 
-## 2. Подсистема работы с файлами (Files)
+## 2. Подсистема консольного ввода/вывода (Console I/O)
+
+### Назначение
+Предоставление консольного интерфейса для пользовательского кода через WPF TextBox, включая вывод и ввод данных.
+
+### Компоненты
+
+#### 2.1. TextBoxConsole
+**Файл:** `Services/CodeExecution/TextBoxConsole.cs`
+
+**Ответственность:**
+- Реализация интерфейса IConsole для WPF TextBox
+- Перенаправление стандартного вывода (Console.WriteLine/Write) в TextBox
+- Поддержка ввода данных через Console.ReadLine/Read
+- Обработка ввода с клавиатуры, включая кириллицу и Unicode
+
+**Основные компоненты:**
+
+**Вывод:**
+- `Write(char)`, `Write(string)` — вывод текста в TextBox
+- `Clear()` — очистка содержимого TextBox
+- Все операции выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
+- `TextBoxTextWriter` — реализация TextWriter для вывода
+
+**Ввод:**
+- `Read()` — чтение одного символа
+- `ReadLine()` — чтение строки до нажатия Enter
+- Использует `AutoResetEvent` для синхронизации между потоками
+- Обрабатывает Backspace для удаления символов
+- Поддерживает кириллицу и Unicode символы
+- `TextBoxTextReader` — реализация TextReader для ввода
+
+**StaticConsole:**
+- Статический класс для замены `Console.Clear()` в пользовательском коде
+- Инициализируется при создании TextBoxConsole
+- Используется компилятором для замены вызовов `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()`
+
+**Особенности:**
+- Потокобезопасная работа с UI через `DispatcherManager`
+- Обработка событий клавиатуры (PreviewKeyDown, PreviewTextInput)
+- Событие `OutputReceived` для отслеживания вывода
+- Блокирующий ввод с ожиданием пользовательского ввода
+
+#### 2.2. TextBoxConsoleContext
+**Файл:** `Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
+
+**Ответственность:**
+- Инициализация TextBoxConsole с TextBox из ViewModel
+- Реализация интерфейса IConsoleContext
+- Управление жизненным циклом консоли
+
+**Особенности:**
+- Получает TextBox из ConsoleOutputViewModel
+- Создаёт и инициализирует TextBoxConsole
+- Устанавливает TextBoxConsole в качестве стандартного вывода/ввода
+
+## 3. Подсистема работы с файлами (Files)
 
 ### Назначение
 Открытие, сохранение и управление файлами с кодом.
@@ -167,7 +223,7 @@
 - `ReadAllTextAsync(string path)` — читает файл
 - `WriteAllTextAsync(string path, string content)` — записывает файл
 
-## 3. Подсистема локализации (Localization)
+## 4. Подсистема локализации (Localization)
 
 ### Назначение
 Многоязычная поддержка интерфейса приложения.
@@ -231,7 +287,7 @@
 - `Theme_*` — названия тем
 - `Notification_*` — уведомления
 
-## 4. Подсистема тем оформления (Themes)
+## 5. Подсистема тем оформления (Themes)
 
 ### Назначение
 Управление визуальным оформлением приложения.
@@ -277,14 +333,14 @@
 - `SplitterBrush` — цвет разделителей
 - `WindowButtonStyle` — стиль кнопок окна
 
-## 5. Подсистема инициализации (Initialize)
+## 6. Подсистема инициализации (Initialize)
 
 ### Назначение
 Инициализация приложения при запуске и управление настройками.
 
 ### Компоненты
 
-#### 5.1. WindowConfigurationService
+#### 6.1. WindowConfigurationService
 **Файл:** `Services/Initialize/WindowConfigurationService.cs`
 
 **Ответственность:**
@@ -311,7 +367,7 @@
 - `TemplateCode` — шаблонный код
 - `TemplateName` — путь к файлу шаблона
 
-#### 5.2. WindowInitializationService
+#### 6.2. WindowInitializationService
 **Файл:** `Services/Initialize/WindowInitializationService.cs`
 
 **Ответственность:**
@@ -331,14 +387,14 @@
 6. Инициализация редактора кода
 7. Инициализация консоли
 
-## 6. Подсистема Music API
+## 7. Подсистема Music API
 
 ### Назначение
 Предоставление API для воспроизведения звуков и музыки в пользовательском коде.
 
 ### Компоненты
 
-#### 6.1. Структура данных
+#### 7.1. Структура данных
 **Файл:** `KIDLibrary/Music/Music.SoundNote.cs`
 
 **SoundNote:**
@@ -346,7 +402,7 @@
 - Свойства: `Frequency` (частота в Hz), `DurationMs` (длительность в мс), `Volume` (громкость 0.0-1.0, опционально)
 - Утилиты: `IsSilence` (проверка паузы), `GetEffectiveVolume()` (эффективная громкость)
 
-#### 6.2. Базовое воспроизведение
+#### 7.2. Базовое воспроизведение
 **Файл:** `KIDLibrary/Music/Music.Sound.cs`
 
 **Методы:**
@@ -363,13 +419,13 @@
 - Индивидуальная громкость для каждого звука
 - Интеграция с StopManager для отмены
 
-#### 6.3. Управление громкостью
+#### 7.3. Управление громкостью
 **Файл:** `KIDLibrary/Music/Music.Volume.cs`
 
 **Свойство:**
 - `Music.Volume` — глобальная громкость (0-10, по умолчанию 5)
 
-#### 6.4. Генерация тонов
+#### 7.4. Генерация тонов
 **Файл:** `KIDLibrary/Music/Music.ToneGeneration.cs`
 
 **Функции:**
@@ -377,7 +433,7 @@
 - Поддержка частотного диапазона 50-7000 Hz
 - Генерация пауз (тишины)
 
-#### 6.5. Полифония
+#### 7.5. Полифония
 **Файл:** `KIDLibrary/Music/Music.Polyphony.cs`
 
 **Функции:**
@@ -385,7 +441,7 @@
 - Микширование дорожек через NAudio
 - Поддержка индивидуальной громкости для каждой дорожки
 
-#### 6.6. Проигрывание файлов
+#### 7.6. Проигрывание файлов
 **Файл:** `KIDLibrary/Music/Music.FilePlayback.cs`
 
 **Функции:**
@@ -393,7 +449,7 @@
 - Поддержка локальных путей и URL
 - Автоматическая загрузка и удаление временных файлов для URL
 
-#### 6.7. Расширенное API
+#### 7.7. Расширенное API
 **Файл:** `KIDLibrary/Music/Music.Advanced.cs`
 
 **Методы управления:**
@@ -410,14 +466,14 @@
 - Зацикливание звуков
 - Плавное изменение громкости
 
-## 7. Подсистема Graphics API
+## 8. Подсистема Graphics API
 
 ### Назначение
 Предоставление упрощённого API для рисования в пользовательском коде.
 
 ### Компоненты
 
-#### 7.1. Системные функции
+#### 8.1. Системные функции
 **Файл:** `KIDLibrary/Graphics/Graphics.System.cs`
 
 **Функции:**
@@ -426,10 +482,10 @@
 - Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
 
 **Особенности:**
-- Все операции с UI выполняются в UI потоке через `DispatcherManager`
-- Централизованное управление Dispatcher через `DispatcherManager`
+- Все операции с UI выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
+- `DispatcherManager` — статический класс для централизованного управления Dispatcher, инициализируется в `CodeExecutionContext.Init()`
 
-#### 7.2. Работа с цветами
+#### 8.2. Работа с цветами
 **Файл:** `KIDLibrary/Graphics/Graphics.Color.cs`
 
 **Свойства:**
@@ -448,7 +504,7 @@
 - Неявные преобразования из различных типов
 - Создание Brush в UI потоке
 
-#### 7.3. Простые фигуры
+#### 8.3. Простые фигуры
 **Файл:** `KIDLibrary/Graphics/Graphics.SimpleFigures.cs`
 
 **Фигуры:**
@@ -465,7 +521,7 @@
 - Поддержка перегрузок с Point
 - Все операции выполняются в UI потоке
 
-#### 7.4. Работа с текстом
+#### 8.4. Работа с текстом
 **Файл:** `KIDLibrary/Graphics/Graphics.Text.cs`
 
 **Функции:**
@@ -477,7 +533,7 @@
 - Возвращает TextBlock для дальнейшей модификации
 - Использует текущий FillColor для цвета текста
 
-#### 7.5. Работа с изображениями
+#### 8.5. Работа с изображениями
 **Файл:** `KIDLibrary/Graphics/Graphics.Image.cs`
 
 **Методы:**
@@ -491,7 +547,7 @@
 - Возвращает Image для дальнейшей модификации
 - Все операции выполняются в UI потоке
 
-#### 7.6. Методы расширения для элементов
+#### 8.6. Методы расширения для элементов
 **Файл:** `KIDLibrary/Graphics/Graphics.ExtensionMethods.cs`
 
 **Методы позиционирования (для UIElement):**
@@ -524,14 +580,14 @@
 - Все методы возвращают элемент для цепочки вызовов
 - Все операции выполняются в UI потоке
 
-## 8. Подсистема Mouse API
+## 9. Подсистема Mouse API
 
 ### Назначение
 Предоставление API для получения информации о позиции курсора и кликах мыши на Canvas в пользовательском коде.
 
 ### Компоненты
 
-#### 8.1. Структуры данных
+#### 9.1. Структуры данных
 **Файлы:** `KIDLibrary/Mouse/ClickStatus.cs`, `KIDLibrary/Mouse/MouseClickInfo.cs`, `KIDLibrary/Mouse/PressButtonStatus.cs`
 
 **ClickStatus:**
@@ -555,11 +611,11 @@
 - Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
 
 **Особенности:**
-- Все операции с UI выполняются в UI потоке через `DispatcherManager`
-- Централизованное управление Dispatcher через `DispatcherManager`
+- Все операции с UI выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
+- `DispatcherManager` — статический класс для централизованного управления Dispatcher, инициализируется в `CodeExecutionContext.Init()`
 - Подписка на события Canvas: MouseMove, MouseLeave, MouseLeftButtonDown, MouseRightButtonDown, MouseLeftButtonUp, MouseRightButtonUp
 
-#### 8.3. Работа с позицией курсора
+#### 9.3. Работа с позицией курсора
 **Файл:** `KIDLibrary/Mouse/Mouse.Position.cs`
 
 **Свойства:**
@@ -571,7 +627,7 @@
 - LastActualPosition обновляется при перемещении мыши по Canvas
 - Обработка OutOfArea флага при выходе курсора за пределы Canvas
 
-#### 8.4. Работа с кликами
+#### 9.4. Работа с кликами
 **Файл:** `KIDLibrary/Mouse/Mouse.Click.cs`
 
 **Свойства:**
@@ -586,7 +642,7 @@
 - Использование таймеров для определения двойных кликов правой кнопки
 - Обновление состояния при нажатии/отпускании кнопок
 
-#### 8.5. События мыши
+#### 9.5. События мыши
 **Файл:** `KIDLibrary/Mouse/Mouse.Events.cs`
 
 **События:**
@@ -596,39 +652,6 @@
 **Особенности:**
 - События вызываются в UI потоке
 - Параметр sender всегда null
-
-## 9. Подсистема DispatcherManager
-
-### Назначение
-Централизованное управление Dispatcher и выполнение операций в UI потоке для всех API библиотеки.
-
-### Компоненты
-
-#### 9.1. DispatcherManager
-**Файл:** `KIDLibrary/DispatcherManager.cs`
-
-**Ответственность:**
-- Централизованное управление Dispatcher
-- Выполнение операций в UI потоке
-- Обеспечение потокобезопасности для всех API
-
-**Основные методы:**
-- `Init(Dispatcher dispatcher)` — инициализация с Dispatcher из контекста выполнения
-- `InvokeOnUI(Action action)` — выполнение действия в UI потоке
-- `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
-
-**Особенности:**
-- Статический класс в пространстве имен `KID`
-- Инициализируется в `CodeExecutionContext.Init()` перед использованием
-- Используется всеми API (Graphics, Mouse, Music, TextBoxConsole)
-- Автоматически проверяет, находится ли текущий поток в UI потоке
-- Использует `BeginInvoke` для неблокирующих операций и `Invoke` для операций с возвратом значения
-
-**Инициализация:**
-1. `CanvasTextBoxContextFabric` получает `App` из DI контейнера
-2. Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
-3. `CodeExecutionContext.Init()` вызывает `DispatcherManager.Init(Dispatcher)`
-4. Все последующие вызовы API используют `DispatcherManager` для работы с UI потоком
 
 ## 10. Подсистема Dependency Injection
 
@@ -696,20 +719,24 @@
    - MenuViewModel → CodeExecutionService → CSharpCompiler → DefaultCodeRunner
    - DefaultCodeRunner → Graphics API → Canvas
    - DefaultCodeRunner → Mouse API → Canvas (события мыши)
-   - DefaultCodeRunner → Console API → TextBox
+   - DefaultCodeRunner → TextBoxConsole → TextBox (консольный ввод/вывод)
    - DefaultCodeRunner → Music API → NAudio → Звуковая карта
 
-2. **Работа с файлами:**
+2. **Консольный ввод/вывод:**
+   - Пользовательский код → Console.WriteLine/ReadLine → TextBoxConsole → TextBox
+   - TextBoxConsole использует DispatcherManager для потокобезопасной работы с UI
+
+3. **Работа с файлами:**
    - MenuViewModel → CodeFileService → FileDialogService → FileService
 
-3. **Локализация:**
+4. **Локализация:**
    - LocalizationService → ResourceManager → .resx файлы
    - LocalizationMarkupExtension → LocalizationService
 
-4. **Темы:**
+5. **Темы:**
    - ThemeService → ResourceDictionary → XAML файлы тем
 
-5. **Инициализация:**
+6. **Инициализация:**
    - WindowInitializationService → WindowConfigurationService → settings.json
    - WindowInitializationService → ThemeService → Применение темы
    - WindowInitializationService → LocalizationService → Применение языка
@@ -719,10 +746,11 @@
 Каждая подсистема может быть расширена:
 
 1. **Code Execution:** Добавление новых компиляторов или раннеров
-2. **Files:** Добавление новых форматов файлов
-3. **Localization:** Добавление новых языков через .resx файлы
-4. **Themes:** Добавление новых тем через XAML файлы
-5. **Graphics API:** Добавление новых методов рисования
-6. **Music API:** Добавление новых методов воспроизведения звуков
-7. **Mouse API:** Добавление новых методов для работы с мышью
+2. **Console I/O:** Расширение возможностей ввода/вывода
+3. **Files:** Добавление новых форматов файлов
+4. **Localization:** Добавление новых языков через .resx файлы
+5. **Themes:** Добавление новых тем через XAML файлы
+6. **Graphics API:** Добавление новых методов рисования
+7. **Music API:** Добавление новых методов воспроизведения звуков
+8. **Mouse API:** Добавление новых методов для работы с мышью
 
