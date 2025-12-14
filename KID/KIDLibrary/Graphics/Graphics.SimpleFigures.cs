@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -9,7 +9,7 @@ namespace KID
     {
         public static Ellipse? Circle(double x, double y, double radius)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var ellipse = new Ellipse
@@ -32,7 +32,7 @@ namespace KID
 
         public static Ellipse? Ellipse(double x, double y, double radiusX, double radiusY)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var ellipse = new Ellipse
@@ -55,7 +55,7 @@ namespace KID
 
         public static Rectangle? Rectangle(double x, double y, double width, double height)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var rect = new Rectangle
@@ -82,7 +82,7 @@ namespace KID
 
         public static Line? Line(double x1, double y1, double x2, double y2)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var line = new Line
@@ -107,7 +107,7 @@ namespace KID
             if (points == null || points.Length == 0)
                 return null;
             
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var path = new Path
@@ -144,7 +144,7 @@ namespace KID
             if (points == null || points.Length == 0)
                 return null;
             
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var path = new Path
@@ -183,7 +183,7 @@ namespace KID
             if (points == null || points.Length == 0)
                 return null;
             
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 var polygon = new Polygon

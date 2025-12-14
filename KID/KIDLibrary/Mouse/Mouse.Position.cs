@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using KID;
 
 namespace KID
 {
@@ -18,14 +19,14 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI<Point?>(() =>
+                return DispatcherManager.InvokeOnUI<Point?>(() =>
                 {
-                    if (_canvas == null || !_canvas.IsMouseOver)
+                    if (Canvas == null || !Canvas.IsMouseOver)
                         return null;
 
                     try
                     {
-                        var mousePosition = System.Windows.Input.Mouse.GetPosition(_canvas);
+                        var mousePosition = System.Windows.Input.Mouse.GetPosition(Canvas);
                         return mousePosition;
                     }
                     catch (Exception ex)
@@ -45,7 +46,7 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI<Point>(() => _lastActualPosition);
+                return DispatcherManager.InvokeOnUI<Point>(() => _lastActualPosition);
             }
         }
 
@@ -54,12 +55,12 @@ namespace KID
         /// </summary>
         static partial void OnMouseMove(MouseEventArgs e)
         {
-            if (_canvas == null)
+            if (Canvas == null)
                 return;
 
             try
             {
-                var position = e.GetPosition(_canvas);
+                var position = e.GetPosition(Canvas);
                 _lastActualPosition = position;
 
                 // Убираем OutOfArea из состояния (если был установлен)
@@ -79,7 +80,7 @@ namespace KID
         /// </summary>
         static partial void OnMouseLeave(MouseEventArgs e)
         {
-            if (_canvas == null)
+            if (Canvas == null)
                 return;
 
             try

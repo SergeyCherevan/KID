@@ -13,7 +13,7 @@ namespace KID
             if (string.IsNullOrWhiteSpace(path))
                 return null;
 
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
 
@@ -67,7 +67,7 @@ namespace KID
             if (image == null || string.IsNullOrWhiteSpace(path))
                 return null;
 
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
 

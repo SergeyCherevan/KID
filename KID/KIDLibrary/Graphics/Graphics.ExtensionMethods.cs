@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -10,7 +10,7 @@ namespace KID
         // Общие методы для UIElement (позиционирование)
         public static UIElement? SetLeftX(this UIElement element, double x)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.SetLeft(element, x);
@@ -19,7 +19,7 @@ namespace KID
         }
         public static UIElement? SetTopY(this UIElement element, double y)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.SetTop(element, y);
@@ -28,7 +28,7 @@ namespace KID
         }
         public static UIElement? SetLeftTopXY(this UIElement element, double x, double y)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.SetLeft(element, x);
@@ -44,7 +44,7 @@ namespace KID
         // Общие методы для FrameworkElement (центрирование и размеры)
         public static FrameworkElement? SetCenterX(this FrameworkElement element, double x)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.SetLeft(element, x - element.ActualWidth / 2);
@@ -53,7 +53,7 @@ namespace KID
         }
         public static FrameworkElement? SetCenterY(this FrameworkElement element, double y)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.SetTop(element, y - element.ActualHeight / 2);
@@ -62,7 +62,7 @@ namespace KID
         }
         public static FrameworkElement? SetCenterXY(this FrameworkElement element, double x, double y)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.SetLeft(element, x - element.ActualWidth / 2);
@@ -77,7 +77,7 @@ namespace KID
 
         public static FrameworkElement? SetWidth(this FrameworkElement element, double width)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 element.Width = width;
@@ -86,7 +86,7 @@ namespace KID
         }
         public static FrameworkElement? SetHeight(this FrameworkElement element, double height)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 element.Height = height;
@@ -95,7 +95,7 @@ namespace KID
         }
         public static FrameworkElement? SetSize(this FrameworkElement element, double width, double height)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 element.Width = width;
@@ -111,7 +111,7 @@ namespace KID
         // Общие методы для UIElement (управление Canvas)
         public static UIElement? AddToCanvas(this UIElement element)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.Children.Add(element);
@@ -121,7 +121,7 @@ namespace KID
 
         public static UIElement? RemoveFromCanvas(this UIElement element)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 Canvas.Children.Remove(element);
@@ -132,7 +132,7 @@ namespace KID
         // Методы только для Shape (цвета)
         public static Shape? SetStrokeColor(this Shape element, ColorType color)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 element.Stroke = color.CreateBrush();
@@ -141,7 +141,7 @@ namespace KID
         }
         public static Shape? SetFillColor(this Shape element, ColorType color)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 element.Fill = color.CreateBrush();
@@ -150,7 +150,7 @@ namespace KID
         }
         public static Shape? SetColor(this Shape element, ColorType color)
         {
-            return InvokeOnUI(() =>
+            return DispatcherManager.InvokeOnUI(() =>
             {
                 if (Canvas == null) return null;
                 element.Stroke = color.CreateBrush();

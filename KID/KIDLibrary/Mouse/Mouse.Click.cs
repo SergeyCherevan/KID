@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
+using KID;
 
 namespace KID
 {
@@ -34,7 +35,7 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI(() => _currentClick);
+                return DispatcherManager.InvokeOnUI(() => _currentClick);
             }
         }
 
@@ -45,7 +46,7 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI(() => _lastClick);
+                return DispatcherManager.InvokeOnUI(() => _lastClick);
             }
         }
 
@@ -86,12 +87,12 @@ namespace KID
         /// </summary>
         private static void HandleButtonDown(MouseButtonEventArgs e, PressButtonStatus buttonFlag, ref DoubleClickTracker tracker)
         {
-            if (_canvas == null)
+            if (Canvas == null)
                 return;
 
             try
             {
-                var position = e.GetPosition(_canvas);
+                var position = e.GetPosition(Canvas);
                 var now = DateTime.Now;
 
                 // Обновление состояния кнопки
@@ -120,7 +121,7 @@ namespace KID
         /// </summary>
         private static void HandleButtonUp(MouseButtonEventArgs e, PressButtonStatus buttonFlag)
         {
-            if (_canvas == null)
+            if (Canvas == null)
                 return;
 
             try

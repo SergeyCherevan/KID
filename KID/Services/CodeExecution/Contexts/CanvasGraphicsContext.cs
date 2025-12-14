@@ -21,6 +21,7 @@ namespace KID.Services.CodeExecution.Contexts
             {
                 Graphics.Init(canvas);
                 Mouse.Init(canvas);
+                Music.Init();
             }
         }
 

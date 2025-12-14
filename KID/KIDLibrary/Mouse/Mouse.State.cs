@@ -19,10 +19,10 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI<PressButtonStatus>(() =>
+                return DispatcherManager.InvokeOnUI<PressButtonStatus>(() =>
                 {
                     // Если курсор не на Canvas, добавляем OutOfArea (сохраняя флаги кнопок)
-                    if (_canvas == null || !_canvas.IsMouseOver)
+                    if (Canvas == null || !Canvas.IsMouseOver)
                     {
                         return _currentPressedButton | PressButtonStatus.OutOfArea;
                     }
@@ -40,7 +40,7 @@ namespace KID
         {
             get
             {
-                return InvokeOnUI<PressButtonStatus>(() => _lastActualPressedButton);
+                return DispatcherManager.InvokeOnUI<PressButtonStatus>(() => _lastActualPressedButton);
             }
         }
 
@@ -61,7 +61,7 @@ namespace KID
             }
 
             // Обновляем последнее состояние на Canvas, если курсор на Canvas
-            if (_canvas != null && _canvas.IsMouseOver)
+            if (Canvas != null && Canvas.IsMouseOver)
             {
                 UpdateLastActualPressedButton();
             }

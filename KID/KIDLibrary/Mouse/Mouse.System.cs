@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using System.Windows.Threading;
+using KID.Services.CodeExecution;
 
 namespace KID
 {
@@ -12,9 +12,6 @@ namespace KID
     /// </summary>
     public static partial class Mouse
     {
-        private static Canvas? _canvas;
-        private static Dispatcher? _dispatcher;
-
         // Константы для обработки кликов
         internal const int DoubleClickDelayMs = 500; // Интервал для определения двойного клика в миллисекундах
         internal const double DoubleClickPositionTolerance = 5.0; // Допуск для определения двойного клика в пикселях
@@ -22,7 +19,7 @@ namespace KID
         /// <summary>
         /// Canvas, на котором отслеживаются события мыши.
         /// </summary>
-        public static Canvas? Canvas => _canvas;
+        public static Canvas Canvas { get; private set; }
 
         /// <summary>
         /// Инициализация Mouse API с Canvas.
@@ -34,16 +31,15 @@ namespace KID
                 throw new ArgumentNullException(nameof(targetCanvas));
 
             // Отписываемся от предыдущего Canvas, если был
-            if (_canvas != null)
+            if (Canvas != null)
             {
-                UnsubscribeFromEvents(_canvas);
+                UnsubscribeFromEvents(Canvas);
             }
 
-            _canvas = targetCanvas;
-            _dispatcher = Application.Current?.Dispatcher;
+            Canvas = targetCanvas;
 
             // Подписываемся на события Canvas
-            SubscribeToEvents(_canvas);
+            SubscribeToEvents(Canvas);
         }
 
         /// <summary>
@@ -71,48 +67,6 @@ namespace KID
             canvas.MouseRightButtonDown -= Canvas_MouseRightButtonDown;
             canvas.MouseLeftButtonUp -= Canvas_MouseLeftButtonUp;
             canvas.MouseRightButtonUp -= Canvas_MouseRightButtonUp;
-        }
-
-        /// <summary>
-        /// Выполняет действие в UI потоке.
-        /// </summary>
-        /// <param name="action">Действие для выполнения.</param>
-        internal static void InvokeOnUI(Action action)
-        {
-            if (action == null)
-                return;
-
-            if (_dispatcher == null || _dispatcher.CheckAccess())
-            {
-                action();
-            }
-            else
-            {
-                _dispatcher.BeginInvoke(action, DispatcherPriority.Background);
-            }
-        }
-
-        /// <summary>
-        /// Выполняет функцию в UI потоке с возвратом значения.
-        /// </summary>
-        /// <typeparam name="T">Тип возвращаемого значения.</typeparam>
-        /// <param name="func">Функция для выполнения.</param>
-        /// <returns>Результат выполнения функции.</returns>
-        internal static T InvokeOnUI<T>(Func<T> func)
-        {
-            if (func == null)
-                return default(T)!;
-
-            if (_dispatcher == null || _dispatcher.CheckAccess())
-            {
-                return func();
-            }
-            else
-            {
-                T result = default(T)!;
-                _dispatcher.Invoke(() => { result = func(); }, DispatcherPriority.Background);
-                return result;
-            }
         }
 
         // Обработчики событий - вызывают partial методы, реализованные в других файлах

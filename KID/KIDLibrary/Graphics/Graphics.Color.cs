@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows.Media;
 
 namespace KID
@@ -64,7 +64,7 @@ namespace KID
             get => new ColorType(() => fillBrush);
             set
             {
-                InvokeOnUI(() =>
+                DispatcherManager.InvokeOnUI(() =>
                 {
                     fillBrush = value.CreateBrush();
                 });
@@ -76,7 +76,7 @@ namespace KID
             get => new ColorType(() => strokeBrush);
             set
             {
-                InvokeOnUI(() =>
+                DispatcherManager.InvokeOnUI(() =>
                 {
                     strokeBrush = value.CreateBrush();
                 });
@@ -88,7 +88,7 @@ namespace KID
             get => new ColorType(() => fillBrush);
             set
             {
-                InvokeOnUI(() =>
+                DispatcherManager.InvokeOnUI(() =>
                 {
                     var brush = value.CreateBrush();
                     fillBrush = brush;
