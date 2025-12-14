@@ -72,6 +72,8 @@
 - Объединяет графический и консольный контексты
 - Управляет инициализацией и освобождением ресурсов
 - Содержит CancellationToken для отмены
+- Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
+- Инициализирует `DispatcherManager` в методе `Init()` перед инициализацией контекстов
 
 **CanvasGraphicsContext** (`Contexts/CanvasGraphicsContext.cs`)
 - Инициализирует Graphics API с Canvas
@@ -84,6 +86,8 @@
 **CanvasTextBoxContextFabric** (`Contexts/CanvasTextBoxContextFabric.cs`)
 - Фабрика для создания контекстов выполнения
 - Создаёт CodeExecutionContext с нужными контекстами
+- Получает `App` из DI контейнера через конструктор
+- Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
 #### 1.5. TextBoxConsole
 **Файл:** `Services/CodeExecution/TextBoxConsole.cs`
@@ -98,7 +102,7 @@
 **Вывод:**
 - `Write(char)`, `Write(string)` — вывод текста
 - `Clear()` — очистка консоли
-- Все операции выполняются в UI потоке
+- Все операции выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
 
 **Ввод:**
 - `Read()` — чтение одного символа
@@ -419,12 +423,11 @@
 **Функции:**
 - `Init(Canvas)` — инициализация с Canvas
 - `Clear()` — очистка холста
-- `InvokeOnUI(Action)` — выполнение в UI потоке
-- `InvokeOnUI<T>(Func<T>)` — выполнение с возвратом значения
+- Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
 
 **Особенности:**
-- Все операции с UI выполняются в UI потоке
-- Использует Dispatcher для синхронизации
+- Все операции с UI выполняются в UI потоке через `DispatcherManager`
+- Централизованное управление Dispatcher через `DispatcherManager`
 
 #### 7.2. Работа с цветами
 **Файл:** `KIDLibrary/Graphics/Graphics.Color.cs`
@@ -549,12 +552,11 @@
 
 **Функции:**
 - `Init(Canvas)` — инициализация с Canvas
-- `InvokeOnUI(Action)` — выполнение в UI потоке
-- `InvokeOnUI<T>(Func<T>)` — выполнение с возвратом значения
+- Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
 
 **Особенности:**
-- Все операции с UI выполняются в UI потоке
-- Использует Dispatcher для синхронизации
+- Все операции с UI выполняются в UI потоке через `DispatcherManager`
+- Централизованное управление Dispatcher через `DispatcherManager`
 - Подписка на события Canvas: MouseMove, MouseLeave, MouseLeftButtonDown, MouseRightButtonDown, MouseLeftButtonUp, MouseRightButtonUp
 
 #### 8.3. Работа с позицией курсора
@@ -595,14 +597,47 @@
 - События вызываются в UI потоке
 - Параметр sender всегда null
 
-## 9. Подсистема Dependency Injection
+## 9. Подсистема DispatcherManager
+
+### Назначение
+Централизованное управление Dispatcher и выполнение операций в UI потоке для всех API библиотеки.
+
+### Компоненты
+
+#### 9.1. DispatcherManager
+**Файл:** `KIDLibrary/DispatcherManager.cs`
+
+**Ответственность:**
+- Централизованное управление Dispatcher
+- Выполнение операций в UI потоке
+- Обеспечение потокобезопасности для всех API
+
+**Основные методы:**
+- `Init(Dispatcher dispatcher)` — инициализация с Dispatcher из контекста выполнения
+- `InvokeOnUI(Action action)` — выполнение действия в UI потоке
+- `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
+
+**Особенности:**
+- Статический класс в пространстве имен `KID`
+- Инициализируется в `CodeExecutionContext.Init()` перед использованием
+- Используется всеми API (Graphics, Mouse, Music, TextBoxConsole)
+- Автоматически проверяет, находится ли текущий поток в UI потоке
+- Использует `BeginInvoke` для неблокирующих операций и `Invoke` для операций с возвратом значения
+
+**Инициализация:**
+1. `CanvasTextBoxContextFabric` получает `App` из DI контейнера
+2. Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
+3. `CodeExecutionContext.Init()` вызывает `DispatcherManager.Init(Dispatcher)`
+4. Все последующие вызовы API используют `DispatcherManager` для работы с UI потоком
+
+## 10. Подсистема Dependency Injection
 
 ### Назначение
 Управление зависимостями и жизненным циклом объектов.
 
 ### Компоненты
 
-#### 8.1. ServiceCollectionExtensions
+#### 10.1. ServiceCollectionExtensions
 **Файл:** `Services/DI/ServiceCollectionExtensions.cs`
 
 **Ответственность:**
@@ -617,7 +652,7 @@
 - Все ViewModels регистрируются как Singleton
 - MainWindow регистрируется как Transient (специальный случай)
 
-#### 8.2. ServiceProviderExtension
+#### 10.2. ServiceProviderExtension
 **Файл:** `Services/DI/ServiceProviderExtension.cs`
 
 **Ответственность:**

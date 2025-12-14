@@ -86,12 +86,12 @@ public class MyViewModel
 ### Добавление нового метода Graphics API
 
 1. Определите, в какой файл добавить метод (SimpleFigures, Text, и т.д.)
-2. Добавьте метод с использованием `InvokeOnUI()`:
+2. Добавьте метод с использованием `DispatcherManager.InvokeOnUI()`:
 
 ```csharp
 public static Shape? MyNewMethod(double x, double y)
 {
-    return InvokeOnUI(() =>
+    return DispatcherManager.InvokeOnUI(() =>
     {
         if (Canvas == null) return null;
         // Ваш код
@@ -123,14 +123,14 @@ public static void MyNewMethod(SoundNote note)
 ### Добавление нового метода Mouse API
 
 1. Определите, в какой файл добавить метод (Position.cs, Click.cs, Events.cs, и т.д.)
-2. Добавьте метод с использованием `InvokeOnUI()` для потокобезопасности:
+2. Добавьте метод с использованием `DispatcherManager.InvokeOnUI()` для потокобезопасности:
 
 ```csharp
 public static Point? MyNewMethod()
 {
-    return InvokeOnUI<Point?>(() =>
+    return DispatcherManager.InvokeOnUI<Point?>(() =>
     {
-        if (_canvas == null) return null;
+        if (Canvas == null) return null;
         // Ваш код
         return result;
     });
@@ -315,27 +315,26 @@ catch (Exception ex)
 
 ### Потокобезопасность
 
-Все операции с UI должны выполняться в UI потоке:
+Все операции с UI должны выполняться в UI потоке через `DispatcherManager`:
 
 ```csharp
-InvokeOnUI(() =>
+DispatcherManager.InvokeOnUI(() =>
 {
     // Операции с UI
 });
 ```
 
-Или через Dispatcher:
+Для операций с возвратом значения:
 
 ```csharp
-if (dispatcher.CheckAccess())
+var result = DispatcherManager.InvokeOnUI<ReturnType>(() =>
 {
-    // Операция
-}
-else
-{
-    dispatcher.BeginInvoke(() => { /* операция */ });
-}
+    // Операции с UI
+    return value;
+});
 ```
+
+**Важно:** `DispatcherManager` должен быть инициализирован в `CodeExecutionContext.Init()` перед использованием. Это происходит автоматически при создании контекста выполнения.
 
 ### Асинхронность
 

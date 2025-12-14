@@ -116,9 +116,13 @@
 
 **Контексты выполнения:**
 - **CodeExecutionContext** — контекст выполнения, объединяющий графический и консольный контексты
+  - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
+  - Инициализирует `DispatcherManager` в методе `Init()`
 - **CanvasGraphicsContext** — инициализирует Graphics API с Canvas
 - **TextBoxConsoleContext** — инициализирует консоль с TextBox
 - **CanvasTextBoxContextFabric** — фабрика для создания контекстов
+  - Получает `App` из DI контейнера
+  - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
 **TextBoxConsole** (`TextBoxConsole.cs`)
 - Реализация IConsole для WPF TextBox
@@ -126,6 +130,7 @@
 - Поддерживает Console.ReadLine для ввода данных
 - Обрабатывает ввод с клавиатуры (включая кириллицу)
 - Статический класс StaticConsole для замены Console.Clear()
+- Использует `DispatcherManager.InvokeOnUI()` для работы с UI потоком
 
 #### 3.2. Files (Работа с файлами)
 
@@ -236,12 +241,21 @@
 
 Этот слой предоставляет API, доступный в пользовательском коде.
 
+#### DispatcherManager
+
+**DispatcherManager.cs**
+- Статический класс для централизованного управления Dispatcher
+- `Init(Dispatcher dispatcher)` — инициализация с Dispatcher из контекста выполнения
+- `InvokeOnUI(Action action)` — выполнение действия в UI потоке
+- `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
+- Используется всеми API (Graphics, Mouse, Music, TextBoxConsole) для потокобезопасной работы с UI
+
 #### Graphics API
 
 **Graphics.System.cs**
 - `Graphics.Init(Canvas)` — инициализация с Canvas
 - `Graphics.Clear()` — очистка холста
-- `InvokeOnUI()` — выполнение действий в UI потоке
+- Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
 
 **Graphics.Color.cs**
 - `Graphics.FillColor` — цвет заливки
@@ -285,7 +299,7 @@
 
 **Music.System.cs**
 - Инициализация и базовые утилиты
-- `InvokeOnUI()` — выполнение действий в UI потоке
+- Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
 - Интеграция с `StopManager`
 
 **Music.Volume.cs**
@@ -330,7 +344,7 @@
 **Mouse.System.cs**
 - Инициализация и базовые утилиты
 - `Init(Canvas)` — инициализация с Canvas
-- `InvokeOnUI()` — выполнение действий в UI потоке
+- Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
 - Подписка на события Canvas
 
 **Mouse.Position.cs**
@@ -407,10 +421,12 @@ WindowInitializationService.Initialize()
 
 ## Потокобезопасность
 
-- Все операции с UI выполняются через `Dispatcher.Invoke()` или `Dispatcher.BeginInvoke()`
-- Graphics API использует `InvokeOnUI()` для безопасного доступа к Canvas
-- Mouse API использует `InvokeOnUI()` для безопасного доступа к Canvas и обработки событий мыши
-- TextBoxConsole использует `InvokeOnUIThread()` для работы с TextBox
+- Все операции с UI выполняются через централизованный `DispatcherManager`
+- `DispatcherManager` инициализируется в `CodeExecutionContext.Init()` с Dispatcher из `App`
+- Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
+- Mouse API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas и обработки событий мыши
+- Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
+- TextBoxConsole использует `DispatcherManager.InvokeOnUI()` для работы с TextBox
 - Выполнение кода происходит в отдельном потоке (Task.Run)
 - CancellationToken используется для безопасной отмены выполнения
 
