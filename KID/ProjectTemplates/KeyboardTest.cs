@@ -9,6 +9,9 @@ using KEY = System.Windows.Input.Key;
 // Очищаем Canvas
 Graphics.Clear();
 
+// Устанавливаем фокус на Canvas для получения событий клавиатуры
+Keyboard.Focus();
+
 // Устанавливаем красный цвет
 Graphics.Color = "Red";
 

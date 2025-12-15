@@ -1,6 +1,8 @@
 using System;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using KID.Services.CodeExecution;
 
 namespace KID
 {
@@ -54,6 +56,45 @@ namespace KID
             {
                 TargetElement = null;
             }
+        }
+
+        /// <summary>
+        /// Устанавливает фокус клавиатуры на TargetElement (Canvas).
+        /// </summary>
+        public static void Focus()
+        {
+            DispatcherManager.InvokeOnUI(() =>
+            {
+                if (TargetElement == null)
+                    return;
+
+                // Делаем элемент focusable, если это необходимо
+                if (TargetElement is Canvas canvas)
+                {
+                    canvas.Focusable = true;
+                }
+
+                // Метод 1: Стандартный Focus()
+                TargetElement.Focus();
+
+                // Метод 2: System.Windows.Input.Keyboard.Focus() - более надежный
+                System.Windows.Input.Keyboard.Focus(TargetElement);
+
+                // Метод 3: FocusManager - устанавливает фокус на уровне окна
+                if (TargetElement is FrameworkElement frameworkElement && frameworkElement.IsLoaded)
+                {
+                    FocusManager.SetFocusedElement(
+                        FocusManager.GetFocusScope(TargetElement), 
+                        TargetElement
+                    );
+                }
+
+                // Делаем элемент видимым
+                if (TargetElement is FrameworkElement element)
+                {
+                    element.BringIntoView();
+                }
+            });
         }
 
         /// <summary>
