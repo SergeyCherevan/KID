@@ -140,6 +140,7 @@ if (position.HasValue)
 - [Архитектура проекта](ARCHITECTURE.md) — общее описание архитектуры и компонентов
 - [Подсистемы проекта](SUBSYSTEMS.md) — детальное описание всех подсистем и их взаимодействия
 - [Функциональность](FEATURES.md) — подробное описание всех функций
+- [Console API](Console-API.md) - полная документация по Console API
 - [Graphics API](Graphics-API.md) — полная документация по Graphics API
 - [Music API](Music-API.md) — полная документация по Music API
 - [Mouse API](Mouse-API.md) — полная документация по Mouse API
