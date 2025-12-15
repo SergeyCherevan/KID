@@ -208,8 +208,8 @@ namespace KID.Services.CodeExecution
             // Метод 1: Стандартный Focus()
             textBox.Focus();
             
-            // Метод 2: Keyboard.Focus() - более надежный для элементов ввода
-            Keyboard.Focus(textBox);
+            // Метод 2: System.Windows.Input.Keyboard.Focus() - более надежный для элементов ввода
+            System.Windows.Input.Keyboard.Focus(textBox);
             
             // Метод 3: FocusManager - устанавливает фокус на уровне окна
             if (textBox.IsLoaded)
