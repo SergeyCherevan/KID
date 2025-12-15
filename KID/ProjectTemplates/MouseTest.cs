@@ -10,15 +10,15 @@ while (true)
     // Проверка на остановку выполнения
     StopManager.StopIfButtonPressed();
     
-    // Получаем текущую позицию мыши
-    var position = Mouse.CurrentPosition;
+    // Получаем текущую информацию о курсоре
+    var cursor = Mouse.CurrentCursor;
     
     // Если курсор на Canvas, рисуем точку
-    if (position.HasValue)
+    if (cursor.Position.HasValue)
     {
         Graphics.Color = "Green";
-        Graphics.Circle(position.Value.X, position.Value.Y, 1);
-        Console.WriteLine($"Position: {position.Value.X}, {position.Value.Y}");
+        Graphics.Circle(cursor.Position.Value.X, cursor.Position.Value.Y, 1);
+        Console.WriteLine($"Position: {cursor.Position.Value.X}, {cursor.Position.Value.Y}");
     }
 
     var click = Mouse.CurrentClick;

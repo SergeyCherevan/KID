@@ -8,41 +8,8 @@ namespace KID
     public static partial class Mouse
     {
         // Для отслеживания состояния нажатых кнопок
-        private static PressButtonStatus _currentPressedButton = PressButtonStatus.NoButton;
-        private static PressButtonStatus _lastActualPressedButton = PressButtonStatus.NoButton;
-
-        /// <summary>
-        /// Код с информацией о текущей нажатой кнопке мыши.
-        /// Может включать комбинации флагов LeftButton, RightButton и OutOfArea.
-        /// </summary>
-        public static PressButtonStatus CurrentPressedButton
-        {
-            get
-            {
-                return DispatcherManager.InvokeOnUI<PressButtonStatus>(() =>
-                {
-                    // Если курсор не на Canvas, добавляем OutOfArea (сохраняя флаги кнопок)
-                    if (Canvas == null || !Canvas.IsMouseOver)
-                    {
-                        return _currentPressedButton | PressButtonStatus.OutOfArea;
-                    }
-                    // Если курсор на Canvas, возвращаем только флаги кнопок (без OutOfArea)
-                    return _currentPressedButton & ~PressButtonStatus.OutOfArea;
-                });
-            }
-        }
-
-        /// <summary>
-        /// Код с информацией о последней нажатой кнопке мыши на Canvas.
-        /// Никогда не содержит флаг OutOfArea.
-        /// </summary>
-        public static PressButtonStatus LastActualPressedButton
-        {
-            get
-            {
-                return DispatcherManager.InvokeOnUI<PressButtonStatus>(() => _lastActualPressedButton);
-            }
-        }
+        internal static PressButtonStatus _currentPressedButton = PressButtonStatus.NoButton;
+        internal static PressButtonStatus _lastActualPressedButton = PressButtonStatus.NoButton;
 
         /// <summary>
         /// Обновляет состояние нажатой кнопки.

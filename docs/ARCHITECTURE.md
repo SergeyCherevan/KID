@@ -353,17 +353,14 @@
 - Подписка на события Canvas
 
 **Mouse.Position.cs**
-- `CurrentPosition` (Point?) — текущая координата курсора (null если курсор вне Canvas)
-- `LastActualPosition` (Point) — последняя актуальная позиция курсора на Canvas
+- `CurrentCursor` (CursorInfo) — информация о текущем состоянии курсора (позиция и состояние кнопок)
+- `LastActualCursor` (CursorInfo) — информация о последнем актуальном состоянии курсора на Canvas
 - Обработка OutOfArea флага
 
 **Mouse.Click.cs**
 - `CurrentClick` (MouseClickInfo) — информация о текущем клике
 - `LastClick` (MouseClickInfo) — информация о последнем клике
-- `CurrentPressedButton` (PressButtonStatus) — текущее состояние нажатых кнопок
-- `LastActualPressedButton` (PressButtonStatus) — последнее состояние нажатых кнопок на Canvas
 - Обработка одиночных и двойных кликов (левая/правая кнопка)
-- Отслеживание состояния нажатых кнопок
 
 **Mouse.Events.cs**
 - `MouseMoveEvent` (EventHandler<Point>) — событие перемещения мыши

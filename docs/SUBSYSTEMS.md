@@ -619,13 +619,14 @@
 **Файл:** `KIDLibrary/Mouse/Mouse.Position.cs`
 
 **Свойства:**
-- `CurrentPosition` (Point?) — текущая координата курсора относительно Canvas (null если курсор вне Canvas)
-- `LastActualPosition` (Point) — последняя актуальная позиция курсора на Canvas
+- `CurrentCursor` (CursorInfo) — информация о текущем состоянии курсора (позиция и состояние кнопок)
+- `LastActualCursor` (CursorInfo) — информация о последнем актуальном состоянии курсора на Canvas
 
 **Особенности:**
-- CurrentPosition вычисляется динамически на основе IsMouseOver
-- LastActualPosition обновляется при перемещении мыши по Canvas
-- Обработка OutOfArea флага при выходе курсора за пределы Canvas
+- CurrentCursor.Position вычисляется динамически на основе IsMouseOver
+- CurrentCursor.PressedButton включает флаг OutOfArea, если курсор вне Canvas
+- LastActualCursor обновляется при перемещении мыши по Canvas
+- LastActualCursor.PressedButton никогда не содержит флаг OutOfArea
 
 #### 9.4. Работа с кликами
 **Файл:** `KIDLibrary/Mouse/Mouse.Click.cs`
@@ -633,12 +634,9 @@
 **Свойства:**
 - `CurrentClick` (MouseClickInfo) — информация о текущем клике
 - `LastClick` (MouseClickInfo) — информация о последнем клике
-- `CurrentPressedButton` (PressButtonStatus) — текущее состояние нажатых кнопок
-- `LastActualPressedButton` (PressButtonStatus) — последнее состояние нажатых кнопок на Canvas
 
 **Особенности:**
 - Обработка одиночных и двойных кликов для левой и правой кнопок
-- Отслеживание состояния нажатых кнопок с поддержкой комбинаций
 - Использование таймеров для определения двойных кликов правой кнопки
 - Обновление состояния при нажатии/отпускании кнопок
 

@@ -41,25 +41,61 @@ Enum с флагами для состояния нажатых кнопок м�
 
 **Примечание:** Флаги могут комбинироваться (например, `LeftButton | RightButton` для обеих кнопок одновременно). Флаг `OutOfArea` может комбинироваться с флагами кнопок, если курсор вышел за пределы Canvas, но кнопки все еще нажаты.
 
-## Позиция курсора
+### CursorInfo
 
-### CurrentPosition
+Структура с информацией о курсоре мыши на Canvas.
 
-Текущая координата курсора относительно верхнего левого угла Canvas.
+**Свойства:**
+- `Position` (Point?) - позиция курсора относительно верхнего левого угла Canvas. null, если курсор сейчас не на Canvas
+- `PressedButton` (PressButtonStatus) - состояние нажатых кнопок мыши. Может включать комбинации флагов LeftButton, RightButton и OutOfArea
+
+## Информация о курсоре
+
+### CurrentCursor
+
+Информация о текущем состоянии курсора на Canvas. Объединяет позицию курсора и состояние нажатых кнопок.
 
 **Сигнатура:**
 ```csharp
-public static Point? CurrentPosition { get; }
+public static CursorInfo CurrentCursor { get; }
 ```
 
-**Возвращает:** `Point?` - координаты курсора или `null`, если курсор сейчас не на Canvas.
+**Возвращает:** `CursorInfo` - информация о текущем состоянии курсора.
+
+**Логика:**
+- Если курсор на Canvas: `Position` содержит координаты, `PressedButton` содержит только флаги нажатых кнопок (без `OutOfArea`)
+- Если курсор вне Canvas: `Position` равен `null`, `PressedButton` содержит `OutOfArea | флаги нажатых кнопок`
 
 **Примеры:**
 ```csharp
-var position = Mouse.CurrentPosition;
-if (position.HasValue)
+var cursor = Mouse.CurrentCursor;
+
+// Проверка позиции курсора
+if (cursor.Position.HasValue)
 {
-    Console.WriteLine($"Курсор на позиции: {position.Value.X}, {position.Value.Y}");
+    Console.WriteLine($"Курсор на позиции: {cursor.Position.Value.X}, {cursor.Position.Value.Y}");
+}
+else
+{
+    Console.WriteLine("Курсор вне Canvas");
+}
+
+// Проверка нажатой кнопки
+if ((cursor.PressedButton & PressButtonStatus.LeftButton) != 0)
+{
+    Console.WriteLine("Левая кнопка нажата");
+}
+
+// Проверка комбинации кнопок
+if (cursor.PressedButton == (PressButtonStatus.LeftButton | PressButtonStatus.RightButton))
+{
+    Console.WriteLine("Обе кнопки нажаты одновременно");
+}
+
+// Проверка, находится ли курсор на Canvas
+if ((cursor.PressedButton & PressButtonStatus.OutOfArea) == 0)
+{
+    Console.WriteLine("Курсор на Canvas");
 }
 else
 {
@@ -67,21 +103,26 @@ else
 }
 ```
 
-### LastActualPosition
+### LastActualCursor
 
-Последняя актуальная позиция курсора относительно верхнего левого угла Canvas.
+Информация о последнем актуальном состоянии курсора на Canvas. Объединяет последнюю позицию курсора и последнее состояние нажатых кнопок.
 
 **Сигнатура:**
 ```csharp
-public static Point LastActualPosition { get; }
+public static CursorInfo LastActualCursor { get; }
 ```
 
-**Возвращает:** `Point` - последняя известная позиция курсора на Canvas.
+**Возвращает:** `CursorInfo` - информация о последнем актуальном состоянии курсора на Canvas. `PressedButton` никогда не содержит флаг `OutOfArea`.
 
 **Примеры:**
 ```csharp
-var lastPosition = Mouse.LastActualPosition;
-Console.WriteLine($"Последняя позиция: {lastPosition.X}, {lastPosition.Y}");
+var lastCursor = Mouse.LastActualCursor;
+Console.WriteLine($"Последняя позиция: {lastCursor.Position.X}, {lastCursor.Position.Y}");
+
+if ((lastCursor.PressedButton & PressButtonStatus.LeftButton) != 0)
+{
+    Console.WriteLine("Последняя нажатая кнопка на Canvas была левая");
+}
 ```
 
 ## Информация о кликах
@@ -127,68 +168,6 @@ var lastClick = Mouse.LastClick;
 if (lastClick.Status != ClickStatus.NoClick)
 {
     Console.WriteLine($"Последний клик: {lastClick.Status}");
-}
-```
-
-## Состояние нажатых кнопок
-
-### CurrentPressedButton
-
-Код с информацией о текущей нажатой кнопке мыши.
-
-**Сигнатура:**
-```csharp
-public static PressButtonStatus CurrentPressedButton { get; }
-```
-
-**Возвращает:** `PressButtonStatus` - текущее состояние нажатых кнопок. Может включать комбинации флагов `LeftButton`, `RightButton` и `OutOfArea`.
-
-**Логика:**
-- Если курсор на Canvas: возвращает только флаги нажатых кнопок (без `OutOfArea`)
-- Если курсор вне Canvas: возвращает `OutOfArea | флаги нажатых кнопок`
-
-**Примеры:**
-```csharp
-// Проверка нажатой кнопки
-if ((Mouse.CurrentPressedButton & PressButtonStatus.LeftButton) != 0)
-{
-    Console.WriteLine("Левая кнопка нажата");
-}
-
-// Проверка комбинации кнопок
-if (Mouse.CurrentPressedButton == (PressButtonStatus.LeftButton | PressButtonStatus.RightButton))
-{
-    Console.WriteLine("Обе кнопки нажаты одновременно");
-}
-
-// Проверка, находится ли курсор на Canvas
-if ((Mouse.CurrentPressedButton & PressButtonStatus.OutOfArea) == 0)
-{
-    Console.WriteLine("Курсор на Canvas");
-}
-else
-{
-    Console.WriteLine("Курсор вне Canvas");
-}
-```
-
-### LastActualPressedButton
-
-Код с информацией о последней нажатой кнопке мыши на Canvas.
-
-**Сигнатура:**
-```csharp
-public static PressButtonStatus LastActualPressedButton { get; }
-```
-
-**Возвращает:** `PressButtonStatus` - последнее состояние нажатых кнопок, когда курсор был на Canvas. Никогда не содержит флаг `OutOfArea`.
-
-**Примеры:**
-```csharp
-var lastState = Mouse.LastActualPressedButton;
-if ((lastState & PressButtonStatus.LeftButton) != 0)
-{
-    Console.WriteLine("Последняя нажатая кнопка на Canvas была левая");
 }
 ```
 
@@ -255,7 +234,7 @@ Mouse.MouseClickEvent += (sender, clickInfo) =>
 
 - Все координаты относительно верхнего левого угла Canvas
 - Используется `e.GetPosition(canvas)` для получения координат
-- `CurrentPosition` возвращает `null`, если курсор вне Canvas
+- `CurrentCursor.Position` возвращает `null`, если курсор вне Canvas
 
 ## Примеры использования
 
@@ -270,11 +249,11 @@ while (true)
 {
     StopManager.StopIfButtonPressed();
     
-    var position = Mouse.CurrentPosition;
-    if (position.HasValue)
+    var cursor = Mouse.CurrentCursor;
+    if (cursor.Position.HasValue)
     {
         Graphics.Color = "Green";
-        Graphics.Circle(position.Value.X, position.Value.Y, 1);
+        Graphics.Circle(cursor.Position.Value.X, cursor.Position.Value.Y, 1);
     }
     
     Thread.Sleep(10);
@@ -314,21 +293,20 @@ while (true)
 {
     StopManager.StopIfButtonPressed();
     
-    var pressed = Mouse.CurrentPressedButton;
+    var cursor = Mouse.CurrentCursor;
     
     // Проверка нажатой левой кнопки
-    if ((pressed & PressButtonStatus.LeftButton) != 0)
+    if ((cursor.PressedButton & PressButtonStatus.LeftButton) != 0)
     {
-        var pos = Mouse.CurrentPosition;
-        if (pos.HasValue)
+        if (cursor.Position.HasValue)
         {
             Graphics.Color = "Blue";
-            Graphics.Circle(pos.Value.X, pos.Value.Y, 3);
+            Graphics.Circle(cursor.Position.Value.X, cursor.Position.Value.Y, 3);
         }
     }
     
     // Проверка комбинации кнопок
-    if (pressed == (PressButtonStatus.LeftButton | PressButtonStatus.RightButton))
+    if (cursor.PressedButton == (PressButtonStatus.LeftButton | PressButtonStatus.RightButton))
     {
         Console.WriteLine("Обе кнопки нажаты!");
     }
@@ -376,7 +354,7 @@ while (true)
     StopManager.StopIfButtonPressed();
     
     // Работа с Mouse API
-    var position = Mouse.CurrentPosition;
+    var cursor = Mouse.CurrentCursor;
     // ...
 }
 ```

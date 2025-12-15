@@ -12,41 +12,63 @@ namespace KID
         private static Point _lastActualPosition = new Point(0, 0);
 
         /// <summary>
-        /// Текущая координата курсора относительно верхнего левого угла Canvas.
-        /// Если курсор сейчас не на Canvas, значение равно null.
+        /// Информация о текущем состоянии курсора на Canvas.
+        /// Объединяет позицию курсора и состояние нажатых кнопок.
         /// </summary>
-        public static Point? CurrentPosition
+        public static CursorInfo CurrentCursor
         {
             get
             {
-                return DispatcherManager.InvokeOnUI<Point?>(() =>
+                return DispatcherManager.InvokeOnUI<CursorInfo>(() =>
                 {
-                    if (Canvas == null || !Canvas.IsMouseOver)
-                        return null;
+                    Point? position = null;
+                    PressButtonStatus pressedButton = PressButtonStatus.NoButton;
 
-                    try
+                    if (Canvas == null || !Canvas.IsMouseOver)
                     {
-                        var mousePosition = System.Windows.Input.Mouse.GetPosition(Canvas);
-                        return mousePosition;
+                        // Курсор вне Canvas
+                        pressedButton = _currentPressedButton | PressButtonStatus.OutOfArea;
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        System.Diagnostics.Debug.WriteLine($"Mouse position error: {ex.Message}");
-                        return null;
+                        // Курсор на Canvas
+                        try
+                        {
+                            position = System.Windows.Input.Mouse.GetPosition(Canvas);
+                            pressedButton = _currentPressedButton & ~PressButtonStatus.OutOfArea;
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Mouse position error: {ex.Message}");
+                            pressedButton = _currentPressedButton | PressButtonStatus.OutOfArea;
+                        }
                     }
+
+                    return new CursorInfo
+                    {
+                        Position = position,
+                        PressedButton = pressedButton
+                    };
                 });
             }
         }
 
         /// <summary>
-        /// Последняя актуальная позиция курсора относительно верхнего левого угла Canvas.
-        /// Если курсор сейчас на Canvas, значение равно CurrentPosition.
+        /// Информация о последнем актуальном состоянии курсора на Canvas.
+        /// Объединяет последнюю позицию курсора и последнее состояние нажатых кнопок.
         /// </summary>
-        public static Point LastActualPosition
+        public static CursorInfo LastActualCursor
         {
             get
             {
-                return DispatcherManager.InvokeOnUI<Point>(() => _lastActualPosition);
+                return DispatcherManager.InvokeOnUI<CursorInfo>(() =>
+                {
+                    return new CursorInfo
+                    {
+                        Position = _lastActualPosition,
+                        PressedButton = _lastActualPressedButton
+                    };
+                });
             }
         }
 

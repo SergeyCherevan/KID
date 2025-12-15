@@ -179,19 +179,15 @@
 
 Полный набор функций для получения информации о позиции курсора и кликах мыши (см. [Mouse API](Mouse-API.md) для подробностей):
 
-- **Позиция курсора**
-  - `CurrentPosition` - текущая координата курсора относительно Canvas (null если курсор вне Canvas)
-  - `LastActualPosition` - последняя актуальная позиция курсора на Canvas
+- **Информация о курсоре**
+  - `CurrentCursor` (CursorInfo) - информация о текущем состоянии курсора (позиция и состояние кнопок)
+  - `LastActualCursor` (CursorInfo) - информация о последнем актуальном состоянии курсора на Canvas
+  - Поддержка комбинаций флагов (LeftButton, RightButton, OutOfArea)
 
 - **Информация о кликах**
   - `CurrentClick` - структура с информацией о текущем клике
   - `LastClick` - структура с информацией о последнем клике
   - Поддержка одиночных и двойных кликов для левой и правой кнопок мыши
-
-- **Состояние нажатых кнопок**
-  - `CurrentPressedButton` - код с информацией о текущей нажатой кнопке мыши (с флагами)
-  - `LastActualPressedButton` - код с информацией о последней нажатой кнопке на Canvas
-  - Поддержка комбинаций флагов (LeftButton, RightButton, OutOfArea)
 
 - **События мыши**
   - `MouseMoveEvent` - событие перемещения мыши по Canvas
@@ -606,11 +602,11 @@ while (true)
 {
     StopManager.StopIfButtonPressed();
     
-    var position = Mouse.CurrentPosition;
-    if (position.HasValue)
+    var cursor = Mouse.CurrentCursor;
+    if (cursor.Position.HasValue)
     {
         Graphics.Color = "Green";
-        Graphics.Circle(position.Value.X, position.Value.Y, 1);
+        Graphics.Circle(cursor.Position.Value.X, cursor.Position.Value.Y, 1);
     }
     
     Thread.Sleep(10);
@@ -624,7 +620,7 @@ if (click.Status == ClickStatus.OneLeftClick)
 }
 
 // Отслеживание нажатых кнопок
-if ((Mouse.CurrentPressedButton & PressButtonStatus.LeftButton) != 0)
+if ((Mouse.CurrentCursor.PressedButton & PressButtonStatus.LeftButton) != 0)
 {
     Console.WriteLine("Левая кнопка нажата");
 }

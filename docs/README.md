@@ -128,10 +128,10 @@ Music.Sound(
 );
 
 // Отслеживаем позицию мыши
-var position = Mouse.CurrentPosition;
-if (position.HasValue)
+var cursor = Mouse.CurrentCursor;
+if (cursor.Position.HasValue)
 {
-    Console.WriteLine($"Мышь на позиции: {position.Value.X}, {position.Value.Y}");
+    Console.WriteLine($"Мышь на позиции: {cursor.Position.Value.X}, {cursor.Position.Value.Y}");
 }
 ```
 
