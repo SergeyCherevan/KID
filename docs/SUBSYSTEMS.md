@@ -580,77 +580,6 @@
 - Все методы возвращают элемент для цепочки вызовов
 - Все операции выполняются в UI потоке
 
-## 9. Подсистема Mouse API
-
-### Назначение
-Предоставление API для получения информации о позиции курсора и кликах мыши на Canvas в пользовательском коде.
-
-### Компоненты
-
-#### 9.1. Структуры данных
-**Файлы:** `KIDLibrary/Mouse/ClickStatus.cs`, `KIDLibrary/Mouse/MouseClickInfo.cs`, `KIDLibrary/Mouse/PressButtonStatus.cs`
-
-**ClickStatus:**
-- Enum для статуса клика мыши
-- Значения: NoClick, OneLeftClick, OneRightClick, DoubleLeftClick, DoubleRightClick
-
-**MouseClickInfo:**
-- Структура с информацией о клике
-- Свойства: Status (ClickStatus), Position (Point?)
-
-**PressButtonStatus:**
-- Enum с флагами для состояния нажатых кнопок
-- Значения: NoButton (0b000), LeftButton (0b001), RightButton (0b010), OutOfArea (0b100)
-- Поддержка комбинаций флагов
-
-#### 8.2. Системные функции
-**Файл:** `KIDLibrary/Mouse/Mouse.System.cs`
-
-**Функции:**
-- `Init(Canvas)` — инициализация с Canvas
-- Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
-
-**Особенности:**
-- Все операции с UI выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
-- `DispatcherManager` — статический класс для централизованного управления Dispatcher, инициализируется в `CodeExecutionContext.Init()`
-- Подписка на события Canvas: MouseMove, MouseLeave, MouseLeftButtonDown, MouseRightButtonDown, MouseLeftButtonUp, MouseRightButtonUp
-
-#### 9.3. Работа с позицией курсора
-**Файл:** `KIDLibrary/Mouse/Mouse.Position.cs`
-
-**Свойства:**
-- `CurrentCursor` (CursorInfo) — информация о текущем состоянии курсора (позиция и состояние кнопок)
-- `LastActualCursor` (CursorInfo) — информация о последнем актуальном состоянии курсора на Canvas
-
-**Особенности:**
-- CurrentCursor.Position вычисляется динамически на основе IsMouseOver
-- CurrentCursor.PressedButton включает флаг OutOfArea, если курсор вне Canvas
-- LastActualCursor обновляется при перемещении мыши по Canvas
-- LastActualCursor.PressedButton никогда не содержит флаг OutOfArea
-
-#### 9.4. Работа с кликами
-**Файл:** `KIDLibrary/Mouse/Mouse.Click.cs`
-
-**Свойства:**
-- `CurrentClick` (MouseClickInfo) — информация о текущем клике
-- `LastClick` (MouseClickInfo) — информация о последнем клике
-
-**Особенности:**
-- Обработка одиночных и двойных кликов для левой и правой кнопок
-- Использование таймеров для определения двойных кликов правой кнопки
-- Обновление состояния при нажатии/отпускании кнопок
-
-#### 9.5. События мыши
-**Файл:** `KIDLibrary/Mouse/Mouse.Events.cs`
-
-**События:**
-- `MouseMoveEvent` (EventHandler<Point>) — событие перемещения мыши по Canvas
-- `MouseClickEvent` (EventHandler<MouseClickInfo>) — событие клика мыши по Canvas
-
-**Особенности:**
-- События вызываются в UI потоке
-- Параметр sender всегда null
-
 ## 10. Подсистема Dependency Injection
 
 ### Назначение
@@ -716,7 +645,6 @@
 1. **Выполнение кода:**
    - MenuViewModel → CodeExecutionService → CSharpCompiler → DefaultCodeRunner
    - DefaultCodeRunner → Graphics API → Canvas
-   - DefaultCodeRunner → Mouse API → Canvas (события мыши)
    - DefaultCodeRunner → TextBoxConsole → TextBox (консольный ввод/вывод)
    - DefaultCodeRunner → Music API → NAudio → Звуковая карта
 
@@ -750,5 +678,4 @@
 5. **Themes:** Добавление новых тем через XAML файлы
 6. **Graphics API:** Добавление новых методов рисования
 7. **Music API:** Добавление новых методов воспроизведения звуков
-8. **Mouse API:** Добавление новых методов для работы с мышью
 

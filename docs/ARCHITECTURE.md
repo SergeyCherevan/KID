@@ -27,7 +27,7 @@
                     ↕
 ┌─────────────────────────────────────────┐
 │        KIDLibrary Layer                 │
-│  (Graphics, Mouse, Music API и другие   │
+│  (Graphics, Music API и другие          │
 │   API для пользовательского кода)       │
 └─────────────────────────────────────────┘
 ```
@@ -248,7 +248,7 @@
 - `Init(Dispatcher dispatcher)` — инициализация с Dispatcher из контекста выполнения
 - `InvokeOnUI(Action action)` — выполнение действия в UI потоке
 - `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
-- Используется всеми API (Graphics, Mouse, Music, TextBoxConsole) для потокобезопасной работы с UI
+- Используется всеми API (Graphics, Music, TextBoxConsole) для потокобезопасной работы с UI
 
 #### StopManager
 
@@ -342,35 +342,6 @@
   - `SoundSeek()`, `SoundFade()` — дополнительные возможности
   - `SoundPlayerOFF()` — остановка всех звуков
 
-#### Mouse API
-
-**Расположение:** `KID/KIDLibrary/Mouse/`
-
-**Mouse.System.cs**
-- Инициализация и базовые утилиты
-- `Init(Canvas)` — инициализация с Canvas
-- Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
-- Подписка на события Canvas
-
-**Mouse.Position.cs**
-- `CurrentCursor` (CursorInfo) — информация о текущем состоянии курсора (позиция и состояние кнопок)
-- `LastActualCursor` (CursorInfo) — информация о последнем актуальном состоянии курсора на Canvas
-- Обработка OutOfArea флага
-
-**Mouse.Click.cs**
-- `CurrentClick` (MouseClickInfo) — информация о текущем клике
-- `LastClick` (MouseClickInfo) — информация о последнем клике
-- Обработка одиночных и двойных кликов (левая/правая кнопка)
-
-**Mouse.Events.cs**
-- `MouseMoveEvent` (EventHandler<Point>) — событие перемещения мыши
-- `MouseClickEvent` (EventHandler<MouseClickInfo>) — событие клика мыши
-
-**Структуры данных:**
-- `ClickStatus` — enum для статуса клика (NoClick, OneLeftClick, OneRightClick, DoubleLeftClick, DoubleRightClick)
-- `MouseClickInfo` — структура с информацией о клике (Status, Position)
-- `PressButtonStatus` — enum с флагами для состояния кнопок (NoButton, LeftButton, RightButton, OutOfArea)
-
 ## Потоки данных
 
 ### Выполнение кода
@@ -389,7 +360,6 @@ DefaultCodeRunner.RunAsync()
 Выполнение пользовательского кода
          ↓
 Graphics API → Canvas (UI поток)
-Mouse API → Canvas (события мыши, UI поток)
 Console API → TextBox (UI поток)
 ```
 
@@ -426,7 +396,6 @@ WindowInitializationService.Initialize()
 - Все операции с UI выполняются через централизованный `DispatcherManager`
 - `DispatcherManager` инициализируется в `CodeExecutionContext.Init()` с Dispatcher из `App`
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
-- Mouse API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas и обработки событий мыши
 - Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
 - TextBoxConsole использует `DispatcherManager.InvokeOnUI()` для работы с TextBox
 - Выполнение кода происходит в отдельном потоке (Task.Run)
@@ -438,7 +407,6 @@ WindowInitializationService.Initialize()
 - Новые сервисы через DI
 - Новые ViewModels для дополнительных функций
 - Новые методы в Graphics API
-- Новые методы в Mouse API
 - Новые темы оформления
 - Новые языки интерфейса
 
