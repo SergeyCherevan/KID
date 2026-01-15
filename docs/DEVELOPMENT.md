@@ -120,6 +120,18 @@ public static void MyNewMethod(SoundNote note)
 4. Для работы с файлами используйте методы из `Music.FilePlayback.cs`
 5. Обновите документацию в `docs/Music-API.md`
 
+### Добавление нового метода Mouse API
+
+1. Определите, в какой файл добавить изменения (System / State / Events):
+   - `Mouse.System.cs` — хуки Canvas (Enter/Leave/Move/Down/Up), распознавание кликов
+   - `Mouse.State.cs` — структура публичного состояния (`CurrentCursor`, `LastActualCursor`, `CurrentClick`, `LastClick`)
+   - `Mouse.Events.cs` — публичные события и доставка обработчиков в фоновом потоке
+2. Помните про потоки:
+   - события Canvas приходят в UI-потоке
+   - обработчики пользователя должны вызываться в фоне (через очередь), чтобы не блокировать UI
+3. Для доступа к общему состоянию используйте синхронизацию (например, `lock`) и возвращайте копии структур
+4. Обновите документацию в `docs/Mouse-API.md`
+
 ### Добавление нового языка
 
 1. Создайте файл `Resources/Strings.XX-XX.resx` (например, `Strings.de-DE.resx`)
@@ -390,6 +402,7 @@ public async Task DoSomethingAsync()
 - **SUBSYSTEMS.md** — новые подсистемы или изменения в существующих
 - **Graphics-API.md** — новые методы Graphics API
 - **Music-API.md** — новые методы Music API
+- **Mouse-API.md** — новые методы Mouse API
 - **FEATURES.md** — новые функции
 - **DEVELOPMENT.md** — изменения в процессе разработки
 

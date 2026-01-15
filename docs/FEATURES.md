@@ -173,6 +173,30 @@
   - Метод `Graphics.Clear()` для очистки
   - Автоматическая очистка перед запуском программы
 
+## 5. Информация от мыши
+
+### Mouse API
+
+API для получения информации о мыши **относительно Canvas** (см. [Mouse API](Mouse-API.md) для подробностей):
+
+- **Позиция курсора**
+  - `Mouse.CurrentCursor.Position` — текущая координата на Canvas (`null`, если курсор вне Canvas)
+  - `Mouse.LastActualCursor.Position` — последняя актуальная позиция на Canvas
+
+- **Нажатые кнопки**
+  - `Mouse.CurrentCursor.PressedButton` — флаги `LeftButton`, `RightButton`, `OutOfArea`
+  - `Mouse.LastActualCursor.PressedButton` — последнее состояние кнопок на Canvas
+
+- **Клики**
+  - `Mouse.CurrentClick` — кратковременный «пульс» клика (удобно для polling в цикле)
+  - `Mouse.LastClick` — последний зарегистрированный клик
+  - Типы кликов: одинарный/двойной, левая/правая кнопка
+
+- **События**
+  - `Mouse.MouseMoveEvent` — перемещение курсора
+  - `Mouse.MousePressButtonEvent` — изменение состояния нажатых кнопок
+  - `Mouse.MouseClickEvent` — клик по Canvas
+
 ## 6. Консольный ввод/вывод
 
 ### Вывод

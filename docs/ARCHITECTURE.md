@@ -342,6 +342,24 @@
   - `SoundSeek()`, `SoundFade()` — дополнительные возможности
   - `SoundPlayerOFF()` — остановка всех звуков
 
+#### Mouse API
+
+**Расположение:** `KID/KIDLibrary/Mouse/`
+
+**Mouse.System.cs**
+- `Mouse.Init(Canvas)` — инициализация и подписка на события мыши Canvas
+
+**Mouse.State.cs**
+- `Mouse.CurrentCursor` — текущее состояние курсора (позиция и кнопки)
+- `Mouse.LastActualCursor` — последнее актуальное состояние на Canvas
+- `Mouse.CurrentClick` — текущий клик как кратковременный «пульс»
+- `Mouse.LastClick` — последний клик по Canvas
+
+**Mouse.Events.cs**
+- `Mouse.MouseMoveEvent` — событие перемещения мыши
+- `Mouse.MousePressButtonEvent` — событие изменения нажатых кнопок
+- `Mouse.MouseClickEvent` — событие клика по Canvas
+
 ## Потоки данных
 
 ### Выполнение кода
@@ -360,6 +378,7 @@ DefaultCodeRunner.RunAsync()
 Выполнение пользовательского кода
          ↓
 Graphics API → Canvas (UI поток)
+Mouse API → Canvas (UI поток)
 Console API → TextBox (UI поток)
 ```
 
@@ -397,6 +416,7 @@ WindowInitializationService.Initialize()
 - `DispatcherManager` инициализируется в `CodeExecutionContext.Init()` с Dispatcher из `App`
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
 - Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
+- Mouse API собирает события в UI потоке и доставляет обработчики в фоновом потоке
 - TextBoxConsole использует `DispatcherManager.InvokeOnUI()` для работы с TextBox
 - Выполнение кода происходит в отдельном потоке (Task.Run)
 - CancellationToken используется для безопасной отмены выполнения

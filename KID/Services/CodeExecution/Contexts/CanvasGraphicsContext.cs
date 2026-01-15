@@ -20,6 +20,7 @@ namespace KID.Services.CodeExecution.Contexts
             if (GraphicsTarget is Canvas canvas)
             {
                 Graphics.Init(canvas);
+                Mouse.Init(canvas);
                 Music.Init();
             }
         }

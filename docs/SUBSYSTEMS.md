@@ -580,6 +580,41 @@
 - Все методы возвращают элемент для цепочки вызовов
 - Все операции выполняются в UI потоке
 
+## 9. Подсистема Mouse API
+
+### Назначение
+Предоставление API для получения информации о мыши относительно Canvas и подписки на события мыши (перемещение, нажатия, клики).
+
+### Компоненты
+
+#### 9.1. Инициализация и хуки Canvas
+**Файл:** `KIDLibrary/Mouse/Mouse.System.cs`
+
+**Функции:**
+- `Mouse.Init(Canvas)` — инициализация Mouse API и подписка на события мыши Canvas (Enter/Leave/Move/Down/Up)
+
+#### 9.2. Состояние
+**Файл:** `KIDLibrary/Mouse/Mouse.State.cs`
+
+**Свойства:**
+- `Mouse.CurrentCursor` — текущая позиция и кнопки (позиция `null`, если курсор вне Canvas)
+- `Mouse.LastActualCursor` — последнее актуальное состояние, когда курсор был на Canvas
+- `Mouse.CurrentClick` — текущий клик как кратковременный «пульс»
+- `Mouse.LastClick` — последний зарегистрированный клик
+
+#### 9.3. События
+**Файл:** `KIDLibrary/Mouse/Mouse.Events.cs`
+
+**События:**
+- `Mouse.MouseMoveEvent`
+- `Mouse.MousePressButtonEvent`
+- `Mouse.MouseClickEvent`
+
+### Особенности
+- События мыши собираются в UI-потоке, но обработчики пользователя вызываются в фоновом потоке (чтобы не блокировать UI).
+- `PressButtonStatus` поддерживает комбинации флагов (включая `OutOfArea`).
+- `CurrentClick` автоматически сбрасывается в `NoClick` через короткий интервал, чтобы его было удобно использовать в polling-циклах.
+
 ## 10. Подсистема Dependency Injection
 
 ### Назначение
@@ -645,6 +680,7 @@
 1. **Выполнение кода:**
    - MenuViewModel → CodeExecutionService → CSharpCompiler → DefaultCodeRunner
    - DefaultCodeRunner → Graphics API → Canvas
+   - DefaultCodeRunner → Mouse API → Canvas
    - DefaultCodeRunner → TextBoxConsole → TextBox (консольный ввод/вывод)
    - DefaultCodeRunner → Music API → NAudio → Звуковая карта
 
@@ -678,4 +714,5 @@
 5. **Themes:** Добавление новых тем через XAML файлы
 6. **Graphics API:** Добавление новых методов рисования
 7. **Music API:** Добавление новых методов воспроизведения звуков
+8. **Mouse API:** Добавление новых методов/событий мыши
 
