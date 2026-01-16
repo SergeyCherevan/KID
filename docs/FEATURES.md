@@ -177,19 +177,20 @@
 
 ### Mouse API
 
-API для получения информации о мыши **относительно Canvas** (см. [Mouse API](Mouse-API.md) для подробностей):
+Полный набор API для получения информации от мыши **на поле графического вывода Canvas** (см. [Mouse API](Mouse-API.md) для подробностей):
 
 - **Позиция курсора**
-  - `Mouse.CurrentCursor.Position` — текущая координата на Canvas (`null`, если курсор вне Canvas)
-  - `Mouse.LastActualCursor.Position` — последняя актуальная позиция на Canvas
+  - `Mouse.CurrentCursor.Position` — текущая координата курсора мыши на Canvas (`null`, если курсор вне Canvas)
+  - `Mouse.LastActualCursor.Position` — последняя актуальная координата курсора мыши, когда он ещё находился на Canvas
 
-- **Нажатые кнопки**
-  - `Mouse.CurrentCursor.PressedButton` — флаги `LeftButton`, `RightButton`, `OutOfArea`
-  - `Mouse.LastActualCursor.PressedButton` — последнее состояние кнопок на Canvas
+- **Нажатые кнопки мыши**
+  - `Mouse.CurrentCursor.PressedButton` — код с информацией о текущей нажатой кнопке мыши (флаги `LeftButton`, `RightButton`, `OutOfArea` - могут комбинироваться)
+  - `Mouse.LastActualCursor.PressedButton` — последнее актуальное состояние кнопок мыши, когда курсор ещё находился на Canvas
 
 - **Клики**
-  - `Mouse.CurrentClick` — кратковременный «пульс» клика (удобно для polling в цикле)
-  - `Mouse.LastClick` — последний зарегистрированный клик
+  - `MouseClickInfo` — структура с информацией о клике мышью по Canvas (поля: `Status` и `Position`)
+  - `Mouse.CurrentClick` — свойство с информацией о текущем клике, кратковременный «пульс» клика (удобно для polling в цикле) - после клика пользователя хранит информацию о нём только очень короткое время, после чего сбрасывается в `{ Position = null, Status = NoClick }`
+  - `Mouse.LastClick` — последний зарегистрированный клик с момента запуска программы
   - Типы кликов: одинарный/двойной, левая/правая кнопка
 
 - **События**
