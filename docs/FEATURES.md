@@ -198,6 +198,29 @@
   - `Mouse.MousePressButtonEvent` — изменение состояния нажатых кнопок
   - `Mouse.MouseClickEvent` — клик по Canvas
 
+## 6. Информация от клавиатуры
+
+### Keyboard API
+
+Полный набор API для получения информации от клавиатуры **на уровне окна приложения** (см. [Keyboard API](Keyboard-API.md) для подробностей):
+
+- **Состояние (polling)**
+  - `Keyboard.IsDown(key)` / `Keyboard.IsUp(key)` — зажата ли клавиша
+  - `Keyboard.WasPressed(key)` / `Keyboard.WasReleased(key)` — «нажали/отпустили один раз» (consume)
+  - `Keyboard.CurrentState` — снимок модификаторов/lock-клавиш/зажатых клавиш
+  - `Keyboard.CurrentKeyPress` — «пульс» последнего KeyDown (удобно ловить в цикле)
+
+- **Текстовый ввод**
+  - `Keyboard.TextInputEvent` — событие ввода текста (Unicode)
+  - `Keyboard.ReadText()` / `Keyboard.ReadChar()` — буфер ввода (consume)
+
+- **Хоткеи**
+  - `Keyboard.RegisterShortcut(...)` — регистрация комбинаций/последовательностей
+  - `Keyboard.ShortcutEvent` — событие срабатывания хоткея
+
+- **Важное поведение**
+  - `Keyboard.CapturePolicy` помогает не мешать вводу в консоль (по умолчанию клавиатура активна всегда)
+
 ## 6. Консольный ввод/вывод
 
 ### Вывод

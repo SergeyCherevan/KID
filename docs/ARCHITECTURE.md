@@ -379,6 +379,7 @@ DefaultCodeRunner.RunAsync()
          ↓
 Graphics API → Canvas (UI поток)
 Mouse API → Canvas (UI поток)
+Keyboard API → Window (UI поток)
 Console API → TextBox (UI поток)
 ```
 
@@ -417,6 +418,7 @@ WindowInitializationService.Initialize()
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
 - Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
 - Mouse API собирает события в UI потоке и доставляет обработчики в фоновом потоке
+- Keyboard API собирает события в UI потоке и доставляет обработчики в фоновом потоке
 - TextBoxConsole использует `DispatcherManager.InvokeOnUI()` для работы с TextBox
 - Выполнение кода происходит в отдельном потоке (Task.Run)
 - CancellationToken используется для безопасной отмены выполнения

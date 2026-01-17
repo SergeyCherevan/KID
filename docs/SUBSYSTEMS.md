@@ -615,14 +615,50 @@
 - `PressButtonStatus` поддерживает комбинации флагов (включая `OutOfArea`).
 - `CurrentClick` автоматически сбрасывается в `NoClick` через короткий интервал, чтобы его было удобно использовать в polling-циклах.
 
-## 10. Подсистема Dependency Injection
+## 10. Подсистема Keyboard API
+
+### Назначение
+Предоставление API для получения информации от клавиатуры на уровне окна приложения и подписки на события клавиатуры (нажатия/отпускания клавиш, текстовый ввод, хоткеи).
+
+### Компоненты
+
+#### 10.1. Инициализация и хуки окна
+**Файл:** `KIDLibrary/Keyboard/Keyboard.System.cs`
+
+**Функции:**
+- `Keyboard.Init(Window)` — инициализация Keyboard API и подписка на `Window.PreviewKeyDown/PreviewKeyUp/PreviewTextInput`
+
+#### 10.2. Состояние
+**Файл:** `KIDLibrary/Keyboard/Keyboard.State.cs`
+
+**Свойства/методы:**
+- `Keyboard.CurrentState` — снимок состояния клавиатуры (модификаторы, lock-клавиши, зажатые клавиши)
+- `Keyboard.IsDown(key)` / `Keyboard.IsUp(key)` — проверка удержания
+- `Keyboard.WasPressed(key)` / `Keyboard.WasReleased(key)` — edge-методы (consume)
+- `Keyboard.ReadText()` / `Keyboard.ReadChar()` — буфер текстового ввода (consume)
+- `Keyboard.CurrentKeyPress` / `Keyboard.CurrentTextInput` — кратковременные «пульсы»
+
+#### 10.3. События
+**Файл:** `KIDLibrary/Keyboard/Keyboard.Events.cs`
+
+**События:**
+- `Keyboard.KeyDownEvent`
+- `Keyboard.KeyUpEvent`
+- `Keyboard.TextInputEvent`
+- `Keyboard.ShortcutEvent`
+
+### Особенности
+- События клавиатуры собираются в UI-потоке, но обработчики пользователя вызываются в фоновом потоке (как в Mouse API).
+- `CapturePolicy` помогает не мешать вводу в консоль (по умолчанию клавиатура активна всегда).
+
+## 11. Подсистема Dependency Injection
 
 ### Назначение
 Управление зависимостями и жизненным циклом объектов.
 
 ### Компоненты
 
-#### 10.1. ServiceCollectionExtensions
+#### 11.1. ServiceCollectionExtensions
 **Файл:** `Services/DI/ServiceCollectionExtensions.cs`
 
 **Ответственность:**
@@ -637,7 +673,7 @@
 - Все ViewModels регистрируются как Singleton
 - MainWindow регистрируется как Transient (специальный случай)
 
-#### 10.2. ServiceProviderExtension
+#### 11.2. ServiceProviderExtension
 **Файл:** `Services/DI/ServiceProviderExtension.cs`
 
 **Ответственность:**

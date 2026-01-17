@@ -143,6 +143,7 @@ if (cursor.Position.HasValue)
 - [Graphics API](Graphics-API.md) — полная документация по Graphics API
 - [Music API](Music-API.md) — полная документация по Music API
 - [Mouse API](Mouse-API.md) — полная документация по Mouse API
+- [Keyboard API](Keyboard-API.md) — полная документация по Keyboard API
 - [Руководство разработчика](DEVELOPMENT.md) — информация для разработчиков
 
 ## Лицензия

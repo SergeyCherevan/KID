@@ -1,5 +1,6 @@
 using KID.Services.CodeExecution.Contexts.Interfaces;
 using System.Windows.Controls;
+using System.Windows;
 
 namespace KID.Services.CodeExecution.Contexts
 {
@@ -21,6 +22,12 @@ namespace KID.Services.CodeExecution.Contexts
             {
                 Graphics.Init(canvas);
                 Mouse.Init(canvas);
+
+                // Keyboard слушает уровень окна (Preview* события), чтобы работало даже не только на Canvas.
+                var window = Window.GetWindow(canvas);
+                if (window != null)
+                    Keyboard.Init(window);
+
                 Music.Init();
             }
         }
