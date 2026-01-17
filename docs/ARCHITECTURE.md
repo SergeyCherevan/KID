@@ -266,7 +266,7 @@
 - `Graphics.Clear()` — очистка холста
 - Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
 
-**Graphics.Color.cs**
+**Graphics.Colors.cs / ColorType.cs**
 - `Graphics.FillColor` — цвет заливки
 - `Graphics.StrokeColor` — цвет обводки
 - `Graphics.Color` — общий цвет (заливка + обводка)

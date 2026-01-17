@@ -486,7 +486,7 @@
 - `DispatcherManager` — статический класс для централизованного управления Dispatcher, инициализируется в `CodeExecutionContext.Init()`
 
 #### 8.2. Работа с цветами
-**Файл:** `KIDLibrary/Graphics/Graphics.Color.cs`
+**Файлы:** `KIDLibrary/Graphics/Graphics.Colors.cs`, `KIDLibrary/Graphics/ColorType.cs`
 
 **Свойства:**
 - `FillColor` — цвет заливки фигур
