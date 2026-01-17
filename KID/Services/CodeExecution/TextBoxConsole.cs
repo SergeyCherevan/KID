@@ -98,6 +98,8 @@ namespace KID.Services.CodeExecution
                 
                 // Ждем события (блокируем поток)
                 keyDownReadEvent.WaitOne();
+
+                StopManager.StopIfButtonPressed();
                 
                 isReading = false;
                 
