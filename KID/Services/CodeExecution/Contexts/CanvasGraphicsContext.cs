@@ -22,13 +22,12 @@ namespace KID.Services.CodeExecution.Contexts
             {
                 Graphics.Init(canvas);
                 Mouse.Init(canvas);
+                Music.Init();
 
                 // Keyboard слушает уровень окна (Preview* события), чтобы работало даже не только на Canvas.
                 var window = Window.GetWindow(canvas);
                 if (window != null)
                     Keyboard.Init(window);
-
-                Music.Init();
             }
         }
 
