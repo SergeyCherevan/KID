@@ -8,15 +8,20 @@ namespace HelloWorldKID
 	{
 		public static void Main()
 		{
-			HelloWorld();
+            // Приветствие "Привет, Мир!"
+            HelloWorld();
 
-			string name = AskName();
+            // Спросить имя пользователя, сохранить его в переменную name
+            string name = AskName();
 
-			HelloName(name);
+            // Приветствие по имени
+            HelloName(name);
 
-			DrawSmile();
+            // Рисуем жёлтый смайлик
+            DrawSmile();
 
-			PlayWelcomeMelody();
+            // Проигрываем приветственную мелодию
+            PlayWelcomeMelody();
 		}
 
 		// Приветствие в консоли и окне графического вывода
@@ -34,9 +39,11 @@ namespace HelloWorldKID
 		// Спросить у пользователя его имя
 		public static string AskName()
 		{
-			Console.WriteLine("- Как тебя зовут?");
+            // Спросить имя пользователя в консоли
+            Console.WriteLine("- Как тебя зовут?");
 			Console.Write($"- ");
-			return Console.ReadLine();
+
+			return Console.ReadLine() ?? "";
 		}
 
 		// Приветствие в консоли и окне графического вывода по имени

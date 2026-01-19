@@ -3,5 +3,5 @@
     "FontFamily": "Consolas",
     "FontSize": 14,
     "ConsoleMessage": "Консольный вывод...",
-    "TemplateName": "ProjectTemplates/HelloWorld. Console & Graphics.cs"
+    "TemplateName": "ProjectTemplates/ru-RU/HelloWorld.cs"
 }
