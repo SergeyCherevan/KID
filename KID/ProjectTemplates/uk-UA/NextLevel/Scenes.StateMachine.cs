@@ -29,7 +29,11 @@ while (true)
 
     var next = scene.Update(ctx, dt);
     if (next != null)
+    {
         scene = next;
+        // Сцену змінено -> очищаємо Canvas один раз, далі оновлюємо UI-елементи.
+        Graphics.Clear();
+    }
 
     scene.Draw(ctx);
     Thread.Sleep(16);
@@ -54,6 +58,9 @@ interface IScene
 
 class StartScene : IScene
 {
+    private System.Windows.Controls.TextBlock? _bestText;
+    private bool _uiReady;
+
     public IScene? Update(GameContext ctx, double dt)
     {
         if (Keyboard.WasPressed(Key.Enter))
@@ -68,15 +75,23 @@ class StartScene : IScene
 
     public void Draw(GameContext ctx)
     {
-        Graphics.Clear();
+        EnsureUi();
+        _bestText?.SetText(ctx.BestScore > 0 ? $"Найкращий: {ctx.BestScore}" : "");
+    }
+
+    private void EnsureUi()
+    {
+        if (_uiReady) return;
+
         Graphics.Color = "White";
         Graphics.SetFont("Consolas", 20);
 
         Graphics.Text(10, 10, "Приклад «Сцени»");
         Graphics.Text(10, 40, "Enter = почати");
         Graphics.Text(10, 70, "Esc = вихід");
-        if (ctx.BestScore > 0)
-            Graphics.Text(10, 110, $"Найкращий: {ctx.BestScore}");
+        _bestText = Graphics.Text(10, 110, "");
+
+        _uiReady = true;
     }
 }
 
@@ -86,6 +101,10 @@ class PlayScene : IScene
     private Point _target = new Point(150, 150);
     private double _r = 26;
     private const int DurationSeconds = 15;
+    private FrameworkElement? _targetCircle;
+    private System.Windows.Controls.TextBlock? _scoreText;
+    private System.Windows.Controls.TextBlock? _timeText;
+    private bool _uiReady;
 
     public PlayScene()
     {
@@ -118,19 +137,29 @@ class PlayScene : IScene
 
     public void Draw(GameContext ctx)
     {
+        EnsureUi();
+
         double elapsed = (DateTime.UtcNow - ctx.GameStartUtc).TotalSeconds;
         double left = DurationSeconds - elapsed;
+        _targetCircle?.SetCenterXY(_target.X, _target.Y);
+        _scoreText?.SetText($"Рахунок: {ctx.Score}");
+        _timeText?.SetText($"Час: {Math.Ceiling(Math.Max(0, left))} с");
+    }
 
-        Graphics.Clear();
+    private void EnsureUi()
+    {
+        if (_uiReady) return;
 
         Graphics.Color = "Lime";
-        Graphics.Circle(_target.X, _target.Y, _r);
+        _targetCircle = Graphics.Circle(_target.X, _target.Y, _r);
 
         Graphics.Color = "White";
         Graphics.SetFont("Consolas", 18);
-        Graphics.Text(10, 10, $"Рахунок: {ctx.Score}");
-        Graphics.Text(10, 34, $"Час: {Math.Ceiling(Math.Max(0, left))} с");
+        _scoreText = Graphics.Text(10, 10, "Рахунок: 0");
+        _timeText = Graphics.Text(10, 34, $"Час: {DurationSeconds} с");
         Graphics.Text(10, 58, "Клікни по колу!");
+
+        _uiReady = true;
     }
 
     private void Respawn()
@@ -149,6 +178,10 @@ class PlayScene : IScene
 
 class ResultScene : IScene
 {
+    private System.Windows.Controls.TextBlock? _scoreText;
+    private System.Windows.Controls.TextBlock? _bestText;
+    private bool _uiReady;
+
     public IScene? Update(GameContext ctx, double dt)
     {
         if (ctx.Score > ctx.BestScore)
@@ -162,15 +195,25 @@ class ResultScene : IScene
 
     public void Draw(GameContext ctx)
     {
-        Graphics.Clear();
+        EnsureUi();
+        _scoreText?.SetText($"Рахунок: {ctx.Score}");
+        _bestText?.SetText($"Найкращий: {ctx.BestScore}");
+    }
+
+    private void EnsureUi()
+    {
+        if (_uiReady) return;
+
         Graphics.Color = "White";
         Graphics.SetFont("Consolas", 20);
 
         Graphics.Text(10, 10, "Результат");
-        Graphics.Text(10, 40, $"Рахунок: {ctx.Score}");
-        Graphics.Text(10, 70, $"Найкращий: {ctx.BestScore}");
+        _scoreText = Graphics.Text(10, 40, "Рахунок: 0");
+        _bestText = Graphics.Text(10, 70, "Найкращий: 0");
         Graphics.Text(10, 110, "Enter = у меню");
         Graphics.Text(10, 140, "Esc = вихід");
+
+        _uiReady = true;
     }
 }
 

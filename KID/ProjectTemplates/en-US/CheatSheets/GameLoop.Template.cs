@@ -19,6 +19,14 @@ double radius = 18;
 
 var lastTime = DateTime.UtcNow;
 
+// --- UI (create once, then update) ---
+Graphics.Color = "DodgerBlue";
+var ball = Graphics.Circle(x, y, radius);
+
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 16);
+Graphics.Text(10, 10, "Game loop template\nEsc = exit\nShift + mouse = teleport");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -59,14 +67,7 @@ while (true)
     if (y + radius > h) { y = h - radius; vy = -vy; }
 
     // --- draw ---
-    Graphics.Clear();
-
-    Graphics.Color = "DodgerBlue";
-    Graphics.Circle(x, y, radius);
-
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 16);
-    Graphics.Text(10, 10, "Game loop template\nEsc = exit\nShift + mouse = teleport");
+    ball?.SetCenterXY(x, y);
 
     // --- sleep / pacing ---
     Thread.Sleep(frameMs);

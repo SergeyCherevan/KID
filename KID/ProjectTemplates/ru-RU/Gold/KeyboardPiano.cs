@@ -23,6 +23,15 @@ var keys = new (Key key, string name, double freq)[]
 
 string last = "-";
 
+// --- UI (создаём один раз, дальше только обновляем) ---
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 18);
+
+Graphics.Text(10, 10, "Пианино на клавишах");
+Graphics.Text(10, 34, "A S D F G H J K = ноты");
+Graphics.Text(10, 58, "Esc = выход, «Стоп» = остановить программу");
+var lastText = Graphics.Text(10, 92, $"Последняя: {last}");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -41,14 +50,7 @@ while (true)
         }
     }
 
-    Graphics.Clear();
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 18);
-
-    Graphics.Text(10, 10, "Пианино на клавишах");
-    Graphics.Text(10, 34, "A S D F G H J K = ноты");
-    Graphics.Text(10, 58, "Esc = выход, «Стоп» = остановить программу");
-    Graphics.Text(10, 92, $"Последняя: {last}");
+    lastText?.SetText($"Последняя: {last}");
 
     Thread.Sleep(16);
 }

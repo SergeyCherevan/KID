@@ -19,6 +19,16 @@ Respawn();
 
 var start = DateTime.UtcNow;
 
+// --- UI (create once, then update) ---
+Graphics.Color = "Lime";
+var targetCircle = Graphics.Circle(target.X, target.Y, radius);
+
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 18);
+var scoreText = Graphics.Text(10, 10, $"Score: {score}");
+var timeText = Graphics.Text(10, 34, $"Time: {durationSeconds} s");
+var hintText = Graphics.Text(10, 58, "Click the circle! Press Stop to exit");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -43,23 +53,18 @@ while (true)
         }
     }
 
-    Graphics.Clear();
-
-    // target
-    Graphics.Color = "Lime";
-    Graphics.Circle(target.X, target.Y, radius);
-
-    // HUD
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 18);
-    Graphics.Text(10, 10, $"Score: {score}");
-    Graphics.Text(10, 34, $"Time: {Math.Ceiling(left)} s");
-    Graphics.Text(10, 58, "Click the circle! Press Stop to exit");
+    targetCircle?.SetCenterXY(target.X, target.Y);
+    scoreText?.SetText($"Score: {score}");
+    timeText?.SetText($"Time: {Math.Ceiling(left)} s");
 
     Thread.Sleep(16);
 }
 
-Graphics.Clear();
+targetCircle?.RemoveFromCanvas();
+scoreText?.RemoveFromCanvas();
+timeText?.RemoveFromCanvas();
+hintText?.RemoveFromCanvas();
+
 Graphics.Color = "White";
 Graphics.SetFont("Consolas", 24);
 Graphics.Text(10, 10, $"Time is up! Final score: {score}");

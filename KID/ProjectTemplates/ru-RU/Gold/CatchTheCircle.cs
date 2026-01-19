@@ -19,6 +19,16 @@ Respawn();
 
 var start = DateTime.UtcNow;
 
+// --- UI (создаём один раз, дальше только обновляем) ---
+Graphics.Color = "Lime";
+var targetCircle = Graphics.Circle(target.X, target.Y, radius);
+
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 18);
+var scoreText = Graphics.Text(10, 10, $"Счёт: {score}");
+var timeText = Graphics.Text(10, 34, $"Время: {durationSeconds} с");
+var hintText = Graphics.Text(10, 58, "Кликни по кругу! Нажми «Стоп», чтобы выйти");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -43,23 +53,18 @@ while (true)
         }
     }
 
-    Graphics.Clear();
-
-    // цель
-    Graphics.Color = "Lime";
-    Graphics.Circle(target.X, target.Y, radius);
-
-    // HUD
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 18);
-    Graphics.Text(10, 10, $"Счёт: {score}");
-    Graphics.Text(10, 34, $"Время: {Math.Ceiling(left)} с");
-    Graphics.Text(10, 58, "Кликни по кругу! Нажми «Стоп», чтобы выйти");
+    targetCircle?.SetCenterXY(target.X, target.Y);
+    scoreText?.SetText($"Счёт: {score}");
+    timeText?.SetText($"Время: {Math.Ceiling(left)} с");
 
     Thread.Sleep(16);
 }
 
-Graphics.Clear();
+targetCircle?.RemoveFromCanvas();
+scoreText?.RemoveFromCanvas();
+timeText?.RemoveFromCanvas();
+hintText?.RemoveFromCanvas();
+
 Graphics.Color = "White";
 Graphics.SetFont("Consolas", 24);
 Graphics.Text(10, 10, $"Время вышло! Итоговый счёт: {score}");

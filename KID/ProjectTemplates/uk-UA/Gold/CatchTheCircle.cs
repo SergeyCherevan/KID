@@ -19,6 +19,16 @@ Respawn();
 
 var start = DateTime.UtcNow;
 
+// --- UI (створюємо один раз, далі тільки оновлюємо) ---
+Graphics.Color = "Lime";
+var targetCircle = Graphics.Circle(target.X, target.Y, radius);
+
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 18);
+var scoreText = Graphics.Text(10, 10, $"Рахунок: {score}");
+var timeText = Graphics.Text(10, 34, $"Час: {durationSeconds} с");
+var hintText = Graphics.Text(10, 58, "Клікни по колу! Натисни «Стоп», щоб вийти");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -43,23 +53,18 @@ while (true)
         }
     }
 
-    Graphics.Clear();
-
-    // ціль
-    Graphics.Color = "Lime";
-    Graphics.Circle(target.X, target.Y, radius);
-
-    // HUD
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 18);
-    Graphics.Text(10, 10, $"Рахунок: {score}");
-    Graphics.Text(10, 34, $"Час: {Math.Ceiling(left)} с");
-    Graphics.Text(10, 58, "Клікни по колу! Натисни «Стоп», щоб вийти");
+    targetCircle?.SetCenterXY(target.X, target.Y);
+    scoreText?.SetText($"Рахунок: {score}");
+    timeText?.SetText($"Час: {Math.Ceiling(left)} с");
 
     Thread.Sleep(16);
 }
 
-Graphics.Clear();
+targetCircle?.RemoveFromCanvas();
+scoreText?.RemoveFromCanvas();
+timeText?.RemoveFromCanvas();
+hintText?.RemoveFromCanvas();
+
 Graphics.Color = "White";
 Graphics.SetFont("Consolas", 24);
 Graphics.Text(10, 10, $"Час вийшов! Підсумковий рахунок: {score}");

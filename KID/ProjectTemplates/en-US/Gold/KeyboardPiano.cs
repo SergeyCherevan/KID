@@ -23,6 +23,15 @@ var keys = new (Key key, string name, double freq)[]
 
 string last = "-";
 
+// --- UI (create once, then update) ---
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 18);
+
+Graphics.Text(10, 10, "Keyboard piano");
+Graphics.Text(10, 34, "A S D F G H J K = notes");
+Graphics.Text(10, 58, "Esc = exit, Stop = stop program");
+var lastText = Graphics.Text(10, 92, $"Last: {last}");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -41,14 +50,7 @@ while (true)
         }
     }
 
-    Graphics.Clear();
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 18);
-
-    Graphics.Text(10, 10, "Keyboard piano");
-    Graphics.Text(10, 34, "A S D F G H J K = notes");
-    Graphics.Text(10, 58, "Esc = exit, Stop = stop program");
-    Graphics.Text(10, 92, $"Last: {last}");
+    lastText?.SetText($"Last: {last}");
 
     Thread.Sleep(16);
 }

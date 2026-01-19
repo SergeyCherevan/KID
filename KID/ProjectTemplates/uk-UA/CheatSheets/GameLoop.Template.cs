@@ -19,6 +19,14 @@ double radius = 18;
 
 var lastTime = DateTime.UtcNow;
 
+// --- UI (створюємо один раз, далі тільки оновлюємо) ---
+Graphics.Color = "DodgerBlue";
+var ball = Graphics.Circle(x, y, radius);
+
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 16);
+Graphics.Text(10, 10, "Шаблон ігрового циклу\nEsc = вихід\nShift + миша = телепорт");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -59,14 +67,7 @@ while (true)
     if (y + radius > h) { y = h - radius; vy = -vy; }
 
     // --- малювання ---
-    Graphics.Clear();
-
-    Graphics.Color = "DodgerBlue";
-    Graphics.Circle(x, y, radius);
-
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 16);
-    Graphics.Text(10, 10, "Шаблон ігрового циклу\nEsc = вихід\nShift + миша = телепорт");
+    ball?.SetCenterXY(x, y);
 
     // --- затримка / частота кадрів ---
     Thread.Sleep(frameMs);

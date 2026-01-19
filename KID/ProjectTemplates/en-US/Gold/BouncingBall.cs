@@ -17,6 +17,14 @@ double vy = rng.Next(120, 220) * (rng.Next(0, 2) == 0 ? 1 : -1);
 
 var last = DateTime.UtcNow;
 
+// --- UI (create once, then update) ---
+Graphics.Color = "Orange";
+var ball = Graphics.Circle(x, y, radius);
+
+Graphics.Color = "White";
+Graphics.SetFont("Consolas", 16);
+Graphics.Text(10, 10, "Bouncing ball\nPress Stop to exit");
+
 while (true)
 {
     StopManager.StopIfButtonPressed();
@@ -38,14 +46,7 @@ while (true)
     if (x + radius > w) { x = w - radius; vx = -vx; }
     if (y + radius > h) { y = h - radius; vy = -vy; }
 
-    Graphics.Clear();
-
-    Graphics.Color = "Orange";
-    Graphics.Circle(x, y, radius);
-
-    Graphics.Color = "White";
-    Graphics.SetFont("Consolas", 16);
-    Graphics.Text(10, 10, "Bouncing ball\nPress Stop to exit");
+    ball?.SetCenterXY(x, y);
 
     Thread.Sleep(16); // ~60 FPS
 }
