@@ -6,17 +6,22 @@ using KID;
 using Keyboard = KID.Keyboard;
 
 // Keyboard piano.
-// Press keys A S D F G H J K to play notes.
+// Press keys A W S E D F T G Y H U J K to play notes.
 // Tip: Music.Sound is blocking, so we play it in a background task.
 
 var keys = new (Key key, string name, double freq)[]
 {
     (Key.A, "C4", 261.63),
+    (Key.W, "C#4/Db4", 277.18),
     (Key.S, "D4", 293.66),
+    (Key.E, "D#4/Eb4", 311.13),
     (Key.D, "E4", 329.63),
     (Key.F, "F4", 349.23),
+    (Key.T, "F#4/Gb4", 369.99),
     (Key.G, "G4", 392.00),
+    (Key.Y, "G#4/Ab4", 415.30),
     (Key.H, "A4", 440.00),
+    (Key.U, "A#4/Bb4", 466.16),
     (Key.J, "B4", 493.88),
     (Key.K, "C5", 523.25),
 };
@@ -28,7 +33,7 @@ Graphics.Color = "White";
 Graphics.SetFont("Consolas", 18);
 
 Graphics.Text(10, 10, "Keyboard piano");
-Graphics.Text(10, 34, "A S D F G H J K = notes");
+Graphics.Text(10, 34, "A W S E D F T G Y H U J K = notes");
 Graphics.Text(10, 58, "Esc = exit, Stop = stop program");
 var lastText = Graphics.Text(10, 92, $"Last: {last}");
 

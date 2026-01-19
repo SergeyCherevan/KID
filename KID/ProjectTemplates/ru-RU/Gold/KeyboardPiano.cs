@@ -6,17 +6,22 @@ using KID;
 using Keyboard = KID.Keyboard;
 
 // «Пианино на клавишах».
-// Нажимай A S D F G H J K — будут звучать ноты.
+// Нажимай A W S E D F T G Y H U J K — будут звучать ноты.
 // Совет: Music.Sound блокирует поток, поэтому запускаем звук в фоне.
 
 var keys = new (Key key, string name, double freq)[]
 {
     (Key.A, "До (C4)", 261.63),
+    (Key.W, "До# / Ре♭ (C#4/Db4)", 277.18),
     (Key.S, "Ре (D4)", 293.66),
+    (Key.E, "Ре# / Ми♭ (D#4/Eb4)", 311.13),
     (Key.D, "Ми (E4)", 329.63),
     (Key.F, "Фа (F4)", 349.23),
+    (Key.T, "Фа# / Соль♭ (F#4/Gb4)", 369.99),
     (Key.G, "Соль (G4)", 392.00),
+    (Key.Y, "Соль# / Ля♭ (G#4/Ab4)", 415.30),
     (Key.H, "Ля (A4)", 440.00),
+    (Key.U, "Ля# / Си♭ (A#4/Bb4)", 466.16),
     (Key.J, "Си (B4)", 493.88),
     (Key.K, "До (C5)", 523.25),
 };
@@ -28,7 +33,7 @@ Graphics.Color = "White";
 Graphics.SetFont("Consolas", 18);
 
 Graphics.Text(10, 10, "Пианино на клавишах");
-Graphics.Text(10, 34, "A S D F G H J K = ноты");
+Graphics.Text(10, 34, "A W S E D F T G Y H U J K = ноты");
 Graphics.Text(10, 58, "Esc = выход, «Стоп» = остановить программу");
 var lastText = Graphics.Text(10, 92, $"Последняя: {last}");
 
