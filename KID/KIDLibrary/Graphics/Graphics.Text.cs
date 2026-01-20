@@ -16,14 +16,13 @@ namespace KID
             });
         }
 
-        public static TextBlock? Text(double x, double y, string text)
+        public static TextBlock Text(double x, double y, string text)
         {
-            if (text == null)
-                return null;
+            if (text == null) text = "";
             
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var textBlock = new TextBlock
                 {
                     Text = text,
@@ -40,19 +39,25 @@ namespace KID
                 return textBlock;
             });
         }
-        public static TextBlock? Text(Point position, string text)
+        public static TextBlock Text(Point position, string text)
         {
             return Text(position.X, position.Y, text);
         }
 
-        public static TextBlock? SetText(this TextBlock textBlock, string text)
+        public static TextBlock SetText(this TextBlock textBlock, string text)
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 textBlock.Text = text;
                 return textBlock;
             });
+        }
+        public static TextBlock SetFont(this TextBlock textBlock, string fontName, double fontSize)
+        {
+            textBlock.FontFamily = new FontFamily(fontName);
+            textBlock.FontSize = fontSize;
+            return textBlock;
         }
     }
 }

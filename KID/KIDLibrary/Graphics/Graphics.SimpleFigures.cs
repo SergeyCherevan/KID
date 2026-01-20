@@ -7,11 +7,11 @@ namespace KID
 {
     public static partial class Graphics
     {
-        public static Ellipse? Circle(double x, double y, double radius)
+        public static Ellipse Circle(double x, double y, double radius)
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var ellipse = new Ellipse
                 {
                     Width = radius * 2,
@@ -25,16 +25,16 @@ namespace KID
                 return ellipse;
             });
         }
-        public static Ellipse? Circle(Point center, double radius)
+        public static Ellipse Circle(Point center, double radius)
         {
             return Circle(center.X, center.Y, radius);
         }
 
-        public static Ellipse? Ellipse(double x, double y, double radiusX, double radiusY)
+        public static Ellipse Ellipse(double x, double y, double radiusX, double radiusY)
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var ellipse = new Ellipse
                 {
                     Width = radiusX * 2,
@@ -48,16 +48,16 @@ namespace KID
                 return ellipse;
             });
         }
-        public static Ellipse? Ellipse(Point center, double radiusX, double radiusY)
+        public static Ellipse Ellipse(Point center, double radiusX, double radiusY)
         {
             return Ellipse(center.X, center.Y, radiusX, radiusY);
         }
 
-        public static Rectangle? Rectangle(double x, double y, double width, double height)
+        public static Rectangle Rectangle(double x, double y, double width, double height)
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var rect = new Rectangle
                 {
                     Width = width,
@@ -71,20 +71,20 @@ namespace KID
                 return rect;
             });
         }
-        public static Rectangle? Rectangle(Point topLeft, double width, double height)
+        public static Rectangle Rectangle(Point topLeft, double width, double height)
         {
             return Rectangle(topLeft.X, topLeft.Y, width, height);
         }
-        public static Rectangle? Rectangle(Point topLeft, Point size)
+        public static Rectangle Rectangle(Point topLeft, Point size)
         {
             return Rectangle(topLeft.X, topLeft.Y, size.X, size.Y);
         }
 
-        public static Line? Line(double x1, double y1, double x2, double y2)
+        public static Line Line(double x1, double y1, double x2, double y2)
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var line = new Line
                 {
                     X1 = x1,
@@ -97,19 +97,19 @@ namespace KID
                 return line;
             });
         }
-        public static Line? Line(Point p1, Point p2)
+        public static Line Line(Point p1, Point p2)
         {
             return Line(p1.X, p1.Y, p2.X, p2.Y);
         }
 
-        public static Path? QuadraticBezier(Point[] points)
+        public static Path QuadraticBezier(Point[] points)
         {
             if (points == null || points.Length == 0)
-                return null;
-            
+                throw new ArgumentNullException("Points array is null or empty");
+
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var path = new Path
                 {
                     Stroke = strokeBrush,
@@ -139,14 +139,14 @@ namespace KID
                 return path;
             });
         }
-        public static Path? CubicBezier(Point[] points)
+        public static Path CubicBezier(Point[] points)
         {
             if (points == null || points.Length == 0)
-                return null;
-            
+                throw new ArgumentNullException("Points array is null or empty");
+
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var path = new Path
                 {
                     Stroke = strokeBrush,
@@ -178,14 +178,14 @@ namespace KID
                 });
         }
         
-        public static Polygon? Polygon(Point[] points)
+        public static Polygon Polygon(Point[] points)
         {
             if (points == null || points.Length == 0)
-                return null;
+                throw new ArgumentNullException("Points array is null or empty");
             
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) return null;
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var polygon = new Polygon
                 {
                     Points = [.. points],
@@ -196,7 +196,7 @@ namespace KID
                 return polygon;
             });
         }
-        public static Polygon? Polygon((double x, double y)[] points)
+        public static Polygon Polygon((double x, double y)[] points)
         {
             return Polygon(points.Select(p => new Point(p.x, p.y)).ToArray());
         }
