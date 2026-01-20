@@ -62,8 +62,7 @@ void Draw()
 {
     Graphics.Clear();
 
-    (double w, double h) = DispatcherManager.InvokeOnUI(() =>
-        (Graphics.Canvas.ActualWidth, Graphics.Canvas.ActualHeight));
+    (double w, double h) = Graphics.GetCanvasSize();
     if (w < 200) w = 500;
     if (h < 200) h = 350;
 

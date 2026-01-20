@@ -164,8 +164,7 @@ class PlayScene : IScene
 
     private void Respawn()
     {
-        (double w, double h) = DispatcherManager.InvokeOnUI(() =>
-            (Graphics.Canvas.ActualWidth, Graphics.Canvas.ActualHeight));
+        (double w, double h) = Graphics.GetCanvasSize();
 
         if (w < 200) w = 400;
         if (h < 200) h = 300;

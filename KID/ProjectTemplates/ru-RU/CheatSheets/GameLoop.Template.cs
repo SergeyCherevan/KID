@@ -55,8 +55,7 @@ while (true)
 
     // --- обновление (логика игры) ---
     // Размер Canvas читаем в UI-потоке
-    (double w, double h) = DispatcherManager.InvokeOnUI(() =>
-        (Graphics.Canvas.ActualWidth, Graphics.Canvas.ActualHeight));
+    (double w, double h) = Graphics.GetCanvasSize();
 
     x += vx * dt;
     y += vy * dt;

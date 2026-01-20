@@ -71,8 +71,7 @@ Graphics.Text(10, 10, $"Time is up! Final score: {score}");
 
 void Respawn()
 {
-    (double w, double h) = DispatcherManager.InvokeOnUI(() =>
-        (Graphics.Canvas.ActualWidth, Graphics.Canvas.ActualHeight));
+    (double w, double h) = Graphics.GetCanvasSize();
 
     // Safe defaults if the window is too small / not measured yet
     if (w < 200) w = 400;

@@ -34,8 +34,7 @@ while (true)
     last = now;
     if (dt > 0.1) dt = 0.1;
 
-    (double w, double h) = DispatcherManager.InvokeOnUI(() =>
-        (Graphics.Canvas.ActualWidth, Graphics.Canvas.ActualHeight));
+    (double w, double h) = Graphics.GetCanvasSize();
 
     x += vx * dt;
     y += vy * dt;

@@ -71,8 +71,7 @@ Graphics.Text(10, 10, $"Час вийшов! Підсумковий рахуно
 
 void Respawn()
 {
-    (double w, double h) = DispatcherManager.InvokeOnUI(() =>
-        (Graphics.Canvas.ActualWidth, Graphics.Canvas.ActualHeight));
+    (double w, double h) = Graphics.GetCanvasSize();
 
     // Запасні значення, якщо вікно замале / ще не виміряне
     if (w < 200) w = 400;

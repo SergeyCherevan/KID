@@ -71,8 +71,7 @@ Graphics.Text(10, 10, $"Время вышло! Итоговый счёт: {score
 
 void Respawn()
 {
-    (double w, double h) = DispatcherManager.InvokeOnUI(() =>
-        (Graphics.Canvas.ActualWidth, Graphics.Canvas.ActualHeight));
+    (double w, double h) = Graphics.GetCanvasSize();
 
     // Запасные значения, если окно слишком маленькое / ещё не измерено
     if (w < 200) w = 400;
