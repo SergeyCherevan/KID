@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,8 +11,23 @@ namespace KID.ViewModels.Interfaces
     {
         Canvas GraphicsCanvasControl { get; }
 
+        /// <summary>
+        /// Значение MinWidth правой панели вывода, считанное из XAML при инициализации.
+        /// </summary>
+        double DefaultOutputViewMinWidth { get; }
+
+        /// <summary>
+        /// Значение MinHeight строки графики, считанное из XAML при инициализации.
+        /// </summary>
+        double DefaultOutputViewMinHeight { get; }
+
         void Initialize(Canvas graphicsCanvasControl);
 
         void Clear();
+
+        /// <summary>
+        /// Сбрасывает min-ограничения области вывода (как в XAML).
+        /// </summary>
+        void ResetOutputViewMinSizeToDefault();
     }
 }

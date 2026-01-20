@@ -478,6 +478,14 @@ var (w, h) = Graphics.GetCanvasSize();
 Console.WriteLine($"Canvas: {w} x {h}");
 ```
 
+#### GetCanvasWidth / GetCanvasHeight
+Одиночные версии для чтения ширины/высоты:
+
+```csharp
+double w = Graphics.GetCanvasWidth();
+double h = Graphics.GetCanvasHeight();
+```
+
 ### SetCanvasSize
 Меняет размер области графики **через раскладку UI** (программно изменяет размеры строк/колонок в `Grid` — как если бы пользователь перетащил `GridSplitter`).
 
@@ -485,9 +493,33 @@ Console.WriteLine($"Canvas: {w} x {h}");
 Graphics.SetCanvasSize(800, 600);
 ```
 
+#### SetCanvasWidth / SetCanvasHeight
+Одиночные версии для изменения ширины/высоты (а `SetCanvasSize` просто вызывает их):
+
+```csharp
+Graphics.SetCanvasWidth(640);
+Graphics.SetCanvasHeight(360);
+```
+
+### SetCanvasMinSize
+Позволяет программно менять **минимальные** размеры области графики (через `MinWidth/MinHeight` разметки), например чтобы разрешить `SetCanvasSize(100, 100)`:
+
+```csharp
+Graphics.SetCanvasMinSize(0, 0);   // разрешить уменьшать Canvas почти до нуля
+Graphics.SetCanvasSize(100, 100);
+```
+
+Есть одиночные аналоги:
+
+```csharp
+Graphics.SetCanvasMinWidth(0);
+Graphics.SetCanvasMinHeight(0);
+```
+
 **Важно:**
 - Размеры задаются в DIP (как и `ActualWidth/ActualHeight`).
 - Значения могут быть ограничены текущим размером окна, а также минимальными ограничениями панелей (например, минимальная высота области графики и минимальная ширина правой панели).
+- Перед каждым новым запуском (кнопка Run) приложение сбрасывает **min-ограничения UI-области вывода** к дефолтным значениям из XAML (это делается на уровне `GraphicsOutputViewModel`, а не через `Graphics`).
 ## Цепочки вызовов (Method Chaining)
 
 Все методы расширения возвращают элемент, что позволяет создавать цепочки вызовов:

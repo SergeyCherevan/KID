@@ -96,7 +96,7 @@ namespace KID.ViewModels
             };
         }
 
-        private void CodeEditorViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void CodeEditorViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ICodeEditorViewModel.CanUndo) ||
                 e.PropertyName == nameof(ICodeEditorViewModel.CanRedo))
@@ -189,6 +189,8 @@ namespace KID.ViewModels
             
             IsStopButtonEnabled = true;
             cancellationSource = new CancellationTokenSource();
+
+            graphicsOutputViewModel.ResetOutputViewMinSizeToDefault();
 
             consoleOutputViewModel.Clear();
             graphicsOutputViewModel.Clear();
