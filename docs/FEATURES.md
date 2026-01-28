@@ -624,8 +624,8 @@ var track3 = new[] { new SoundNote(392, 2000) };  // Соль
 Music.Sound(track1, track2, track3);
 
 // Асинхронное воспроизведение файла
-int soundId = Music.SoundPlay("background.mp3");
-Music.SoundLoop(soundId, true);
+SoundPlayer player = Music.SoundPlay("background.mp3");
+player.SoundLoop(true);
 ```
 
 ## Заключение

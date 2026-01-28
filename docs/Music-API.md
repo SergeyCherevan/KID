@@ -231,209 +231,217 @@ Music.Sound("https://example.com/music/song.wav");
 
 ### SoundPlay(string filePath)
 
-Воспроизводит аудиофайл асинхронно и возвращает ID звука для управления.
+Воспроизводит аудиофайл асинхронно и возвращает плеер для управления.
 
 **Сигнатура:**
 ```csharp
-public static int SoundPlay(string filePath)
+public static SoundPlayer SoundPlay(string filePath)
 ```
 
-**Возвращает:** ID звука для управления через другие методы.
+**Возвращает:** `SoundPlayer` для управления воспроизведением.
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("background.mp3");
+SoundPlayer player = Music.SoundPlay("background.mp3");
 // Программа продолжает работу, звук играет в фоне
 ```
 
 ### SoundLoad(string filePath)
 
-Загружает аудиофайл и возвращает ID для управления (без автоматического воспроизведения).
+Загружает (регистрирует) аудиофайл и возвращает плеер для управления (без автоматического воспроизведения).
 
 **Сигнатура:**
 ```csharp
-public static int SoundLoad(string filePath)
+public static SoundPlayer SoundLoad(string filePath)
 ```
 
-**Возвращает:** ID звука для управления.
+**Возвращает:** `SoundPlayer` для управления.
 
-### SoundPause(int soundId)
+**Пример:**
+```csharp
+SoundPlayer player = Music.SoundLoad("music.mp3");
+// ... позже
+player.SoundPlay(); // Запустить воспроизведение
+```
+
+### SoundPause(this SoundPlayer player)
 
 Ставит звук на паузу.
 
 **Сигнатура:**
 ```csharp
-public static void SoundPause(int soundId)
+public static void SoundPause(this SoundPlayer player)
 ```
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
+SoundPlayer player = Music.SoundPlay("music.mp3");
 // ... через некоторое время
-Music.SoundPause(soundId); // Поставить на паузу
+player.SoundPause(); // Поставить на паузу
+player.SoundPlay();  // Продолжить (resume)
 ```
 
-### SoundStop(int soundId)
+### SoundStop(this SoundPlayer player)
 
 Останавливает воспроизведение звука и освобождает ресурсы.
 
 **Сигнатура:**
 ```csharp
-public static void SoundStop(int soundId)
+public static void SoundStop(this SoundPlayer player)
 ```
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
+SoundPlayer player = Music.SoundPlay("music.mp3");
 // ... через некоторое время
-Music.SoundStop(soundId); // Остановить и освободить ресурсы
+player.SoundStop(); // Остановить и освободить ресурсы
 ```
 
-### SoundWait(int soundId)
+### SoundWait(this SoundPlayer player)
 
 Ожидает окончания воспроизведения звука. Блокирующий метод.
 
 **Сигнатура:**
 ```csharp
-public static void SoundWait(int soundId)
+public static void SoundWait(this SoundPlayer player)
 ```
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
+SoundPlayer player = Music.SoundPlay("music.mp3");
 // ... делаем что-то ещё
-Music.SoundWait(soundId); // Ждём окончания воспроизведения
+player.SoundWait(); // Ждём окончания воспроизведения
 ```
 
-### SoundVolume(int soundId, double volume)
+### SoundVolume(this SoundPlayer player, double volume)
 
 Устанавливает громкость для конкретного звука.
 
 **Сигнатура:**
 ```csharp
-public static void SoundVolume(int soundId, double volume)
+public static void SoundVolume(this SoundPlayer player, double volume)
 ```
 
 **Параметры:**
-- `soundId` - ID звука
+- `player` - плеер
 - `volume` - громкость от 0.0 (тишина) до 1.0 (максимум)
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
-Music.SoundVolume(soundId, 0.5); // Установить громкость на 50%
+SoundPlayer player = Music.SoundPlay("music.mp3");
+player.SoundVolume(0.5); // Установить громкость на 50%
 ```
 
-### SoundLoop(int soundId, bool loop)
+### SoundLoop(this SoundPlayer player, bool loop)
 
 Включает или выключает зацикливание звука.
 
 **Сигнатура:**
 ```csharp
-public static void SoundLoop(int soundId, bool loop)
+public static void SoundLoop(this SoundPlayer player, bool loop)
 ```
 
 **Параметры:**
-- `soundId` - ID звука
+- `player` - плеер
 - `loop` - `true` для зацикливания, `false` для однократного воспроизведения
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("background.mp3");
-Music.SoundLoop(soundId, true); // Зациклить звук
+SoundPlayer player = Music.SoundPlay("background.mp3");
+player.SoundLoop(true); // Зациклить звук
 ```
 
-### SoundLength(int soundId)
+### SoundLength(this SoundPlayer player)
 
 Получает длительность звука.
 
 **Сигнатура:**
 ```csharp
-public static TimeSpan SoundLength(int soundId)
+public static TimeSpan SoundLength(this SoundPlayer player)
 ```
 
 **Возвращает:** Длительность звука или `TimeSpan.Zero` если звук не найден.
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
-TimeSpan length = Music.SoundLength(soundId);
+SoundPlayer player = Music.SoundPlay("music.mp3");
+TimeSpan length = player.SoundLength();
 Console.WriteLine($"Длительность: {length.TotalSeconds} секунд");
 ```
 
-### SoundPosition(int soundId)
+### SoundPosition(this SoundPlayer player)
 
 Получает текущую позицию воспроизведения.
 
 **Сигнатура:**
 ```csharp
-public static TimeSpan SoundPosition(int soundId)
+public static TimeSpan SoundPosition(this SoundPlayer player)
 ```
 
 **Возвращает:** Текущая позиция или `TimeSpan.Zero` если звук не найден.
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
-TimeSpan position = Music.SoundPosition(soundId);
+SoundPlayer player = Music.SoundPlay("music.mp3");
+TimeSpan position = player.SoundPosition();
 Console.WriteLine($"Текущая позиция: {position.TotalSeconds} секунд");
 ```
 
-### SoundState(int soundId)
+### SoundState(this SoundPlayer player)
 
 Получает состояние воспроизведения звука.
 
 **Сигнатура:**
 ```csharp
-public static PlaybackState SoundState(int soundId)
+public static PlaybackState SoundState(this SoundPlayer player)
 ```
 
 **Возвращает:** Состояние: `Playing`, `Paused`, `Stopped`.
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
-if (Music.SoundState(soundId) == PlaybackState.Playing)
+SoundPlayer player = Music.SoundPlay("music.mp3");
+if (player.SoundState() == PlaybackState.Playing)
 {
     Console.WriteLine("Звук воспроизводится");
 }
 ```
 
-### SoundSeek(int soundId, TimeSpan position)
+### SoundSeek(this SoundPlayer player, TimeSpan position)
 
 Перематывает звук на указанную позицию.
 
 **Сигнатура:**
 ```csharp
-public static void SoundSeek(int soundId, TimeSpan position)
+public static void SoundSeek(this SoundPlayer player, TimeSpan position)
 ```
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
-Music.SoundSeek(soundId, TimeSpan.FromSeconds(30)); // Перемотать на 30 секунд
+SoundPlayer player = Music.SoundPlay("music.mp3");
+player.SoundSeek(TimeSpan.FromSeconds(30)); // Перемотать на 30 секунд
 ```
 
-### SoundFade(int soundId, double fromVolume, double toVolume, TimeSpan duration)
+### SoundFade(this SoundPlayer player, double fromVolume, double toVolume, TimeSpan duration)
 
 Плавно изменяет громкость звука от одного значения к другому за указанное время.
 
 **Сигнатура:**
 ```csharp
-public static void SoundFade(int soundId, double fromVolume, double toVolume, TimeSpan duration)
+public static void SoundFade(this SoundPlayer player, double fromVolume, double toVolume, TimeSpan duration)
 ```
 
 **Параметры:**
-- `soundId` - ID звука
+- `player` - плеер
 - `fromVolume` - начальная громкость (0.0 - 1.0)
 - `toVolume` - конечная громкость (0.0 - 1.0)
 - `duration` - длительность изменения громкости
 
 **Пример:**
 ```csharp
-int soundId = Music.SoundPlay("music.mp3");
+SoundPlayer player = Music.SoundPlay("music.mp3");
 // Плавно увеличить громкость от 0 до 1 за 2 секунды
-Music.SoundFade(soundId, 0.0, 1.0, TimeSpan.FromSeconds(2));
+player.SoundFade(0.0, 1.0, TimeSpan.FromSeconds(2));
 ```
 
 ### SoundPlayerOFF()
@@ -524,9 +532,9 @@ using System.Threading;
 using KID;
 
 // Запустить фоновую музыку
-int bgMusic = Music.SoundPlay("background.mp3");
-Music.SoundLoop(bgMusic, true); // Зациклить
-Music.SoundVolume(bgMusic, 0.3); // Тише
+SoundPlayer bgMusic = Music.SoundPlay("background.mp3");
+bgMusic.SoundLoop(true); // Зациклить
+bgMusic.SoundVolume(0.3); // Тише
 
 // Делаем что-то ещё, пока играет музыка
 for (int i = 0; i < 10; i++)
@@ -536,7 +544,7 @@ for (int i = 0; i < 10; i++)
 }
 
 // Остановить музыку
-Music.SoundStop(bgMusic);
+bgMusic.SoundStop();
 ```
 
 ### Управление несколькими звуками
@@ -546,15 +554,15 @@ using System;
 using KID;
 
 // Запустить несколько звуков
-int sound1 = Music.SoundPlay("sound1.mp3");
-int sound2 = Music.SoundPlay("sound2.mp3");
+SoundPlayer sound1 = Music.SoundPlay("sound1.mp3");
+SoundPlayer sound2 = Music.SoundPlay("sound2.mp3");
 
 // Управлять ими независимо
-Music.SoundPause(sound1);
-Music.SoundVolume(sound2, 0.5);
+sound1.SoundPause();
+sound2.SoundVolume(0.5);
 
 // Продолжить первый звук
-// (в NAudio нет метода Resume, нужно использовать Play после Pause)
+sound1.SoundPlay(); // Продолжить (resume) после паузы
 
 // Остановить все звуки
 Music.SoundPlayerOFF();

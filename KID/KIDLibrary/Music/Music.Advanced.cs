@@ -17,43 +17,17 @@ namespace KID
         private static int _nextSoundId = 1;
         private static readonly Dictionary<int, SoundPlayer> _activeSounds = new Dictionary<int, SoundPlayer>();
 
-        /// <summary>
-        /// Внутренний класс для управления звуковым потоком.
-        /// </summary>
-        private class SoundPlayer : IDisposable
-        {
-            public int Id { get; }
-            public WaveOutEvent? WaveOut { get; set; }
-            public AudioFileReader? AudioFile { get; set; }
-            public PlaybackState State => WaveOut?.PlaybackState ?? PlaybackState.Stopped;
-            public TimeSpan Position => AudioFile?.CurrentTime ?? TimeSpan.Zero;
-            public TimeSpan Length => AudioFile?.TotalTime ?? TimeSpan.Zero;
-            public double Volume { get; set; } = 1.0;
-            public bool Loop { get; set; } = false;
-            public string? FilePath { get; set; }
 
-            public SoundPlayer(int id)
-            {
-                Id = id;
-            }
-
-            public void Dispose()
-            {
-                WaveOut?.Stop();
-                WaveOut?.Dispose();
-                AudioFile?.Dispose();
-            }
-        }
 
         /// <summary>
-        /// Воспроизводит аудиофайл асинхронно и возвращает ID звука для управления.
+        /// Воспроизводит аудиофайл асинхронно и возвращает плеер для управления.
         /// </summary>
         /// <param name="filePath">Путь к аудиофайлу (локальный или URL).</param>
-        /// <returns>ID звука для управления через другие методы.</returns>
-        public static int SoundPlay(string filePath)
+        /// <returns>Плеер для управления воспроизведением.</returns>
+        public static SoundPlayer SoundPlay(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
-                return 0;
+                return new SoundPlayer(0);
 
             lock (_lockObject)
             {
@@ -83,26 +57,28 @@ namespace KID
                         {
                             lock (_lockObject)
                             {
-                                _activeSounds.Remove(player.Id);
-                                player.Dispose();
+                                if (_activeSounds.Remove(player.Id))
+                                {
+                                    player.Dispose();
+                                }
                             }
                         }
                     }
                 });
 
-                return soundId;
+                return player;
             }
         }
 
         /// <summary>
-        /// Загружает аудиофайл и возвращает ID для управления.
+        /// Загружает (регистрирует) аудиофайл и возвращает плеер для управления (без автоматического воспроизведения).
         /// </summary>
         /// <param name="filePath">Путь к аудиофайлу.</param>
-        /// <returns>ID звука для управления.</returns>
-        public static int SoundLoad(string filePath)
+        /// <returns>Плеер для управления.</returns>
+        public static SoundPlayer SoundLoad(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
-                return 0;
+                return new SoundPlayer(0);
 
             lock (_lockObject)
             {
@@ -114,83 +90,152 @@ namespace KID
                 };
 
                 _activeSounds[soundId] = player;
-                return soundId;
+                return player;
             }
+        }
+
+        /// <summary>
+        /// Запускает воспроизведение для ранее созданного плеера (например, из <see cref="SoundLoad(string)"/>).
+        /// </summary>
+        /// <param name="player">Плеер.</param>
+        public static void SoundPlay(this SoundPlayer player)
+        {
+            if (player == null || player.Id <= 0)
+                return;
+
+            lock (_lockObject)
+            {
+                if (!_activeSounds.TryGetValue(player.Id, out var active) || !ReferenceEquals(active, player))
+                    return;
+
+                // Если уже есть плеер NAudio и он на паузе — продолжаем воспроизведение, не создавая второй поток.
+                if (active.WaveOut != null)
+                {
+                    if (active.WaveOut.PlaybackState == PlaybackState.Paused)
+                    {
+                        try
+                        {
+                            active.WaveOut.Play();
+                        }
+                        catch { }
+                    }
+                    return;
+                }
+            }
+
+            // Запускаем воспроизведение асинхронно
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await PlaySoundAsync(player);
+                }
+                catch
+                {
+                    // Игнорируем ошибки
+                }
+                finally
+                {
+                    if (!player.Loop)
+                    {
+                        lock (_lockObject)
+                        {
+                            if (_activeSounds.Remove(player.Id))
+                            {
+                                player.Dispose();
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         /// <summary>
         /// Ставит звук на паузу.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
-        public static void SoundPause(int soundId)
+        /// <param name="player">Плеер.</param>
+        public static void SoundPause(this SoundPlayer player)
         {
+            if (player == null || player.Id <= 0)
+                return;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
-                    player.WaveOut?.Pause();
+                    active.WaveOut?.Pause();
                 }
             }
         }
 
         /// <summary>
-        /// Останавливает воспроизведение звука.
+        /// Останавливает воспроизведение звука и освобождает ресурсы.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
-        public static void SoundStop(int soundId)
+        /// <param name="player">Плеер.</param>
+        public static void SoundStop(this SoundPlayer player)
         {
+            if (player == null || player.Id <= 0)
+                return;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
-                    player.WaveOut?.Stop();
-                    _activeSounds.Remove(soundId);
-                    player.Dispose();
+                    active.WaveOut?.Stop();
+                    _activeSounds.Remove(player.Id);
+                    active.Dispose();
                 }
             }
         }
 
         /// <summary>
-        /// Ожидает окончания воспроизведения звука.
+        /// Ожидает окончания воспроизведения звука. Блокирующий метод.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
-        public static void SoundWait(int soundId)
+        /// <param name="player">Плеер.</param>
+        public static void SoundWait(this SoundPlayer player)
         {
-            SoundPlayer? player = null;
-            lock (_lockObject)
-            {
-                if (_activeSounds.TryGetValue(soundId, out player))
-                {
-                    // Захватываем ссылку
-                }
-            }
+            if (player == null || player.Id <= 0)
+                return;
 
-            if (player != null)
+            while (true)
             {
-                while (player.State == PlaybackState.Playing)
+                CheckStopRequested();
+
+                PlaybackState state;
+                lock (_lockObject)
                 {
-                    CheckStopRequested();
-                    Thread.Sleep(10);
+                    if (!_activeSounds.TryGetValue(player.Id, out var active) || !ReferenceEquals(active, player))
+                        return;
+
+                    state = active.State;
                 }
+
+                if (state != PlaybackState.Playing)
+                    return;
+
+                Thread.Sleep(10);
             }
         }
 
         /// <summary>
         /// Устанавливает громкость для конкретного звука (0.0 - 1.0).
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
+        /// <param name="player">Плеер.</param>
         /// <param name="volume">Громкость от 0.0 до 1.0.</param>
-        public static void SoundVolume(int soundId, double volume)
+        public static void SoundVolume(this SoundPlayer player, double volume)
         {
+            if (player == null || player.Id <= 0)
+                return;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
                     volume = Math.Max(0.0, Math.Min(1.0, volume));
-                    player.Volume = volume;
-                    if (player.AudioFile != null)
+                    active.Volume = volume;
+                    if (active.AudioFile != null)
                     {
-                        player.AudioFile.Volume = (float)volume;
+                        active.AudioFile.Volume = (float)volume;
                     }
                 }
             }
@@ -199,15 +244,18 @@ namespace KID
         /// <summary>
         /// Включает или выключает зацикливание звука.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
+        /// <param name="player">Плеер.</param>
         /// <param name="loop">true для зацикливания, false для однократного воспроизведения.</param>
-        public static void SoundLoop(int soundId, bool loop)
+        public static void SoundLoop(this SoundPlayer player, bool loop)
         {
+            if (player == null || player.Id <= 0)
+                return;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
-                    player.Loop = loop;
+                    active.Loop = loop;
                 }
             }
         }
@@ -215,15 +263,18 @@ namespace KID
         /// <summary>
         /// Получает длительность звука.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
+        /// <param name="player">Плеер.</param>
         /// <returns>Длительность звука или TimeSpan.Zero если звук не найден.</returns>
-        public static TimeSpan SoundLength(int soundId)
+        public static TimeSpan SoundLength(this SoundPlayer player)
         {
+            if (player == null || player.Id <= 0)
+                return TimeSpan.Zero;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
-                    return player.Length;
+                    return active.Length;
                 }
             }
             return TimeSpan.Zero;
@@ -232,15 +283,18 @@ namespace KID
         /// <summary>
         /// Получает текущую позицию воспроизведения.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
+        /// <param name="player">Плеер.</param>
         /// <returns>Текущая позиция или TimeSpan.Zero если звук не найден.</returns>
-        public static TimeSpan SoundPosition(int soundId)
+        public static TimeSpan SoundPosition(this SoundPlayer player)
         {
+            if (player == null || player.Id <= 0)
+                return TimeSpan.Zero;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
-                    return player.Position;
+                    return active.Position;
                 }
             }
             return TimeSpan.Zero;
@@ -249,15 +303,18 @@ namespace KID
         /// <summary>
         /// Получает состояние воспроизведения звука.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
+        /// <param name="player">Плеер.</param>
         /// <returns>Состояние: Playing, Paused, Stopped.</returns>
-        public static PlaybackState SoundState(int soundId)
+        public static PlaybackState SoundState(this SoundPlayer player)
         {
+            if (player == null || player.Id <= 0)
+                return PlaybackState.Stopped;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
-                    return player.State;
+                    return active.State;
                 }
             }
             return PlaybackState.Stopped;
@@ -266,17 +323,20 @@ namespace KID
         /// <summary>
         /// Перематывает звук на указанную позицию.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
+        /// <param name="player">Плеер.</param>
         /// <param name="position">Позиция для перемотки.</param>
-        public static void SoundSeek(int soundId, TimeSpan position)
+        public static void SoundSeek(this SoundPlayer player, TimeSpan position)
         {
+            if (player == null || player.Id <= 0)
+                return;
+
             lock (_lockObject)
             {
-                if (_activeSounds.TryGetValue(soundId, out var player))
+                if (_activeSounds.TryGetValue(player.Id, out var active) && ReferenceEquals(active, player))
                 {
-                    if (player.AudioFile != null)
+                    if (active.AudioFile != null)
                     {
-                        player.AudioFile.CurrentTime = position;
+                        active.AudioFile.CurrentTime = position;
                     }
                 }
             }
@@ -285,22 +345,25 @@ namespace KID
         /// <summary>
         /// Плавно изменяет громкость звука от одного значения к другому за указанное время.
         /// </summary>
-        /// <param name="soundId">ID звука.</param>
+        /// <param name="player">Плеер.</param>
         /// <param name="fromVolume">Начальная громкость (0.0 - 1.0).</param>
         /// <param name="toVolume">Конечная громкость (0.0 - 1.0).</param>
         /// <param name="duration">Длительность изменения громкости.</param>
-        public static void SoundFade(int soundId, double fromVolume, double toVolume, TimeSpan duration)
+        public static void SoundFade(this SoundPlayer player, double fromVolume, double toVolume, TimeSpan duration)
         {
+            if (player == null || player.Id <= 0)
+                return;
+
             Task.Run(async () =>
             {
-                lock (_lockObject)
+                if (duration.TotalMilliseconds <= 0)
                 {
-                    if (!_activeSounds.TryGetValue(soundId, out var player))
-                        return;
+                    player.SoundVolume(toVolume);
+                    return;
                 }
 
                 var steps = 50;
-                var stepDuration = duration.TotalMilliseconds / steps;
+                var stepDuration = Math.Max(1, (int)(duration.TotalMilliseconds / steps));
                 var volumeStep = (toVolume - fromVolume) / steps;
 
                 for (int i = 0; i <= steps; i++)
@@ -310,9 +373,9 @@ namespace KID
                     var currentVolume = fromVolume + (volumeStep * i);
                     currentVolume = Math.Max(0.0, Math.Min(1.0, currentVolume));
 
-                    SoundVolume(soundId, currentVolume);
+                    player.SoundVolume(currentVolume);
 
-                    await Task.Delay((int)stepDuration);
+                    await Task.Delay(stepDuration);
                 }
             });
         }
@@ -320,18 +383,25 @@ namespace KID
         /// <summary>
         /// Асинхронно воспроизводит звук.
         /// </summary>
-        private static async Task PlaySoundAsync(SoundPlayer player)
+        public static async Task PlaySoundAsync(this SoundPlayer player)
         {
+            string? actualPath = null;
+            bool isUrl = false;
+
             try
             {
-                bool isUrl = player.FilePath!.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
-                            player.FilePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+                var filePath = player.FilePath;
+                if (string.IsNullOrWhiteSpace(filePath))
+                    return;
 
-                string actualPath = player.FilePath;
+                isUrl = filePath.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                        filePath.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+                actualPath = filePath;
 
                 if (isUrl)
                 {
-                    actualPath = await DownloadFileAsync(player.FilePath);
+                    actualPath = await DownloadFileAsync(filePath);
                     if (string.IsNullOrEmpty(actualPath))
                         return;
                 }
@@ -339,34 +409,72 @@ namespace KID
                 if (!File.Exists(actualPath))
                     return;
 
-                using (var audioFile = new AudioFileReader(actualPath))
+                lock (_lockObject)
                 {
-                    audioFile.Volume = (float)player.Volume;
-                    player.AudioFile = audioFile;
-
-                    do
-                    {
-                        using (var waveOut = new WaveOutEvent())
-                        {
-                            player.WaveOut = waveOut;
-                            waveOut.Init(audioFile);
-                            waveOut.Play();
-
-                            while (waveOut.PlaybackState == PlaybackState.Playing)
-                            {
-                                CheckStopRequested();
-                                await Task.Delay(10);
-                            }
-
-                            if (player.Loop && waveOut.PlaybackState == PlaybackState.Stopped)
-                            {
-                                audioFile.Position = 0;
-                            }
-                        }
-                    } while (player.Loop);
+                    // Если плеер уже остановлен/убран из реестра — не начинаем воспроизведение.
+                    if (!_activeSounds.TryGetValue(player.Id, out var active) || !ReferenceEquals(active, player))
+                        return;
                 }
 
-                if (isUrl && File.Exists(actualPath))
+                player.AudioFile = new AudioFileReader(actualPath);
+                player.AudioFile.Volume = (float)player.Volume;
+
+                do
+                {
+                    var waveOut = new WaveOutEvent();
+                    player.WaveOut = waveOut;
+
+                    waveOut.Init(player.AudioFile);
+                    waveOut.Play();
+
+                    while (waveOut.PlaybackState == PlaybackState.Playing)
+                    {
+                        CheckStopRequested();
+                        await Task.Delay(10);
+                    }
+
+                    // Если зациклено — перематываем в начало.
+                    if (player.Loop && waveOut.PlaybackState == PlaybackState.Stopped)
+                    {
+                        player.AudioFile.Position = 0;
+                    }
+
+                    try
+                    {
+                        waveOut.Dispose();
+                    }
+                    catch { }
+                    finally
+                    {
+                        if (ReferenceEquals(player.WaveOut, waveOut))
+                            player.WaveOut = null;
+                    }
+                } while (player.Loop);
+            }
+            catch { }
+            finally
+            {
+                try
+                {
+                    player.WaveOut?.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    player.WaveOut = null;
+                }
+
+                try
+                {
+                    player.AudioFile?.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    player.AudioFile = null;
+                }
+
+                if (isUrl && !string.IsNullOrEmpty(actualPath) && File.Exists(actualPath))
                 {
                     try
                     {
@@ -375,7 +483,6 @@ namespace KID
                     catch { }
                 }
             }
-            catch { }
         }
 
         /// <summary>
@@ -399,7 +506,7 @@ namespace KID
             }
             catch
             {
-                return null;
+                return string.Empty;
             }
         }
 
