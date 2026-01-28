@@ -1,5 +1,6 @@
 using System;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace KID
 {
@@ -33,6 +34,19 @@ namespace KID
 
         internal WaveOutEvent? WaveOut { get; set; }
         internal AudioFileReader? AudioFile { get; set; }
+
+        /// <summary>
+        /// Фабрика источника звука для синтетических/генерируемых звуков (тон, мелодия, полифония).
+        /// Используется расширенным Music API для воспроизведения через NAudio.
+        /// </summary>
+        internal Func<ISampleProvider>? SampleProviderFactory { get; set; }
+
+        /// <summary>
+        /// Провайдер общей громкости (0.0 - 1.0) для текущего воспроизведения синтетического звука.
+        /// Нужен, чтобы <see cref="Music.SoundVolume(SoundPlayer, double)"/> мог менять громкость \"на лету\".
+        /// </summary>
+        internal VolumeSampleProvider? VolumeProvider { get; set; }
+
         internal double Volume { get; set; } = 1.0; // 0.0 - 1.0
         internal bool Loop { get; set; }
         internal string? FilePath { get; set; }
@@ -77,6 +91,11 @@ namespace KID
             {
                 AudioFile = null;
             }
+
+            // Синтетические источники/обёртки (не требуют Dispose),
+            // но очищаем ссылки, чтобы избежать удержания больших графов объектов.
+            VolumeProvider = null;
+            SampleProviderFactory = null;
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace KID
 {
@@ -237,6 +238,10 @@ namespace KID
                     {
                         active.AudioFile.Volume = (float)volume;
                     }
+                    if (active.VolumeProvider != null)
+                    {
+                        active.VolumeProvider.Volume = (float)volume;
+                    }
                 }
             }
         }
@@ -427,7 +432,7 @@ namespace KID
                     waveOut.Init(player.AudioFile);
                     waveOut.Play();
 
-                    while (waveOut.PlaybackState == PlaybackState.Playing)
+                    while (waveOut.PlaybackState == PlaybackState.Playing || waveOut.PlaybackState == PlaybackState.Paused)
                     {
                         CheckStopRequested();
                         await Task.Delay(10);
@@ -482,6 +487,103 @@ namespace KID
                     }
                     catch { }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Асинхронно воспроизводит синтетический звук (тон/мелодия/полифония) через NAudio.
+        /// </summary>
+        internal static async Task PlayGeneratedAsync(this SoundPlayer player)
+        {
+            try
+            {
+                if (player.SampleProviderFactory == null)
+                    return;
+
+                lock (_lockObject)
+                {
+                    // Если плеер уже остановлен/убран из реестра — не начинаем воспроизведение.
+                    if (!_activeSounds.TryGetValue(player.Id, out var active) || !ReferenceEquals(active, player))
+                        return;
+                }
+
+                do
+                {
+                    // Создаём новый источник на каждый запуск (и на каждый цикл Loop).
+                    ISampleProvider source;
+                    try
+                    {
+                        source = player.SampleProviderFactory();
+                    }
+                    catch
+                    {
+                        return;
+                    }
+
+                    // Общая громкость плеера (0.0-1.0) поверх «внутренней» громкости нот/дорожек.
+                    var volumeProvider = new VolumeSampleProvider(source)
+                    {
+                        Volume = (float)Math.Max(0.0, Math.Min(1.0, player.Volume))
+                    };
+                    player.VolumeProvider = volumeProvider;
+
+                    var waveOut = new WaveOutEvent();
+                    player.WaveOut = waveOut;
+
+                    try
+                    {
+                        waveOut.Init(volumeProvider);
+                        waveOut.Play();
+
+                        while (waveOut.PlaybackState == PlaybackState.Playing || waveOut.PlaybackState == PlaybackState.Paused)
+                        {
+                            CheckStopRequested();
+
+                            lock (_lockObject)
+                            {
+                                if (!_activeSounds.TryGetValue(player.Id, out var active) || !ReferenceEquals(active, player))
+                                    return;
+                            }
+
+                            await Task.Delay(10);
+                        }
+                    }
+                    catch
+                    {
+                        // Игнорируем ошибки воспроизведения
+                    }
+                    finally
+                    {
+                        try
+                        {
+                            waveOut.Dispose();
+                        }
+                        catch { }
+                        finally
+                        {
+                            if (ReferenceEquals(player.WaveOut, waveOut))
+                                player.WaveOut = null;
+                        }
+
+                        // Это не IDisposable, но ссылку важно чистить, чтобы SoundVolume не держал старый провайдер.
+                        player.VolumeProvider = null;
+                    }
+                } while (player.Loop);
+            }
+            catch { }
+            finally
+            {
+                try
+                {
+                    player.WaveOut?.Dispose();
+                }
+                catch { }
+                finally
+                {
+                    player.WaveOut = null;
+                }
+
+                player.VolumeProvider = null;
             }
         }
 

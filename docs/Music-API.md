@@ -246,6 +246,63 @@ SoundPlayer player = Music.SoundPlay("background.mp3");
 // Программа продолжает работу, звук играет в фоне
 ```
 
+### SoundPlay(double frequency, double durationMs)
+
+Асинхронно воспроизводит тон заданной частоты и длительности и возвращает плеер для управления.
+
+**Сигнатура:**
+```csharp
+public static SoundPlayer SoundPlay(double frequency, double durationMs)
+```
+
+**Пример:**
+```csharp
+SoundPlayer tone = Music.SoundPlay(440, 1000); // Ля, 1 секунда
+// ... делаем что-то ещё
+tone.SoundWait(); // При необходимости дождаться окончания
+```
+
+### SoundPlay(params SoundNote[] notes) / SoundPlay(IEnumerable<SoundNote> notes)
+
+Асинхронно воспроизводит последовательность звуков (мелодию) и возвращает плеер для управления.
+
+**Сигнатуры:**
+```csharp
+public static SoundPlayer SoundPlay(params SoundNote[] notes)
+public static SoundPlayer SoundPlay(IEnumerable<SoundNote> notes)
+```
+
+**Пример:**
+```csharp
+SoundPlayer melody = Music.SoundPlay(
+    new SoundNote(262, 500),
+    new SoundNote(294, 500),
+    new SoundNote(330, 500),
+    new SoundNote(0, 250) // Пауза
+);
+// Можно остановить досрочно:
+// melody.SoundStop();
+```
+
+### SoundPlay(params SoundNote[][] tracks) / SoundPlay(IEnumerable<IEnumerable<SoundNote>> tracks)
+
+Асинхронно воспроизводит несколько дорожек одновременно (полифония) и возвращает плеер для управления.
+
+**Сигнатуры:**
+```csharp
+public static SoundPlayer SoundPlay(params SoundNote[][] tracks)
+public static SoundPlayer SoundPlay(IEnumerable<IEnumerable<SoundNote>> tracks)
+```
+
+**Пример:**
+```csharp
+var track1 = new[] { new SoundNote(262, 1000), new SoundNote(0, 500) };
+var track2 = new[] { new SoundNote(330, 1500), new SoundNote(392, 500) };
+
+SoundPlayer poly = Music.SoundPlay(track1, track2);
+poly.SoundLoop(true); // Зациклить (повторять аккорд/фрагмент)
+```
+
 ### SoundLoad(string filePath)
 
 Загружает (регистрирует) аудиофайл и возвращает плеер для управления (без автоматического воспроизведения).
