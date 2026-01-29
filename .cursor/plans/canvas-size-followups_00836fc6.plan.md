@@ -3,7 +3,7 @@ name: canvas-size-followups
 overview: "Доработать новый раздел API размеров Canvas: вынести в отдельный файл `Graphics.CanvasSize.cs`, добавить `MinSize` и одиночные `Width/Height` методы, разрешить `SetCanvasSize` задавать размеры < 300, и вернуть дефолтные минимумы 300×300 перед каждым запуском в `MenuViewModel`."
 todos:
   - id: split-canvas-size-file
-    content: Вынести методы размеров Canvas в `KID/KIDLibrary/Graphics/Graphics.CanvasSize.cs` и оставить `Graphics.System.cs` системным.
+    content: Вынести методы размеров Canvas в `KID.Library/Graphics/Graphics.CanvasSize.cs` и оставить `Graphics.System.cs` системным.
     status: pending
   - id: add-single-size-methods
     content: Добавить `GetCanvasWidth/Height`, `SetCanvasWidth/Height`, `SetCanvasMinWidth/MinHeight`; парные методы должны вызывать одиночные.
@@ -32,7 +32,7 @@ todos:
   - `SetCanvasSize(width,height)` + одиночные `SetCanvasWidth(width)`/`SetCanvasHeight(height)`.
   - Добавить `SetCanvasMinSize(minWidth,minHeight)` + одиночные `SetCanvasMinWidth(minWidth)`/`SetCanvasMinHeight(minHeight)`.
 - Сделать так, чтобы `Graphics.SetCanvasSize()` мог задавать размеры **меньше 300×300**.
-- Перед **каждым новым запуском** (кнопка Run) вернуть минимальные размеры Canvas обратно к **300×300** (с учётом отступов/«дельты» между колонкой/строкой и реальным Canvas), реализовав это в `[d:\Visual Studio Projects\KID\KID\ViewModels\MenuViewModel.cs](d:\Visual Studio Projects\KID\KID\ViewModels\MenuViewModel.cs)` около строк 193–194.
+- Перед **каждым новым запуском** (кнопка Run) вернуть минимальные размеры Canvas обратно к **300×300** (с учётом отступов/«дельты» между колонкой/строкой и реальным Canvas), реализовав это в `[d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\MenuViewModel.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\MenuViewModel.cs)` около строк 193–194.
 
 1.2. **Ограничения**
 - WPF разметка уже содержит жёсткие минимумы:
@@ -70,7 +70,7 @@ todos:
 ## 3. Список задач
 3.1. **Рефакторинг файлов (вынос в отдельный файл)**
 - Создать новый файл:
-  - `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Graphics\Graphics.CanvasSize.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Graphics\Graphics.CanvasSize.cs)`
+  - `[d:\Visual Studio Projects\KID\KID.Library\Graphics\Graphics.CanvasSize.cs](d:\Visual Studio Projects\KID\KID.Library\Graphics\Graphics.CanvasSize.cs)`
 - Переместить из `Graphics.System.cs` все методы, связанные с размерами Canvas, в новый partial-файл:
   - `GetCanvasSize`, `SetCanvasSize` (и новые одиночные/Min-методы).
 - В `Graphics.System.cs` оставить только системную часть (`Canvas`, `Init`, `Clear` и т.п.).
@@ -94,7 +94,7 @@ todos:
 - При отсутствии нужных элементов разметки (`WorkspaceGrid`/`OutputGrid` не найдены) — сохранить текущий fallback на `Canvas.Width/Canvas.Height`.
 
 3.4. **Reset min-size перед новым запуском (MenuViewModel)**
-- В `[d:\Visual Studio Projects\KID\KID\ViewModels\MenuViewModel.cs](d:\Visual Studio Projects\KID\KID\ViewModels\MenuViewModel.cs)` в `ExecuteRun()` около строк 193–194:
+- В `[d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\MenuViewModel.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\MenuViewModel.cs)` в `ExecuteRun()` около строк 193–194:
   - добавить сброс минимальных размеров Canvas обратно к 300×300:
     - `Graphics.Init(graphicsOutputViewModel.GraphicsCanvasControl);`
     - `Graphics.SetCanvasMinSize(300, 300);`

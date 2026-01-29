@@ -6,7 +6,7 @@ todos:
     content: Специфицировать публичный интерфейс Keyboard (методы/свойства/события, DTO/enums, политики capture, хоткеи, текстовый буфер).
     status: pending
   - id: add-kidlibrary-keyboard-skeleton
-    content: Добавить папку KIDLibrary/Keyboard и разнести реализацию по файлам System/State/Events + DTO, следуя стилю Mouse.
+    content: Добавить папку KID.Library/Keyboard и разнести реализацию по файлам System/State/Events + DTO, следуя стилю Mouse.
     status: pending
     dependencies:
       - design-public-api
@@ -56,9 +56,9 @@ todos:
 
 ### 1.4. Ограничения и требования
 
-- **WPF/.NET 8**, интеграция с текущим `CodeExecutionContext` (см. `[KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs) `где инициализируются `Graphics/Mouse/Music`).
+- **WPF/.NET 8**, интеграция с текущим `CodeExecutionContext` (см. `[KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs) `где инициализируются `Graphics/Mouse/Music`).
 - **Потоки**: сбор событий в UI потоке, доставка пользовательских обработчиков **в фоне** (как `Mouse`), чтобы не подвешивать интерфейс.
-- **Конфликт с консольным вводом**: `TextBoxConsole` активно использует `PreviewKeyDown/PreviewTextInput` и ставит `e.Handled = true` при чтении (см. `[KID/Services/CodeExecution/TextBoxConsole.cs](d:/Visual Studio Projects/KID/KID/Services/CodeExecution/TextBoxConsole.cs)`).
+- **Конфликт с консольным вводом**: `TextBoxConsole` активно использует `PreviewKeyDown/PreviewTextInput` и ставит `e.Handled = true` при чтении (см. `[KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs)`).
   - Политика по умолчанию: `Keyboard` **не помечает** события как handled.
   - Ввести понятную опцию/режим, чтобы школьник мог легко избежать “WASD двигает игру, пока я печатаю в консоль”.
 - **Локализация**: UI-строки приложения локализуются через `.resx`, но `KIDLibrary` API обычно не требует UI-локализации; документация должна быть обновлена.
@@ -156,7 +156,7 @@ todos:
 
 ### 2.4. Интеграция в запуск кода
 
-- В `[KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs)` добавить:
+- В `[KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs)` добавить:
   - получение `Window` через `Window.GetWindow(canvas)`
   - вызов `Keyboard.Init(window)`
 - Если `window == null` (редкий случай) — аккуратный no-op или fallback на `canvas` как `IInputElement` (решим в реализации).
@@ -187,7 +187,7 @@ BG->>User: Invoke(TextInputEvent)
 
 ### 3.1. Новые файлы (KIDLibrary)
 
-Создать папку: `[KID/KIDLibrary/Keyboard/](d:/Visual Studio Projects/KID/KID/KIDLibrary/Keyboard/)`
+Создать папку: `[KID.Library/Keyboard/](d:/Visual Studio Projects/KID/KID.Library/Keyboard/)`
 
 - `Keyboard.System.cs`
 - `Keyboard.State.cs`
@@ -201,7 +201,7 @@ BG->>User: Invoke(TextInputEvent)
 
 ### 3.2. Изменение существующих файлов
 
-- `[KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs) `— добавить `Keyboard.Init(window)`.
+- `[KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs) `— добавить `Keyboard.Init(window)`.
 - Документация:
   - `[docs/Keyboard-API.md](d:/Visual Studio Projects/KID/docs/Keyboard-API.md)` — новый файл.
   - `[docs/README.md](d:/Visual Studio Projects/KID/docs/README.md)` — добавить ссылку.
@@ -211,7 +211,7 @@ BG->>User: Invoke(TextInputEvent)
 
 ### 3.3. ProjectTemplates (пример для детей)
 
-- Добавить шаблон-скрипт: `[KID/ProjectTemplates/KeyboardTests.cs](d:/Visual Studio Projects/KID/KID/ProjectTemplates/KeyboardTests.cs)`
+- Добавить шаблон-скрипт: `[KID.WPF.IDE/ProjectTemplates/KeyboardTests.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/ProjectTemplates/KeyboardTests.cs)`
   - пример polling (WASD/Space)
   - пример TextInput (накапливаем строку и рисуем её через `Graphics.Text`)
   - пример хоткея (например, Ctrl+R сброс)

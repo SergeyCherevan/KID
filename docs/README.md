@@ -80,27 +80,24 @@
 
 ```
 KID/
-├── KIDLibrary/          # Библиотека для пользовательского кода
-│   ├── Graphics/        # API для графики
-│   ├── Music/           # API для воспроизведения звуков
-│   ├── Mouse/           # API для мыши
-├── Models/              # Модели данных
-├── Services/            # Сервисы приложения
-│   ├── CodeExecution/  # Выполнение кода
-│   ├── Files/          # Работа с файлами
-│   ├── Localization/   # Локализация
-│   ├── Themes/         # Темы оформления
-│   └── DI/             # Dependency Injection
-├── ViewModels/         # ViewModels (MVVM)
-├── Views/              # Представления (XAML)
-├── Resources/          # Ресурсы (строки, иконки)
-├── Themes/             # Файлы тем оформления
-└── ProjectTemplates/    # Шаблоны проектов
+├── KID.WPF.IDE/         # Основное WPF-приложение (UI + MVVM + сервисы)
+│   ├── Models/          # Модели данных
+│   ├── Services/        # Сервисы приложения
+│   ├── ViewModels/      # ViewModels (MVVM)
+│   ├── Views/           # Представления (XAML)
+│   ├── Resources/       # Ресурсы (строки, иконки)
+│   ├── Themes/          # Файлы тем оформления
+│   └── ProjectTemplates/# Шаблоны проектов
+└── KID.Library/         # Библиотека для пользовательского кода (API)
+    ├── Graphics/        # API для графики
+    ├── Music/           # API для воспроизведения звуков
+    ├── Mouse/           # API для мыши
+    └── Keyboard/        # API для клавиатуры
 ```
 
 ## Шаблоны проектов (ProjectTemplates)
 
-Шаблоны — это готовые `.cs` примеры для обучения. Они лежат в `KID/ProjectTemplates/<locale>/...` и поставляются вместе с приложением.
+Шаблоны — это готовые `.cs` примеры для обучения. Они лежат в `KID.WPF.IDE/ProjectTemplates/<locale>/...` и поставляются вместе с приложением.
 
 - **Локали**: `en-US`, `ru-RU`, `uk-UA`
 - **Категории**:

@@ -45,14 +45,14 @@ todos:
 ## 3. Конкретные изменения
 
 ### 3.1. Интерфейс `IGraphicsOutputViewModel`
-Файл: `[d:\Visual Studio Projects\KID\KID\ViewModels\Interfaces\IGraphicsOutputViewModel.cs](d:\Visual Studio Projects\KID\KID\ViewModels\Interfaces\IGraphicsOutputViewModel.cs)`
+Файл: `[d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\Interfaces\IGraphicsOutputViewModel.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\Interfaces\IGraphicsOutputViewModel.cs)`
 - Добавить:
   - `double DefaultOutputViewMinWidth { get; }`
   - `double DefaultOutputViewMinHeight { get; }`
   - `void ResetOutputViewMinSizeToDefault();`
 
 ### 3.2. `GraphicsOutputViewModel`
-Файл: `[d:\Visual Studio Projects\KID\KID\ViewModels\GraphicsOutputViewModel.cs](d:\Visual Studio Projects\KID\KID\ViewModels\GraphicsOutputViewModel.cs)`
+Файл: `[d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\GraphicsOutputViewModel.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\GraphicsOutputViewModel.cs)`
 - Добавить свойства:
   - `DefaultOutputViewMinWidth`, `DefaultOutputViewMinHeight` (инициализируются в `Initialize`).
 - Добавить приватные поля для ссылок:
@@ -72,7 +72,7 @@ todos:
     - `_graphicsRow.MinHeight = DefaultOutputViewMinHeight;`
 
 ### 3.3. `MenuViewModel.ExecuteRun`
-Файл: `[d:\Visual Studio Projects\KID\KID\ViewModels\MenuViewModel.cs](d:\Visual Studio Projects\KID\KID\ViewModels\MenuViewModel.cs)`
+Файл: `[d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\MenuViewModel.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\ViewModels\MenuViewModel.cs)`
 - Удалить сброс через `Graphics.*` (и магические числа).
 - Вместо этого вызывать:
   - `graphicsOutputViewModel.ResetOutputViewMinSizeToDefault();`

@@ -3,7 +3,7 @@ name: mouse_api_basic256_like
 overview: "Добавить Mouse API в слой KIDLibrary: состояние курсора/клика относительно Canvas, событийная модель, потокобезопасная доставка событий пользователю и документация по использованию."
 todos:
   - id: mouse-types
-    content: Добавить типы CursorInfo, MouseClickInfo и enum PressButtonStatus, ClickStatus в KID/KIDLibrary/Mouse/.
+    content: Добавить типы CursorInfo, MouseClickInfo и enum PressButtonStatus, ClickStatus в KID.Library/Mouse/.
     status: pending
   - id: mouse-init-hooks
     content: Реализовать Mouse.Init(Canvas) с подписками на события Canvas и обновлением CurrentCursor/LastActualCursor/CurrentClick/LastClick.
@@ -12,7 +12,7 @@ todos:
     content: Сделать очередь + background worker для доставки MouseMoveEvent/MousePressButtonEvent/MouseClickEvent подписчикам без блокировки UI.
     status: pending
   - id: integrate-context
-    content: Подключить Mouse.Init(canvas) в KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs.
+    content: Подключить Mouse.Init(canvas) в KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs.
     status: pending
   - id: docs-mouse-api
     content: Добавить docs/Mouse-API.md и обновить README/FEATURES/ARCHITECTURE/SUBSYSTEMS с упоминанием Mouse API.
@@ -61,7 +61,7 @@ todos:
 - **Документация**: `docs/*` (аналогично `Graphics-API.md`, `Music-API.md`).
 
 2.2. **Новые компоненты**
-- Папка `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\)`.
+- Папка `[d:\Visual Studio Projects\KID\KID.Library\Mouse\](d:\Visual Studio Projects\KID\KID.Library\Mouse\)`.
 - Статический partial-класс `public static partial class Mouse` (несколько файлов по зонам ответственности).
 - Типы данных:
   - `public readonly struct CursorInfo` (или `struct` + копирование),
@@ -74,7 +74,7 @@ todos:
   - очередь (или единый worker) для вызова подписчиков в фоне с сохранением порядка.
 
 2.3. **Изменяемые существующие компоненты**
-- `[d:\Visual Studio Projects\KID\KID\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs](d:\Visual Studio Projects\KID\KID\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs)`:
+- `[d:\Visual Studio Projects\KID\KID.WPF.IDE\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs)`:
   - добавить `Mouse.Init(canvas)` рядом с `Graphics.Init(canvas)`.
 
 2.4. **Зависимости между компонентами**
@@ -102,35 +102,35 @@ flowchart TD
 
 ## 3. Список задач
 
-### 3.1. Создание новых файлов (KIDLibrary/Mouse)
+### 3.1. Создание новых файлов (KID.Library/Mouse)
 Создать папку и файлы:
-- `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\Mouse.System.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\Mouse.System.cs)`
+- `[d:\Visual Studio Projects\KID\KID.Library\Mouse\Mouse.System.cs](d:\Visual Studio Projects\KID\KID.Library\Mouse\Mouse.System.cs)`
   - `Init(Canvas canvas)`: подписка на WPF-события, сброс состояния, запуск/перезапуск worker.
   - `Reset()` (internal/private): начальные значения (Position=null, Status=NoClick).
   - безопасность повторной инициализации: если `Init()` вызывается снова, **отписаться** от прежнего `Canvas` и остановить прежний worker.
-- `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\Mouse.State.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\Mouse.State.cs)`
+- `[d:\Visual Studio Projects\KID\KID.Library\Mouse\Mouse.State.cs](d:\Visual Studio Projects\KID\KID.Library\Mouse\Mouse.State.cs)`
   - свойства:
     - `public static CursorInfo CurrentCursor { get; }`
     - `public static CursorInfo LastActualCursor { get; }`
     - `public static MouseClickInfo CurrentClick { get; }`
     - `public static MouseClickInfo LastClick { get; }`
   - потокобезопасность: `lock` вокруг чтения/записи снапшотов (возвращать **копии** структур).
-- `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\Mouse.Events.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\Mouse.Events.cs)`
+- `[d:\Visual Studio Projects\KID\KID.Library\Mouse\Mouse.Events.cs](d:\Visual Studio Projects\KID\KID.Library\Mouse\Mouse.Events.cs)`
   - события для пользователя (исполняются в фоне):
     - `public static event Action<CursorInfo>? MouseMoveEvent;`
     - `public static event Action<CursorInfo>? MousePressButtonEvent;` (или `Action<PressButtonStatus>`; выбрать и зафиксировать в реализации)
     - `public static event Action<MouseClickInfo>? MouseClickEvent;`
   - внутренняя утилита `Enqueue(Action invokeAllSubscribers)`.
-- `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\PressButtonStatus.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\PressButtonStatus.cs)`
+- `[d:\Visual Studio Projects\KID\KID.Library\Mouse\PressButtonStatus.cs](d:\Visual Studio Projects\KID\KID.Library\Mouse\PressButtonStatus.cs)`
   - `[Flags]` значения (как вы задали):
     - `NoButton = 0b000`, `LeftButton = 0b001`, `RightButton = 0b010`, `OutOfArea = 0b100`.
-- `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\ClickStatus.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\ClickStatus.cs)`
+- `[d:\Visual Studio Projects\KID\KID.Library\Mouse\ClickStatus.cs](d:\Visual Studio Projects\KID\KID.Library\Mouse\ClickStatus.cs)`
   - `NoClick, OneLeftClick, OneRightClick, DoubleLeftClick, DoubleRightClick`.
   - Примечание: для `LastClick` удобно тоже иметь `NoClick` как начальное значение (иначе придётся хранить `Nullable`).
-- `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\CursorInfo.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\CursorInfo.cs)`
+- `[d:\Visual Studio Projects\KID\KID.Library\Mouse\CursorInfo.cs](d:\Visual Studio Projects\KID\KID.Library\Mouse\CursorInfo.cs)`
   - `Point? Position`
   - `PressButtonStatus PressedButton`
-- `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\MouseClickInfo.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Mouse\MouseClickInfo.cs)`
+- `[d:\Visual Studio Projects\KID\KID.Library\Mouse\MouseClickInfo.cs](d:\Visual Studio Projects\KID\KID.Library\Mouse\MouseClickInfo.cs)`
   - `ClickStatus Status`
   - `Point? Position`
 
@@ -161,7 +161,7 @@ flowchart TD
 
 ### 3.4. Интеграция в контекст выполнения
 Изменить:
-- `[d:\Visual Studio Projects\KID\KID\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs](d:\Visual Studio Projects\KID\KID\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs)`:
+- `[d:\Visual Studio Projects\KID\KID.WPF.IDE\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs)`:
   - добавить `Mouse.Init(canvas);`.
 
 (Опционально, но желательно) привести lifecycle к чистому виду:

@@ -3,10 +3,10 @@ name: Реализация Music API
 overview: Создание полнофункционального API для музыкального воспроизведения звуков по образцу BASIC256, включая генерацию тонов, полифонию, проигрывание файлов и расширенное управление воспроизведением.
 todos:
   - id: add-naudio-package
-    content: Добавить NuGet пакет NAudio в KID.csproj
+    content: Добавить NuGet пакет NAudio в `KID.WPF.IDE/KID.WPF.IDE.csproj`
     status: pending
   - id: create-music-folder
-    content: Создать папку KID/KIDLibrary/Music/
+    content: Создать папку KID.Library/Music/
     status: pending
   - id: create-music-system
     content: Создать Music.System.cs с инициализацией, полями и утилитами (InvokeOnUI, интеграция с StopManager)
@@ -99,7 +99,7 @@ todos:
 
 ### 1.1. Описание функции
 
-Создание статического частичного класса `Music` в папке `KID/KIDLibrary/Music/` с методами для:
+Создание статического частичного класса `Music` в папке `KID.Library/Music/` с методами для:
 
 - Воспроизведения тонов заданной частоты и длительности
 - Последовательного воспроизведения нот без пауз
@@ -145,7 +145,7 @@ todos:
 
 ### 2.2. Новые компоненты
 
-1. **Папка**: `KID/KIDLibrary/Music/`
+1. **Папка**: `KID.Library/Music/`
 2. **Файлы частичного класса**:
 
    - `Music.System.cs` - инициализация, базовые поля, утилиты
@@ -158,7 +158,7 @@ todos:
 
 ### 2.3. Изменения существующих компонентов
 
-- `KID/KID.csproj` - добавление пакета NAudio
+- `KID.WPF.IDE/KID.WPF.IDE.csproj` - добавление пакета NAudio
 - `docs/` - обновление или создание документации
 
 ### 2.4. Зависимости
@@ -288,8 +288,8 @@ public static double Volume { get; set; } // 0-10, по умолчанию 5
 
 ### 4.1. Подготовка
 
-- [ ] Добавить NuGet пакет NAudio в `KID.csproj`
-- [ ] Создать папку `KID/KIDLibrary/Music/`
+- [ ] Добавить NuGet пакет NAudio в `KID.WPF.IDE/KID.WPF.IDE.csproj`
+- [ ] Создать папку `KID.Library/Music/`
 
 ### 4.2. Базовые компоненты
 
@@ -469,17 +469,17 @@ Music.SoundVolume(soundId, 0.5);
 
 ## 9. Файлы для создания
 
-1. `KID/KIDLibrary/Music/Music.System.cs`
-2. `KID/KIDLibrary/Music/Music.Volume.cs`
-3. `KID/KIDLibrary/Music/Music.ToneGeneration.cs`
-4. `KID/KIDLibrary/Music/Music.Sound.cs`
-5. `KID/KIDLibrary/Music/Music.Polyphony.cs`
-6. `KID/KIDLibrary/Music/Music.FilePlayback.cs`
-7. `KID/KIDLibrary/Music/Music.Advanced.cs`
+1. `KID.Library/Music/Music.System.cs`
+2. `KID.Library/Music/Music.Volume.cs`
+3. `KID.Library/Music/Music.ToneGeneration.cs`
+4. `KID.Library/Music/Music.Sound.cs`
+5. `KID.Library/Music/Music.Polyphony.cs`
+6. `KID.Library/Music/Music.FilePlayback.cs`
+7. `KID.Library/Music/Music.Advanced.cs`
 8. `docs/Music-API.md` (новый файл документации)
 
 ## 10. Изменения существующих файлов
 
-1. `KID/KID.csproj` - добавление `<PackageReference Include="NAudio" Version="..." />`
+1. `KID.WPF.IDE/KID.WPF.IDE.csproj` - добавление `<PackageReference Include="NAudio" Version="..." />`
 2. `docs/ARCHITECTURE.md` - добавление раздела о Music API
 3. `docs/SUBSYSTEMS.md` - добавление подсистемы Music (опционально)

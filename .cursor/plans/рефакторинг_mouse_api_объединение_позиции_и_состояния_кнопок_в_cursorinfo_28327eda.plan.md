@@ -38,7 +38,7 @@ todos: []
 
 ### Затронутые подсистемы
 
-- **KIDLibrary/Mouse** - основной класс Mouse
+- **KID.Library/Mouse** - основной класс Mouse
 - **ProjectTemplates** - шаблоны проектов с примерами использования
 - **docs** - документация API
 
@@ -79,7 +79,7 @@ Mouse.LastActualCursor
 
 ### 3.1. Создание структуры CursorInfo
 
-**Файл:** `KID/KIDLibrary/Mouse/CursorInfo.cs` (новый файл)
+**Файл:** `KID.Library/Mouse/CursorInfo.cs` (новый файл)
 
 Создать структуру с двумя свойствами:
 
@@ -88,7 +88,7 @@ Mouse.LastActualCursor
 
 ### 3.2. Рефакторинг Mouse.Position.cs
 
-**Файл:** `KID/KIDLibrary/Mouse/Mouse.Position.cs`
+**Файл:** `KID.Library/Mouse/Mouse.Position.cs`
 
 Изменения:
 
@@ -100,7 +100,7 @@ Mouse.LastActualCursor
 
 ### 3.3. Рефакторинг Mouse.State.cs
 
-**Файл:** `KID/KIDLibrary/Mouse/Mouse.State.cs`
+**Файл:** `KID.Library/Mouse/Mouse.State.cs`
 
 Изменения:
 
@@ -110,7 +110,7 @@ Mouse.LastActualCursor
 
 ### 3.4. Обновление примера MouseTest.cs
 
-**Файл:** `KID/ProjectTemplates/MouseTest.cs`
+**Файл:** `KID.WPF.IDE/ProjectTemplates/MouseTest.cs`
 
 Изменения:
 

@@ -1,6 +1,6 @@
 ---
 name: Project templates pack
-overview: "Добавить полный набор новых учебных шаблонов в `KID/ProjectTemplates` (en-US/ru-RU/uk-UA) без изменений UI: новые примеры, структурирование по категориям, локализованные версии файлов, обновление документации и согласование дефолтного пути шаблона."
+overview: "Добавить полный набор новых учебных шаблонов в `KID.WPF.IDE/ProjectTemplates` (en-US/ru-RU/uk-UA) без изменений UI: новые примеры, структурирование по категориям, локализованные версии файлов, обновление документации и согласование дефолтного пути шаблона."
 todos:
   - id: define-structure-naming
     content: Утвердить структуру папок и конвенцию имен файлов (Gold/NextLevel/CheatSheets) зеркально в en-US, ru-RU и uk-UA.
@@ -50,8 +50,8 @@ todos:
 
 ## 2. Архитектурный анализ
 1. **Затронутые подсистемы**
-   - **Контент**: `KID/ProjectTemplates/**`.
-   - **Сборка/доставка**: уже настроено копирование шаблонов в output через `KID/KID.csproj` (`<None Include="ProjectTemplates\**\*" CopyToOutputDirectory=...>`).
+   - **Контент**: `KID.WPF.IDE/ProjectTemplates/**`.
+   - **Сборка/доставка**: уже настроено копирование шаблонов в output через `KID.WPF.IDE/KID.WPF.IDE.csproj` (`<None Include="ProjectTemplates\**\*" CopyToOutputDirectory=...>`).
    - **Документация**: `docs/README.md`, `docs/FEATURES.md` (опционально: отдельный `docs/ProjectTemplates.md`).
 
 2. **Новые компоненты**
@@ -59,7 +59,7 @@ todos:
    - Добавляются только новые файлы шаблонов.
 
 3. **Изменяемые существующие компоненты**
-   - Рекомендуемая небольшая правка: `KID/DefaultWindowConfiguration.json` сейчас ссылается на устаревшее имя шаблона (`ProjectTemplates/HelloWorld. Console & Graphics.cs`). Логично синхронизировать с фактическими файлами (например, на `ProjectTemplates/ru-RU/HelloWorld.cs` или `ProjectTemplates/en-US/HelloWorld.cs`).
+   - Рекомендуемая небольшая правка: `KID.WPF.IDE/DefaultWindowConfiguration.json` сейчас ссылается на устаревшее имя шаблона (`ProjectTemplates/HelloWorld. Console & Graphics.cs`). Логично синхронизировать с фактическими файлами (например, на `ProjectTemplates/ru-RU/HelloWorld.cs` или `ProjectTemplates/en-US/HelloWorld.cs`).
 
 4. **Зависимости между компонентами**
    - Шаблоны зависят от API KIDLibrary:
@@ -75,74 +75,74 @@ todos:
 
 ### 3.1. Стандартизировать структуру шаблонов
 - **Решение по структуре**: завести одинаковые подпапки во всех локалях:
-  - `[KID/ProjectTemplates/en-US/Gold/](KID/ProjectTemplates/en-US/Gold/)`
-  - `[KID/ProjectTemplates/en-US/NextLevel/](KID/ProjectTemplates/en-US/NextLevel/)`
-  - `[KID/ProjectTemplates/en-US/CheatSheets/](KID/ProjectTemplates/en-US/CheatSheets/)`
-  - и зеркально для `[KID/ProjectTemplates/ru-RU/...](KID/ProjectTemplates/ru-RU/)`
-  - и зеркально для `[KID/ProjectTemplates/uk-UA/...](KID/ProjectTemplates/uk-UA/)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/Gold/](KID.WPF.IDE/ProjectTemplates/en-US/Gold/)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/](KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/CheatSheets/](KID.WPF.IDE/ProjectTemplates/en-US/CheatSheets/)`
+  - и зеркально для `[KID.WPF.IDE/ProjectTemplates/ru-RU/...](KID.WPF.IDE/ProjectTemplates/ru-RU/)`
+  - и зеркально для `[KID.WPF.IDE/ProjectTemplates/uk-UA/...](KID.WPF.IDE/ProjectTemplates/uk-UA/)`
 - **Правило именования файлов**: одинаковые имена во всех локалях (разница — только содержимое).
 
 ### 3.2. Добавить «золотые» шаблоны (5)
 Создать триплеты файлов (en-US + ru-RU + uk-UA):
 - **Рисовалка мышью**
-  - `[KID/ProjectTemplates/en-US/Gold/MousePainter.cs](KID/ProjectTemplates/en-US/Gold/MousePainter.cs)`
-  - `[KID/ProjectTemplates/ru-RU/Gold/MousePainter.cs](KID/ProjectTemplates/ru-RU/Gold/MousePainter.cs)`
-  - `[KID/ProjectTemplates/uk-UA/Gold/MousePainter.cs](KID/ProjectTemplates/uk-UA/Gold/MousePainter.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/Gold/MousePainter.cs](KID.WPF.IDE/ProjectTemplates/en-US/Gold/MousePainter.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/MousePainter.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/MousePainter.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/MousePainter.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/MousePainter.cs)`
   - Поведение: LMB рисует, RMB «стирает» (удаляет ближайшие точки/штрихи из списка), клавишами меняем цвет/толщину. Внутри: polling `Mouse.CurrentCursor`, `Keyboard.WasPressed(...)`, хранение списка точек/элементов.
 - **«Угадай число» (консоль)**
-  - `[KID/ProjectTemplates/en-US/Gold/GuessNumber.Console.cs](KID/ProjectTemplates/en-US/Gold/GuessNumber.Console.cs)`
-  - `[KID/ProjectTemplates/ru-RU/Gold/GuessNumber.Console.cs](KID/ProjectTemplates/ru-RU/Gold/GuessNumber.Console.cs)`
-  - `[KID/ProjectTemplates/uk-UA/Gold/GuessNumber.Console.cs](KID/ProjectTemplates/uk-UA/Gold/GuessNumber.Console.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/Gold/GuessNumber.Console.cs](KID.WPF.IDE/ProjectTemplates/en-US/Gold/GuessNumber.Console.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/GuessNumber.Console.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/GuessNumber.Console.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/GuessNumber.Console.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/GuessNumber.Console.cs)`
   - Цикл, условия, счётчик попыток, подсказки больше/меньше, безопасный ввод (можно использовать helper из CheatSheets либо локально дублировать).
 - **Анимация «шарик отскакивает»**
-  - `[KID/ProjectTemplates/en-US/Gold/BouncingBall.cs](KID/ProjectTemplates/en-US/Gold/BouncingBall.cs)`
-  - `[KID/ProjectTemplates/ru-RU/Gold/BouncingBall.cs](KID/ProjectTemplates/ru-RU/Gold/BouncingBall.cs)`
-  - `[KID/ProjectTemplates/uk-UA/Gold/BouncingBall.cs](KID/ProjectTemplates/uk-UA/Gold/BouncingBall.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/Gold/BouncingBall.cs](KID.WPF.IDE/ProjectTemplates/en-US/Gold/BouncingBall.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/BouncingBall.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/BouncingBall.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/BouncingBall.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/BouncingBall.cs)`
   - Внутри: `while(true)`/`for`, `StopManager.StopIfButtonPressed()`, `Graphics.Clear()`, физика (pos/vel), границы по размеру Canvas через `DispatcherManager.InvokeOnUI(() => Graphics.Canvas.ActualWidth/ActualHeight)`, `Thread.Sleep(16)`.
 - **Мини-игра «поймай круг»**
-  - `[KID/ProjectTemplates/en-US/Gold/CatchTheCircle.cs](KID/ProjectTemplates/en-US/Gold/CatchTheCircle.cs)`
-  - `[KID/ProjectTemplates/ru-RU/Gold/CatchTheCircle.cs](KID/ProjectTemplates/ru-RU/Gold/CatchTheCircle.cs)`
-  - `[KID/ProjectTemplates/uk-UA/Gold/CatchTheCircle.cs](KID/ProjectTemplates/uk-UA/Gold/CatchTheCircle.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/Gold/CatchTheCircle.cs](KID.WPF.IDE/ProjectTemplates/en-US/Gold/CatchTheCircle.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/CatchTheCircle.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/CatchTheCircle.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/CatchTheCircle.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/CatchTheCircle.cs)`
   - Логика: таймер 30 секунд (Stopwatch/DateTime), случайные позиции, клики по кругу через `Mouse.CurrentClick` или `Mouse.LastClick` + проверка расстояния до центра, счёт/время через `Graphics.Text` и `SetText(...)`.
 - **Музыка «пианино на клавишах»**
-  - `[KID/ProjectTemplates/en-US/Gold/KeyboardPiano.cs](KID/ProjectTemplates/en-US/Gold/KeyboardPiano.cs)`
-  - `[KID/ProjectTemplates/ru-RU/Gold/KeyboardPiano.cs](KID/ProjectTemplates/ru-RU/Gold/KeyboardPiano.cs)`
-  - `[KID/ProjectTemplates/uk-UA/Gold/KeyboardPiano.cs](KID/ProjectTemplates/uk-UA/Gold/KeyboardPiano.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/Gold/KeyboardPiano.cs](KID.WPF.IDE/ProjectTemplates/en-US/Gold/KeyboardPiano.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/KeyboardPiano.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/Gold/KeyboardPiano.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/KeyboardPiano.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/Gold/KeyboardPiano.cs)`
   - Маппинг `Key.A/S/D/F/...` → частоты; на `Keyboard.WasPressed` запускать короткий звук (желательно `Task.Run(() => Music.Sound(freq, 120))`, чтобы не стопорить игровой цикл). На экране показать подсказку маппинга.
 
 ### 3.3. Добавить «следующий уровень» (3)
 Триплеты файлов:
 - **Сцены/меню (старт → игра → результат)**
-  - `[KID/ProjectTemplates/en-US/NextLevel/Scenes.StateMachine.cs](KID/ProjectTemplates/en-US/NextLevel/Scenes.StateMachine.cs)`
-  - `[KID/ProjectTemplates/ru-RU/NextLevel/Scenes.StateMachine.cs](KID/ProjectTemplates/ru-RU/NextLevel/Scenes.StateMachine.cs)`
-  - `[KID/ProjectTemplates/uk-UA/NextLevel/Scenes.StateMachine.cs](KID/ProjectTemplates/uk-UA/NextLevel/Scenes.StateMachine.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/Scenes.StateMachine.cs](KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/Scenes.StateMachine.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/NextLevel/Scenes.StateMachine.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/NextLevel/Scenes.StateMachine.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/NextLevel/Scenes.StateMachine.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/NextLevel/Scenes.StateMachine.cs)`
   - Внутри: базовый интерфейс/абстракция сцены, простой state machine, изоляция Update/Draw/Input. Показывает организацию кода.
 - **Частицы/фейерверк**
-  - `[KID/ProjectTemplates/en-US/NextLevel/Particles.Firework.cs](KID/ProjectTemplates/en-US/NextLevel/Particles.Firework.cs)`
-  - `[KID/ProjectTemplates/ru-RU/NextLevel/Particles.Firework.cs](KID/ProjectTemplates/ru-RU/NextLevel/Particles.Firework.cs)`
-  - `[KID/ProjectTemplates/uk-UA/NextLevel/Particles.Firework.cs](KID/ProjectTemplates/uk-UA/NextLevel/Particles.Firework.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/Particles.Firework.cs](KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/Particles.Firework.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/NextLevel/Particles.Firework.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/NextLevel/Particles.Firework.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/NextLevel/Particles.Firework.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/NextLevel/Particles.Firework.cs)`
   - Внутри: список частиц (позиция/скорость/время жизни/цвет), обновление и рисование, спавн «фейерверка» по клику мыши.
 - **Генеративный рисунок (спирали/узоры/фрактал-лайт)**
-  - `[KID/ProjectTemplates/en-US/NextLevel/Generative.SpiralOrFractal.cs](KID/ProjectTemplates/en-US/NextLevel/Generative.SpiralOrFractal.cs)`
-  - `[KID/ProjectTemplates/ru-RU/NextLevel/Generative.SpiralOrFractal.cs](KID/ProjectTemplates/ru-RU/NextLevel/Generative.SpiralOrFractal.cs)`
-  - `[KID/ProjectTemplates/uk-UA/NextLevel/Generative.SpiralOrFractal.cs](KID/ProjectTemplates/uk-UA/NextLevel/Generative.SpiralOrFractal.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/Generative.SpiralOrFractal.cs](KID.WPF.IDE/ProjectTemplates/en-US/NextLevel/Generative.SpiralOrFractal.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/NextLevel/Generative.SpiralOrFractal.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/NextLevel/Generative.SpiralOrFractal.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/NextLevel/Generative.SpiralOrFractal.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/NextLevel/Generative.SpiralOrFractal.cs)`
   - Внутри: цикл/математика уровня sin/cos/поворот, рисование линий/точек; без тяжёлой теории.
 
 ### 3.4. Добавить «шаблоны‑памятки» (2)
 Триплеты файлов:
 - **Шаблон игрового цикла**
-  - `[KID/ProjectTemplates/en-US/CheatSheets/GameLoop.Template.cs](KID/ProjectTemplates/en-US/CheatSheets/GameLoop.Template.cs)`
-  - `[KID/ProjectTemplates/ru-RU/CheatSheets/GameLoop.Template.cs](KID/ProjectTemplates/ru-RU/CheatSheets/GameLoop.Template.cs)`
-  - `[KID/ProjectTemplates/uk-UA/CheatSheets/GameLoop.Template.cs](KID/ProjectTemplates/uk-UA/CheatSheets/GameLoop.Template.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/CheatSheets/GameLoop.Template.cs](KID.WPF.IDE/ProjectTemplates/en-US/CheatSheets/GameLoop.Template.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/CheatSheets/GameLoop.Template.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/CheatSheets/GameLoop.Template.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/CheatSheets/GameLoop.Template.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/CheatSheets/GameLoop.Template.cs)`
   - Каркас: init → `while` → input/update/draw → sleep, обязательные `StopManager.StopIfButtonPressed()`.
 - **Шаблон безопасного ввода**
-  - `[KID/ProjectTemplates/en-US/CheatSheets/SafeInput.Template.cs](KID/ProjectTemplates/en-US/CheatSheets/SafeInput.Template.cs)`
-  - `[KID/ProjectTemplates/ru-RU/CheatSheets/SafeInput.Template.cs](KID/ProjectTemplates/ru-RU/CheatSheets/SafeInput.Template.cs)`
-  - `[KID/ProjectTemplates/uk-UA/CheatSheets/SafeInput.Template.cs](KID/ProjectTemplates/uk-UA/CheatSheets/SafeInput.Template.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/CheatSheets/SafeInput.Template.cs](KID.WPF.IDE/ProjectTemplates/en-US/CheatSheets/SafeInput.Template.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/CheatSheets/SafeInput.Template.cs](KID.WPF.IDE/ProjectTemplates/ru-RU/CheatSheets/SafeInput.Template.cs)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/CheatSheets/SafeInput.Template.cs](KID.WPF.IDE/ProjectTemplates/uk-UA/CheatSheets/SafeInput.Template.cs)`
   - Функции `ReadInt/ReadDouble/ReadColor` с повтором до корректного значения; примеры использования.
 
 ### 3.5. Привести в порядок дефолтный путь шаблона
-- Обновить `[KID/DefaultWindowConfiguration.json](KID/DefaultWindowConfiguration.json)`, чтобы `TemplateName` указывал на реально существующий файл в `ProjectTemplates` (учитывая, что шаблоны копируются в output).
+- Обновить `[KID.WPF.IDE/DefaultWindowConfiguration.json](KID.WPF.IDE/DefaultWindowConfiguration.json)`, чтобы `TemplateName` указывал на реально существующий файл в `ProjectTemplates` (учитывая, что шаблоны копируются в output).
 
 ### 3.6. Обновить документацию
 - Обновить `[docs/README.md](docs/README.md)`:

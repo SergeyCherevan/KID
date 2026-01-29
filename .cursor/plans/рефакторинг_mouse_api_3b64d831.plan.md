@@ -267,7 +267,7 @@ catch (Exception ex)
 
 ### Задача 7: Вынос InvokeOnUI (опционально)
 
-**Новый файл:** `KIDLibrary/UIThreadHelper.cs` или в существующий утилитный класс
+**Новый файл:** `KID.Library/UIThreadHelper.cs` или в существующий утилитный класс
 
 Вынести общий метод `InvokeOnUI` для использования в Graphics, Music и Mouse.
 

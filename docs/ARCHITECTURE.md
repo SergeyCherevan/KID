@@ -36,7 +36,7 @@
 
 ### 1. Presentation Layer (Слой представления)
 
-**Расположение:** `KID/Views/`
+**Расположение:** `KID.WPF.IDE/Views/`
 
 Компоненты:
 - **MainWindow.xaml** — главное окно приложения
@@ -53,7 +53,7 @@
 
 ### 2. ViewModel Layer (Слой бизнес-логики)
 
-**Расположение:** `KID/ViewModels/`
+**Расположение:** `KID.WPF.IDE/ViewModels/`
 
 #### Основные ViewModels:
 
@@ -90,11 +90,11 @@
 
 ### 3. Service Layer (Слой сервисов)
 
-**Расположение:** `KID/Services/`
+**Расположение:** `KID.WPF.IDE/Services/`
 
 #### 3.1. Code Execution (Выполнение кода)
 
-**Расположение:** `KID/Services/CodeExecution/`
+**Расположение:** `KID.WPF.IDE/Services/CodeExecution/`
 
 **CodeExecutionService** (`CodeExecutionService.cs`)
 - Координирует процесс выполнения кода
@@ -134,7 +134,7 @@
 
 #### 3.2. Files (Работа с файлами)
 
-**Расположение:** `KID/Services/Files/`
+**Расположение:** `KID.WPF.IDE/Services/Files/`
 
 **CodeFileService** (`CodeFileService.cs`)
 - Открытие и сохранение .cs файлов
@@ -151,7 +151,7 @@
 
 #### 3.3. Localization (Локализация)
 
-**Расположение:** `KID/Services/Localization/`
+**Расположение:** `KID.WPF.IDE/Services/Localization/`
 
 **LocalizationService** (`LocalizationService.cs`)
 - Управление локализацией интерфейса
@@ -171,7 +171,7 @@
 
 #### 3.4. Themes (Темы оформления)
 
-**Расположение:** `KID/Services/Themes/`
+**Расположение:** `KID.WPF.IDE/Services/Themes/`
 
 **ThemeService** (`ThemeService.cs`)
 - Управление темами оформления
@@ -185,7 +185,7 @@
 
 #### 3.5. Initialize (Инициализация)
 
-**Расположение:** `KID/Services/Initialize/`
+**Расположение:** `KID.WPF.IDE/Services/Initialize/`
 
 **WindowConfigurationService** (`WindowConfigurationService.cs`)
 - Загрузка и сохранение настроек приложения
@@ -204,7 +204,7 @@
 
 #### 3.6. Dependency Injection (DI)
 
-**Расположение:** `KID/Services/DI/`
+**Расположение:** `KID.WPF.IDE/Services/DI/`
 
 **ServiceCollectionExtensions** (`ServiceCollectionExtensions.cs`)
 - Расширение для регистрации всех сервисов
@@ -221,7 +221,7 @@
 
 ### 4. Model Layer (Слой моделей)
 
-**Расположение:** `KID/Models/`
+**Расположение:** `KID.WPF.IDE/Models/`
 
 **CompilationResult** (`CompilationResult.cs`)
 - Результат компиляции кода
@@ -237,7 +237,7 @@
 
 ### 5. KIDLibrary Layer (Библиотека для пользовательского кода)
 
-**Расположение:** `KID/KIDLibrary/`
+**Расположение:** `KID.Library/`
 
 Этот слой предоставляет API, доступный в пользовательском коде.
 
@@ -300,7 +300,7 @@
 
 #### Music API
 
-**Расположение:** `KID/KIDLibrary/Music/`
+**Расположение:** `KID.Library/Music/`
 
 **Music.System.cs**
 - Инициализация и базовые утилиты
@@ -344,7 +344,7 @@
 
 #### Mouse API
 
-**Расположение:** `KID/KIDLibrary/Mouse/`
+**Расположение:** `KID.Library/Mouse/`
 
 **Mouse.System.cs**
 - `Mouse.Init(Canvas)` — инициализация и подписка на события мыши Canvas

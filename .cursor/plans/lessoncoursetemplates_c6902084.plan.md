@@ -1,12 +1,12 @@
 ---
 name: LessonCourseTemplates
-overview: Сформировать структурированный курс (≥10 уроков) по C# и KIDLibrary и внедрить его в виде локализованных папок `Lesson1..LessonN` в `KID/ProjectTemplates/<locale>/`, с наборами учебных программ и обновлением документации.
+overview: Сформировать структурированный курс (≥10 уроков) по C# и KIDLibrary и внедрить его в виде локализованных папок `Lesson1..LessonN` в `KID.WPF.IDE/ProjectTemplates/<locale>/`, с наборами учебных программ и обновлением документации.
 todos:
   - id: define-lessons-and-files
     content: Зафиксировать Lesson1..Lesson14 и список файлов (единые имена) + распределить существующие шаблоны по урокам
     status: pending
   - id: create-lesson-folders
-    content: Создать папки `Lesson1..Lesson14` в `KID/ProjectTemplates/en-US`, `ru-RU`, `uk-UA`
+    content: Создать папки `Lesson1..Lesson14` в `KID.WPF.IDE/ProjectTemplates/en-US`, `ru-RU`, `uk-UA`
     status: pending
   - id: populate-templates
     content: Добавить/адаптировать программы в каждую папку урока (локализованные версии) + единая учебная шапка в каждом файле
@@ -34,9 +34,9 @@ todos:
 
 1.3. **Входные/выходные данные**
 - Вход:
-  - набор возможностей `KIDLibrary` (см. `docs/*-API.md` и `KID/KIDLibrary/*`), существующие шаблоны (`KID/ProjectTemplates/<locale>`).
+  - набор возможностей `KIDLibrary` (см. `docs/*-API.md` и `KID.Library/*`), существующие шаблоны (`KID.WPF.IDE/ProjectTemplates/<locale>`).
 - Выход:
-  - дерево папок `KID/ProjectTemplates/en-US/LessonX`, `ru-RU/LessonX`, `uk-UA/LessonX` с `.cs`‑программами;
+  - дерево папок `KID.WPF.IDE/ProjectTemplates/en-US/LessonX`, `ru-RU/LessonX`, `uk-UA/LessonX` с `.cs`‑программами;
   - обновлённая документация курса в `docs`.
 
 1.4. **Ограничения и требования**
@@ -48,7 +48,7 @@ todos:
 ## 2. Архитектурный анализ
 
 2.1. **Какие подсистемы затронуты**
-- `ProjectTemplates`: добавление новых файлов/папок. Проект уже копирует `ProjectTemplates\**\*` в output (см. `[KID/KID.csproj](KID/KID.csproj)`), поэтому доп. кода для доставки не нужно.
+- `ProjectTemplates`: добавление новых файлов/папок. Проект уже копирует `ProjectTemplates\**\*` в output (см. `[KID.WPF.IDE/KID.WPF.IDE.csproj](KID.WPF.IDE/KID.WPF.IDE.csproj)`), поэтому доп. кода для доставки не нужно.
 - `docs`: описание курса и способа использования.
 
 2.2. **Новые компоненты**
@@ -60,8 +60,8 @@ todos:
 - Опционально: в каждом уроке добавить `README.md` внутри папки урока (но это не обязательно, если придерживаться единого заголовка‑шапки комментариев в каждом `.cs`).
 
 2.4. **Зависимости**
-- Уроки используют `KIDLibrary`: `Graphics`, `Music`, `Mouse`, `Keyboard` (см. `[KID/KIDLibrary](KID/KIDLibrary)` и API: `[docs/Graphics-API.md](docs/Graphics-API.md)`, `[docs/Music-API.md](docs/Music-API.md)`, `[docs/Mouse-API.md](docs/Mouse-API.md)`, `[docs/Keyboard-API.md](docs/Keyboard-API.md)`).
-- Для циклов/анимаций опираться на существующие шпаргалки: `[KID/ProjectTemplates/*/CheatSheets/GameLoop.Template.cs](KID/ProjectTemplates)` и `SafeInput.Template.cs`.
+- Уроки используют `KIDLibrary`: `Graphics`, `Music`, `Mouse`, `Keyboard` (см. `[KID.Library](KID.Library)` и API: `[docs/Graphics-API.md](docs/Graphics-API.md)`, `[docs/Music-API.md](docs/Music-API.md)`, `[docs/Mouse-API.md](docs/Mouse-API.md)`, `[docs/Keyboard-API.md](docs/Keyboard-API.md)`).
+- Для циклов/анимаций опираться на существующие шпаргалки: `[KID.WPF.IDE/ProjectTemplates/*/CheatSheets/GameLoop.Template.cs](KID.WPF.IDE/ProjectTemplates)` и `SafeInput.Template.cs`.
 
 ```mermaid
 flowchart TD
@@ -182,9 +182,9 @@ flowchart TD
 
 4.1. **Создать структуру уроков в шаблонах**
 - Новые папки:
-  - `[KID/ProjectTemplates/en-US/Lesson1..Lesson14](KID/ProjectTemplates/en-US)`
-  - `[KID/ProjectTemplates/ru-RU/Lesson1..Lesson14](KID/ProjectTemplates/ru-RU)`
-  - `[KID/ProjectTemplates/uk-UA/Lesson1..Lesson14](KID/ProjectTemplates/uk-UA)`
+  - `[KID.WPF.IDE/ProjectTemplates/en-US/Lesson1..Lesson14](KID.WPF.IDE/ProjectTemplates/en-US)`
+  - `[KID.WPF.IDE/ProjectTemplates/ru-RU/Lesson1..Lesson14](KID.WPF.IDE/ProjectTemplates/ru-RU)`
+  - `[KID.WPF.IDE/ProjectTemplates/uk-UA/Lesson1..Lesson14](KID.WPF.IDE/ProjectTemplates/uk-UA)`
 
 4.2. **Добавить/адаптировать программы уроков**
 - В каждой локали создать одинаковые имена файлов (чтобы было легко сравнивать), но локализовать:
@@ -213,7 +213,7 @@ flowchart TD
 
 4.5. **Тестирование/проверки**
 - Пробежаться по 1–2 программам из каждого урока (минимум: запуск/остановка, графика/звук/ввод).
-- Проверить, что `ProjectTemplates\**\*` копируются в output (уже настроено в `[KID/KID.csproj](KID/KID.csproj)`).
+- Проверить, что `ProjectTemplates\**\*` копируются в output (уже настроено в `[KID.WPF.IDE/KID.WPF.IDE.csproj](KID.WPF.IDE/KID.WPF.IDE.csproj)`).
 
 ## 5. Порядок выполнения
 

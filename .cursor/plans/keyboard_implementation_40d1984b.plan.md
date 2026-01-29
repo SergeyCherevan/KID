@@ -72,21 +72,21 @@ todos:
 - WPF события приходят в UI.
 - Обработчики пользователя исполняем в фоне через очередь (паттерн `Mouse.Events.cs`).
 - Консольный ввод:
-- `TextBoxConsole` слушает `PreviewKeyDown/PreviewTextInput` и при чтении ставит `e.Handled = true` (см. `[KID/Services/CodeExecution/TextBoxConsole.cs](d:/Visual Studio Projects/KID/KID/Services/CodeExecution/TextBoxConsole.cs)`).
+- `TextBoxConsole` слушает `PreviewKeyDown/PreviewTextInput` и при чтении ставит `e.Handled = true` (см. `[KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs)`).
 - Window-level Preview получает событие **раньше** TextBox (туннелинг), поэтому `Keyboard` может “видеть” ввод даже когда консоль читает.
 
 ## 2. Архитектурный анализ
 
 ### 2.1. Затронутые подсистемы
 
-- `KID/KIDLibrary` — новый модуль.
-- `KID/Services/CodeExecution/Contexts` — инициализация модуля в контексте выполнения пользовательского кода.
+- `KID.Library` — новый модуль.
+- `KID.WPF.IDE/Services/CodeExecution/Contexts` — инициализация модуля в контексте выполнения пользовательского кода.
 - `docs/` — документация API.
-- `KID/ProjectTemplates/` — пример/скрипт для проверки.
+- `KID.WPF.IDE/ProjectTemplates/` — пример/скрипт для проверки.
 
 ### 2.2. Новые компоненты и файлы (конкретно)
 
-Создать папку: `[KID/KIDLibrary/Keyboard/](d:/Visual Studio Projects/KID/KID/KIDLibrary/Keyboard/)`
+Создать папку: `[KID.Library/Keyboard/](d:/Visual Studio Projects/KID/KID.Library/Keyboard/)`
 
 - **Core**
 - `Keyboard.System.cs` — подписка на события `Window`, обновление состояния, детект repeat, сбор text input, распознавание shortcut.
@@ -110,7 +110,7 @@ todos:
 
 ### 2.3. Изменяемые файлы
 
-- `[KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs)`:
+- `[KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs)`:
 - получить `Window` через `Window.GetWindow(canvas)`
 - вызвать `Keyboard.Init(window)` рядом с `Mouse.Init(canvas)`
 - поведение при `window == null`: no-op + безопасный reset состояния.
@@ -123,7 +123,7 @@ todos:
 - обновить поток данных в `[docs/ARCHITECTURE.md](d:/Visual Studio Projects/KID/docs/ARCHITECTURE.md)`
 
 - Шаблоны:
-- добавить `[KID/ProjectTemplates/KeyboardTests.cs](d:/Visual Studio Projects/KID/KID/ProjectTemplates/KeyboardTests.cs)`
+- добавить `[KID.WPF.IDE/ProjectTemplates/KeyboardTests.cs](d:/Visual Studio Projects/KID/KID.WPF.IDE/ProjectTemplates/KeyboardTests.cs)`
 
 ### 2.4. Потоки, очереди и жизненный цикл
 

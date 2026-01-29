@@ -31,14 +31,15 @@
 
 ```
 KID/
-├── KIDLibrary/          # API для пользовательского кода
-├── Models/              # Модели данных
-├── Services/            # Бизнес-логика и сервисы
-├── ViewModels/          # ViewModels (MVVM)
-├── Views/               # XAML представления
-├── Resources/           # Ресурсы (строки, иконки)
-├── Themes/              # Темы оформления
-└── ProjectTemplates/    # Шаблоны проектов
+├── KID.WPF.IDE/         # Основное WPF-приложение (UI + MVVM + сервисы)
+│   ├── Models/          # Модели данных
+│   ├── Services/        # Бизнес-логика и сервисы
+│   ├── ViewModels/      # ViewModels (MVVM)
+│   ├── Views/           # XAML представления
+│   ├── Resources/       # Ресурсы (строки, иконки)
+│   ├── Themes/          # Темы оформления
+│   └── ProjectTemplates/# Шаблоны проектов
+└── KID.Library/         # API для пользовательского кода
 ```
 
 ## Архитектурные принципы

@@ -1,6 +1,6 @@
 ---
 name: canvas-size-and-gridsplitter
-overview: Разобрать, как в текущей разметке WPF вычисляются размеры `Canvas`, как на них влияют `GridSplitter`, и спланировать добавление в `KIDLibrary/Graphics` методов `Graphics.GetCanvasSize()` и `Graphics.SetCanvasSize(width,height)` так, чтобы изменение размера происходило через те же `Row/ColumnDefinition`, что двигает `GridSplitter`.
+overview: Разобрать, как в текущей разметке WPF вычисляются размеры `Canvas`, как на них влияют `GridSplitter`, и спланировать добавление в `KID.Library/Graphics` методов `Graphics.GetCanvasSize()` и `Graphics.SetCanvasSize(width,height)` так, чтобы изменение размера происходило через те же `Row/ColumnDefinition`, что двигает `GridSplitter`.
 todos:
   - id: analyze-current-layout
     content: Зафиксировать текущую связку размеров Canvas ↔ GridSplitter по `MainWindow.xaml` и местам использования `Graphics.Canvas.ActualWidth/ActualHeight` в шаблонах.
@@ -32,7 +32,7 @@ todos:
 1.1. **Цель**
 
 - Понять, как сейчас вычисляется реальный размер области рисования (`Canvas`) и как на него влияет положение `GridSplitter`.
-- Добавить в `KIDLibrary/Graphics` методы:
+- Добавить в `KID.Library/Graphics` методы:
   - `(double width, double height) Graphics.GetCanvasSize()` — быстро получить текущий реальный размер холста.
   - `Graphics.SetCanvasSize(double width, double height)` — изменить **реальный размер области вывода графики в UI** (эквивалентно программному «сдвигу» сплиттеров/их `Row/ColumnDefinition`).
 
@@ -63,14 +63,14 @@ todos:
 
 2.1. **Как сейчас вычисляется размер Canvas (факт по коду)**
 
-- `Canvas` находится в `[d:\Visual Studio Projects\KID\KID\Views\GraphicsOutputView.xaml](d:\Visual Studio Projects\KID\KID\Views\GraphicsOutputView.xaml)`:
-```12:14:d:\Visual Studio Projects\KID\KID\Views\GraphicsOutputView.xaml
+- `Canvas` находится в `[d:\Visual Studio Projects\KID\KID.WPF.IDE\Views\GraphicsOutputView.xaml](d:\Visual Studio Projects\KID\KID.WPF.IDE\Views\GraphicsOutputView.xaml)`:
+```12:14:d:\Visual Studio Projects\KID\KID.WPF.IDE\Views\GraphicsOutputView.xaml
     <Canvas Name="GraphicsCanvasControl"
             Background="{DynamicResource CanvasBrush}" />
 ```
 
 - В `MainWindow` область вывода (включая графику) — правая колонка `Grid` c `GridSplitter`:
-```75:111:d:\Visual Studio Projects\KID\KID\MainWindow.xaml
+```75:111:d:\Visual Studio Projects\KID\KID.WPF.IDE\MainWindow.xaml
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -98,16 +98,16 @@ todos:
 
 2.2. **Где хранится ссылка на Canvas и как инициализируется Graphics API**
 
-- `Canvas` передаётся во VM в `[d:\Visual Studio Projects\KID\KID\Views\GraphicsOutputView.xaml.cs](d:\Visual Studio Projects\KID\KID\Views\GraphicsOutputView.xaml.cs)`:
-```24:32:d:\Visual Studio Projects\KID\KID\Views\GraphicsOutputView.xaml.cs
+- `Canvas` передаётся во VM в `[d:\Visual Studio Projects\KID\KID.WPF.IDE\Views\GraphicsOutputView.xaml.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\Views\GraphicsOutputView.xaml.cs)`:
+```24:32:d:\Visual Studio Projects\KID\KID.WPF.IDE\Views\GraphicsOutputView.xaml.cs
             if (DataContext is IGraphicsOutputViewModel vm)
             {
                 vm.Initialize(GraphicsCanvasControl);
             }
 ```
 
-- При запуске пользовательского кода `Graphics.Init(canvas)` вызывается из `[d:\Visual Studio Projects\KID\KID\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs](d:\Visual Studio Projects\KID\KID\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs)`.
-- `Graphics` хранит `public static Canvas Canvas { get; private set; }` в `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Graphics\Graphics.System.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Graphics\Graphics.System.cs)`.
+- При запуске пользовательского кода `Graphics.Init(canvas)` вызывается из `[d:\Visual Studio Projects\KID\KID.WPF.IDE\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs](d:\Visual Studio Projects\KID\KID.WPF.IDE\Services\CodeExecution\Contexts\CanvasGraphicsContext.cs)`.
+- `Graphics` хранит `public static Canvas Canvas { get; private set; }` в `[d:\Visual Studio Projects\KID\KID.Library\Graphics\Graphics.System.cs](d:\Visual Studio Projects\KID\KID.Library\Graphics\Graphics.System.cs)`.
 
 2.3. **Почему взаимодействовать нужно не с GridSplitter, а с Row/ColumnDefinition**
 
@@ -146,7 +146,7 @@ flowchart TD
 3.2. **Новые методы в Graphics API**
 
 - Добавить `(double width, double height) Graphics.GetCanvasSize()` (UI-thread safe).
-  - Файл: `[d:\Visual Studio Projects\KID\KID\KIDLibrary\Graphics\Graphics.System.cs](d:\Visual Studio Projects\KID\KID\KIDLibrary\Graphics\Graphics.System.cs) `или новый partial `Graphics.CanvasSize.cs` в той же папке.
+  - Файл: `[d:\Visual Studio Projects\KID\KID.Library\Graphics\Graphics.System.cs](d:\Visual Studio Projects\KID\KID.Library\Graphics\Graphics.System.cs) `или новый partial `Graphics.CanvasSize.cs` в той же папке.
 - Добавить `Graphics.SetCanvasSize(double width, double height)`:
   - В UI-потоке получить `Window`, найти `ColumnDefinition` и `RowDefinition` по имени, выставить `GridLength`.
   - Учесть ограничения:
@@ -155,7 +155,7 @@ flowchart TD
 
 3.3. **Минимальные правки XAML для надёжных ссылок**
 
-- Обновить `[d:\Visual Studio Projects\KID\KID\MainWindow.xaml](d:\Visual Studio Projects\KID\KID\MainWindow.xaml)`:
+- Обновить `[d:\Visual Studio Projects\KID\KID.WPF.IDE\MainWindow.xaml](d:\Visual Studio Projects\KID\KID.WPF.IDE\MainWindow.xaml)`:
   - дать `x:Name` внешнему `Grid` рабочей зоны (в `Grid.Row=2`),
   - дать `x:Name` `ColumnDefinition` правой панели (и при необходимости — левой),
   - дать `x:Name` внутреннему `Grid` вывода (в `Grid.Column=2`),
@@ -170,7 +170,7 @@ flowchart TD
 3.5. **Обновление примеров/шаблонов (по желанию, но полезно)**
 
 - Заменить в шаблонах прямое использование `Graphics.Canvas.ActualWidth/ActualHeight` на `Graphics.GetCanvasSize()`.
-  - Файлы: `KID/ProjectTemplates/*/*/*.cs` (как минимум те, где уже встречается `ActualWidth/ActualHeight`).
+  - Файлы: `KID.WPF.IDE/ProjectTemplates/*/*/*.cs` (как минимум те, где уже встречается `ActualWidth/ActualHeight`).
 
 3.6. **Тестирование**
 

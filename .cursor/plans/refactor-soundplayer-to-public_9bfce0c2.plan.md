@@ -3,7 +3,7 @@ name: refactor-soundplayer-to-public
 overview: Вынести `SoundPlayer` в отдельный публичный класс и заменить управление по `soundId` на extension-методы `this SoundPlayer player` в расширенном API модуля Music.
 todos:
   - id: add-soundplayer-file
-    content: Создать `KID/KIDLibrary/Music/SoundPlayer.cs`, вынести `SoundPlayer` и сделать его `public`, минимизируя публичные зависимости от NAudio.
+    content: Создать `KID.Library/Music/SoundPlayer.cs`, вынести `SoundPlayer` и сделать его `public`, минимизируя публичные зависимости от NAudio.
     status: pending
   - id: refactor-advanced-to-extension-api
     content: "Переписать `Music.Advanced.cs`: `SoundPlay/SoundLoad` возвращают `SoundPlayer`, все методы с `soundId` перевести на `this SoundPlayer` (включая getters), сохранить реестр и `SoundPlayerOFF()`."
@@ -33,7 +33,7 @@ isProject: false
 
 ## Архитектурный анализ
 - **Затронутые подсистемы**:
-  - Музыкальная подсистема `KIDLibrary/Music`.
+  - Музыкальная подсистема `KID.Library/Music`.
   - Документация `docs/Music-API.md`.
 - **Новые компоненты**:
   - Публичный класс `SoundPlayer` в отдельном файле.
@@ -70,12 +70,12 @@ isProject: false
 
 ## Список задач
 - **Создать новый файл**:
-  - `[KID/KIDLibrary/Music/SoundPlayer.cs](KID/KIDLibrary/Music/SoundPlayer.cs)`:
+  - `[KID.Library/Music/SoundPlayer.cs](KID.Library/Music/SoundPlayer.cs)`:
     - Вынести класс `SoundPlayer` из `Music.Advanced.cs`.
     - Сделать `public`, реализовать `IDisposable` как сейчас.
     - Ограничить публичность полей NAudio (предпочтительно `internal`).
 - **Изменить существующий файл**:
-  - `[KID/KIDLibrary/Music/Music.Advanced.cs](KID/KIDLibrary/Music/Music.Advanced.cs)`:
+  - `[KID.Library/Music/Music.Advanced.cs](KID.Library/Music/Music.Advanced.cs)`:
     - Удалить вложенный класс `SoundPlayer`.
     - Обновить `_activeSounds` на внешний `SoundPlayer`.
     - Обновить `SoundPlay/SoundLoad` → возвращают `SoundPlayer`.

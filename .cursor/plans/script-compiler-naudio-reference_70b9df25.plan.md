@@ -22,9 +22,9 @@ isProject: false
 ## Архитектурный анализ
 
 - **Затрагиваемая подсистема**: компиляция пользовательского кода (Roslyn).
-- **Основной файл**: [`KID/Services/CodeExecution/CSharpCompiler.cs`](d:/Visual%20Studio%20Projects/KID/KID/Services/CodeExecution/CSharpCompiler.cs).
+- **Основной файл**: [`KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs`](d:/Visual%20Studio%20Projects/KID/KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs).
 - **Текущее место проблемы**:
-```40:43:d:/Visual Studio Projects/KID/KID/Services/CodeExecution/CSharpCompiler.cs
+```40:43:d:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs
 var references = AppDomain.CurrentDomain.GetAssemblies()
     .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
     .Select(a => MetadataReference.CreateFromFile(a.Location));
@@ -37,7 +37,7 @@ var references = AppDomain.CurrentDomain.GetAssemblies()
 
 ## Список задач
 
-- **Изменить** `KID/Services/CodeExecution/CSharpCompiler.cs`:
+- **Изменить** `KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs`:
   - добавить `using NAudio.Wave;` (или полное имя типа `NAudio.Wave.PlaybackState` без using);
   - после построения списка `references` добавить `naudioRef`:
     - `var naudioPath = typeof(PlaybackState).Assembly.Location;`

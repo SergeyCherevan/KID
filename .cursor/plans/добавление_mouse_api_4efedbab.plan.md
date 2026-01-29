@@ -3,7 +3,7 @@ name: Добавление Mouse API
 overview: Реализация статического класса Mouse для получения информации о позиции курсора и кликах мыши на Canvas, аналогично BASIC256. Класс будет состоять из нескольких частичных файлов и интегрирован с существующей системой инициализации контекста выполнения.
 todos:
   - id: create_mouse_folder
-    content: Создать папку KID/KIDLibrary/Mouse/
+    content: Создать папку KID.Library/Mouse/
     status: pending
   - id: create_click_status
     content: "Создать ClickStatus.cs - enum со значениями: NoClick, OneLeftClick, OneRightClick, DoubleLeftClick, DoubleRightClick"
@@ -80,7 +80,7 @@ todos:
 
 ## 3. Структура файлов
 
-### Новые файлы в `KID/KIDLibrary/Mouse/`:
+### Новые файлы в `KID.Library/Mouse/`:
 
 1. **Mouse.System.cs** - Init(), InvokeOnUI(), базовые поля
 2. **Mouse.Position.cs** - CurrentPosition, LastActualPosition
@@ -182,7 +182,7 @@ Mouse.Init(canvas);
 
 ## 6. Порядок выполнения задач
 
-1. Создать папку `KID/KIDLibrary/Mouse/`
+1. Создать папку `KID.Library/Mouse/`
 2. Создать `ClickStatus.cs` - enum для статуса клика
 3. Создать `MouseClickInfo.cs` - структура для информации о клике
 4. Создать `Mouse.System.cs` - базовая инициализация и подписка на события

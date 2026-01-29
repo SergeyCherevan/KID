@@ -22,12 +22,12 @@ todos:
       - refactor-sound-params-array
       - refactor-sound-polyphony
   - id: update-demo1-template
-    content: Обновить KID/ProjectTemplates/Demo1.ru.cs с использованием нового API SoundNote
+    content: Обновить KID.WPF.IDE/ProjectTemplates/Demo1.ru.cs с использованием нового API SoundNote
     status: pending
     dependencies:
       - refactor-sound-params-array
   - id: update-demo1-full-template
-    content: Обновить KID/ProjectTemplates/Demo1.FullStructure.ru.cs с использованием нового API
+    content: Обновить KID.WPF.IDE/ProjectTemplates/Demo1.FullStructure.ru.cs с использованием нового API
     status: pending
     dependencies:
       - refactor-sound-params-array
@@ -150,7 +150,7 @@ public static void Sound(IEnumerable<IEnumerable<SoundNote>> tracks)
 
 ### 3.1. Создание структуры данных
 
-- [ ] Создать файл `KID/KIDLibrary/Music/Music.SoundNote.cs` со структурой `SoundNote`
+- [ ] Создать файл `KID.Library/Music/SoundNote.cs` со структурой `SoundNote`
 - [ ] Добавить конструкторы и методы валидации
 - [ ] Добавить XML-документацию
 
@@ -169,8 +169,8 @@ public static void Sound(IEnumerable<IEnumerable<SoundNote>> tracks)
 
 ### 3.4. Обновление примеров использования
 
-- [ ] Обновить `KID/ProjectTemplates/Demo1.ru.cs`
-- [ ] Обновить `KID/ProjectTemplates/Demo1.FullStructure.ru.cs`
+- [ ] Обновить `KID.WPF.IDE/ProjectTemplates/Demo1.ru.cs`
+- [ ] Обновить `KID.WPF.IDE/ProjectTemplates/Demo1.FullStructure.ru.cs`
 - [ ] Проверить другие шаблоны на использование Music API
 
 ### 3.5. Обновление документации
@@ -331,14 +331,14 @@ Music.Sound(
 
 ## 7. Файлы для создания
 
-1. `KID/KIDLibrary/Music/Music.SoundNote.cs` - структура SoundNote
+1. `KID.Library/Music/SoundNote.cs` - структура SoundNote
 
 ## 8. Файлы для изменения
 
-1. `KID/KIDLibrary/Music/Music.Sound.cs` - обновление методов Sound()
-2. `KID/KIDLibrary/Music/Music.Polyphony.cs` - обновление PlayPolyphonic()
-3. `KID/ProjectTemplates/Demo1.ru.cs` - обновление примера
-4. `KID/ProjectTemplates/Demo1.FullStructure.ru.cs` - обновление примера
+1. `KID.Library/Music/Music.Sound.cs` - обновление методов Sound()
+2. `KID.Library/Music/Music.Polyphony.cs` - обновление PlayPolyphonic()
+3. `KID.WPF.IDE/ProjectTemplates/Demo1.ru.cs` - обновление примера
+4. `KID.WPF.IDE/ProjectTemplates/Demo1.FullStructure.ru.cs` - обновление примера
 5. `docs/Music-API.md` - обновление документации
 
 ## 9. Преимущества рефакторинга

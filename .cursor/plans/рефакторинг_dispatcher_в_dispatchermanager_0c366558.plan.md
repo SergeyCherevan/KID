@@ -86,7 +86,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 1. Создание DispatcherManager
 
-**Файл**: `KID/Services/CodeExecution/DispatcherManager.cs` (новый)
+**Файл**: `KID.WPF.IDE/Services/CodeExecution/DispatcherManager.cs` (новый)
 
 Создать статический класс с:
 
@@ -103,7 +103,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 2. Добавление поля Dispatcher в CodeExecutionContext
 
-**Файл**: `KID/Services/CodeExecution/Contexts/CodeExecutionContext.cs`
+**Файл**: `KID.WPF.IDE/Services/CodeExecution/Contexts/CodeExecutionContext.cs`
 
 - Добавить публичное свойство `Dispatcher? Dispatcher { get; set; }`
 - В методе `Init()` добавить вызов `DispatcherManager.Init(Dispatcher)` после проверки на null
@@ -114,7 +114,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 3. Обновление CanvasTextBoxContextFabric
 
-**Файл**: `KID/Services/CodeExecution/Contexts/CanvasTextBoxContextFabric.cs`
+**Файл**: `KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasTextBoxContextFabric.cs`
 
 - Добавить конструктор с параметром `App app` (получается из DI)
 - В методе `Create()` установить `context.Dispatcher = app.Dispatcher` перед возвратом
@@ -125,7 +125,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 4. Рефакторинг Graphics.System.cs
 
-**Файл**: `KID/KIDLibrary/Graphics/Graphics.System.cs`
+**Файл**: `KID.Library/Graphics/Graphics.System.cs`
 
 - Удалить `private static Dispatcher dispatcher;` (строка 16)
 - Удалить установку dispatcher в `Init()` (строка 24)
@@ -141,7 +141,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 5. Рефакторинг Mouse.System.cs
 
-**Файл**: `KID/KIDLibrary/Mouse/Mouse.System.cs`
+**Файл**: `KID.Library/Mouse/Mouse.System.cs`
 
 - Удалить `private static Dispatcher dispatcher;` (строка 23)
 - Удалить установку dispatcher в `Init()` (строка 41)
@@ -157,7 +157,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 6. Рефакторинг Music.System.cs
 
-**Файл**: `KID/KIDLibrary/Music/Music.System.cs`
+**Файл**: `KID.Library/Music/Music.System.cs`
 
 - Удалить `private static Dispatcher? _dispatcher;` (строка 14)
 - Удалить установку _dispatcher в `Init()` (строка 22)
@@ -173,7 +173,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 7. Рефакторинг TextBoxConsole.cs
 
-**Файл**: `KID/Services/CodeExecution/TextBoxConsole.cs`
+**Файл**: `KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs`
 
 - Удалить `private readonly Dispatcher dispatcher;` (строка 19)
 - Удалить установку dispatcher в конструкторе (строка 33)
@@ -187,7 +187,7 @@ DispatcherManager → Graphics/Mouse/Music/TextBoxConsole (использова�
 
 ### 8. Обновление регистрации в DI
 
-**Файл**: `KID/Services/DI/ServiceCollectionExtensions.cs`
+**Файл**: `KID.WPF.IDE/Services/DI/ServiceCollectionExtensions.cs`
 
 Убедиться, что `CanvasTextBoxContextFabric` зарегистрирован как Singleton (уже есть на строке 27). Проверить, что `App` зарегистрирован (строка 53).
 

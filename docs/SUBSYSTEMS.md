@@ -12,7 +12,7 @@
 ### Компоненты
 
 #### 1.1. CodeExecutionService
-**Файл:** `Services/CodeExecution/CodeExecutionService.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/CodeExecutionService.cs`
 
 **Ответственность:**
 - Координация процесса выполнения кода
@@ -28,7 +28,7 @@
 - Освобождает контекст после выполнения
 
 #### 1.2. CSharpCompiler
-**Файл:** `Services/CodeExecution/CSharpCompiler.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs`
 
 **Ответственность:**
 - Парсинг C# кода
@@ -50,7 +50,7 @@
 - Работает с обоими вариантами: с `using System;` и без него
 
 #### 1.3. DefaultCodeRunner
-**Файл:** `Services/CodeExecution/DefaultCodeRunner.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/DefaultCodeRunner.cs`
 
 **Ответственность:**
 - Выполнение скомпилированной сборки
@@ -68,29 +68,29 @@
 
 #### 1.4. Контексты выполнения
 
-**CodeExecutionContext** (`Contexts/CodeExecutionContext.cs`)
+**CodeExecutionContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CodeExecutionContext.cs`)
 - Объединяет графический и консольный контексты
 - Управляет инициализацией и освобождением ресурсов
 - Содержит CancellationToken для отмены
 - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
 - Инициализирует `DispatcherManager` в методе `Init()` перед инициализацией контекстов
 
-**CanvasGraphicsContext** (`Contexts/CanvasGraphicsContext.cs`)
+**CanvasGraphicsContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs`)
 - Инициализирует Graphics API с Canvas
 - Реализует `IGraphicsContext`
 
-**TextBoxConsoleContext** (`Contexts/TextBoxConsoleContext.cs`)
+**TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
 - Инициализирует консоль с TextBox
 - Реализует `IConsoleContext`
 
-**CanvasTextBoxContextFabric** (`Contexts/CanvasTextBoxContextFabric.cs`)
+**CanvasTextBoxContextFabric** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasTextBoxContextFabric.cs`)
 - Фабрика для создания контекстов выполнения
 - Создаёт CodeExecutionContext с нужными контекстами
 - Получает `App` из DI контейнера через конструктор
 - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
 #### 1.5. TextBoxConsole
-**Файл:** `Services/CodeExecution/TextBoxConsole.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs`
 
 **Ответственность:**
 - Реализация IConsole для WPF TextBox
@@ -128,7 +128,7 @@
 ### Компоненты
 
 #### 2.1. TextBoxConsole
-**Файл:** `Services/CodeExecution/TextBoxConsole.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs`
 
 **Ответственность:**
 - Реализация интерфейса IConsole для WPF TextBox
@@ -164,7 +164,7 @@
 - Блокирующий ввод с ожиданием пользовательского ввода
 
 #### 2.2. TextBoxConsoleContext
-**Файл:** `Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
 
 **Ответственность:**
 - Инициализация TextBoxConsole с TextBox из ViewModel
@@ -184,7 +184,7 @@
 ### Компоненты
 
 #### 2.1. CodeFileService
-**Файл:** `Services/Files/CodeFileService.cs`
+**Файл:** `KID.WPF.IDE/Services/Files/CodeFileService.cs`
 
 **Ответственность:**
 - Открытие .cs файлов
@@ -201,7 +201,7 @@
 - Асинхронные операции
 
 #### 2.2. FileDialogService
-**Файл:** `Services/Files/FileDialogService.cs`
+**Файл:** `KID.WPF.IDE/Services/Files/FileDialogService.cs`
 
 **Ответственность:**
 - Показ диалогов открытия/сохранения файлов
@@ -212,7 +212,7 @@
 - `ShowSaveDialog(string filter, string defaultFileName)` — показывает диалог сохранения
 
 #### 2.3. FileService
-**Файл:** `Services/Files/FileService.cs`
+**Файл:** `KID.WPF.IDE/Services/Files/FileService.cs`
 
 **Ответственность:**
 - Чтение файлов
@@ -231,7 +231,7 @@
 ### Компоненты
 
 #### 3.1. LocalizationService
-**Файл:** `Services/Localization/LocalizationService.cs`
+**Файл:** `KID.WPF.IDE/Services/Localization/LocalizationService.cs`
 
 **Ответственность:**
 - Загрузка локализованных строк из .resx файлов
@@ -257,7 +257,7 @@
 - uk-UA (Украинский)
 
 #### 3.2. LocalizationMarkupExtension
-**Файл:** `Services/Localization/LocalizationMarkupExtension.cs`
+**Файл:** `KID.WPF.IDE/Services/Localization/LocalizationMarkupExtension.cs`
 
 **Ответственность:**
 - XAML расширение для привязки локализованных строк
@@ -275,9 +275,9 @@
 #### 3.3. Ресурсы локализации
 
 **Файлы:**
-- `Resources/Strings.ru-RU.resx` — русские строки
-- `Resources/Strings.en-US.resx` — английские строки
-- `Resources/Strings.uk-UA.resx` — украинские строки
+- `KID.WPF.IDE/Resources/Strings.ru-RU.resx` — русские строки
+- `KID.WPF.IDE/Resources/Strings.en-US.resx` — английские строки
+- `KID.WPF.IDE/Resources/Strings.uk-UA.resx` — украинские строки
 
 **Структура ключей:**
 - `Menu_*` — пункты меню
@@ -295,7 +295,7 @@
 ### Компоненты
 
 #### 4.1. ThemeService
-**Файл:** `Services/Themes/ThemeService.cs`
+**Файл:** `KID.WPF.IDE/Services/Themes/ThemeService.cs`
 
 **Ответственность:**
 - Применение тем оформления
@@ -317,11 +317,11 @@
 
 #### 4.2. Файлы тем
 
-**LightTheme.xaml** (`Themes/LightTheme.xaml`)
+**LightTheme.xaml** (`KID.WPF.IDE/Themes/LightTheme.xaml`)
 - Светлая цветовая схема
 - Определяет кисти, цвета, стили для светлой темы
 
-**DarkTheme.xaml** (`Themes/DarkTheme.xaml`)
+**DarkTheme.xaml** (`KID.WPF.IDE/Themes/DarkTheme.xaml`)
 - Тёмная цветовая схема
 - Определяет кисти, цвета, стили для тёмной темы
 
@@ -341,7 +341,7 @@
 ### Компоненты
 
 #### 6.1. WindowConfigurationService
-**Файл:** `Services/Initialize/WindowConfigurationService.cs`
+**Файл:** `KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs`
 
 **Ответственность:**
 - Загрузка настроек из файла
@@ -368,7 +368,7 @@
 - `TemplateName` — путь к файлу шаблона
 
 #### 6.2. WindowInitializationService
-**Файл:** `Services/Initialize/WindowInitializationService.cs`
+**Файл:** `KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs`
 
 **Ответственность:**
 - Инициализация всех компонентов при запуске
@@ -395,7 +395,7 @@
 ### Компоненты
 
 #### 7.1. Структура данных
-**Файл:** `KIDLibrary/Music/Music.SoundNote.cs`
+**Файл:** `KID.Library/Music/SoundNote.cs`
 
 **SoundNote:**
 - Структура для представления одного звука
@@ -403,7 +403,7 @@
 - Утилиты: `IsSilence` (проверка паузы), `GetEffectiveVolume()` (эффективная громкость)
 
 #### 7.2. Базовое воспроизведение
-**Файл:** `KIDLibrary/Music/Music.Sound.cs`
+**Файл:** `KID.Library/Music/Music.Sound.cs`
 
 **Методы:**
 - `Sound(frequency, durationMs)` — воспроизведение одного тона
@@ -420,13 +420,13 @@
 - Интеграция с StopManager для отмены
 
 #### 7.3. Управление громкостью
-**Файл:** `KIDLibrary/Music/Music.Volume.cs`
+**Файл:** `KID.Library/Music/Music.Volume.cs`
 
 **Свойство:**
 - `Music.Volume` — глобальная громкость (0-10, по умолчанию 5)
 
 #### 7.4. Генерация тонов
-**Файл:** `KIDLibrary/Music/Music.ToneGeneration.cs`
+**Файл:** `KID.Library/Music/Music.ToneGeneration.cs`
 
 **Функции:**
 - Генерация синусоидальных тонов через NAudio
@@ -434,7 +434,7 @@
 - Генерация пауз (тишины)
 
 #### 7.5. Полифония
-**Файл:** `KIDLibrary/Music/Music.Polyphony.cs`
+**Файл:** `KID.Library/Music/Music.Polyphony.cs`
 
 **Функции:**
 - Одновременное воспроизведение нескольких дорожек
@@ -442,7 +442,7 @@
 - Поддержка индивидуальной громкости для каждой дорожки
 
 #### 7.6. Проигрывание файлов
-**Файл:** `KIDLibrary/Music/Music.FilePlayback.cs`
+**Файл:** `KID.Library/Music/Music.FilePlayback.cs`
 
 **Функции:**
 - Воспроизведение аудиофайлов (WAV, MP3 и др.)
@@ -450,7 +450,7 @@
 - Автоматическая загрузка и удаление временных файлов для URL
 
 #### 7.7. Расширенное API
-**Файл:** `KIDLibrary/Music/Music.Advanced.cs`
+**Файл:** `KID.Library/Music/Music.Advanced.cs`
 
 **Методы управления:**
 - `SoundPlay()`, `SoundLoad()` — асинхронное воспроизведение
@@ -474,7 +474,7 @@
 ### Компоненты
 
 #### 8.1. Системные функции
-**Файл:** `KIDLibrary/Graphics/Graphics.System.cs`
+**Файл:** `KID.Library/Graphics/Graphics.System.cs`
 
 **Функции:**
 - `Init(Canvas)` — инициализация с Canvas
@@ -486,7 +486,7 @@
 - `DispatcherManager` — статический класс для централизованного управления Dispatcher, инициализируется в `CodeExecutionContext.Init()`
 
 #### 8.2. Работа с цветами
-**Файлы:** `KIDLibrary/Graphics/Graphics.Colors.cs`, `KIDLibrary/Graphics/ColorType.cs`
+**Файлы:** `KID.Library/Graphics/Graphics.Colors.cs`, `KID.Library/Graphics/ColorType.cs`
 
 **Свойства:**
 - `FillColor` — цвет заливки фигур
@@ -505,7 +505,7 @@
 - Создание Brush в UI потоке
 
 #### 8.3. Простые фигуры
-**Файл:** `KIDLibrary/Graphics/Graphics.SimpleFigures.cs`
+**Файл:** `KID.Library/Graphics/Graphics.SimpleFigures.cs`
 
 **Фигуры:**
 - `Circle(x, y, radius)` — круг
@@ -522,7 +522,7 @@
 - Все операции выполняются в UI потоке
 
 #### 8.4. Работа с текстом
-**Файл:** `KIDLibrary/Graphics/Graphics.Text.cs`
+**Файл:** `KID.Library/Graphics/Graphics.Text.cs`
 
 **Функции:**
 - `SetFont(fontName, fontSize)` — установка шрифта
@@ -534,7 +534,7 @@
 - Использует текущий FillColor для цвета текста
 
 #### 8.5. Работа с изображениями
-**Файл:** `KIDLibrary/Graphics/Graphics.Image.cs`
+**Файл:** `KID.Library/Graphics/Graphics.Image.cs`
 
 **Методы:**
 - `Image(x, y, path, width?, height?)` — загрузка и отрисовка изображений
@@ -548,7 +548,7 @@
 - Все операции выполняются в UI потоке
 
 #### 8.6. Методы расширения для элементов
-**Файл:** `KIDLibrary/Graphics/Graphics.ExtensionMethods.cs`
+**Файл:** `KID.Library/Graphics/Graphics.ExtensionMethods.cs`
 
 **Методы позиционирования (для UIElement):**
 - `SetLeftX(x)` — установка X координаты левого края
@@ -588,13 +588,13 @@
 ### Компоненты
 
 #### 9.1. Инициализация и хуки Canvas
-**Файл:** `KIDLibrary/Mouse/Mouse.System.cs`
+**Файл:** `KID.Library/Mouse/Mouse.System.cs`
 
 **Функции:**
 - `Mouse.Init(Canvas)` — инициализация Mouse API и подписка на события мыши Canvas (Enter/Leave/Move/Down/Up)
 
 #### 9.2. Состояние
-**Файл:** `KIDLibrary/Mouse/Mouse.State.cs`
+**Файл:** `KID.Library/Mouse/Mouse.State.cs`
 
 **Свойства:**
 - `Mouse.CurrentCursor` — текущая позиция и кнопки (позиция `null`, если курсор вне Canvas)
@@ -603,7 +603,7 @@
 - `Mouse.LastClick` — последний зарегистрированный клик
 
 #### 9.3. События
-**Файл:** `KIDLibrary/Mouse/Mouse.Events.cs`
+**Файл:** `KID.Library/Mouse/Mouse.Events.cs`
 
 **События:**
 - `Mouse.MouseMoveEvent`
@@ -623,13 +623,13 @@
 ### Компоненты
 
 #### 10.1. Инициализация и хуки окна
-**Файл:** `KIDLibrary/Keyboard/Keyboard.System.cs`
+**Файл:** `KID.Library/Keyboard/Keyboard.System.cs`
 
 **Функции:**
 - `Keyboard.Init(Window)` — инициализация Keyboard API и подписка на `Window.PreviewKeyDown/PreviewKeyUp/PreviewTextInput`
 
 #### 10.2. Состояние
-**Файл:** `KIDLibrary/Keyboard/Keyboard.State.cs`
+**Файл:** `KID.Library/Keyboard/Keyboard.State.cs`
 
 **Свойства/методы:**
 - `Keyboard.CurrentState` — снимок состояния клавиатуры (модификаторы, lock-клавиши, зажатые клавиши)
@@ -639,7 +639,7 @@
 - `Keyboard.CurrentKeyPress` / `Keyboard.CurrentTextInput` — кратковременные «пульсы»
 
 #### 10.3. События
-**Файл:** `KIDLibrary/Keyboard/Keyboard.Events.cs`
+**Файл:** `KID.Library/Keyboard/Keyboard.Events.cs`
 
 **События:**
 - `Keyboard.KeyDownEvent`
@@ -659,7 +659,7 @@
 ### Компоненты
 
 #### 11.1. ServiceCollectionExtensions
-**Файл:** `Services/DI/ServiceCollectionExtensions.cs`
+**Файл:** `KID.WPF.IDE/Services/DI/ServiceCollectionExtensions.cs`
 
 **Ответственность:**
 - Регистрация всех сервисов и ViewModels
@@ -674,7 +674,7 @@
 - MainWindow регистрируется как Transient (специальный случай)
 
 #### 11.2. ServiceProviderExtension
-**Файл:** `Services/DI/ServiceProviderExtension.cs`
+**Файл:** `KID.WPF.IDE/Services/DI/ServiceProviderExtension.cs`
 
 **Ответственность:**
 - XAML расширение для получения сервисов из DI контейнера

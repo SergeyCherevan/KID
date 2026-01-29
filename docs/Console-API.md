@@ -323,8 +323,8 @@ Console.WriteLine("Время вышло!");
 ### Архитектурные особенности реализации
 
 - **Слои и разделение ответственности**
-  - Реализация консоли живёт в слое сервисов: `KID/Services/CodeExecution/*` (`TextBoxConsole`, `TextBoxConsoleContext`)
-  - Общая синхронизация UI вынесена в библиотечный слой: `KID/KIDLibrary/DispatcherManager.cs`
+  - Реализация консоли живёт в слое сервисов: `KID.WPF.IDE/Services/CodeExecution/*` (`TextBoxConsole`, `TextBoxConsoleContext`)
+  - Общая синхронизация UI вынесена в библиотечный слой: `KID.Library/DispatcherManager.cs`
 
 - **Потоковая модель и потокобезопасность**
   - Пользовательский код исполняется в фоне, но любые операции с UI выполняются через `DispatcherManager`
