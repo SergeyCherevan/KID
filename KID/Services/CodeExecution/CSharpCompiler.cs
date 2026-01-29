@@ -1,4 +1,4 @@
-﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Localization.Interfaces;
+using NAudio.Wave;
 
 namespace KID.Services.CodeExecution
 {
@@ -39,7 +40,27 @@ namespace KID.Services.CodeExecution
 
                 var references = AppDomain.CurrentDomain.GetAssemblies()
                     .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-                    .Select(a => MetadataReference.CreateFromFile(a.Location));
+                    .Select(a => MetadataReference.CreateFromFile(a.Location))
+                    .ToList();
+
+                // Явно добавляем ссылку на NAudio, чтобы пользовательские скрипты могли компилировать
+                // выражения/сигнатуры, использующие NAudio.Wave.PlaybackState (например SoundState() / SoundPlayer.State).
+                try
+                {
+                    var naudioPath = typeof(PlaybackState).Assembly.Location;
+                    if (!string.IsNullOrEmpty(naudioPath))
+                    {
+                        var alreadyAdded = references
+                            .OfType<PortableExecutableReference>()
+                            .Any(r => string.Equals(r.FilePath, naudioPath, StringComparison.OrdinalIgnoreCase));
+
+                        if (!alreadyAdded)
+                        {
+                            references.Add(MetadataReference.CreateFromFile(naudioPath));
+                        }
+                    }
+                }
+                catch { }
 
                 var compilation = CSharpCompilation.Create(
                     "UserProgram",
