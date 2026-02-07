@@ -90,6 +90,7 @@ KID/
 │   └── ProjectTemplates/# Шаблоны проектов
 └── KID.Library/         # Библиотека для пользовательского кода (API)
     ├── Graphics/        # API для графики
+    ├── Sprite/          # Спрайты (объекты из нескольких элементов, столкновения)
     ├── Music/           # API для воспроизведения звуков
     ├── Mouse/           # API для мыши
     └── Keyboard/        # API для клавиатуры
@@ -154,6 +155,7 @@ if (cursor.Position.HasValue)
 - [ProjectTemplates](ProjectTemplates.md) — полный разбор всех учебных шаблонов (скриптов) из `KID.WPF.IDE/ProjectTemplates`
 - [Console API](Console-API.md) - полная документация по Console API
 - [Graphics API](Graphics-API.md) — полная документация по Graphics API
+- [Sprite API](Sprite-API.md) — документация по спрайтам и столкновениям
 - [Music API](Music-API.md) — полная документация по Music API
 - [Mouse API](Mouse-API.md) — полная документация по Mouse API
 - [Keyboard API](Keyboard-API.md) — полная документация по Keyboard API
