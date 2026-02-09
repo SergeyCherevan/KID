@@ -5,11 +5,12 @@ using KID;
 // Bouncing ball animation.
 // What this teaches: coordinates, speed, collisions, simple game loop.
 
-var rng = new Random();
+var rng = new Random(DateTime.Now.Millisecond);
 
 double radius = 18;
-double x = 120;
-double y = 80;
+(double w, double h) = Graphics.GetCanvasSize();
+double x = rng.Next(0, (int)w);
+double y = rng.Next(0, (int)h);
 
 // pixels per second
 double vx = rng.Next(140, 260) * (rng.Next(0, 2) == 0 ? 1 : -1);
@@ -34,7 +35,7 @@ while (true)
     last = now;
     if (dt > 0.1) dt = 0.1;
 
-    (double w, double h) = Graphics.GetCanvasSize();
+    (w, h) = Graphics.GetCanvasSize();
 
     x += vx * dt;
     y += vy * dt;
