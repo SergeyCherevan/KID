@@ -18,6 +18,7 @@
         <Style TargetType="TextBlock" x:Key="TabTextStyle">
             <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
             <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             <Setter Property="MaxWidth" Value="150"/>
@@ -30,6 +31,7 @@
                         </MultiBinding>
                     </DataTrigger.Binding>
                     <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
