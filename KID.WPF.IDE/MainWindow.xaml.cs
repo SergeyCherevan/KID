@@ -15,6 +15,14 @@ namespace KID
     {
         private const int WM_GETMINMAXINFO = 0x0024;
         private const int MONITOR_DEFAULTTONEAREST = 0x00000002;
+        /// <summary>
+        /// Компенсация невидимой рамки resize в Windows 10/11 (устраняет зазор по периметру окна).
+        /// </summary>
+        private const int FrameExtension = 8;
+        /// <summary>
+        /// Дополнительное расширение по горизонтали — устраняет тонкие зазоры слева и справа.
+        /// </summary>
+        private const int HorizontalExtension = 4;
 
         private readonly IWindowInitializationService _windowInitializationService;
 
@@ -65,12 +73,17 @@ namespace KID
                     var rcWork = monitorInfo.rcWork;
                     var rcMonitor = monitorInfo.rcMonitor;
 
-                    mmi.ptMaxPosition.x = Math.Abs(rcWork.Left - rcMonitor.Left);
-                    mmi.ptMaxPosition.y = Math.Abs(rcWork.Top - rcMonitor.Top);
-                    mmi.ptMaxSize.x = Math.Abs(rcWork.Right - rcWork.Left);
-                    mmi.ptMaxSize.y = Math.Abs(rcWork.Bottom - rcWork.Top);
-                    mmi.ptMaxTrackSize.x = Math.Abs(rcWork.Right - rcWork.Left);
-                    mmi.ptMaxTrackSize.y = Math.Abs(rcWork.Bottom - rcWork.Top);
+                    var workWidth = Math.Abs(rcWork.Right - rcWork.Left);
+                    var workHeight = Math.Abs(rcWork.Bottom - rcWork.Top);
+
+                    // Компенсация невидимой рамки Windows (устраняет зазор по периметру)
+                    // Разрешаем отрицательный x для устранения зазора слева
+                    mmi.ptMaxPosition.x = Math.Abs(rcWork.Left - rcMonitor.Left) - FrameExtension / 2 - HorizontalExtension;
+                    mmi.ptMaxPosition.y = Math.Max(0, Math.Abs(rcWork.Top - rcMonitor.Top) - FrameExtension / 2);
+                    mmi.ptMaxSize.x = workWidth + FrameExtension + 2 * HorizontalExtension;
+                    mmi.ptMaxSize.y = workHeight + FrameExtension;
+                    mmi.ptMaxTrackSize.x = mmi.ptMaxSize.x;
+                    mmi.ptMaxTrackSize.y = mmi.ptMaxSize.y;
                 }
             }
 
