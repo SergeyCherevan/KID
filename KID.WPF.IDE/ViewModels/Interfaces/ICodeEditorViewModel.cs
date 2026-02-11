@@ -11,6 +11,7 @@ namespace KID.ViewModels.Interfaces
         void Initialize(ICSharpCode.AvalonEdit.TextEditor editor);
 
         string Text { get; set; }
+        string FilePath { get; set; }
         FontFamily FontFamily { get; set; }
         double FontSize { get; set; }
         bool CanUndo { get; }

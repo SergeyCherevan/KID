@@ -11,6 +11,7 @@ namespace KID.ViewModels.Interfaces
         ICommand NewFileCommand { get; }
         ICommand OpenFileCommand { get; }
         ICommand SaveFileCommand { get; }
+        ICommand SaveAsFileCommand { get; }
         ICommand RunCommand { get; }
         ICommand StopCommand { get; }
         ICommand UndoCommand { get; }

@@ -85,6 +85,9 @@
   <data name="Menu_Save" xml:space="preserve">
     <value>Сохранить</value>
   </data>
+  <data name="Menu_SaveAs" xml:space="preserve">
+    <value>Сохранить как</value>
+  </data>
   <data name="Menu_Undo" xml:space="preserve">
     <value>Отменить</value>
   </data>

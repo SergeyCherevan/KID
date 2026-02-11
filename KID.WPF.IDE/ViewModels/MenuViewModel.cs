@@ -1,3 +1,4 @@
+using System.IO;
 using KID.Models;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
@@ -112,7 +113,8 @@ namespace KID.ViewModels
 
             NewFileCommand = new RelayCommand(ExecuteNewFile);
             OpenFileCommand = new RelayCommand(ExecuteOpenFile);
-            SaveFileCommand = new RelayCommand(ExecuteSaveFile);
+            SaveFileCommand = new RelayCommand(ExecuteSaveFile, () => CanSaveFile);
+            SaveAsFileCommand = new RelayCommand(ExecuteSaveAsFile);
             RunCommand = new RelayCommand(ExecuteRun, () => !IsStopButtonEnabled);
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
@@ -152,6 +154,10 @@ namespace KID.ViewModels
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
             }
+            if (e.PropertyName == nameof(ICodeEditorViewModel.FilePath))
+            {
+                CommandManager.InvalidateRequerySuggested();
+            }
         }
 
         public bool IsStopButtonEnabled
@@ -169,9 +175,17 @@ namespace KID.ViewModels
         public bool CanUndo => codeEditorViewModel.CanUndo;
         public bool CanRedo => codeEditorViewModel.CanRedo;
 
+        private bool CanSaveFile => !string.IsNullOrEmpty(codeEditorViewModel.FilePath) &&
+            !IsNewFilePath(codeEditorViewModel.FilePath);
+
+        private static bool IsNewFilePath(string path) =>
+            path.EndsWith("NewFile.cs", StringComparison.OrdinalIgnoreCase) ||
+            path == "/NewFile.cs";
+
         public ICommand NewFileCommand { get; }
         public ICommand OpenFileCommand { get; }
         public ICommand SaveFileCommand { get; }
+        public ICommand SaveAsFileCommand { get; }
         public ICommand RunCommand { get; }
         public ICommand StopCommand { get; }
         public ICommand UndoCommand { get; }
@@ -193,6 +207,7 @@ namespace KID.ViewModels
             var code = windowConfigurationService.Settings.TemplateCode;
 
             codeEditorViewModel.Text = code ?? string.Empty;
+            codeEditorViewModel.FilePath = CodeEditorViewModel.NewFilePath;
             consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
             graphicsOutputViewModel.Clear();
         }
@@ -209,10 +224,11 @@ namespace KID.ViewModels
                 localizationService == null)
                 return;
             
-            var code = await codeFileService.OpenCodeFileAsync(GetFileFilter());
-            if (code != null)
+            var result = await codeFileService.OpenCodeFileWithPathAsync(GetFileFilter());
+            if (result != null)
             {
-                codeEditorViewModel.Text = code;
+                codeEditorViewModel.Text = result.Code;
+                codeEditorViewModel.FilePath = result.FilePath;
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
             }
@@ -222,12 +238,36 @@ namespace KID.ViewModels
         {
             if (codeEditorViewModel == null || codeFileService == null)
                 return;
-            
+
+            if (!CanSaveFile)
+            {
+                ExecuteSaveAsFile();
+                return;
+            }
+
             var code = codeEditorViewModel.Text;
             if (!string.IsNullOrEmpty(code))
             {
-                await codeFileService.SaveCodeFileAsync(code, GetFileFilter());
+                await codeFileService.SaveToPathAsync(codeEditorViewModel.FilePath, code);
             }
+        }
+
+        private async void ExecuteSaveAsFile()
+        {
+            if (codeEditorViewModel == null || codeFileService == null)
+                return;
+
+            var code = codeEditorViewModel.Text;
+            if (string.IsNullOrEmpty(code))
+                return;
+
+            var defaultFileName = IsNewFilePath(codeEditorViewModel.FilePath)
+                ? "NewFile.cs"
+                : Path.GetFileName(codeEditorViewModel.FilePath);
+
+            var savedPath = await codeFileService.SaveCodeFileAsync(code, GetFileFilter(), defaultFileName);
+            if (savedPath != null)
+                codeEditorViewModel.FilePath = savedPath;
         }
 
         private async void ExecuteRun()

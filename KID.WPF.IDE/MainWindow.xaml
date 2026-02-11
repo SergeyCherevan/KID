@@ -27,6 +27,13 @@
         <converters:WindowStateToMarginConverter x:Key="WindowStateToMarginConverter" />
     </Window.Resources>
 
+    <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Ctrl" Command="{Binding DataContext.NewFileCommand, ElementName=MenuView}" />
+        <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding DataContext.OpenFileCommand, ElementName=MenuView}" />
+        <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding DataContext.SaveFileCommand, ElementName=MenuView}" />
+        <KeyBinding Key="S" Modifiers="Ctrl+Shift" Command="{Binding DataContext.SaveAsFileCommand, ElementName=MenuView}" />
+    </Window.InputBindings>
+
     <Window.Style>
         <Style TargetType="Window">
             <Setter Property="shell:WindowChrome.WindowChrome">

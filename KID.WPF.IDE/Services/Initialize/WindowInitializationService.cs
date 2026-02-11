@@ -119,6 +119,8 @@ namespace KID.Services.Initialize
             {
                 codeEditorViewModel.Text = windowConfigurationService.Settings.TemplateCode;
             }
+
+            codeEditorViewModel.FilePath = CodeEditorViewModel.NewFilePath;
         }
 
         private void InitializeConsole()

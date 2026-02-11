@@ -3,10 +3,11 @@ using KID.Services.Files.Interfaces;
 
 namespace KID.Services.Files
 {
+    /// <summary>
+    /// Реализация сервиса работы с файлами кода.
+    /// </summary>
     public class CodeFileService : ICodeFileService
     {
-        private const string DefaultFileName = "Program.cs";
-
         private readonly IFileService fileService;
         private readonly IFileDialogService fileDialogService;
 
@@ -16,25 +17,41 @@ namespace KID.Services.Files
             this.fileDialogService = fileDialogService ?? throw new System.ArgumentNullException(nameof(fileDialogService));
         }
 
-        public async Task<string?> OpenCodeFileAsync(string fileFilter)
+        /// <inheritdoc />
+        public async Task<OpenFileResult?> OpenCodeFileWithPathAsync(string fileFilter)
         {
             var filePath = fileDialogService.ShowOpenDialog(fileFilter);
             if (filePath == null)
                 return null;
 
-            return await fileService.ReadFileAsync(filePath);
+            var code = await fileService.ReadFileAsync(filePath);
+            if (code == null)
+                return null;
+
+            return new OpenFileResult(code, filePath);
         }
 
-        public async Task SaveCodeFileAsync(string code, string fileFilter)
+        /// <inheritdoc />
+        public async Task SaveToPathAsync(string filePath, string code)
         {
-            if (string.IsNullOrWhiteSpace(code))
-                return;
-
-            var filePath = fileDialogService.ShowSaveDialog(fileFilter, DefaultFileName);
-            if (filePath == null)
+            if (string.IsNullOrWhiteSpace(filePath))
                 return;
 
             await fileService.WriteFileAsync(filePath, code);
+        }
+
+        /// <inheritdoc />
+        public async Task<string?> SaveCodeFileAsync(string code, string fileFilter, string defaultFileName)
+        {
+            if (string.IsNullOrWhiteSpace(code))
+                return null;
+
+            var filePath = fileDialogService.ShowSaveDialog(fileFilter, defaultFileName);
+            if (filePath == null)
+                return null;
+
+            await fileService.WriteFileAsync(filePath, code);
+            return filePath;
         }
     }
 }

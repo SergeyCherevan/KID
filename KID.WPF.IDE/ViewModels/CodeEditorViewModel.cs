@@ -9,6 +9,13 @@ namespace KID.ViewModels
 {
     public class CodeEditorViewModel : ViewModelBase, ICodeEditorViewModel
     {
+        /// <summary>
+        /// Путь для нового несохранённого файла.
+        /// </summary>
+        public const string NewFilePath = "/NewFile.cs";
+
+        private string filePath = NewFilePath;
+
         public TextEditor TextEditor { get; private set; }
 
         public CodeEditorViewModel()
@@ -36,6 +43,15 @@ namespace KID.ViewModels
                 if (TextEditor != null)
                     TextEditor.Text = value;
             }
+        }
+
+        /// <summary>
+        /// Путь к текущему файлу. Для нового файла — "/NewFile.cs".
+        /// </summary>
+        public string FilePath
+        {
+            get => filePath;
+            set => SetProperty(ref filePath, value ?? NewFilePath);
         }
 
         public FontFamily FontFamily

@@ -20,9 +20,10 @@
     <StackPanel Orientation="Horizontal" Background="{DynamicResource MenuBrush}">
         <Menu Margin="0,0,0,10">
             <MenuItem Header="{localization:Localization Menu_File}">
-                <MenuItem Header="{localization:Localization Menu_New}" Command="{Binding NewFileCommand}" />
-                <MenuItem Header="{localization:Localization Menu_Open}" Command="{Binding OpenFileCommand}" />
-                <MenuItem Header="{localization:Localization Menu_Save}" Command="{Binding SaveFileCommand}" />
+                <MenuItem Header="{localization:Localization Menu_New}" InputGestureText="Ctrl+N" Command="{Binding NewFileCommand}" />
+                <MenuItem Header="{localization:Localization Menu_Open}" InputGestureText="Ctrl+O" Command="{Binding OpenFileCommand}" />
+                <MenuItem Header="{localization:Localization Menu_Save}" InputGestureText="Ctrl+S" Command="{Binding SaveFileCommand}" />
+                <MenuItem Header="{localization:Localization Menu_SaveAs}" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveAsFileCommand}" />
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_Edit}">
                 <MenuItem Header="{localization:Localization Menu_Undo}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
