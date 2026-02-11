@@ -55,6 +55,38 @@ namespace KID
             var handle = new WindowInteropHelper(this).Handle;
             var source = HwndSource.FromHwnd(handle);
             source?.AddHook(WindowProc);
+
+            ApplyRectangularRegion(handle);
+            SizeChanged += MainWindow_SizeChanged;
+        }
+
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            var handle = new WindowInteropHelper(this).Handle;
+            if (handle != IntPtr.Zero)
+                ApplyRectangularRegion(handle);
+        }
+
+        /// <summary>
+        /// Применяет прямоугольную область окна для устранения закругления углов DWM (Windows 10/11).
+        /// </summary>
+        private static void ApplyRectangularRegion(IntPtr hwnd)
+        {
+            if (hwnd == IntPtr.Zero) return;
+
+            if (!GetWindowRect(hwnd, out RECT rect))
+                return;
+
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+            if (width <= 0 || height <= 0) return;
+
+            IntPtr hRgn = CreateRectRgn(0, 0, width, height);
+            if (hRgn != IntPtr.Zero)
+            {
+                if (SetWindowRgn(hwnd, hRgn, true) == 0)
+                    DeleteObject(hRgn); // Освобождаем только при неудаче; при успехе система забирает регион
+            }
         }
 
         private static IntPtr WindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -107,6 +139,18 @@ namespace KID
 
         [DllImport("user32.dll")]
         private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
+
+        [DllImport("gdi32.dll")]
+        private static extern IntPtr CreateRectRgn(int x1, int y1, int x2, int y2);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
 
         [StructLayout(LayoutKind.Sequential)]
         private struct POINT
