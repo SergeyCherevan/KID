@@ -39,6 +39,26 @@ namespace KID.ViewModels
         public ObservableCollection<string> AvailableFonts { get; }
         public ObservableCollection<double> AvailableFontSizes { get; }
 
+        /// <summary>
+        /// Выбранная тема (для отображения галочки в меню).
+        /// </summary>
+        public string SelectedThemeKey => windowConfigurationService?.Settings?.ColorTheme ?? string.Empty;
+
+        /// <summary>
+        /// Выбранный язык интерфейса (для отображения галочки в меню).
+        /// </summary>
+        public string SelectedCultureCode => windowConfigurationService?.Settings?.UILanguage ?? string.Empty;
+
+        /// <summary>
+        /// Выбранный шрифт (для отображения галочки в меню).
+        /// </summary>
+        public string SelectedFontFamily => windowConfigurationService?.Settings?.FontFamily ?? string.Empty;
+
+        /// <summary>
+        /// Выбранный размер шрифта (для отображения галочки в меню).
+        /// </summary>
+        public double SelectedFontSize => windowConfigurationService?.Settings?.FontSize ?? 0.0;
+
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
             ICodeExecutionService codeExecutionService,
@@ -109,6 +129,19 @@ namespace KID.ViewModels
                 UpdateLanguageDisplayNames();
                 UpdateThemeDisplayNames();
             };
+
+            RefreshSelectedSettings();
+        }
+
+        /// <summary>
+        /// Обновляет отображение галочек у выбранных параметров в меню.
+        /// </summary>
+        private void RefreshSelectedSettings()
+        {
+            OnPropertyChanged(nameof(SelectedThemeKey));
+            OnPropertyChanged(nameof(SelectedCultureCode));
+            OnPropertyChanged(nameof(SelectedFontFamily));
+            OnPropertyChanged(nameof(SelectedFontSize));
         }
 
         private void CodeEditorViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -268,6 +301,7 @@ namespace KID.ViewModels
             // Сохраняем выбранный язык в настройках
             windowConfigurationService.Settings.UILanguage = language.CultureCode;
             windowConfigurationService.SaveSettings();
+            OnPropertyChanged(nameof(SelectedCultureCode));
         }
 
         private void UpdateLanguageDisplayNames()
@@ -298,6 +332,7 @@ namespace KID.ViewModels
             // Сохраняем выбранную тему в настройках
             windowConfigurationService.Settings.ColorTheme = theme.ThemeKey;
             windowConfigurationService.SaveSettings();
+            OnPropertyChanged(nameof(SelectedThemeKey));
         }
 
         private void UpdateThemeDisplayNames()
@@ -326,6 +361,7 @@ namespace KID.ViewModels
             consoleOutputViewModel.FontFamily = fontFamily;
             windowConfigurationService.Settings.FontFamily = fontFamilyName;
             windowConfigurationService.SaveSettings();
+            OnPropertyChanged(nameof(SelectedFontFamily));
         }
 
         private void ChangeFontSize(double fontSize)
@@ -337,6 +373,7 @@ namespace KID.ViewModels
             consoleOutputViewModel.FontSize = fontSize;
             windowConfigurationService.Settings.FontSize = fontSize;
             windowConfigurationService.SaveSettings();
+            OnPropertyChanged(nameof(SelectedFontSize));
         }
     }
 }

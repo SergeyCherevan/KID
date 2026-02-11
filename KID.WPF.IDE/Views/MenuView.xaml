@@ -10,6 +10,7 @@
 
     <UserControl.Resources>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+        <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
     </UserControl.Resources>
 
     <UserControl.DataContext>
@@ -33,8 +34,17 @@
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
                             <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
+                            <Setter Property="IsChecked">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource EqualityToBoolConverter}" Mode="OneWay">
+                                        <Binding Path="DataContext.SelectedThemeKey" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                        <Binding Path="ThemeKey" />
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
@@ -43,8 +53,17 @@
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
                             <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeLanguageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
+                            <Setter Property="IsChecked">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource EqualityToBoolConverter}" Mode="OneWay">
+                                        <Binding Path="DataContext.SelectedCultureCode" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                        <Binding Path="CultureCode" />
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
@@ -53,8 +72,17 @@
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
                             <Setter Property="Header" Value="{Binding}" />
+                            <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeFontCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
+                            <Setter Property="IsChecked">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource EqualityToBoolConverter}" Mode="OneWay">
+                                        <Binding Path="DataContext.SelectedFontFamily" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                        <Binding Path="." />
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
@@ -63,8 +91,17 @@
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
                             <Setter Property="Header" Value="{Binding}" />
+                            <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeFontSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
+                            <Setter Property="IsChecked">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource EqualityToBoolConverter}" Mode="OneWay">
+                                        <Binding Path="DataContext.SelectedFontSize" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                        <Binding Path="." />
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
