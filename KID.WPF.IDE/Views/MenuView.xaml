@@ -26,8 +26,8 @@
                 <MenuItem Header="{localization:Localization Menu_SaveAs}" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveAsFileCommand}" />
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_Edit}">
-                <MenuItem Header="{localization:Localization Menu_Undo}" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
-                <MenuItem Header="{localization:Localization Menu_Redo}" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
+                <MenuItem Header="{localization:Localization Menu_Undo}" InputGestureText="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />
+                <MenuItem Header="{localization:Localization Menu_Redo}" InputGestureText="Ctrl+Y" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}" />
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_View}">
                 <MenuItem Header="{localization:Localization Menu_Theme}" 
@@ -107,8 +107,8 @@
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="{localization:Localization Menu_Run}" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
-            <MenuItem Header="{localization:Localization Menu_Stop}" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />
+            <MenuItem Header="{localization:Localization Menu_Run}" InputGestureText="Ctrl+F5" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
+            <MenuItem Header="{localization:Localization Menu_Stop}" InputGestureText="Shift+F5" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />
         </Menu>
     </StackPanel>
 </UserControl>

@@ -32,6 +32,10 @@
         <KeyBinding Key="O" Modifiers="Ctrl" Command="{Binding DataContext.OpenFileCommand, ElementName=MenuView}" />
         <KeyBinding Key="S" Modifiers="Ctrl" Command="{Binding DataContext.SaveFileCommand, ElementName=MenuView}" />
         <KeyBinding Key="S" Modifiers="Ctrl+Shift" Command="{Binding DataContext.SaveAsFileCommand, ElementName=MenuView}" />
+        <KeyBinding Key="F5" Modifiers="Ctrl" Command="{Binding DataContext.RunCommand, ElementName=MenuView}" />
+        <KeyBinding Key="F5" Modifiers="Shift" Command="{Binding DataContext.StopCommand, ElementName=MenuView}" />
+        <KeyBinding Key="Z" Modifiers="Ctrl" Command="{Binding DataContext.UndoCommand, ElementName=MenuView}" />
+        <KeyBinding Key="Y" Modifiers="Ctrl" Command="{Binding DataContext.RedoCommand, ElementName=MenuView}" />
     </Window.InputBindings>
 
     <Window.Style>
