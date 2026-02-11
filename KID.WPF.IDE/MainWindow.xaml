@@ -112,7 +112,7 @@
             </Grid.ColumnDefinitions>
 
             <!-- Код -->
-            <views:CodeEditorView x:Name="CodeEditorView" Grid.Column="0" Margin="0" />
+            <views:CodeEditorsView x:Name="CodeEditorsView" Grid.Column="0" Margin="0" />
 
             <!-- Разделитель -->
             <GridSplitter Grid.Column="1" Width="5"

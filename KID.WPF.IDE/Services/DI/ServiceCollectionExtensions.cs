@@ -49,7 +49,7 @@ namespace KID.Services.DI
             // ViewModels
             services.AddSingleton<IMainViewModel, MainViewModel>();
             services.AddSingleton<IMenuViewModel, MenuViewModel>();
-            services.AddSingleton<ICodeEditorViewModel, CodeEditorViewModel>();
+            services.AddSingleton<ICodeEditorsViewModel, CodeEditorsViewModel>();
             services.AddSingleton<IConsoleOutputViewModel, ConsoleOutputViewModel>();
             services.AddSingleton<IGraphicsOutputViewModel, GraphicsOutputViewModel>();
 

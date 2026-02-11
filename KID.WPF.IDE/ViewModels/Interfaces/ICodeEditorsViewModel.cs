@@ -6,9 +6,15 @@ using KID.Models;
 
 namespace KID.ViewModels.Interfaces
 {
-    public interface ICodeEditorViewModel
+    /// <summary>
+    /// Интерфейс ViewModel для панели редакторов кода с вкладками.
+    /// </summary>
+    public interface ICodeEditorsViewModel
     {
-        TextEditor? TextEditor { get; }
+        /// <summary>
+        /// CodeEditor активной вкладки (для совместимости с меню).
+        /// </summary>
+        TextEditor? CodeEditor { get; }
 
         /// <summary>
         /// Коллекция открытых вкладок.
@@ -19,8 +25,6 @@ namespace KID.ViewModels.Interfaces
         /// Активная вкладка.
         /// </summary>
         OpenedFileTab? ActiveFile { get; set; }
-
-        void Initialize(ICSharpCode.AvalonEdit.TextEditor editor);
 
         string Text { get; set; }
         string FilePath { get; set; }

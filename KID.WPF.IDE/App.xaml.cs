@@ -30,15 +30,15 @@ namespace KID
             try
             {
                 var settingsService = ServiceProvider.GetRequiredService<IWindowConfigurationService>();
-                var codeEditorViewModel = ServiceProvider.GetService<ICodeEditorViewModel>();
+                var codeEditorsViewModel = ServiceProvider.GetService<ICodeEditorsViewModel>();
                 
-                if (codeEditorViewModel != null && settingsService.Settings != null)
+                if (codeEditorsViewModel != null && settingsService.Settings != null)
                 {
-                    var fontFamily = codeEditorViewModel.FontFamily;
+                    var fontFamily = codeEditorsViewModel.FontFamily;
                     if (fontFamily != null && !string.IsNullOrEmpty(fontFamily.Source))
                         settingsService.Settings.FontFamily = fontFamily.Source;
-                    if (codeEditorViewModel.FontSize > 0)
-                        settingsService.Settings.FontSize = codeEditorViewModel.FontSize;
+                    if (codeEditorsViewModel.FontSize > 0)
+                        settingsService.Settings.FontSize = codeEditorsViewModel.FontSize;
                 }
                 
                 settingsService.SaveSettings();

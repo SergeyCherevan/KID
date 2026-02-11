@@ -27,7 +27,7 @@ namespace KID.ViewModels
 
         private readonly IWindowConfigurationService windowConfigurationService;
 
-        private readonly ICodeEditorViewModel codeEditorViewModel;
+        private readonly ICodeEditorsViewModel codeEditorsViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
         private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
         private readonly ICodeFileService codeFileService;
@@ -64,7 +64,7 @@ namespace KID.ViewModels
             IWindowConfigurationService windowConfigurationService,
             ICodeExecutionService codeExecutionService,
             CanvasTextBoxContextFabric canvasTextBoxContextFabric,
-            ICodeEditorViewModel codeEditorViewModel,
+            ICodeEditorsViewModel codeEditorsViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel,
             ICodeFileService codeFileService,
@@ -77,7 +77,7 @@ namespace KID.ViewModels
             this.codeExecutionService = codeExecutionService ?? throw new ArgumentNullException(nameof(codeExecutionService));
             this.canvasTextBoxContextFabric = canvasTextBoxContextFabric ?? throw new ArgumentNullException(nameof(canvasTextBoxContextFabric));
 
-            this.codeEditorViewModel = codeEditorViewModel ?? throw new ArgumentNullException(nameof(codeEditorViewModel));
+            this.codeEditorsViewModel = codeEditorsViewModel ?? throw new ArgumentNullException(nameof(codeEditorsViewModel));
             this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
             this.graphicsOutputViewModel = graphicsOutputViewModel ?? throw new ArgumentNullException(nameof(graphicsOutputViewModel));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
@@ -105,8 +105,8 @@ namespace KID.ViewModels
             // Обновляем локализованные имена для всех тем
             UpdateThemeDisplayNames();
 
-            // Подписываемся на изменения свойств codeEditorViewModel
-            if (codeEditorViewModel is INotifyPropertyChanged notifyPropertyChanged)
+            // Подписываемся на изменения свойств codeEditorsViewModel
+            if (codeEditorsViewModel is INotifyPropertyChanged notifyPropertyChanged)
             {
                 notifyPropertyChanged.PropertyChanged += CodeEditorViewModel_PropertyChanged;
             }
@@ -148,14 +148,14 @@ namespace KID.ViewModels
 
         private void CodeEditorViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(ICodeEditorViewModel.CanUndo) ||
-                e.PropertyName == nameof(ICodeEditorViewModel.CanRedo))
+            if (e.PropertyName == nameof(ICodeEditorsViewModel.CanUndo) ||
+                e.PropertyName == nameof(ICodeEditorsViewModel.CanRedo))
             {
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
             }
-            if (e.PropertyName == nameof(ICodeEditorViewModel.FilePath) ||
-                e.PropertyName == nameof(ICodeEditorViewModel.ActiveFile))
+            if (e.PropertyName == nameof(ICodeEditorsViewModel.FilePath) ||
+                e.PropertyName == nameof(ICodeEditorsViewModel.ActiveFile))
             {
                 CommandManager.InvalidateRequerySuggested();
             }
@@ -173,11 +173,11 @@ namespace KID.ViewModels
                 }
             }
         }
-        public bool CanUndo => codeEditorViewModel.CanUndo;
-        public bool CanRedo => codeEditorViewModel.CanRedo;
+        public bool CanUndo => codeEditorsViewModel.CanUndo;
+        public bool CanRedo => codeEditorsViewModel.CanRedo;
 
-        private bool CanSaveFile => !string.IsNullOrEmpty(codeEditorViewModel.FilePath) &&
-            !IsNewFilePath(codeEditorViewModel.FilePath);
+        private bool CanSaveFile => !string.IsNullOrEmpty(codeEditorsViewModel.FilePath) &&
+            !IsNewFilePath(codeEditorsViewModel.FilePath);
 
         private static bool IsNewFilePath(string path) =>
             path.EndsWith("NewFile.cs", StringComparison.OrdinalIgnoreCase) ||
@@ -199,14 +199,14 @@ namespace KID.ViewModels
         private void ExecuteNewFile()
         {
             if (windowConfigurationService?.Settings == null || 
-                codeEditorViewModel == null || 
+                codeEditorsViewModel == null || 
                 consoleOutputViewModel == null || 
                 graphicsOutputViewModel == null ||
                 localizationService == null)
                 return;
             
             var code = windowConfigurationService.Settings.TemplateCode;
-            codeEditorViewModel.AddFile(CodeEditorViewModel.NewFilePath, code ?? string.Empty);
+            codeEditorsViewModel.AddFile(CodeEditorsViewModel.NewFilePath, code ?? string.Empty);
             consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
             graphicsOutputViewModel.Clear();
         }
@@ -218,7 +218,7 @@ namespace KID.ViewModels
 
         private async void ExecuteOpenFile()
         {
-            if (codeFileService == null || codeEditorViewModel == null || 
+            if (codeFileService == null || codeEditorsViewModel == null || 
                 consoleOutputViewModel == null || graphicsOutputViewModel == null ||
                 localizationService == null)
                 return;
@@ -226,7 +226,7 @@ namespace KID.ViewModels
             var result = await codeFileService.OpenCodeFileWithPathAsync(GetFileFilter());
             if (result != null)
             {
-                codeEditorViewModel.AddFile(result.FilePath, result.Code);
+                codeEditorsViewModel.AddFile(result.FilePath, result.Code);
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
             }
@@ -234,7 +234,7 @@ namespace KID.ViewModels
 
         private async void ExecuteSaveFile()
         {
-            if (codeEditorViewModel == null || codeFileService == null)
+            if (codeEditorsViewModel == null || codeFileService == null)
                 return;
 
             if (!CanSaveFile)
@@ -243,34 +243,34 @@ namespace KID.ViewModels
                 return;
             }
 
-            var code = codeEditorViewModel.Text;
+            var code = codeEditorsViewModel.Text;
             if (!string.IsNullOrEmpty(code))
             {
-                await codeFileService.SaveToPathAsync(codeEditorViewModel.FilePath, code);
+                await codeFileService.SaveToPathAsync(codeEditorsViewModel.FilePath, code);
             }
         }
 
         private async void ExecuteSaveAsFile()
         {
-            if (codeEditorViewModel == null || codeFileService == null)
+            if (codeEditorsViewModel == null || codeFileService == null)
                 return;
 
-            var code = codeEditorViewModel.Text;
+            var code = codeEditorsViewModel.Text;
             if (string.IsNullOrEmpty(code))
                 return;
 
-            var defaultFileName = IsNewFilePath(codeEditorViewModel.FilePath)
+            var defaultFileName = IsNewFilePath(codeEditorsViewModel.FilePath)
                 ? "NewFile.cs"
-                : Path.GetFileName(codeEditorViewModel.FilePath);
+                : Path.GetFileName(codeEditorsViewModel.FilePath);
 
             var savedPath = await codeFileService.SaveCodeFileAsync(code, GetFileFilter(), defaultFileName);
             if (savedPath != null)
-                codeEditorViewModel.FilePath = savedPath;
+                codeEditorsViewModel.FilePath = savedPath;
         }
 
         private async void ExecuteRun()
         {
-            if (codeEditorViewModel == null || consoleOutputViewModel == null || 
+            if (codeEditorsViewModel == null || consoleOutputViewModel == null || 
                 graphicsOutputViewModel == null || canvasTextBoxContextFabric == null ||
                 codeExecutionService == null)
                 return;
@@ -296,7 +296,7 @@ namespace KID.ViewModels
                 cancellationSource.Token
             );
 
-            var code = codeEditorViewModel.Text;
+            var code = codeEditorsViewModel.Text;
             if (!string.IsNullOrEmpty(code))
             {
                 await codeExecutionService.ExecuteAsync(code, context);
@@ -313,17 +313,17 @@ namespace KID.ViewModels
 
         private void ExecuteUndo()
         {
-            if (codeEditorViewModel?.UndoCommand != null)
+            if (codeEditorsViewModel?.UndoCommand != null)
             {
-                codeEditorViewModel.UndoCommand.Execute(null);
+                codeEditorsViewModel.UndoCommand.Execute(null);
             }
         }
 
         private void ExecuteRedo()
         {
-            if (codeEditorViewModel?.RedoCommand != null)
+            if (codeEditorsViewModel?.RedoCommand != null)
             {
-                codeEditorViewModel.RedoCommand.Execute(null);
+                codeEditorsViewModel.RedoCommand.Execute(null);
             }
         }
 
@@ -395,7 +395,7 @@ namespace KID.ViewModels
                 return;
 
             var fontFamily = new FontFamily(fontFamilyName);
-            codeEditorViewModel.FontFamily = fontFamily;
+            codeEditorsViewModel.FontFamily = fontFamily;
             consoleOutputViewModel.FontFamily = fontFamily;
             windowConfigurationService.Settings.FontFamily = fontFamilyName;
             windowConfigurationService.SaveSettings();
@@ -407,7 +407,7 @@ namespace KID.ViewModels
             if (fontSize <= 0 || windowConfigurationService?.Settings == null)
                 return;
 
-            codeEditorViewModel.FontSize = fontSize;
+            codeEditorsViewModel.FontSize = fontSize;
             consoleOutputViewModel.FontSize = fontSize;
             windowConfigurationService.Settings.FontSize = fontSize;
             windowConfigurationService.SaveSettings();

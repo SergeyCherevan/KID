@@ -20,7 +20,7 @@ namespace KID.Services.Initialize
         private readonly IThemeService themeService;
 
         private readonly IMainViewModel mainViewModel;
-        private readonly ICodeEditorViewModel codeEditorViewModel;
+        private readonly ICodeEditorsViewModel codeEditorsViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
 
         private readonly MainWindow mainWindow;
@@ -30,7 +30,7 @@ namespace KID.Services.Initialize
             ILocalizationService localizationService,
             IThemeService themeService,
             IMainViewModel mainViewModel,
-            ICodeEditorViewModel codeEditorViewModel,
+            ICodeEditorsViewModel codeEditorsViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             MainWindow mainWindow
         )
@@ -40,7 +40,7 @@ namespace KID.Services.Initialize
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
             this.mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
-            this.codeEditorViewModel = codeEditorViewModel ?? throw new ArgumentNullException(nameof(codeEditorViewModel));
+            this.codeEditorsViewModel = codeEditorsViewModel ?? throw new ArgumentNullException(nameof(codeEditorsViewModel));
             this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
 
             this.mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
@@ -69,22 +69,22 @@ namespace KID.Services.Initialize
 
         private void ApplyCodeEditorSettings()
         {
-            if (codeEditorViewModel == null || windowConfigurationService?.Settings == null)
+            if (codeEditorsViewModel == null || windowConfigurationService?.Settings == null)
                 return;
 
             if (!string.IsNullOrEmpty(windowConfigurationService.Settings.ProgrammingLanguage))
             {
-                codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.ProgrammingLanguage);
+                codeEditorsViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.ProgrammingLanguage);
             }
 
             if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
             {
-                codeEditorViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
+                codeEditorsViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
             }
 
             if (windowConfigurationService.Settings.FontSize > 0)
             {
-                codeEditorViewModel.FontSize = windowConfigurationService.Settings.FontSize;
+                codeEditorsViewModel.FontSize = windowConfigurationService.Settings.FontSize;
             }
         }
 
@@ -121,11 +121,13 @@ namespace KID.Services.Initialize
 
         private void InitializeCodeEditor()
         {
-            if (codeEditorViewModel == null || windowConfigurationService?.Settings == null)
+            if (codeEditorsViewModel == null || windowConfigurationService?.Settings == null)
                 return;
 
+
+
             var templateCode = windowConfigurationService.Settings.TemplateCode ?? string.Empty;
-            codeEditorViewModel.AddFile(CodeEditorViewModel.NewFilePath, templateCode);
+            codeEditorsViewModel.AddFile(CodeEditorsViewModel.NewFilePath, templateCode);
         }
 
         private void InitializeConsole()

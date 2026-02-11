@@ -10,7 +10,8 @@ namespace KID.Models
     {
         private string filePath = string.Empty;
         private string content = string.Empty;
-        private TextEditor? textEditor;
+        private TextEditor? codeEditor;
+        private bool isActive;
 
         /// <summary>
         /// Путь к файлу. Для нового файла — /NewFile.cs.
@@ -22,7 +23,7 @@ namespace KID.Models
         }
 
         /// <summary>
-        /// Текст содержимого файла. Начальное значение и синхронизация при смене вкладки.
+        /// Текст содержимого файла (fallback до загрузки CodeEditor).
         /// </summary>
         public string Content
         {
@@ -31,12 +32,21 @@ namespace KID.Models
         }
 
         /// <summary>
-        /// Экземпляр AvalonEdit, присваиваемый View при загрузке контента вкладки.
+        /// Экземпляр AvalonEdit, создаётся в AddFile() и присваивается вкладке.
         /// </summary>
-        public TextEditor? TextEditor
+        public TextEditor? CodeEditor
         {
-            get => textEditor;
-            set => SetProperty(ref textEditor, value);
+            get => codeEditor;
+            set => SetProperty(ref codeEditor, value);
+        }
+
+        /// <summary>
+        /// True, если вкладка активна (её редактор виден).
+        /// </summary>
+        public bool IsActive
+        {
+            get => isActive;
+            set => SetProperty(ref isActive, value);
         }
 
         /// <summary>

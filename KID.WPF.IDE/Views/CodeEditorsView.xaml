@@ -1,20 +1,20 @@
-<UserControl x:Class="KID.Views.CodeEditorView"
+<UserControl x:Class="KID.Views.CodeEditorsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
              xmlns:viewModels="clr-namespace:KID.ViewModels"
              xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
              xmlns:di="clr-namespace:KID.Services.DI"
-             xmlns:views="clr-namespace:KID.Views"
              xmlns:models="clr-namespace:KID.Models"
              xmlns:converters="clr-namespace:KID.Converters">
     
     <UserControl.DataContext>
-        <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:ICodeEditorViewModel}" />
+        <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:ICodeEditorsViewModel}" />
     </UserControl.DataContext>
     
     <UserControl.Resources>
         <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
+        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <Style TargetType="TextBlock" x:Key="TabTextStyle">
             <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
             <Setter Property="FontSize" Value="12"/>
@@ -49,9 +49,6 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        <DataTemplate DataType="{x:Type models:OpenedFileTab}">
-            <views:EditorTabContent />
-        </DataTemplate>
     </UserControl.Resources>
     
     <Grid>
@@ -121,9 +118,16 @@
             </ItemsControl>
         </Border>
         
-        <!-- Контент редактора -->
-        <ContentControl Grid.Row="1"
-                        Content="{Binding ActiveFile}"
-                        Margin="5"/>
+        <!-- Список редакторов кода (виден только активный) -->
+        <ItemsControl Grid.Row="1"
+                      ItemsSource="{Binding OpenedFiles}"
+                      Margin="5">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <ContentControl Content="{Binding CodeEditor}"
+                                    Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </UserControl>
