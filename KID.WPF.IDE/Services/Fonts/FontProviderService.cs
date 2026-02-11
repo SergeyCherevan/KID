@@ -1,4 +1,3 @@
-using KID.Models;
 using KID.Services.Fonts.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,13 +29,13 @@ namespace KID.Services.Fonts
         private static readonly double[] FontSizes = { 10, 11, 12, 13, 14, 16, 18, 20 };
 
         /// <inheritdoc />
-        public IEnumerable<AvailableFont> GetAvailableFonts()
+        public IEnumerable<string> GetAvailableFonts()
         {
             var installedFontNames = System.Windows.Media.Fonts.SystemFontFamilies
                 .Select(f => f.Source)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var result = new List<AvailableFont>();
+            var result = new List<string>();
             var added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var fontName in KnownMonospaceFonts.Distinct(StringComparer.OrdinalIgnoreCase))
@@ -44,34 +43,17 @@ namespace KID.Services.Fonts
                 if (installedFontNames.Contains(fontName) && !added.Contains(fontName))
                 {
                     added.Add(fontName);
-                    result.Add(new AvailableFont
-                    {
-                        FontFamilyName = fontName,
-                        LocalizedDisplayName = fontName
-                    });
+                    result.Add(fontName);
                 }
             }
 
             if (result.Count == 0)
-            {
-                result.Add(new AvailableFont
-                {
-                    FontFamilyName = "Consolas",
-                    LocalizedDisplayName = "Consolas"
-                });
-            }
+                result.Add("Consolas");
 
             return result;
         }
 
         /// <inheritdoc />
-        public IEnumerable<AvailableFontSize> GetAvailableFontSizes()
-        {
-            return FontSizes.Select(size => new AvailableFontSize
-            {
-                Size = size,
-                LocalizedDisplayName = size.ToString("F0")
-            });
-        }
+        public IEnumerable<double> GetAvailableFontSizes() => FontSizes;
     }
 }

@@ -52,7 +52,7 @@
                          ItemsSource="{Binding AvailableFonts}">
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
-                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Header" Value="{Binding}" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeFontCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
                         </Style>
@@ -62,7 +62,7 @@
                          ItemsSource="{Binding AvailableFontSizes}">
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
-                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Header" Value="{Binding}" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeFontSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
                         </Style>

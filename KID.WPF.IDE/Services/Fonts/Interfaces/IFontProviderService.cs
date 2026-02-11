@@ -1,5 +1,3 @@
-using KID.Models;
-
 namespace KID.Services.Fonts.Interfaces
 {
     /// <summary>
@@ -10,11 +8,11 @@ namespace KID.Services.Fonts.Interfaces
         /// <summary>
         /// Возвращает список моноширинных шрифтов, установленных в системе.
         /// </summary>
-        IEnumerable<AvailableFont> GetAvailableFonts();
+        IEnumerable<string> GetAvailableFonts();
 
         /// <summary>
         /// Возвращает список доступных размеров шрифта.
         /// </summary>
-        IEnumerable<AvailableFontSize> GetAvailableFontSizes();
+        IEnumerable<double> GetAvailableFontSizes();
     }
 }

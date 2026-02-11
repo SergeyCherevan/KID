@@ -36,8 +36,8 @@ namespace KID.ViewModels
 
         public ObservableCollection<AvailableLanguage> AvailableLanguages { get; }
         public ObservableCollection<AvailableTheme> AvailableThemes { get; }
-        public ObservableCollection<AvailableFont> AvailableFonts { get; }
-        public ObservableCollection<AvailableFontSize> AvailableFontSizes { get; }
+        public ObservableCollection<string> AvailableFonts { get; }
+        public ObservableCollection<double> AvailableFontSizes { get; }
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -66,9 +66,9 @@ namespace KID.ViewModels
 
             // Инициализируем список доступных шрифтов и размеров
             var fonts = fontProviderService.GetAvailableFonts();
-            AvailableFonts = new ObservableCollection<AvailableFont>(fonts ?? Array.Empty<AvailableFont>());
+            AvailableFonts = new ObservableCollection<string>(fonts ?? Array.Empty<string>());
             var fontSizes = fontProviderService.GetAvailableFontSizes();
-            AvailableFontSizes = new ObservableCollection<AvailableFontSize>(fontSizes ?? Array.Empty<AvailableFontSize>());
+            AvailableFontSizes = new ObservableCollection<double>(fontSizes ?? Array.Empty<double>());
 
             // Инициализируем список доступных языков
             var languages = localizationService.GetAvailableLanguages();
@@ -99,8 +99,8 @@ namespace KID.ViewModels
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             ChangeLanguageCommand = new RelayCommand<AvailableLanguage>(lang => ChangeLanguage(lang));
             ChangeThemeCommand = new RelayCommand<AvailableTheme>(theme => ChangeTheme(theme));
-            ChangeFontCommand = new RelayCommand<AvailableFont>(font => ChangeFont(font));
-            ChangeFontSizeCommand = new RelayCommand<AvailableFontSize>(fontSize => ChangeFontSize(fontSize));
+            ChangeFontCommand = new RelayCommand<string>(font => ChangeFont(font));
+            ChangeFontSizeCommand = new RelayCommand<double>(fontSize => ChangeFontSize(fontSize));
 
             // Подписываемся на изменение культуры для обновления UI
             localizationService.CultureChanged += (s, e) =>
@@ -108,7 +108,6 @@ namespace KID.ViewModels
                 OnPropertyChanged(string.Empty);
                 UpdateLanguageDisplayNames();
                 UpdateThemeDisplayNames();
-                UpdateFontDisplayNames();
             };
         }
 
@@ -317,45 +316,27 @@ namespace KID.ViewModels
             }
         }
 
-        private void ChangeFont(AvailableFont? font)
+        private void ChangeFont(string? fontFamilyName)
         {
-            if (font == null || windowConfigurationService?.Settings == null)
+            if (string.IsNullOrEmpty(fontFamilyName) || windowConfigurationService?.Settings == null)
                 return;
 
-            var fontFamily = new FontFamily(font.FontFamilyName);
+            var fontFamily = new FontFamily(fontFamilyName);
             codeEditorViewModel.FontFamily = fontFamily;
             consoleOutputViewModel.FontFamily = fontFamily;
-            windowConfigurationService.Settings.FontFamily = font.FontFamilyName;
+            windowConfigurationService.Settings.FontFamily = fontFamilyName;
             windowConfigurationService.SaveSettings();
         }
 
-        private void ChangeFontSize(AvailableFontSize? fontSize)
+        private void ChangeFontSize(double fontSize)
         {
-            if (fontSize == null || windowConfigurationService?.Settings == null)
+            if (fontSize <= 0 || windowConfigurationService?.Settings == null)
                 return;
 
-            codeEditorViewModel.FontSize = fontSize.Size;
-            consoleOutputViewModel.FontSize = fontSize.Size;
-            windowConfigurationService.Settings.FontSize = fontSize.Size;
+            codeEditorViewModel.FontSize = fontSize;
+            consoleOutputViewModel.FontSize = fontSize;
+            windowConfigurationService.Settings.FontSize = fontSize;
             windowConfigurationService.SaveSettings();
-        }
-
-        private void UpdateFontDisplayNames()
-        {
-            if (AvailableFonts == null || AvailableFontSizes == null)
-                return;
-
-            foreach (var font in AvailableFonts)
-            {
-                if (font != null)
-                    font.LocalizedDisplayName = font.FontFamilyName;
-            }
-
-            foreach (var fontSize in AvailableFontSizes)
-            {
-                if (fontSize != null)
-                    fontSize.LocalizedDisplayName = fontSize.Size.ToString("F0");
-            }
         }
     }
 }
