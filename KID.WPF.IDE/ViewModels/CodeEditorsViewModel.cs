@@ -174,8 +174,11 @@ namespace KID.ViewModels
             get => ActiveFile?.CodeEditor?.FontFamily ?? new FontFamily("Consolas");
             set
             {
-                if (ActiveFile?.CodeEditor != null)
-                    ActiveFile.CodeEditor.FontFamily = value;
+                foreach (var tab in OpenedFiles)
+                {
+                    if (tab.CodeEditor != null)
+                        tab.CodeEditor.FontFamily = value;
+                }
             }
         }
 
@@ -184,8 +187,11 @@ namespace KID.ViewModels
             get => ActiveFile?.CodeEditor?.FontSize ?? 14.0;
             set
             {
-                if (ActiveFile?.CodeEditor != null)
-                    ActiveFile.CodeEditor.FontSize = value;
+                foreach (var tab in OpenedFiles)
+                {
+                    if (tab.CodeEditor != null)
+                        tab.CodeEditor.FontSize = value;
+                }
             }
         }
 
