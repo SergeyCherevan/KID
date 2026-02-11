@@ -16,11 +16,36 @@
     <UserControl.Resources>
         <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
         <Style TargetType="TextBlock" x:Key="TabTextStyle">
-            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
             <Setter Property="FontSize" Value="12"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             <Setter Property="MaxWidth" Value="150"/>
+            <Style.Triggers>
+                <DataTrigger Value="True">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
+                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.ActiveFile"/>
+                            <Binding/>
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="Button" x:Key="TabCloseButtonStyle">
+            <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Value="True">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
+                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.ActiveFile"/>
+                            <Binding/>
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
         <DataTemplate DataType="{x:Type models:OpenedFileTab}">
             <views:EditorTabContent />
@@ -36,9 +61,7 @@
         <!-- Панель вкладок -->
         <Border Grid.Row="0"
                 Background="{DynamicResource TabBarBackgroundBrush}"
-                Padding="2,2,2,0"
-                BorderBrush="{DynamicResource WindowBorderBrush}"
-                BorderThickness="0,0,0,1">
+                Padding="7,2,2,0">
             <ItemsControl ItemsSource="{Binding OpenedFiles}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -86,7 +109,7 @@
                                         VerticalAlignment="Center"
                                         Background="Transparent"
                                         BorderThickness="0"
-                                        Foreground="{DynamicResource TextBrush}"
+                                        Style="{StaticResource TabCloseButtonStyle}"
                                         Command="{Binding DataContext.CloseFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                         CommandParameter="{Binding}"/>
                             </DockPanel>
@@ -98,6 +121,7 @@
         
         <!-- Контент редактора -->
         <ContentControl Grid.Row="1"
-                       Content="{Binding ActiveFile}"/>
+                        Content="{Binding ActiveFile}"
+                        Margin="5"/>
     </Grid>
 </UserControl>

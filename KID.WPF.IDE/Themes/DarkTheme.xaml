@@ -18,6 +18,8 @@
     <Color x:Key="TabActiveBackground">#7160E8</Color>
     <Color x:Key="TabInactiveBackground">#2E2E2E</Color>
     <Color x:Key="TabBarBackground">#1F1F1F</Color>
+    <Color x:Key="TabActiveText">#FFFFFF</Color>
+    <Color x:Key="TabInactiveText">#B0B0B0</Color>
 
     <!-- Кисти -->
     <SolidColorBrush x:Key="WindowBrush" Color="{StaticResource WindowBackground}" />
@@ -36,6 +38,8 @@
     <SolidColorBrush x:Key="TabActiveBrush" Color="{StaticResource TabActiveBackground}" />
     <SolidColorBrush x:Key="TabInactiveBrush" Color="{StaticResource TabInactiveBackground}" />
     <SolidColorBrush x:Key="TabBarBackgroundBrush" Color="{StaticResource TabBarBackground}" />
+    <SolidColorBrush x:Key="TabActiveTextBrush" Color="{StaticResource TabActiveText}" />
+    <SolidColorBrush x:Key="TabInactiveTextBrush" Color="{StaticResource TabInactiveText}" />
 
     <!-- Стили элементов -->
     <Style TargetType="Window">
