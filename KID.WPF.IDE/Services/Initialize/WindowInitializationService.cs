@@ -62,6 +62,30 @@ namespace KID.Services.Initialize
             InitializeConsole();
 
             mainWindow.UpdateLayout();
+
+            // Применяем шрифт и подсветку синтаксиса после загрузки представления (TextEditor создаётся асинхронно)
+            mainWindow.Dispatcher.BeginInvoke(new Action(ApplyCodeEditorSettings), System.Windows.Threading.DispatcherPriority.Loaded);
+        }
+
+        private void ApplyCodeEditorSettings()
+        {
+            if (codeEditorViewModel == null || windowConfigurationService?.Settings == null)
+                return;
+
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.ProgrammingLanguage))
+            {
+                codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.ProgrammingLanguage);
+            }
+
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
+            {
+                codeEditorViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
+            }
+
+            if (windowConfigurationService.Settings.FontSize > 0)
+            {
+                codeEditorViewModel.FontSize = windowConfigurationService.Settings.FontSize;
+            }
         }
 
         private void InitializeTheme()
@@ -99,28 +123,9 @@ namespace KID.Services.Initialize
         {
             if (codeEditorViewModel == null || windowConfigurationService?.Settings == null)
                 return;
-            
-            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.ProgrammingLanguage))
-            {
-                codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.ProgrammingLanguage);
-            }
-            
-            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
-            {
-                codeEditorViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
-            }
-            
-            if (windowConfigurationService.Settings.FontSize > 0)
-            {
-                codeEditorViewModel.FontSize = windowConfigurationService.Settings.FontSize;
-            }
-            
-            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.TemplateCode))
-            {
-                codeEditorViewModel.Text = windowConfigurationService.Settings.TemplateCode;
-            }
 
-            codeEditorViewModel.FilePath = CodeEditorViewModel.NewFilePath;
+            var templateCode = windowConfigurationService.Settings.TemplateCode ?? string.Empty;
+            codeEditorViewModel.AddFile(CodeEditorViewModel.NewFilePath, templateCode);
         }
 
         private void InitializeConsole()

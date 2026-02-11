@@ -14,6 +14,11 @@
     <Color x:Key="CanvasBackground">#D3D3D3</Color>
     <Color x:Key="WindowBorder">#2B2B2B</Color>
 
+    <!-- Цвета вкладок редактора -->
+    <Color x:Key="TabActiveBackground">#F5CC84</Color>
+    <Color x:Key="TabInactiveBackground">#3B4F81</Color>
+    <Color x:Key="TabBarBackground">#5d6b99</Color>
+
     <!-- Кисти -->
     <SolidColorBrush x:Key="WindowBrush" Color="{StaticResource WindowBackground}" />
     <SolidColorBrush x:Key="TitleBrush" Color="{StaticResource SpecialElementsBackground}" />
@@ -28,6 +33,9 @@
     <SolidColorBrush x:Key="ConsoleTextBrush" Color="{StaticResource ConsoleForeground}" />
     <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource CanvasBackground}" />
     <SolidColorBrush x:Key="WindowBorderBrush" Color="{StaticResource WindowBorder}" />
+    <SolidColorBrush x:Key="TabActiveBrush" Color="{StaticResource TabActiveBackground}" />
+    <SolidColorBrush x:Key="TabInactiveBrush" Color="{StaticResource TabInactiveBackground}" />
+    <SolidColorBrush x:Key="TabBarBackgroundBrush" Color="{StaticResource TabBarBackground}" />
 
     <!-- Стили элементов -->
     <Style TargetType="Window">

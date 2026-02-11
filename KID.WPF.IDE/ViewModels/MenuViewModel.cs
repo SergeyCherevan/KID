@@ -154,7 +154,8 @@ namespace KID.ViewModels
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
             }
-            if (e.PropertyName == nameof(ICodeEditorViewModel.FilePath))
+            if (e.PropertyName == nameof(ICodeEditorViewModel.FilePath) ||
+                e.PropertyName == nameof(ICodeEditorViewModel.ActiveFile))
             {
                 CommandManager.InvalidateRequerySuggested();
             }
@@ -205,9 +206,7 @@ namespace KID.ViewModels
                 return;
             
             var code = windowConfigurationService.Settings.TemplateCode;
-
-            codeEditorViewModel.Text = code ?? string.Empty;
-            codeEditorViewModel.FilePath = CodeEditorViewModel.NewFilePath;
+            codeEditorViewModel.AddFile(CodeEditorViewModel.NewFilePath, code ?? string.Empty);
             consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
             graphicsOutputViewModel.Clear();
         }
@@ -227,8 +226,7 @@ namespace KID.ViewModels
             var result = await codeFileService.OpenCodeFileWithPathAsync(GetFileFilter());
             if (result != null)
             {
-                codeEditorViewModel.Text = result.Code;
-                codeEditorViewModel.FilePath = result.FilePath;
+                codeEditorViewModel.AddFile(result.FilePath, result.Code);
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
             }

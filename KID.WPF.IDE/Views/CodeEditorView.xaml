@@ -4,17 +4,100 @@
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
              xmlns:viewModels="clr-namespace:KID.ViewModels"
              xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
-             xmlns:di="clr-namespace:KID.Services.DI">
+             xmlns:di="clr-namespace:KID.Services.DI"
+             xmlns:views="clr-namespace:KID.Views"
+             xmlns:models="clr-namespace:KID.Models"
+             xmlns:converters="clr-namespace:KID.Converters">
     
     <UserControl.DataContext>
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:ICodeEditorViewModel}" />
     </UserControl.DataContext>
     
+    <UserControl.Resources>
+        <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
+        <Style TargetType="TextBlock" x:Key="TabTextStyle">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="MaxWidth" Value="150"/>
+        </Style>
+        <DataTemplate DataType="{x:Type models:OpenedFileTab}">
+            <views:EditorTabContent />
+        </DataTemplate>
+    </UserControl.Resources>
+    
     <Grid>
-        <avalonedit:TextEditor x:Name="TextEditor"
-                               ShowLineNumbers="True"
-                               WordWrap="True"
-                               Background="{DynamicResource EditorBackgroundBrush}"
-                               Foreground="{DynamicResource EditorForegroundBrush}"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <!-- Панель вкладок -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource TabBarBackgroundBrush}"
+                Padding="2,2,2,0"
+                BorderBrush="{DynamicResource WindowBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <ItemsControl ItemsSource="{Binding OpenedFiles}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="2,0,0,0"
+                                Padding="10,6,4,6"
+                                MinWidth="80"
+                                Cursor="Hand">
+                            <Border.InputBindings>
+                                <MouseBinding Gesture="LeftClick"
+                                              Command="{Binding DataContext.SelectFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                              CommandParameter="{Binding}"/>
+                            </Border.InputBindings>
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="{DynamicResource TabInactiveBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Value="True">
+                                            <DataTrigger.Binding>
+                                                <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.ActiveFile"/>
+                                                    <Binding/>
+                                                </MultiBinding>
+                                            </DataTrigger.Binding>
+                                            <Setter Property="Background" Value="{DynamicResource TabActiveBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <DockPanel>
+                                <TextBlock Text="{Binding FileName}"
+                                           Style="{StaticResource TabTextStyle}"
+                                           DockPanel.Dock="Left"
+                                           Margin="0,0,8,0"/>
+                                <Button Content="×"
+                                        Width="20"
+                                        Height="20"
+                                        Padding="0"
+                                        FontSize="14"
+                                        Cursor="Hand"
+                                        VerticalAlignment="Center"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Foreground="{DynamicResource TextBrush}"
+                                        Command="{Binding DataContext.CloseFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"/>
+                            </DockPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+        
+        <!-- Контент редактора -->
+        <ContentControl Grid.Row="1"
+                       Content="{Binding ActiveFile}"/>
     </Grid>
 </UserControl>
