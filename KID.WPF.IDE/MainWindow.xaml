@@ -8,6 +8,7 @@
         xmlns:local="clr-namespace:KID"
         xmlns:di="clr-namespace:KID.Services.DI"
         xmlns:localization="clr-namespace:KID.Services.Localization"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="{localization:Localization Window_Title}"
         Height="600" Width="800"
         WindowState="{Binding WindowState, Mode=TwoWay}"
@@ -21,7 +22,21 @@
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMainViewModel}" />
     </Window.DataContext>
 
-    <Grid>
+    <Window.Style>
+        <Style TargetType="Window">
+            <Setter Property="shell:WindowChrome.WindowChrome">
+                <Setter.Value>
+                    <shell:WindowChrome CaptionHeight="0"
+                                       ResizeBorderThickness="5"
+                                       GlassFrameThickness="0,0,0,0"/>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Style>
+
+    <Border BorderBrush="{DynamicResource WindowBorderBrush}"
+            BorderThickness="1">
+        <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="32"/>
             <RowDefinition Height="Auto"/>
@@ -110,5 +125,6 @@
                 <views:GraphicsOutputView x:Name="GraphicsOutputView" Grid.Row="2" />
             </Grid>
         </Grid>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>

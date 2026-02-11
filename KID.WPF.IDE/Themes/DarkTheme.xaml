@@ -12,6 +12,7 @@
     <Color x:Key="ConsoleBackground">Black</Color>
     <Color x:Key="ConsoleForeground">White</Color>
     <Color x:Key="CanvasBackground">#D3D3D3</Color>
+    <Color x:Key="WindowBorder">#606060</Color>
 
     <!-- Кисти -->
     <SolidColorBrush x:Key="WindowBrush" Color="{StaticResource WindowBackground}" />
@@ -26,6 +27,7 @@
     <SolidColorBrush x:Key="ConsoleBrush" Color="{StaticResource ConsoleBackground}" />
     <SolidColorBrush x:Key="ConsoleTextBrush" Color="{StaticResource ConsoleForeground}" />
     <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource CanvasBackground}" />
+    <SolidColorBrush x:Key="WindowBorderBrush" Color="{StaticResource WindowBorder}" />
     
     <!-- Стили элементов -->
     <Style TargetType="Window">

@@ -40,6 +40,16 @@ namespace KID
             Loaded += MainWindow_Loaded;
         }
 
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            _windowInitializationService?.Initialize();
+        }
+
+        void IClosable.Close()
+        {
+            base.Close();
+        }
+
         private void OnSourceInitialized(object? sender, EventArgs e)
         {
             var handle = new WindowInteropHelper(this).Handle;
@@ -88,16 +98,6 @@ namespace KID
             }
 
             Marshal.StructureToPtr(mmi, lParam, true);
-        }
-
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            _windowInitializationService?.Initialize();
-        }
-
-        void IClosable.Close()
-        {
-            base.Close();
         }
 
         #region Win32 P/Invoke
