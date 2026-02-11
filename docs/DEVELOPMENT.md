@@ -37,8 +37,7 @@ KID/
 │   ├── ViewModels/      # ViewModels (MVVM)
 │   ├── Views/           # XAML представления
 │   ├── Resources/       # Ресурсы (строки, иконки)
-│   ├── Themes/          # Темы оформления
-│   └── ProjectTemplates/# Шаблоны проектов
+│   └── Themes/          # Темы оформления
 └── KID.Library/         # API для пользовательского кода
 ```
 

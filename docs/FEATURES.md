@@ -378,32 +378,7 @@
 
 - **Шаблоны**
   - Шаблонный код при создании нового файла
-  - Путь к файлу шаблона
-
-### Набор шаблонов проектов
-
-Шаблоны лежат в `KID.WPF.IDE/ProjectTemplates/<locale>/...` и поставляются вместе с приложением.
-
-- **Локали**: `en-US`, `ru-RU`, `uk-UA`
-- **Категории**:
-  - **Gold** — быстрые «золотые» примеры:
-    - `Gold/MousePainter.cs` — рисовалка мышью (LMB рисует, RMB стирает, C/Up/Down меняют параметры)
-    - `Gold/GuessNumber.Console.cs` — «угадай число» (консоль)
-    - `Gold/BouncingBall.cs` — шарик отскакивает от стен (анимация + физика)
-    - `Gold/CatchTheCircle.cs` — мини‑игра «поймай круг» (клик + таймер)
-    - `Gold/KeyboardPiano.cs` — «пианино» на клавиатуре (A/S/D/F… → ноты)
-  - **NextLevel** — примеры со структурой:
-    - `NextLevel/Scenes.StateMachine.cs` — сцены: меню → игра → результат
-    - `NextLevel/Particles.Firework.cs` — частицы/фейерверк по клику
-    - `NextLevel/Generative.SpiralOrFractal.cs` — генеративная спираль (параметры + математика)
-  - **CheatSheets** — шаблоны‑памятки:
-    - `CheatSheets/GameLoop.Template.cs` — каркас игрового цикла (Update/Draw/Sleep + Stop)
-    - `CheatSheets/SafeInput.Template.cs` — безопасный ввод `ReadInt/ReadDouble/ReadColor`
-
-### Как использовать шаблоны
-
-- **Открыть как файл**: `Файл → Открыть` и выбрать `.cs` в `ProjectTemplates/...`
-- **Сделать шаблоном “Новый файл”**: в `AppData/KID/settings.json` установить `TemplateName`, например `ProjectTemplates/ru-RU/Gold/CatchTheCircle.cs`
+  - Путь к файлу шаблона (в `AppData/KID/settings.json` — `TemplateName`)
 
 ### Хранение настроек
 
