@@ -8,6 +8,7 @@
         xmlns:local="clr-namespace:KID"
         xmlns:di="clr-namespace:KID.Services.DI"
         xmlns:localization="clr-namespace:KID.Services.Localization"
+        xmlns:converters="clr-namespace:KID.Converters"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="{localization:Localization Window_Title}"
         Height="600" Width="800"
@@ -22,6 +23,10 @@
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMainViewModel}" />
     </Window.DataContext>
 
+    <Window.Resources>
+        <converters:WindowStateToMarginConverter x:Key="WindowStateToMarginConverter" />
+    </Window.Resources>
+
     <Window.Style>
         <Style TargetType="Window">
             <Setter Property="shell:WindowChrome.WindowChrome">
@@ -35,7 +40,8 @@
     </Window.Style>
 
     <Border BorderBrush="{DynamicResource WindowBorderBrush}"
-            BorderThickness="1">
+            BorderThickness="1"
+            Margin="{Binding WindowState, Converter={StaticResource WindowStateToMarginConverter}}">
         <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="32"/>
