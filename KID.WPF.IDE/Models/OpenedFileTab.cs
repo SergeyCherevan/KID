@@ -11,7 +11,6 @@ namespace KID.Models
         private string filePath = string.Empty;
         private string content = string.Empty;
         private TextEditor? codeEditor;
-        private bool isActive;
 
         /// <summary>
         /// Путь к файлу. Для нового файла — /NewFile.cs.
@@ -38,15 +37,6 @@ namespace KID.Models
         {
             get => codeEditor;
             set => SetProperty(ref codeEditor, value);
-        }
-
-        /// <summary>
-        /// True, если вкладка активна (её редактор виден).
-        /// </summary>
-        public bool IsActive
-        {
-            get => isActive;
-            set => SetProperty(ref isActive, value);
         }
 
         /// <summary>

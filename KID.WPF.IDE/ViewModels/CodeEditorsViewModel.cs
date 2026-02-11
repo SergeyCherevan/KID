@@ -49,7 +49,6 @@ namespace KID.ViewModels
 
                 if (SetProperty(ref indexOfActiveFile, newIndex))
                 {
-                    UpdateIsActiveForAllTabs();
                     OnPropertyChanged(nameof(Text));
                     OnPropertyChanged(nameof(FilePath));
                     OnPropertyChanged(nameof(CodeEditor));
@@ -107,7 +106,6 @@ namespace KID.ViewModels
 
             OpenedFiles.Add(tab);
             indexOfActiveFile = OpenedFiles.Count - 1;
-            UpdateIsActiveForAllTabs();
             OnPropertyChanged(nameof(ActiveFile));
             OnPropertyChanged(nameof(Text));
             OnPropertyChanged(nameof(FilePath));
@@ -135,7 +133,6 @@ namespace KID.ViewModels
                     indexOfActiveFile = OpenedFiles.Count - 1;
                 else if (index < indexOfActiveFile)
                     indexOfActiveFile--;
-                UpdateIsActiveForAllTabs();
                 OnPropertyChanged(nameof(ActiveFile));
                 OnPropertyChanged(nameof(Text));
                 OnPropertyChanged(nameof(FilePath));
@@ -219,13 +216,6 @@ namespace KID.ViewModels
         private void ExecuteCloseFile(OpenedFileTab tab) => CloseFile(tab);
 
         private void ExecuteSelectFile(OpenedFileTab tab) => SelectFile(tab);
-
-        private void UpdateIsActiveForAllTabs()
-        {
-            var active = ActiveFile;
-            foreach (var tab in OpenedFiles)
-                tab.IsActive = (tab == active);
-        }
 
         private static TextEditor CreateCodeEditor(string content, WindowConfigurationData settings)
         {
