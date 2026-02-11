@@ -13,6 +13,8 @@ using KID.Services.Localization;
 using KID.Services.Localization.Interfaces;
 using KID.Services.Themes;
 using KID.Services.Themes.Interfaces;
+using KID.Services.Fonts;
+using KID.Services.Fonts.Interfaces;
 
 namespace KID.Services.DI
 {
@@ -40,6 +42,9 @@ namespace KID.Services.DI
 
             // Theme Service
             services.AddSingleton<IThemeService, ThemeService>();
+
+            // Font Provider Service
+            services.AddSingleton<IFontProviderService, FontProviderService>();
 
             // ViewModels
             services.AddSingleton<IMainViewModel, MainViewModel>();

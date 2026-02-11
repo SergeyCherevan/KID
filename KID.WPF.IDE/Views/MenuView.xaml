@@ -48,6 +48,26 @@
                         </Style>
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
+                <MenuItem Header="{localization:Localization Menu_Font}" 
+                         ItemsSource="{Binding AvailableFonts}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Command" Value="{Binding DataContext.ChangeFontCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
+                <MenuItem Header="{localization:Localization Menu_FontSize}" 
+                         ItemsSource="{Binding AvailableFontSizes}">
+                    <MenuItem.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Command" Value="{Binding DataContext.ChangeFontSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            <Setter Property="CommandParameter" Value="{Binding}" />
+                        </Style>
+                    </MenuItem.ItemContainerStyle>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_Run}" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
             <MenuItem Header="{localization:Localization Menu_Stop}" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />

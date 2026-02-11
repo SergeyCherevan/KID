@@ -151,5 +151,11 @@
   <data name="Theme_Dark" xml:space="preserve">
     <value>Тёмная</value>
   </data>
+  <data name="Menu_Font" xml:space="preserve">
+    <value>Шрифт</value>
+  </data>
+  <data name="Menu_FontSize" xml:space="preserve">
+    <value>Размер шрифта</value>
+  </data>
 </root>
 

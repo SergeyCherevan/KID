@@ -65,7 +65,7 @@
 **MenuViewModel** (`MenuViewModel.cs`)
 - Управление меню приложения
 - Команды: NewFile, OpenFile, SaveFile, Run, Stop, Undo, Redo
-- Управление темами и языками интерфейса
+- Управление темами, языками интерфейса, шрифтом и размером шрифта
 - Состояние кнопок (IsStopButtonEnabled, CanUndo, CanRedo)
 
 **CodeEditorViewModel** (`CodeEditorViewModel.cs`)
@@ -76,7 +76,7 @@
 
 **ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
 - Управление консольным выводом
-- Свойство Text для отображения текста
+- Свойства: Text, FontFamily, FontSize
 
 **GraphicsOutputViewModel** (`GraphicsOutputViewModel.cs`)
 - Управление графическим выводом
@@ -200,7 +200,7 @@
 
 **WindowConfigurationData** (`WindowConfigurationData.cs`)
 - Модель данных для настроек
-- Свойства: Language, FontFamily, FontSize, ColorTheme, UILanguage, TemplateCode, TemplateName
+- Свойства: ProgrammingLanguage, FontFamily, FontSize, ColorTheme, UILanguage, TemplateCode, TemplateName
 
 #### 3.6. Dependency Injection (DI)
 

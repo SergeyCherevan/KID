@@ -1,4 +1,4 @@
-﻿using KID.Services.Initialize.Interfaces;
+using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using System;
 using System.Collections.Generic;

@@ -1,9 +1,10 @@
-﻿using System.Configuration;
+using System.Configuration;
 using System.Data;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using KID.Services.DI;
 using KID.Services.Initialize.Interfaces;
+using KID.ViewModels.Interfaces;
 
 namespace KID
 {
@@ -25,10 +26,21 @@ namespace KID
 
         protected override void OnExit(ExitEventArgs e)
         {
-            // Сохраняем настройки перед выходом
+            // Синхронизируем и сохраняем настройки перед выходом
             try
             {
                 var settingsService = ServiceProvider.GetRequiredService<IWindowConfigurationService>();
+                var codeEditorViewModel = ServiceProvider.GetService<ICodeEditorViewModel>();
+                
+                if (codeEditorViewModel != null && settingsService.Settings != null)
+                {
+                    var fontFamily = codeEditorViewModel.FontFamily;
+                    if (fontFamily != null && !string.IsNullOrEmpty(fontFamily.Source))
+                        settingsService.Settings.FontFamily = fontFamily.Source;
+                    if (codeEditorViewModel.FontSize > 0)
+                        settingsService.Settings.FontSize = codeEditorViewModel.FontSize;
+                }
+                
                 settingsService.SaveSettings();
             }
             catch

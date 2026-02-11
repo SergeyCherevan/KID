@@ -151,5 +151,11 @@
   <data name="Theme_Dark" xml:space="preserve">
     <value>Dark</value>
   </data>
+  <data name="Menu_Font" xml:space="preserve">
+    <value>Font</value>
+  </data>
+  <data name="Menu_FontSize" xml:space="preserve">
+    <value>Font Size</value>
+  </data>
 </root>
 

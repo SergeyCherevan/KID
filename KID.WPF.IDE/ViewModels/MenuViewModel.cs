@@ -2,9 +2,11 @@ using KID.Models;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Files.Interfaces;
+using KID.Services.Fonts.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.Services.Themes.Interfaces;
+using System.Windows.Media;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 using System;
@@ -30,9 +32,12 @@ namespace KID.ViewModels
         private readonly ICodeFileService codeFileService;
         private readonly ILocalizationService localizationService;
         private readonly IThemeService themeService;
+        private readonly IFontProviderService fontProviderService;
 
         public ObservableCollection<AvailableLanguage> AvailableLanguages { get; }
         public ObservableCollection<AvailableTheme> AvailableThemes { get; }
+        public ObservableCollection<AvailableFont> AvailableFonts { get; }
+        public ObservableCollection<AvailableFontSize> AvailableFontSizes { get; }
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -43,7 +48,8 @@ namespace KID.ViewModels
             IGraphicsOutputViewModel graphicsOutputViewModel,
             ICodeFileService codeFileService,
             ILocalizationService localizationService,
-            IThemeService themeService
+            IThemeService themeService,
+            IFontProviderService fontProviderService
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
@@ -56,6 +62,13 @@ namespace KID.ViewModels
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+            this.fontProviderService = fontProviderService ?? throw new ArgumentNullException(nameof(fontProviderService));
+
+            // Инициализируем список доступных шрифтов и размеров
+            var fonts = fontProviderService.GetAvailableFonts();
+            AvailableFonts = new ObservableCollection<AvailableFont>(fonts ?? Array.Empty<AvailableFont>());
+            var fontSizes = fontProviderService.GetAvailableFontSizes();
+            AvailableFontSizes = new ObservableCollection<AvailableFontSize>(fontSizes ?? Array.Empty<AvailableFontSize>());
 
             // Инициализируем список доступных языков
             var languages = localizationService.GetAvailableLanguages();
@@ -86,6 +99,8 @@ namespace KID.ViewModels
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             ChangeLanguageCommand = new RelayCommand<AvailableLanguage>(lang => ChangeLanguage(lang));
             ChangeThemeCommand = new RelayCommand<AvailableTheme>(theme => ChangeTheme(theme));
+            ChangeFontCommand = new RelayCommand<AvailableFont>(font => ChangeFont(font));
+            ChangeFontSizeCommand = new RelayCommand<AvailableFontSize>(fontSize => ChangeFontSize(fontSize));
 
             // Подписываемся на изменение культуры для обновления UI
             localizationService.CultureChanged += (s, e) =>
@@ -93,6 +108,7 @@ namespace KID.ViewModels
                 OnPropertyChanged(string.Empty);
                 UpdateLanguageDisplayNames();
                 UpdateThemeDisplayNames();
+                UpdateFontDisplayNames();
             };
         }
 
@@ -130,6 +146,8 @@ namespace KID.ViewModels
         public ICommand RedoCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
         public ICommand ChangeThemeCommand { get; }
+        public ICommand ChangeFontCommand { get; }
+        public ICommand ChangeFontSizeCommand { get; }
 
         private void ExecuteNewFile()
         {
@@ -296,6 +314,47 @@ namespace KID.ViewModels
                 // Получаем локализованное название темы
                 var key = $"Theme_{theme.EnglishName}";
                 theme.LocalizedDisplayName = localizationService.GetString(key);
+            }
+        }
+
+        private void ChangeFont(AvailableFont? font)
+        {
+            if (font == null || windowConfigurationService?.Settings == null)
+                return;
+
+            var fontFamily = new FontFamily(font.FontFamilyName);
+            codeEditorViewModel.FontFamily = fontFamily;
+            consoleOutputViewModel.FontFamily = fontFamily;
+            windowConfigurationService.Settings.FontFamily = font.FontFamilyName;
+            windowConfigurationService.SaveSettings();
+        }
+
+        private void ChangeFontSize(AvailableFontSize? fontSize)
+        {
+            if (fontSize == null || windowConfigurationService?.Settings == null)
+                return;
+
+            codeEditorViewModel.FontSize = fontSize.Size;
+            consoleOutputViewModel.FontSize = fontSize.Size;
+            windowConfigurationService.Settings.FontSize = fontSize.Size;
+            windowConfigurationService.SaveSettings();
+        }
+
+        private void UpdateFontDisplayNames()
+        {
+            if (AvailableFonts == null || AvailableFontSizes == null)
+                return;
+
+            foreach (var font in AvailableFonts)
+            {
+                if (font != null)
+                    font.LocalizedDisplayName = font.FontFamilyName;
+            }
+
+            foreach (var fontSize in AvailableFontSizes)
+            {
+                if (fontSize != null)
+                    fontSize.LocalizedDisplayName = fontSize.Size.ToString("F0");
             }
         }
     }

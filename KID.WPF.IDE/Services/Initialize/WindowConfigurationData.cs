@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,10 +15,9 @@ namespace KID.Services.Initialize
         public string UILanguage { get; set; } = "ru-RU"; // ru-RU, en-US, uk-UA
         
         // Настройки редактора кода
-        public string Language { get; set; } = "C#";
+        public string ProgrammingLanguage { get; set; } = "C#";
         public string FontFamily { get; set; } = "Consolas";
         public double FontSize { get; set; } = 14;
-        public string ConsoleMessage { get; set; } = "Консольный вывод...";
         public string TemplateName { get; set; } = "HelloWorld.cs";
         public string TemplateCode { get; set; } =
 @"using System;

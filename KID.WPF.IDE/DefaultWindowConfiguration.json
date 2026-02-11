@@ -1,7 +1,6 @@
 {
-    "Language": "C#",
-    "FontFamily": "Consolas",
-    "FontSize": 14,
-    "ConsoleMessage": "Консольный вывод...",
-    "TemplateName": "ProjectTemplates/ru-RU/HelloWorld.cs"
+  "ProgrammingLanguage": "C#",
+  "FontFamily": "Consolas",
+  "FontSize": 14,
+  "TemplateName": "ProjectTemplates/ru-RU/HelloWorld.cs"
 }

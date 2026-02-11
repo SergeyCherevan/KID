@@ -1,4 +1,4 @@
-﻿using KID.Services.Initialize.Interfaces;
+using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.Services.Themes.Interfaces;
 using KID.ViewModels;
@@ -100,9 +100,9 @@ namespace KID.Services.Initialize
             if (codeEditorViewModel == null || windowConfigurationService?.Settings == null)
                 return;
             
-            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.Language))
+            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.ProgrammingLanguage))
             {
-                codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.Language);
+                codeEditorViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.ProgrammingLanguage);
             }
             
             if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
@@ -123,9 +123,17 @@ namespace KID.Services.Initialize
 
         private void InitializeConsole()
         {
-            if (consoleOutputViewModel != null && windowConfigurationService?.Settings != null)
+            if (consoleOutputViewModel == null)
+                return;
+
+            consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
+
+            if (windowConfigurationService?.Settings != null)
             {
-                consoleOutputViewModel.Text = windowConfigurationService.Settings.ConsoleMessage ?? string.Empty;
+                if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
+                    consoleOutputViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
+                if (windowConfigurationService.Settings.FontSize > 0)
+                    consoleOutputViewModel.FontSize = windowConfigurationService.Settings.FontSize;
             }
         }
     }
