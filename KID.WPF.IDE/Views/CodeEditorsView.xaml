@@ -14,7 +14,6 @@
     
     <UserControl.Resources>
         <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
         <Style TargetType="TextBlock" x:Key="TabTextStyle">
             <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
             <Setter Property="FontSize" Value="12"/>
@@ -118,16 +117,17 @@
             </ItemsControl>
         </Border>
         
-        <!-- Список редакторов кода (виден только активный) -->
-        <ItemsControl Grid.Row="1"
-                      ItemsSource="{Binding OpenedFiles}"
-                      Margin="5">
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <ContentControl Content="{Binding CodeEditor}"
-                                    Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}"/>
+        <!-- Редактор кода активной вкладки (растягивается на всю доступную высоту) -->
+        <ContentControl Grid.Row="1"
+                        Content="{Binding ActiveFile}"
+                        Margin="5">
+            <ContentControl.ContentTemplate>
+                <DataTemplate DataType="{x:Type models:OpenedFileTab}">
+                    <ContentPresenter Content="{Binding CodeEditor}"
+                                       HorizontalAlignment="Stretch"
+                                       VerticalAlignment="Stretch"/>
                 </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
     </Grid>
 </UserControl>
