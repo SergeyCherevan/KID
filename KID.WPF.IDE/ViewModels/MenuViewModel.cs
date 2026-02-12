@@ -191,18 +191,12 @@ namespace KID.ViewModels
         public ICommand NewFileCommand { get; }
         public ICommand OpenFileCommand { get; }
         public RelayCommand SaveFileCommand { get; }
-        ICommand IMenuViewModel.SaveFileCommand => SaveFileCommand;
         public ICommand SaveAsFileCommand { get; }
         public RelayCommand SaveAndSetAsTemplateCommand { get; }
-        ICommand IMenuViewModel.SaveAndSetAsTemplateCommand => SaveAndSetAsTemplateCommand;
         public RelayCommand RunCommand { get; }
-        ICommand IMenuViewModel.RunCommand => RunCommand;
         public RelayCommand StopCommand { get; }
-        ICommand IMenuViewModel.StopCommand => StopCommand;
         public RelayCommand UndoCommand { get; }
-        ICommand IMenuViewModel.UndoCommand => UndoCommand;
         public RelayCommand RedoCommand { get; }
-        ICommand IMenuViewModel.RedoCommand => RedoCommand;
         public ICommand ChangeLanguageCommand { get; }
         public ICommand ChangeThemeCommand { get; }
         public ICommand ChangeFontCommand { get; }

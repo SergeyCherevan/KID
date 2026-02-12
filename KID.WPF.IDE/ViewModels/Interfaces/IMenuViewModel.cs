@@ -1,3 +1,4 @@
+using KID.ViewModels.Infrastructure;
 using System.Windows.Input;
 
 namespace KID.ViewModels.Interfaces
@@ -10,13 +11,13 @@ namespace KID.ViewModels.Interfaces
 
         ICommand NewFileCommand { get; }
         ICommand OpenFileCommand { get; }
-        ICommand SaveFileCommand { get; }
+        RelayCommand SaveFileCommand { get; }
         ICommand SaveAsFileCommand { get; }
-        ICommand SaveAndSetAsTemplateCommand { get; }
-        ICommand RunCommand { get; }
-        ICommand StopCommand { get; }
-        ICommand UndoCommand { get; }
-        ICommand RedoCommand { get; }
+        RelayCommand SaveAndSetAsTemplateCommand { get; }
+        RelayCommand RunCommand { get; }
+        RelayCommand StopCommand { get; }
+        RelayCommand UndoCommand { get; }
+        RelayCommand RedoCommand { get; }
         ICommand ChangeLanguageCommand { get; }
         ICommand ChangeThemeCommand { get; }
         ICommand ChangeFontCommand { get; }
