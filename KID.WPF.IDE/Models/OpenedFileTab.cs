@@ -10,6 +10,7 @@ namespace KID.Models
     {
         private string filePath = string.Empty;
         private string content = string.Empty;
+        private string savedContent = string.Empty;
         private TextEditor? codeEditor;
 
         /// <summary>
@@ -28,6 +29,36 @@ namespace KID.Models
         {
             get => content;
             set => SetProperty(ref content, value ?? string.Empty);
+        }
+
+        /// <summary>
+        /// Текст на момент последнего сохранения или открытия. Для NewFile — шаблон по умолчанию.
+        /// </summary>
+        public string SavedContent
+        {
+            get => savedContent;
+            private set => SetProperty(ref savedContent, value ?? string.Empty);
+        }
+
+        /// <summary>
+        /// true, если текущее содержимое отличается от SavedContent (есть несохранённые изменения).
+        /// </summary>
+        public bool IsModified => (CodeEditor?.Text ?? Content) != SavedContent;
+
+        /// <summary>
+        /// Вызывается при изменении текста в редакторе для обновления IsModified.
+        /// </summary>
+        public void NotifyContentChanged()
+        {
+            OnPropertyChanged(nameof(IsModified));
+        }
+
+        /// <summary>
+        /// Обновляет SavedContent после успешного сохранения.
+        /// </summary>
+        public void UpdateSavedContent(string content)
+        {
+            SavedContent = content ?? string.Empty;
         }
 
         /// <summary>

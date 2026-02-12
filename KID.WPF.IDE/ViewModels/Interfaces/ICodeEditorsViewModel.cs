@@ -32,6 +32,7 @@ namespace KID.ViewModels.Interfaces
         double FontSize { get; set; }
         bool CanUndo { get; }
         bool CanRedo { get; }
+        bool HasUnsavedChanges { get; }
 
         ICommand UndoCommand { get; }
         ICommand RedoCommand { get; }
@@ -58,5 +59,10 @@ namespace KID.ViewModels.Interfaces
         /// Делает вкладку активной.
         /// </summary>
         void SelectFile(OpenedFileTab tab);
+
+        /// <summary>
+        /// Уведомляет о сохранении активного файла (обновляет SavedContent).
+        /// </summary>
+        void NotifyActiveFileSaved(string content);
     }
 }

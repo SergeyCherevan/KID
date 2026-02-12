@@ -155,7 +155,8 @@ namespace KID.ViewModels
                 OnPropertyChanged(nameof(CanRedo));
             }
             if (e.PropertyName == nameof(ICodeEditorsViewModel.FilePath) ||
-                e.PropertyName == nameof(ICodeEditorsViewModel.ActiveFile))
+                e.PropertyName == nameof(ICodeEditorsViewModel.ActiveFile) ||
+                e.PropertyName == nameof(ICodeEditorsViewModel.HasUnsavedChanges))
             {
                 CommandManager.InvalidateRequerySuggested();
             }
@@ -177,7 +178,8 @@ namespace KID.ViewModels
         public bool CanRedo => codeEditorsViewModel.CanRedo;
 
         private bool CanSaveFile => !string.IsNullOrEmpty(codeEditorsViewModel.FilePath) &&
-            !IsNewFilePath(codeEditorsViewModel.FilePath);
+            !IsNewFilePath(codeEditorsViewModel.FilePath) &&
+            codeEditorsViewModel.HasUnsavedChanges;
 
         private static bool IsNewFilePath(string path) =>
             path.EndsWith("NewFile.cs", StringComparison.OrdinalIgnoreCase) ||
@@ -247,6 +249,7 @@ namespace KID.ViewModels
             if (!string.IsNullOrEmpty(code))
             {
                 await codeFileService.SaveToPathAsync(codeEditorsViewModel.FilePath, code);
+                codeEditorsViewModel.NotifyActiveFileSaved(code);
             }
         }
 
@@ -265,7 +268,10 @@ namespace KID.ViewModels
 
             var savedPath = await codeFileService.SaveCodeFileAsync(code, GetFileFilter(), defaultFileName);
             if (savedPath != null)
+            {
                 codeEditorsViewModel.FilePath = savedPath;
+                codeEditorsViewModel.NotifyActiveFileSaved(code);
+            }
         }
 
         private async void ExecuteRun()

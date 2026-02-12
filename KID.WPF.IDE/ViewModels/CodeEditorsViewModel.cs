@@ -67,6 +67,7 @@ namespace KID.ViewModels
                     OnPropertyChanged(nameof(CodeEditor));
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
+                    OnPropertyChanged(nameof(HasUnsavedChanges));
                     CommandManager.InvalidateRequerySuggested();
                 }
             }
@@ -90,7 +91,7 @@ namespace KID.ViewModels
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             CloseFileCommand = new RelayCommand<OpenedFileTab>(ExecuteCloseFile);
             SelectFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSelectFile);
-            SaveFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveFile);
+            SaveFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveFile, CanSaveTab);
             SaveAsFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveAsFile);
             MoveTabLeftCommand = new RelayCommand<OpenedFileTab>(ExecuteMoveTabLeft, CanMoveTabLeft);
             MoveTabRightCommand = new RelayCommand<OpenedFileTab>(ExecuteMoveTabRight, CanMoveTabRight);
@@ -114,14 +115,17 @@ namespace KID.ViewModels
                 Content = content,
                 CodeEditor = codeEditor
             };
+            tab.UpdateSavedContent(content);
 
             codeEditor.TextChanged += (s, e) =>
             {
+                tab.NotifyContentChanged();
                 if (tab == ActiveFile)
                 {
                     OnPropertyChanged(nameof(Text));
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
+                    OnPropertyChanged(nameof(HasUnsavedChanges));
                     CommandManager.InvalidateRequerySuggested();
                 }
             };
@@ -134,6 +138,7 @@ namespace KID.ViewModels
             OnPropertyChanged(nameof(CodeEditor));
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         /// <inheritdoc />
@@ -147,7 +152,8 @@ namespace KID.ViewModels
 
             if (OpenedFiles.Count == 0)
             {
-                AddFile(NewFilePath, string.Empty);
+                var templateCode = windowConfigurationService?.Settings?.TemplateCode ?? string.Empty;
+                AddFile(NewFilePath, templateCode);
             }
             else
             {
@@ -161,6 +167,7 @@ namespace KID.ViewModels
                 OnPropertyChanged(nameof(CodeEditor));
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
             }
         }
 
@@ -218,6 +225,11 @@ namespace KID.ViewModels
 
         public bool CanRedo => ActiveFile?.CodeEditor?.CanRedo ?? false;
 
+        /// <summary>
+        /// true, если в активной вкладке есть несохранённые изменения.
+        /// </summary>
+        public bool HasUnsavedChanges => ActiveFile?.IsModified ?? false;
+
         public ICommand UndoCommand { get; }
         public ICommand RedoCommand { get; }
         public ICommand CloseFileCommand { get; }
@@ -243,6 +255,8 @@ namespace KID.ViewModels
 
         private void ExecuteSelectFile(OpenedFileTab tab) => SelectFile(tab);
 
+        private static bool CanSaveTab(OpenedFileTab? tab) => tab?.IsModified == true;
+
         private async void ExecuteSaveFile(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
@@ -259,6 +273,7 @@ namespace KID.ViewModels
             }
 
             await codeFileService.SaveToPathAsync(tab.FilePath, content);
+            tab.UpdateSavedContent(content);
         }
 
         private async void ExecuteSaveAsFile(OpenedFileTab tab)
@@ -277,7 +292,10 @@ namespace KID.ViewModels
             var fileFilter = localizationService.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
             var savedPath = await codeFileService.SaveCodeFileAsync(content, fileFilter, defaultFileName);
             if (savedPath != null)
+            {
                 tab.FilePath = savedPath;
+                tab.UpdateSavedContent(content);
+            }
         }
 
         private bool CanMoveTabLeft(OpenedFileTab? tab) =>
@@ -380,6 +398,13 @@ namespace KID.ViewModels
                 ActiveFile.CodeEditor.Text = value;
             else if (ActiveFile != null)
                 ActiveFile.Content = value ?? string.Empty;
+        }
+
+        /// <inheritdoc />
+        public void NotifyActiveFileSaved(string content)
+        {
+            ActiveFile?.UpdateSavedContent(content);
+            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         /// <inheritdoc />
