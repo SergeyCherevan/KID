@@ -115,6 +115,9 @@ namespace KID.ViewModels
             OpenFileCommand = new RelayCommand(ExecuteOpenFile);
             SaveFileCommand = new RelayCommand(ExecuteSaveFile, () => CanSaveFile);
             SaveAsFileCommand = new RelayCommand(ExecuteSaveAsFile);
+            SaveAndSetAsTemplateCommand = new RelayCommand(
+                ExecuteSaveAndSetAsTemplate,
+                () => codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(codeEditorsViewModel.ActiveFile));
             RunCommand = new RelayCommand(ExecuteRun, () => !IsStopButtonEnabled);
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
@@ -189,6 +192,7 @@ namespace KID.ViewModels
         public ICommand OpenFileCommand { get; }
         public ICommand SaveFileCommand { get; }
         public ICommand SaveAsFileCommand { get; }
+        public ICommand SaveAndSetAsTemplateCommand { get; }
         public ICommand RunCommand { get; }
         public ICommand StopCommand { get; }
         public ICommand UndoCommand { get; }
@@ -265,6 +269,15 @@ namespace KID.ViewModels
             {
                 await codeFileService.SaveToPathAsync(codeEditorsViewModel.FilePath, code);
                 codeEditorsViewModel.NotifyActiveFileSaved(code);
+            }
+        }
+
+        private void ExecuteSaveAndSetAsTemplate()
+        {
+            var activeFile = codeEditorsViewModel.ActiveFile;
+            if (activeFile != null && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(activeFile))
+            {
+                codeEditorsViewModel.SaveAndSetAsTemplateCommand.Execute(activeFile);
             }
         }
 

@@ -24,6 +24,8 @@
                 <MenuItem Header="{localization:Localization Menu_Open}" InputGestureText="Ctrl+O" Command="{Binding OpenFileCommand}" />
                 <MenuItem Header="{localization:Localization Menu_Save}" InputGestureText="Ctrl+S" Command="{Binding SaveFileCommand}" />
                 <MenuItem Header="{localization:Localization Menu_SaveAs}" InputGestureText="Ctrl+Shift+S" Command="{Binding SaveAsFileCommand}" />
+                <MenuItem Header="{localization:Localization TabContext_SaveAndSetAsTemplate}"
+                          Command="{Binding SaveAndSetAsTemplateCommand}" />
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_Edit}">
                 <MenuItem Header="{localization:Localization Menu_Undo}" InputGestureText="Ctrl+Z" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}" />

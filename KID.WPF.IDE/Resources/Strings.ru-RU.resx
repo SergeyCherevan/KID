@@ -170,7 +170,7 @@
     <value>Передвинуть вправо</value>
   </data>
   <data name="TabContext_SaveAndSetAsTemplate" xml:space="preserve">
-    <value>Сохранить и назначить&#10;в качестве шаблона</value>
+    <value>Назначить шаблоном&#10;по умолчанию (и сохранить)</value>
   </data>
 </root>
 

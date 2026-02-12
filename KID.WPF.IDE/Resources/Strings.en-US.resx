@@ -170,7 +170,7 @@
     <value>Move Right</value>
   </data>
   <data name="TabContext_SaveAndSetAsTemplate" xml:space="preserve">
-    <value>Save and set as&#10;template</value>
+    <value>Set as default&#10;template (and save)</value>
   </data>
 </root>
 
