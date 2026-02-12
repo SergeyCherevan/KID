@@ -68,7 +68,7 @@ namespace KID.ViewModels
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
                     OnPropertyChanged(nameof(HasUnsavedChanges));
-                    CommandManager.InvalidateRequerySuggested();
+                    RaiseTabCommandsCanExecute();
                 }
             }
         }
@@ -127,7 +127,7 @@ namespace KID.ViewModels
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
                     OnPropertyChanged(nameof(HasUnsavedChanges));
-                    CommandManager.InvalidateRequerySuggested();
+                    RaiseTabCommandsCanExecute();
                 }
             };
 
@@ -351,7 +351,7 @@ namespace KID.ViewModels
 
             OpenedFiles.Move(index, index - 1);
             UpdateActiveFileIndexAfterMove(index, index - 1);
-            CommandManager.InvalidateRequerySuggested();
+            RaiseMoveTabCommandsCanExecute();
         }
 
         private void ExecuteMoveTabRight(OpenedFileTab tab)
@@ -365,7 +365,7 @@ namespace KID.ViewModels
 
             OpenedFiles.Move(index, index + 1);
             UpdateActiveFileIndexAfterMove(index, index + 1);
-            CommandManager.InvalidateRequerySuggested();
+            RaiseMoveTabCommandsCanExecute();
         }
 
         private void UpdateActiveFileIndexAfterMove(int oldIndex, int newIndex)
@@ -377,6 +377,21 @@ namespace KID.ViewModels
             else if (oldIndex > indexOfActiveFile && newIndex <= indexOfActiveFile)
                 indexOfActiveFile++;
             OnPropertyChanged(nameof(ActiveFile));
+        }
+
+        private void RaiseTabCommandsCanExecute()
+        {
+            ((IRaisableCommand)SaveFileCommand).RaiseCanExecuteChanged();
+            ((IRaisableCommand)SaveAsFileCommand).RaiseCanExecuteChanged();
+            ((IRaisableCommand)SaveAndSetAsTemplateCommand).RaiseCanExecuteChanged();
+            ((IRaisableCommand)UndoCommand).RaiseCanExecuteChanged();
+            ((IRaisableCommand)RedoCommand).RaiseCanExecuteChanged();
+        }
+
+        private void RaiseMoveTabCommandsCanExecute()
+        {
+            ((IRaisableCommand)MoveTabLeftCommand).RaiseCanExecuteChanged();
+            ((IRaisableCommand)MoveTabRightCommand).RaiseCanExecuteChanged();
         }
 
         private static string GetTabContent(OpenedFileTab tab) =>

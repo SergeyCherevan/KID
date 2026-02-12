@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: relaycommand-raise
     content: Добавить RaiseCanExecuteChanged в RelayCommand и заменить CommandManager.InvalidateRequerySuggested
-    status: pending
+    status: completed
   - id: font-settings-service
     content: Создать IFontSettingsService и FontSettingsService, интегрировать в MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel, WindowInitializationService, App.xaml.cs
     status: pending

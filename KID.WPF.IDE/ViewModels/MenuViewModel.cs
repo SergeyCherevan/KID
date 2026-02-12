@@ -157,12 +157,15 @@ namespace KID.ViewModels
             {
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
+                UndoCommand.RaiseCanExecuteChanged();
+                RedoCommand.RaiseCanExecuteChanged();
             }
             if (e.PropertyName == nameof(ICodeEditorsViewModel.FilePath) ||
                 e.PropertyName == nameof(ICodeEditorsViewModel.ActiveFile) ||
                 e.PropertyName == nameof(ICodeEditorsViewModel.HasUnsavedChanges))
             {
-                CommandManager.InvalidateRequerySuggested();
+                SaveFileCommand.RaiseCanExecuteChanged();
+                SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
             }
         }
 
@@ -173,8 +176,8 @@ namespace KID.ViewModels
             {
                 if (SetProperty(ref isStopButtonEnabled, value))
                 {
-                    // Принудительно обновляем состояние команд после изменения IsStopButtonEnabled
-                    CommandManager.InvalidateRequerySuggested();
+                    RunCommand.RaiseCanExecuteChanged();
+                    StopCommand.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -187,13 +190,19 @@ namespace KID.ViewModels
 
         public ICommand NewFileCommand { get; }
         public ICommand OpenFileCommand { get; }
-        public ICommand SaveFileCommand { get; }
+        public RelayCommand SaveFileCommand { get; }
+        ICommand IMenuViewModel.SaveFileCommand => SaveFileCommand;
         public ICommand SaveAsFileCommand { get; }
-        public ICommand SaveAndSetAsTemplateCommand { get; }
-        public ICommand RunCommand { get; }
-        public ICommand StopCommand { get; }
-        public ICommand UndoCommand { get; }
-        public ICommand RedoCommand { get; }
+        public RelayCommand SaveAndSetAsTemplateCommand { get; }
+        ICommand IMenuViewModel.SaveAndSetAsTemplateCommand => SaveAndSetAsTemplateCommand;
+        public RelayCommand RunCommand { get; }
+        ICommand IMenuViewModel.RunCommand => RunCommand;
+        public RelayCommand StopCommand { get; }
+        ICommand IMenuViewModel.StopCommand => StopCommand;
+        public RelayCommand UndoCommand { get; }
+        ICommand IMenuViewModel.UndoCommand => UndoCommand;
+        public RelayCommand RedoCommand { get; }
+        ICommand IMenuViewModel.RedoCommand => RedoCommand;
         public ICommand ChangeLanguageCommand { get; }
         public ICommand ChangeThemeCommand { get; }
         public ICommand ChangeFontCommand { get; }
