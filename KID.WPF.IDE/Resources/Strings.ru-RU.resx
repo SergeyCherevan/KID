@@ -160,5 +160,14 @@
   <data name="Menu_FontSize" xml:space="preserve">
     <value>Размер шрифта</value>
   </data>
+  <data name="TabContext_Close" xml:space="preserve">
+    <value>Закрыть</value>
+  </data>
+  <data name="TabContext_MoveLeft" xml:space="preserve">
+    <value>Передвинуть влево</value>
+  </data>
+  <data name="TabContext_MoveRight" xml:space="preserve">
+    <value>Передвинуть вправо</value>
+  </data>
 </root>
 

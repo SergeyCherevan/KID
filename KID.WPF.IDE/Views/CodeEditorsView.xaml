@@ -1,4 +1,5 @@
 <UserControl x:Class="KID.Views.CodeEditorsView"
+             x:Name="CodeEditorsViewRoot"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
@@ -6,7 +7,8 @@
              xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
              xmlns:di="clr-namespace:KID.Services.DI"
              xmlns:models="clr-namespace:KID.Models"
-             xmlns:converters="clr-namespace:KID.Converters">
+             xmlns:converters="clr-namespace:KID.Converters"
+             xmlns:localization="clr-namespace:KID.Services.Localization">
     
     <UserControl.DataContext>
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:ICodeEditorsViewModel}" />
@@ -72,6 +74,26 @@
                                 Padding="10,2,4,2"
                                 MinWidth="80"
                                 Cursor="Hand">
+                            <Border.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="{localization:Localization TabContext_Close}"
+                                              Command="{Binding DataContext.CloseFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <MenuItem Header="{localization:Localization Menu_Save}"
+                                              Command="{Binding DataContext.SaveFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <MenuItem Header="{localization:Localization Menu_SaveAs}"
+                                              Command="{Binding DataContext.SaveAsFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <Separator/>
+                                    <MenuItem Header="{localization:Localization TabContext_MoveLeft}"
+                                              Command="{Binding DataContext.MoveTabLeftCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <MenuItem Header="{localization:Localization TabContext_MoveRight}"
+                                              Command="{Binding DataContext.MoveTabRightCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <Border.InputBindings>
                                 <MouseBinding Gesture="LeftClick"
                                               Command="{Binding DataContext.SelectFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"

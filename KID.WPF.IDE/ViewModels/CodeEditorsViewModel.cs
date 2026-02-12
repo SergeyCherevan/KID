@@ -1,12 +1,15 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit;
 using KID.Models;
 using KID.Services.DI;
+using KID.Services.Files.Interfaces;
 using KID.Services.Initialize;
 using KID.Services.Initialize.Interfaces;
+using KID.Services.Localization.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 
@@ -21,6 +24,16 @@ namespace KID.ViewModels
         /// Сервис для работы с настройками окна.
         /// </summary>
         private readonly IWindowConfigurationService windowConfigurationService;
+
+        /// <summary>
+        /// Сервис для работы с файлами кода.
+        /// </summary>
+        private readonly ICodeFileService codeFileService;
+
+        /// <summary>
+        /// Сервис локализации.
+        /// </summary>
+        private readonly ILocalizationService localizationService;
 
         /// <summary>
         /// Путь для нового несохранённого файла.
@@ -64,14 +77,23 @@ namespace KID.ViewModels
         /// </summary>
         public TextEditor? CodeEditor => ActiveFile?.CodeEditor;
 
-        public CodeEditorsViewModel(IWindowConfigurationService windowConfigurationService)
+        public CodeEditorsViewModel(
+            IWindowConfigurationService windowConfigurationService,
+            ICodeFileService codeFileService,
+            ILocalizationService localizationService)
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
-            
+            this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
+            this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             CloseFileCommand = new RelayCommand<OpenedFileTab>(ExecuteCloseFile);
             SelectFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSelectFile);
+            SaveFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveFile);
+            SaveAsFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveAsFile);
+            MoveTabLeftCommand = new RelayCommand<OpenedFileTab>(ExecuteMoveTabLeft, CanMoveTabLeft);
+            MoveTabRightCommand = new RelayCommand<OpenedFileTab>(ExecuteMoveTabRight, CanMoveTabRight);
         }
 
         /// <inheritdoc />
@@ -200,6 +222,10 @@ namespace KID.ViewModels
         public ICommand RedoCommand { get; }
         public ICommand CloseFileCommand { get; }
         public ICommand SelectFileCommand { get; }
+        public ICommand SaveFileCommand { get; }
+        public ICommand SaveAsFileCommand { get; }
+        public ICommand MoveTabLeftCommand { get; }
+        public ICommand MoveTabRightCommand { get; }
 
         private void ExecuteUndo()
         {
@@ -216,6 +242,95 @@ namespace KID.ViewModels
         private void ExecuteCloseFile(OpenedFileTab tab) => CloseFile(tab);
 
         private void ExecuteSelectFile(OpenedFileTab tab) => SelectFile(tab);
+
+        private async void ExecuteSaveFile(OpenedFileTab tab)
+        {
+            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
+                return;
+
+            var content = GetTabContent(tab);
+            if (string.IsNullOrEmpty(content))
+                return;
+
+            if (IsNewFilePath(tab.FilePath))
+            {
+                ExecuteSaveAsFile(tab);
+                return;
+            }
+
+            await codeFileService.SaveToPathAsync(tab.FilePath, content);
+        }
+
+        private async void ExecuteSaveAsFile(OpenedFileTab tab)
+        {
+            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null || localizationService == null)
+                return;
+
+            var content = GetTabContent(tab);
+            if (string.IsNullOrEmpty(content))
+                return;
+
+            var defaultFileName = IsNewFilePath(tab.FilePath)
+                ? "NewFile.cs"
+                : Path.GetFileName(tab.FilePath);
+
+            var fileFilter = localizationService.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
+            var savedPath = await codeFileService.SaveCodeFileAsync(content, fileFilter, defaultFileName);
+            if (savedPath != null)
+                tab.FilePath = savedPath;
+        }
+
+        private bool CanMoveTabLeft(OpenedFileTab? tab) =>
+            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) > 0;
+
+        private bool CanMoveTabRight(OpenedFileTab? tab) =>
+            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) < OpenedFiles.Count - 1;
+
+        private void ExecuteMoveTabLeft(OpenedFileTab tab)
+        {
+            if (tab == null || !OpenedFiles.Contains(tab))
+                return;
+
+            var index = OpenedFiles.IndexOf(tab);
+            if (index <= 0)
+                return;
+
+            OpenedFiles.Move(index, index - 1);
+            UpdateActiveFileIndexAfterMove(index, index - 1);
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void ExecuteMoveTabRight(OpenedFileTab tab)
+        {
+            if (tab == null || !OpenedFiles.Contains(tab))
+                return;
+
+            var index = OpenedFiles.IndexOf(tab);
+            if (index < 0 || index >= OpenedFiles.Count - 1)
+                return;
+
+            OpenedFiles.Move(index, index + 1);
+            UpdateActiveFileIndexAfterMove(index, index + 1);
+            CommandManager.InvalidateRequerySuggested();
+        }
+
+        private void UpdateActiveFileIndexAfterMove(int oldIndex, int newIndex)
+        {
+            if (indexOfActiveFile == oldIndex)
+                indexOfActiveFile = newIndex;
+            else if (oldIndex < indexOfActiveFile && newIndex >= indexOfActiveFile)
+                indexOfActiveFile--;
+            else if (oldIndex > indexOfActiveFile && newIndex <= indexOfActiveFile)
+                indexOfActiveFile++;
+            OnPropertyChanged(nameof(ActiveFile));
+        }
+
+        private static string GetTabContent(OpenedFileTab tab) =>
+            tab.CodeEditor?.Text ?? tab.Content ?? string.Empty;
+
+        private static bool IsNewFilePath(string path) =>
+            path.EndsWith("NewFile.cs", StringComparison.OrdinalIgnoreCase) ||
+            path == "/NewFile.cs";
 
         private static TextEditor CreateCodeEditor(string content, WindowConfigurationData settings)
         {

@@ -37,6 +37,10 @@ namespace KID.ViewModels.Interfaces
         ICommand RedoCommand { get; }
         ICommand CloseFileCommand { get; }
         ICommand SelectFileCommand { get; }
+        ICommand SaveFileCommand { get; }
+        ICommand SaveAsFileCommand { get; }
+        ICommand MoveTabLeftCommand { get; }
+        ICommand MoveTabRightCommand { get; }
 
         void SetSyntaxHighlighting(string language);
 

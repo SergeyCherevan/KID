@@ -160,5 +160,14 @@
   <data name="Menu_FontSize" xml:space="preserve">
     <value>Font Size</value>
   </data>
+  <data name="TabContext_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="TabContext_MoveLeft" xml:space="preserve">
+    <value>Move Left</value>
+  </data>
+  <data name="TabContext_MoveRight" xml:space="preserve">
+    <value>Move Right</value>
+  </data>
 </root>
 
