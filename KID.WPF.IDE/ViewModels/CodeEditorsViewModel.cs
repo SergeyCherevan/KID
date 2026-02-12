@@ -272,7 +272,7 @@ namespace KID.ViewModels
             if (string.IsNullOrEmpty(content))
                 return;
 
-            if (IsNewFilePath(tab.FilePath))
+            if (codeFileService.IsNewFilePath(tab.FilePath))
             {
                 var defaultFileName = "NewFile.cs";
                 var fileFilter = localizationService.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
@@ -302,7 +302,7 @@ namespace KID.ViewModels
             if (string.IsNullOrEmpty(content))
                 return;
 
-            if (IsNewFilePath(tab.FilePath))
+            if (codeFileService.IsNewFilePath(tab.FilePath))
             {
                 ExecuteSaveAsFile(tab);
                 return;
@@ -321,7 +321,7 @@ namespace KID.ViewModels
             if (string.IsNullOrEmpty(content))
                 return;
 
-            var defaultFileName = IsNewFilePath(tab.FilePath)
+            var defaultFileName = codeFileService.IsNewFilePath(tab.FilePath)
                 ? "NewFile.cs"
                 : Path.GetFileName(tab.FilePath);
 
@@ -381,10 +381,6 @@ namespace KID.ViewModels
 
         private static string GetTabContent(OpenedFileTab tab) =>
             tab.CodeEditor?.Text ?? tab.Content ?? string.Empty;
-
-        private static bool IsNewFilePath(string path) =>
-            path.EndsWith("NewFile.cs", StringComparison.OrdinalIgnoreCase) ||
-            path == "/NewFile.cs";
 
         private static TextEditor CreateCodeEditor(string content, WindowConfigurationData settings)
         {

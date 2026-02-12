@@ -53,6 +53,9 @@ namespace KID.Services.Files
             await fileService.WriteFileAsync(filePath, code);
             return filePath;
         }
+
+        /// <inheritdoc />
+        public bool IsNewFilePath(string path) => path == "/NewFile.cs";
     }
 }
 

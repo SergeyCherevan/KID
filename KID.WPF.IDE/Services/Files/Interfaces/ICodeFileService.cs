@@ -23,6 +23,11 @@ namespace KID.Services.Files.Interfaces
         /// Возвращает путь сохранённого файла или null, если пользователь отменил.
         /// </summary>
         Task<string?> SaveCodeFileAsync(string code, string fileFilter, string defaultFileName);
+
+        /// <summary>
+        /// Возвращает true, если путь указывает на новый несохранённый файл.
+        /// </summary>
+        bool IsNewFilePath(string path);
     }
 }
 

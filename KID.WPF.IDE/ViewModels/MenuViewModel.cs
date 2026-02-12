@@ -2,6 +2,7 @@ using System.IO;
 using KID.Models;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
+using KID.Services.Files;
 using KID.Services.Files.Interfaces;
 using KID.Services.Fonts.Interfaces;
 using KID.Services.Initialize.Interfaces;
@@ -181,12 +182,8 @@ namespace KID.ViewModels
         public bool CanRedo => codeEditorsViewModel.CanRedo;
 
         private bool CanSaveFile => !string.IsNullOrEmpty(codeEditorsViewModel.FilePath) &&
-            !IsNewFilePath(codeEditorsViewModel.FilePath) &&
+            !codeFileService.IsNewFilePath(codeEditorsViewModel.FilePath) &&
             codeEditorsViewModel.HasUnsavedChanges;
-
-        private static bool IsNewFilePath(string path) =>
-            path.EndsWith("NewFile.cs", StringComparison.OrdinalIgnoreCase) ||
-            path == "/NewFile.cs";
 
         public ICommand NewFileCommand { get; }
         public ICommand OpenFileCommand { get; }
@@ -238,7 +235,7 @@ namespace KID.ViewModels
                 var openedFiles = codeEditorsViewModel.OpenedFiles;
                 var onlyTab = openedFiles.Count == 1 ? openedFiles[0] : null;
                 var shouldReplaceNewFile = onlyTab != null
-                    && IsNewFilePath(onlyTab.FilePath)
+                    && codeFileService.IsNewFilePath(onlyTab.FilePath)
                     && !onlyTab.IsModified;
 
                 codeEditorsViewModel.AddFile(result.FilePath, result.Code);
@@ -290,7 +287,7 @@ namespace KID.ViewModels
             if (string.IsNullOrEmpty(code))
                 return;
 
-            var defaultFileName = IsNewFilePath(codeEditorsViewModel.FilePath)
+            var defaultFileName = codeFileService.IsNewFilePath(codeEditorsViewModel.FilePath)
                 ? "NewFile.cs"
                 : Path.GetFileName(codeEditorsViewModel.FilePath);
 
