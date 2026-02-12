@@ -41,7 +41,7 @@
 Компоненты:
 - **MainWindow.xaml** — главное окно приложения
 - **MenuView.xaml** — меню приложения
-- **CodeEditorView.xaml** — редактор кода на базе AvalonEdit
+- **CodeEditorsView.xaml** — панель с вкладками открытых файлов (ItemsControl для вкладок, ContentControl для редактора активной вкладки на базе AvalonEdit)
 - **ConsoleOutputView.xaml** — панель консольного вывода
 - **GraphicsOutputView.xaml** — панель графического вывода
 
@@ -64,15 +64,17 @@
 
 **MenuViewModel** (`MenuViewModel.cs`)
 - Управление меню приложения
-- Команды: NewFile, OpenFile, SaveFile, Run, Stop, Undo, Redo
+- Команды: NewFile, OpenFile, SaveFile, SaveAsFile, Run, Stop, Undo, Redo
 - Управление темами, языками интерфейса, шрифтом и размером шрифта
 - Состояние кнопок (IsStopButtonEnabled, CanUndo, CanRedo)
+- Зависимость от ICodeEditorsViewModel для работы с вкладками
 
-**CodeEditorViewModel** (`CodeEditorViewModel.cs`)
-- Управление редактором кода
-- Свойства: Text, FontFamily, FontSize
-- Команды: Undo, Redo
-- Интеграция с AvalonEdit TextEditor
+**CodeEditorsViewModel** (`CodeEditorsViewModel.cs`)
+- Управление панелью редакторов с вкладками
+- Свойства: OpenedFiles, ActiveFile, Text, FilePath, CodeEditor, FontFamily, FontSize, CanUndo, CanRedo, HasUnsavedChanges
+- Команды: Undo, Redo, CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
+- Методы: AddFile, CloseFile, SelectFile, SetSyntaxHighlighting
+- Интеграция с AvalonEdit TextEditor (создаётся на каждую вкладку)
 
 **ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
 - Управление консольным выводом
@@ -136,8 +138,13 @@
 
 **Расположение:** `KID.WPF.IDE/Services/Files/`
 
+**OpenFileResult** (`OpenFileResult.cs`)
+- Результат открытия файла — содержит Code и FilePath
+
 **CodeFileService** (`CodeFileService.cs`)
-- Открытие и сохранение .cs файлов
+- `OpenCodeFileWithPathAsync(string filter)` — открывает файл через диалог, возвращает `OpenFileResult?` (содержимое и путь)
+- `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
+- `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
 - Использует FileDialogService для диалогов
 - Использует FileService для чтения/записи
 
@@ -226,6 +233,11 @@
 **CompilationResult** (`CompilationResult.cs`)
 - Результат компиляции кода
 - Свойства: Success, Errors, Assembly
+
+**OpenedFileTab** (`OpenedFileTab.cs`)
+- Модель вкладки открытого файла
+- Свойства: FilePath, Content, SavedContent, IsModified, CodeEditor, FileName
+- Методы: NotifyContentChanged, UpdateSavedContent
 
 **AvailableLanguage** (`AvailableLanguage.cs`)
 - Модель доступного языка

@@ -183,7 +183,17 @@
 
 ### Компоненты
 
-#### 2.1. CodeFileService
+#### 3.1. OpenFileResult
+**Файл:** `KID.WPF.IDE/Services/Files/OpenFileResult.cs`
+
+**Ответственность:**
+- Результат открытия файла — содержит Code и FilePath
+
+**Свойства:**
+- `Code` — содержимое файла
+- `FilePath` — путь к файлу
+
+#### 3.2. CodeFileService
 **Файл:** `KID.WPF.IDE/Services/Files/CodeFileService.cs`
 
 **Ответственность:**
@@ -192,15 +202,16 @@
 - Работа с диалогами открытия/сохранения
 
 **Основные методы:**
-- `OpenCodeFileAsync(string filter)` — открывает файл
-- `SaveCodeFileAsync(string code, string filter)` — сохраняет файл
+- `OpenCodeFileWithPathAsync(string filter)` — открывает файл через диалог, возвращает `OpenFileResult?` (содержимое и путь)
+- `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
+- `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
 
 **Особенности:**
 - Использует FileDialogService для диалогов
 - Использует FileService для чтения/записи
 - Асинхронные операции
 
-#### 2.2. FileDialogService
+#### 3.3. FileDialogService
 **Файл:** `KID.WPF.IDE/Services/Files/FileDialogService.cs`
 
 **Ответственность:**
@@ -211,7 +222,7 @@
 - `ShowOpenDialog(string filter)` — показывает диалог открытия
 - `ShowSaveDialog(string filter, string defaultFileName)` — показывает диалог сохранения
 
-#### 2.3. FileService
+#### 3.4. FileService
 **Файл:** `KID.WPF.IDE/Services/Files/FileService.cs`
 
 **Ответственность:**
@@ -222,6 +233,28 @@
 **Основные методы:**
 - `ReadAllTextAsync(string path)` — читает файл
 - `WriteAllTextAsync(string path, string content)` — записывает файл
+
+### 3.5. Подсистема редактора кода (Code Editors)
+
+**Назначение:** Управление панелью вкладок с открытыми файлами, отслеживание несохранённых изменений.
+
+**Компоненты:**
+
+**CodeEditorsViewModel** (`KID.WPF.IDE/ViewModels/CodeEditorsViewModel.cs`)
+- Управление коллекцией `OpenedFiles` (ObservableCollection<OpenedFileTab>)
+- Активная вкладка `ActiveFile`, делегирование Text, FilePath, CodeEditor
+- Команды: CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
+- Отслеживание `HasUnsavedChanges`, `IsModified` для каждой вкладки
+- Метод `AddFile(path, content)` — создание новой вкладки (или замена NewFile при открытии, если без изменений)
+
+**OpenedFileTab** (`KID.WPF.IDE/Models/OpenedFileTab.cs`)
+- Модель вкладки: FilePath, Content, SavedContent, IsModified, CodeEditor, FileName
+- `NotifyContentChanged()`, `UpdateSavedContent()` для синхронизации состояния
+
+**CodeEditorsView** (`KID.WPF.IDE/Views/CodeEditorsView.xaml`)
+- ItemsControl для вкладок, ContentControl для редактора активной вкладки
+- Контекстное меню вкладки: Закрыть, Сохранить, Сохранить как, Сохранить и назначить шаблоном, Переместить влево/вправо
+- Визуальная индикация: жирный шрифт активной вкладки, кнопка × для закрытия
 
 ## 4. Подсистема локализации (Localization)
 
@@ -286,6 +319,7 @@
 - `Language_*` — названия языков
 - `Theme_*` — названия тем
 - `Notification_*` — уведомления
+- `TabContext_*` — пункты контекстного меню вкладок (Close, MoveLeft, MoveRight, SaveAndSetAsTemplate)
 
 ## 5. Подсистема тем оформления (Themes)
 
@@ -332,6 +366,8 @@
 - `SpecialElementsBrush` — фон специальных элементов
 - `SplitterBrush` — цвет разделителей
 - `WindowButtonStyle` — стиль кнопок окна
+- `TabActiveBrush`, `TabInactiveBrush`, `TabBarBackgroundBrush` — цвета вкладок редактора
+- `TabActiveTextBrush`, `TabInactiveTextBrush` — цвета текста вкладок
 
 ## 6. Подсистема инициализации (Initialize)
 
@@ -384,8 +420,12 @@
 3. Применение темы оформления
 4. Применение языка интерфейса
 5. Инициализация главного окна
-6. Инициализация редактора кода
+6. Инициализация редактора кода: `codeEditorsViewModel.AddFile(NewFilePath, templateCode)` — создание первой вкладки
 7. Инициализация консоли
+8. `ApplyCodeEditorSettings()` — отложенное применение шрифта и подсветки синтаксиса (Dispatcher.BeginInvoke с Loaded) после создания TextEditor
+
+**Особенности:**
+- TextEditor создаётся асинхронно во вкладке, поэтому настройки шрифта применяются через BeginInvoke
 
 ## 7. Подсистема Music API
 
@@ -692,23 +732,23 @@
 ### Схема взаимодействия
 
 ```
-┌─────────────────┐
-│  MenuViewModel  │
-└────────┬────────┘
-         │
-         ├──→ CodeExecutionService
-         │         │
-         │         ├──→ CSharpCompiler
-         │         └──→ DefaultCodeRunner
-         │
-         ├──→ CodeFileService
-         │         │
-         │         ├──→ FileDialogService
-         │         └──→ FileService
-         │
-         ├──→ LocalizationService
-         │
-         └──→ ThemeService
+┌─────────────────────┐
+│   MenuViewModel     │
+└──────────┬──────────┘
+           │
+           ├──→ CodeEditorsViewModel ──→ CodeFileService
+           │              │                      │
+           │              │                      ├──→ FileDialogService
+           │              │                      └──→ FileService
+           │              │
+           ├──→ CodeExecutionService
+           │         │
+           │         ├──→ CSharpCompiler
+           │         └──→ DefaultCodeRunner
+           │
+           ├──→ LocalizationService
+           │
+           └──→ ThemeService
 ```
 
 ### Потоки данных
@@ -725,7 +765,8 @@
    - TextBoxConsole использует DispatcherManager для потокобезопасной работы с UI
 
 3. **Работа с файлами:**
-   - MenuViewModel → CodeFileService → FileDialogService → FileService
+   - MenuViewModel → CodeEditorsViewModel → CodeFileService → FileDialogService → FileService
+   - Сохранение/открытие выполняется через CodeEditorsViewModel с учётом активной вкладки
 
 4. **Локализация:**
    - LocalizationService → ResourceManager → .resx файлы
