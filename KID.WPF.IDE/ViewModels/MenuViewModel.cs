@@ -209,8 +209,11 @@ namespace KID.ViewModels
             
             var code = windowConfigurationService.Settings.TemplateCode;
             codeEditorsViewModel.AddFile(CodeEditorsViewModel.NewFilePath, code ?? string.Empty);
-            consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
-            graphicsOutputViewModel.Clear();
+            if (!IsStopButtonEnabled)
+            {
+                consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
+                graphicsOutputViewModel.Clear();
+            }
         }
 
         private string GetFileFilter()
@@ -235,8 +238,11 @@ namespace KID.ViewModels
                     && !onlyTab.IsModified;
 
                 codeEditorsViewModel.AddFile(result.FilePath, result.Code);
-                consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
-                graphicsOutputViewModel.Clear();
+                if (!IsStopButtonEnabled)
+                {
+                    consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
+                    graphicsOutputViewModel.Clear();
+                }
 
                 if (shouldReplaceNewFile && onlyTab != null)
                     codeEditorsViewModel.CloseFile(onlyTab);
