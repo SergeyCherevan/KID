@@ -1,6 +1,6 @@
 ---
 name: Рефакторинг MenuViewModel и CodeEditorsViewModel
-overview: "План рефакторинга включает: замену async void на async Task с обработкой ошибок, добавление IsNewFilePath в ICodeFileService, добавление RaiseCanExecuteChanged в RelayCommand, создание IFontSettingsService и ICodeEditorFactory, обновление IMenuViewModel."
+overview: "План рефакторинга включает: замену async void на async Task с обработкой ошибок, добавление IsNewFilePath в ICodeFileService, добавление RaiseCanExecuteChanged в RelayCommand, расширение IWindowConfigurationService (FontSettingsChanged, SetFont) и создание ICodeEditorFactory, обновление IMenuViewModel."
 todos:
   - id: isnewfilepath-ext
     content: Добавить IsNewFilePath в ICodeFileService, реализовать в CodeFileService, заменить вызовы в MenuViewModel и CodeEditorsViewModel
@@ -12,8 +12,8 @@ todos:
     content: Добавить RaiseCanExecuteChanged в RelayCommand и заменить CommandManager.InvalidateRequerySuggested
     status: completed
   - id: font-settings-service
-    content: Создать IFontSettingsService и FontSettingsService, интегрировать в MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel, WindowInitializationService, App.xaml.cs
-    status: pending
+    content: Расширить IWindowConfigurationService (event FontSettingsChanged, SetFont), интегрировать в MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel, WindowInitializationService
+    status: completed
   - id: code-editor-factory
     content: Создать ICodeEditorFactory и CodeEditorFactory, использовать в CodeEditorsViewModel
     status: pending
@@ -54,8 +54,6 @@ isProject: false
 ```mermaid
 flowchart TB
     subgraph new [Новые компоненты]
-        IFontSettingsService[IFontSettingsService]
-        FontSettingsService[FontSettingsService]
         ICodeEditorFactory[ICodeEditorFactory]
         CodeEditorFactory[CodeEditorFactory]
     end
@@ -71,15 +69,14 @@ flowchart TB
         IWindowConfigurationService[IWindowConfigurationService]
     end
 
-    MenuViewModel --> IFontSettingsService
+    MenuViewModel --> IWindowConfigurationService
     MenuViewModel --> ICodeFileService
     MenuViewModel --> CodeEditorsViewModel
     CodeEditorsViewModel --> ICodeEditorFactory
     CodeEditorsViewModel --> ICodeFileService
-    FontSettingsService --> IWindowConfigurationService
-    CodeEditorFactory --> IFontSettingsService
-    ConsoleOutputViewModel --> IFontSettingsService
-    CodeEditorsViewModel --> IFontSettingsService
+    CodeEditorsViewModel --> IWindowConfigurationService
+    CodeEditorFactory --> IWindowConfigurationService
+    ConsoleOutputViewModel --> IWindowConfigurationService
 ```
 
 
@@ -164,57 +161,56 @@ ICommand ChangeFontSizeCommand { get; }
 
 ---
 
-### Задача 4: IFontSettingsService (приоритет 4)
+### Задача 4: Расширение IWindowConfigurationService для шрифтов (приоритет 4)
 
-**Создать:** [KID.WPF.IDE/Services/Fonts/Interfaces/IFontSettingsService.cs](KID.WPF.IDE/Services/Fonts/Interfaces/IFontSettingsService.cs)
+Вместо отдельного IFontSettingsService — расширяем существующий IWindowConfigurationService. Меньше кода, нет дублирования (Settings уже хранит FontFamily и FontSize).
 
+**Изменить:** [KID.WPF.IDE/Services/Initialize/Interfaces/IWindowConfigurationService.cs](KID.WPF.IDE/Services/Initialize/Interfaces/IWindowConfigurationService.cs)
+
+Добавить в интерфейс:
 ```csharp
-public interface IFontSettingsService
-{
-    string FontFamilyName { get; }
-    double FontSize { get; }
-    event EventHandler FontSettingsChanged;
-    void SetFont(string fontFamilyName, double fontSize);
-}
+/// <summary>
+/// Событие при изменении шрифта. Вызывается из SetFont.
+/// </summary>
+event EventHandler FontSettingsChanged;
+
+/// <summary>
+/// Устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков.
+/// </summary>
+void SetFont(string fontFamilyName, double fontSize);
 ```
 
-**Создать:** [KID.WPF.IDE/Services/Fonts/FontSettingsService.cs](KID.WPF.IDE/Services/Fonts/FontSettingsService.cs)
+**Изменить:** [KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs](KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs)
 
-- Конструктор: `IWindowConfigurationService`
-- Читает `FontFamily` и `FontSize` из Settings при создании
-- `SetFont`: обновляет свойства, сохраняет в Settings, вызывает `SaveSettings()`, поднимает `FontSettingsChanged`
-
-**Изменить:** [ServiceCollectionExtensions.cs](KID.WPF.IDE/Services/DI/ServiceCollectionExtensions.cs)
-
-- Зарегистрировать `services.AddSingleton<IFontSettingsService, FontSettingsService>();`
+- Добавить `event EventHandler? FontSettingsChanged`
+- Реализовать `SetFont`: обновить `Settings.FontFamily`, `Settings.FontSize`, вызвать `SaveSettings()`, поднять `FontSettingsChanged`
 
 **Изменить:** [MenuViewModel.cs](KID.WPF.IDE/ViewModels/MenuViewModel.cs)
 
-- Добавить `IFontSettingsService fontSettingsService`
-- `ChangeFont`: вызывать `fontSettingsService.SetFont(fontFamilyName, fontSize)` вместо прямого изменения ViewModels
+- `ChangeFont`: вызывать `windowConfigurationService.SetFont(fontFamilyName, fontSize)` вместо прямого изменения ViewModels
 - `ChangeFontSize`: аналогично
-- `SelectedFontFamily` и `SelectedFontSize`: читать из `fontSettingsService` вместо `windowConfigurationService.Settings`
-- Подписаться на `FontSettingsChanged` для `OnPropertyChanged(SelectedFontFamily)` и т.д.
+- Подписаться на `FontSettingsChanged` для `OnPropertyChanged(SelectedFontFamily)` и `OnPropertyChanged(SelectedFontSize)`
+- `SelectedFontFamily` и `SelectedFontSize` оставить как есть (читают из `windowConfigurationService.Settings`)
 
 **Изменить:** [CodeEditorsViewModel.cs](KID.WPF.IDE/ViewModels/CodeEditorsViewModel.cs)
 
-- Добавить `IFontSettingsService fontSettingsService`
-- Подписаться на `FontSettingsChanged`: при событии обновлять `FontFamily`/`FontSize` у всех вкладок
-- Удалить сеттеры `FontFamily`/`FontSize` из публичного API? Нет — они по-прежнему нужны для применения шрифта из сервиса. Сервис вызовет `FontFamily = value` на ViewModel при событии. Но тогда CodeEditorsViewModel должен подписаться и применять — через `FontFamily = new FontFamily(fontSettingsService.FontFamilyName)` и т.д.
+- Добавить `IWindowConfigurationService` в конструктор (уже есть)
+- Подписаться на `FontSettingsChanged`: при событии применять `FontFamily = new FontFamily(Settings.FontFamily)` и `FontSize = Settings.FontSize` ко всем вкладкам
 
 **Изменить:** [ConsoleOutputViewModel.cs](KID.WPF.IDE/ViewModels/ConsoleOutputViewModel.cs)
 
-- Добавить `IFontSettingsService fontSettingsService`
-- В конструкторе подписаться на `FontSettingsChanged` и применить текущий шрифт + при инициализации применить шрифт из сервиса
+- Добавить `IWindowConfigurationService windowConfigurationService` в конструктор
+- Подписаться на `FontSettingsChanged`: при событии применять шрифт из Settings
+- При `Initialize` применять текущий шрифт из Settings (если Control уже создан)
 
 **Изменить:** [WindowInitializationService.cs](KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs)
 
-- В `ApplyCodeEditorSettings`: убрать установку шрифта (теперь через IFontSettingsService)
-- В `InitializeConsole`: убрать установку шрифта — ConsoleOutputViewModel при подписке получит текущие значения из FontSettingsService и применит при Initialize
+- В `ApplyCodeEditorSettings`: убрать установку шрифта — ICodeEditorFactory создаёт редактор с шрифтом из Settings
+- В `InitializeConsole`: убрать установку шрифта — ConsoleOutputViewModel в Initialize применит шрифт из Settings
 
 **Изменить:** [App.xaml.cs](KID.WPF.IDE/App.xaml.cs)
 
-- При сохранении настроек при закрытии: читать FontFamily/FontSize из `IFontSettingsService` вместо `codeEditorsViewModel`
+- При сохранении настроек при закрытии: FontFamily/FontSize уже в Settings (обновляются через SetFont), дополнительных действий не требуется
 
 ---
 
@@ -231,8 +227,8 @@ public interface ICodeEditorFactory
 
 **Создать:** [KID.WPF.IDE/Services/CodeEditor/CodeEditorFactory.cs](KID.WPF.IDE/Services/CodeEditor/CodeEditorFactory.cs)
 
-- Конструктор: `IFontSettingsService`
-- `Create`: создаёт TextEditor с `content`, `WordWrap`, `ShowLineNumbers`, синтаксис из `programmingLanguage`, шрифт из `IFontSettingsService`, кисти из `Application.Current.FindResource`
+- Конструктор: `IWindowConfigurationService`
+- `Create`: создаёт TextEditor с `content`, `WordWrap`, `ShowLineNumbers`, синтаксис из `programmingLanguage`, шрифт из `windowConfigurationService.Settings`, кисти из `Application.Current.FindResource`
 
 **Изменить:** [ServiceCollectionExtensions.cs](KID.WPF.IDE/Services/DI/ServiceCollectionExtensions.cs)
 
@@ -294,8 +290,8 @@ private async void ExecuteAsync(Func<Task> asyncAction)
 | 1   | IsNewFilePath в ICodeFileService    | —                    |
 | 2   | IMenuViewModel — команды            | —                    |
 | 3   | RelayCommand RaiseCanExecuteChanged | —                    |
-| 4   | IFontSettingsService                | —                    |
-| 5   | ICodeEditorFactory                  | IFontSettingsService |
+| 4   | Расширение IWindowConfigurationService | —                    |
+| 5   | ICodeEditorFactory                  | —                    |
 | 6   | async void → async Task             | Локализация          |
 
 
@@ -309,7 +305,7 @@ private async void ExecuteAsync(Func<Task> asyncAction)
 | 1. IsNewFilePath в ICodeFileService | Низкая | 15 мин | Нет |
 | 2. IMenuViewModel       | Низкая    | 5 мин  | Нет                                                            |
 | 3. RelayCommand         | Средняя   | 45 мин | Нужно аккуратно заменить все вызовы InvalidateRequerySuggested |
-| 4. IFontSettingsService | Средняя   | 60 мин | Порядок инициализации, подписка при создании вкладок           |
+| 4. Расширение IWindowConfigurationService | Средняя | 40 мин | Порядок инициализации, подписка при создании вкладок |
 | 5. ICodeEditorFactory   | Средняя   | 40 мин | Вынести логику CreateCodeEditor                                |
 | 6. async void           | Средняя   | 50 мин | ExecuteRun: гарантировать сброс IsStopButtonEnabled в finally  |
 
@@ -320,6 +316,6 @@ private async void ExecuteAsync(Func<Task> asyncAction)
 
 После рефакторинга обновить:
 
-- [docs/SUBSYSTEMS.md](docs/SUBSYSTEMS.md) — описать IFontSettingsService, ICodeEditorFactory, метод IsNewFilePath в ICodeFileService
+- [docs/SUBSYSTEMS.md](docs/SUBSYSTEMS.md) — описать расширение IWindowConfigurationService (FontSettingsChanged, SetFont), ICodeEditorFactory, метод IsNewFilePath в ICodeFileService
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — обновить диаграммы зависимостей (если есть)
 

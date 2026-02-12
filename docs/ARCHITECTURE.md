@@ -205,7 +205,7 @@
 - Применение настроек из конфигурации
 - Инициализация редактора, консоли, графики
 
-**WindowConfigurationData** (`WindowConfigurationData.cs`)
+**WindowConfigurationData** (`Models/WindowConfigurationData.cs`)
 - Модель данных для настроек
 - Свойства: ProgrammingLanguage, FontFamily, FontSize, ColorTheme, UILanguage, TemplateCode, TemplateName
 

@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Media;
 using KID.Models;
+using KID.ViewModels.Infrastructure;
 
 namespace KID.ViewModels.Interfaces
 {
@@ -34,15 +35,15 @@ namespace KID.ViewModels.Interfaces
         bool CanRedo { get; }
         bool HasUnsavedChanges { get; }
 
-        ICommand UndoCommand { get; }
-        ICommand RedoCommand { get; }
-        ICommand CloseFileCommand { get; }
-        ICommand SelectFileCommand { get; }
-        ICommand SaveFileCommand { get; }
-        ICommand SaveAsFileCommand { get; }
-        ICommand SaveAndSetAsTemplateCommand { get; }
-        ICommand MoveTabLeftCommand { get; }
-        ICommand MoveTabRightCommand { get; }
+        RelayCommand UndoCommand { get; }
+        RelayCommand RedoCommand { get; }
+        RelayCommand<OpenedFileTab> CloseFileCommand { get; }
+        RelayCommand<OpenedFileTab> SelectFileCommand { get; }
+        RelayCommand<OpenedFileTab> SaveFileCommand { get; }
+        RelayCommand<OpenedFileTab> SaveAsFileCommand { get; }
+        RelayCommand<OpenedFileTab> SaveAndSetAsTemplateCommand { get; }
+        RelayCommand<OpenedFileTab> MoveTabLeftCommand { get; }
+        RelayCommand<OpenedFileTab> MoveTabRightCommand { get; }
 
         void SetSyntaxHighlighting(string language);
 

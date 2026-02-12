@@ -1,19 +1,16 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace KID.Services.Initialize
+namespace KID.Models
 {
+    /// <summary>
+    /// Модель данных настроек окна приложения (тема, язык, шрифт, шаблон кода).
+    /// </summary>
     public class WindowConfigurationData
     {
         // Цветовая тема
         public string ColorTheme { get; set; } = "Light"; // Light, Dark
-        
+
         // Язык интерфейса
         public string UILanguage { get; set; } = "ru-RU"; // ru-RU, en-US, uk-UA
-        
+
         // Настройки редактора кода
         public string ProgrammingLanguage { get; set; } = "C#";
         public string FontFamily { get; set; } = "Consolas";

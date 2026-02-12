@@ -77,15 +77,7 @@ namespace KID.Services.Initialize
                 codeEditorsViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.ProgrammingLanguage);
             }
 
-            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
-            {
-                codeEditorsViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
-            }
-
-            if (windowConfigurationService.Settings.FontSize > 0)
-            {
-                codeEditorsViewModel.FontSize = windowConfigurationService.Settings.FontSize;
-            }
+            // Шрифт применяется через FontSettingsChanged — CodeEditorsViewModel подписан на событие
         }
 
         private void InitializeTheme()
@@ -137,13 +129,7 @@ namespace KID.Services.Initialize
 
             consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
 
-            if (windowConfigurationService?.Settings != null)
-            {
-                if (!string.IsNullOrEmpty(windowConfigurationService.Settings.FontFamily))
-                    consoleOutputViewModel.FontFamily = new System.Windows.Media.FontFamily(windowConfigurationService.Settings.FontFamily);
-                if (windowConfigurationService.Settings.FontSize > 0)
-                    consoleOutputViewModel.FontSize = windowConfigurationService.Settings.FontSize;
-            }
+            // Шрифт применяется в ConsoleOutputViewModel.Initialize через ApplyFontFromSettings
         }
     }
 }

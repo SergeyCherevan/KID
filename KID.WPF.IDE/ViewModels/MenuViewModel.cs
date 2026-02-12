@@ -136,6 +136,12 @@ namespace KID.ViewModels
                 UpdateThemeDisplayNames();
             };
 
+            windowConfigurationService.FontSettingsChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(SelectedFontFamily));
+                OnPropertyChanged(nameof(SelectedFontSize));
+            };
+
             RefreshSelectedSettings();
         }
 
@@ -428,12 +434,10 @@ namespace KID.ViewModels
             if (string.IsNullOrEmpty(fontFamilyName) || windowConfigurationService?.Settings == null)
                 return;
 
-            var fontFamily = new FontFamily(fontFamilyName);
-            codeEditorsViewModel.FontFamily = fontFamily;
-            consoleOutputViewModel.FontFamily = fontFamily;
-            windowConfigurationService.Settings.FontFamily = fontFamilyName;
-            windowConfigurationService.SaveSettings();
-            OnPropertyChanged(nameof(SelectedFontFamily));
+            var fontSize = windowConfigurationService.Settings.FontSize > 0
+                ? windowConfigurationService.Settings.FontSize
+                : 14.0;
+            windowConfigurationService.SetFont(fontFamilyName, fontSize);
         }
 
         private void ChangeFontSize(double fontSize)
@@ -441,11 +445,8 @@ namespace KID.ViewModels
             if (fontSize <= 0 || windowConfigurationService?.Settings == null)
                 return;
 
-            codeEditorsViewModel.FontSize = fontSize;
-            consoleOutputViewModel.FontSize = fontSize;
-            windowConfigurationService.Settings.FontSize = fontSize;
-            windowConfigurationService.SaveSettings();
-            OnPropertyChanged(nameof(SelectedFontSize));
+            var fontFamily = windowConfigurationService.Settings.FontFamily ?? "Consolas";
+            windowConfigurationService.SetFont(fontFamily, fontSize);
         }
     }
 }

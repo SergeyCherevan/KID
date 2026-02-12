@@ -87,6 +87,8 @@ namespace KID.ViewModels
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
 
+            windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
+
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             CloseFileCommand = new RelayCommand<OpenedFileTab>(ExecuteCloseFile);
@@ -231,15 +233,15 @@ namespace KID.ViewModels
         /// </summary>
         public bool HasUnsavedChanges => ActiveFile?.IsModified ?? false;
 
-        public ICommand UndoCommand { get; }
-        public ICommand RedoCommand { get; }
-        public ICommand CloseFileCommand { get; }
-        public ICommand SelectFileCommand { get; }
-        public ICommand SaveFileCommand { get; }
-        public ICommand SaveAsFileCommand { get; }
-        public ICommand SaveAndSetAsTemplateCommand { get; }
-        public ICommand MoveTabLeftCommand { get; }
-        public ICommand MoveTabRightCommand { get; }
+        public RelayCommand UndoCommand { get; }
+        public RelayCommand RedoCommand { get; }
+        public RelayCommand<OpenedFileTab> CloseFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SelectFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SaveFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SaveAsFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SaveAndSetAsTemplateCommand { get; }
+        public RelayCommand<OpenedFileTab> MoveTabLeftCommand { get; }
+        public RelayCommand<OpenedFileTab> MoveTabRightCommand { get; }
 
         private void ExecuteUndo()
         {
@@ -379,19 +381,33 @@ namespace KID.ViewModels
             OnPropertyChanged(nameof(ActiveFile));
         }
 
+        private void OnFontSettingsChanged(object? sender, EventArgs e)
+        {
+            var settings = windowConfigurationService?.Settings;
+            if (settings == null) return;
+
+            var fontFamily = !string.IsNullOrEmpty(settings.FontFamily)
+                ? new FontFamily(settings.FontFamily)
+                : new FontFamily("Consolas");
+            var fontSize = settings.FontSize > 0 ? settings.FontSize : 14.0;
+
+            FontFamily = fontFamily;
+            FontSize = fontSize;
+        }
+
         private void RaiseTabCommandsCanExecute()
         {
-            ((IRaisableCommand)SaveFileCommand).RaiseCanExecuteChanged();
-            ((IRaisableCommand)SaveAsFileCommand).RaiseCanExecuteChanged();
-            ((IRaisableCommand)SaveAndSetAsTemplateCommand).RaiseCanExecuteChanged();
-            ((IRaisableCommand)UndoCommand).RaiseCanExecuteChanged();
-            ((IRaisableCommand)RedoCommand).RaiseCanExecuteChanged();
+            SaveFileCommand.RaiseCanExecuteChanged();
+            SaveAsFileCommand.RaiseCanExecuteChanged();
+            SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
+            UndoCommand.RaiseCanExecuteChanged();
+            RedoCommand.RaiseCanExecuteChanged();
         }
 
         private void RaiseMoveTabCommandsCanExecute()
         {
-            ((IRaisableCommand)MoveTabLeftCommand).RaiseCanExecuteChanged();
-            ((IRaisableCommand)MoveTabRightCommand).RaiseCanExecuteChanged();
+            MoveTabLeftCommand.RaiseCanExecuteChanged();
+            MoveTabRightCommand.RaiseCanExecuteChanged();
         }
 
         private static string GetTabContent(OpenedFileTab tab) =>

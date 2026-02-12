@@ -4,7 +4,6 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using KID.Services.DI;
 using KID.Services.Initialize.Interfaces;
-using KID.ViewModels.Interfaces;
 
 namespace KID
 {
@@ -26,21 +25,10 @@ namespace KID
 
         protected override void OnExit(ExitEventArgs e)
         {
-            // Синхронизируем и сохраняем настройки перед выходом
+            // Сохраняем настройки перед выходом (FontFamily/FontSize обновляются через SetFont при смене шрифта)
             try
             {
                 var settingsService = ServiceProvider.GetRequiredService<IWindowConfigurationService>();
-                var codeEditorsViewModel = ServiceProvider.GetService<ICodeEditorsViewModel>();
-                
-                if (codeEditorsViewModel != null && settingsService.Settings != null)
-                {
-                    var fontFamily = codeEditorsViewModel.FontFamily;
-                    if (fontFamily != null && !string.IsNullOrEmpty(fontFamily.Source))
-                        settingsService.Settings.FontFamily = fontFamily.Source;
-                    if (codeEditorsViewModel.FontSize > 0)
-                        settingsService.Settings.FontSize = codeEditorsViewModel.FontSize;
-                }
-                
                 settingsService.SaveSettings();
             }
             catch

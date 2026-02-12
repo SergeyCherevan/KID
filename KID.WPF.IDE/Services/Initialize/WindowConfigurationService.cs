@@ -1,3 +1,4 @@
+using KID.Models;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using System;
@@ -17,6 +18,9 @@ namespace KID.Services.Initialize
         private readonly string _settingsPath;
 
         public WindowConfigurationData Settings { get; set; } = new WindowConfigurationData();
+
+        /// <inheritdoc />
+        public event EventHandler? FontSettingsChanged;
 
         public WindowConfigurationService(ILocalizationService localizationService)
         {
@@ -116,6 +120,17 @@ namespace KID.Services.Initialize
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
+        }
+
+        /// <inheritdoc />
+        public void SetFont(string fontFamilyName, double fontSize)
+        {
+            if (!string.IsNullOrEmpty(fontFamilyName))
+                Settings.FontFamily = fontFamilyName;
+            if (fontSize > 0)
+                Settings.FontSize = fontSize;
+            SaveSettings();
+            FontSettingsChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }
