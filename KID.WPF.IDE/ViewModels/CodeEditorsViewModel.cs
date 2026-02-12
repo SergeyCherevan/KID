@@ -103,7 +103,7 @@ namespace KID.ViewModels
         {
             var normalizedPath = path ?? NewFilePath;
             var existing = FindTabByPath(normalizedPath);
-            if (existing != null)
+            if (existing != null && !(normalizedPath == NewFilePath && existing.IsModified))
             {
                 ActiveFile = existing;
                 return;
