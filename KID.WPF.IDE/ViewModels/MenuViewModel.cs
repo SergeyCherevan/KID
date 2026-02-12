@@ -228,9 +228,18 @@ namespace KID.ViewModels
             var result = await codeFileService.OpenCodeFileWithPathAsync(GetFileFilter());
             if (result != null)
             {
+                var openedFiles = codeEditorsViewModel.OpenedFiles;
+                var onlyTab = openedFiles.Count == 1 ? openedFiles[0] : null;
+                var shouldReplaceNewFile = onlyTab != null
+                    && IsNewFilePath(onlyTab.FilePath)
+                    && !onlyTab.IsModified;
+
                 codeEditorsViewModel.AddFile(result.FilePath, result.Code);
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
+
+                if (shouldReplaceNewFile && onlyTab != null)
+                    codeEditorsViewModel.CloseFile(onlyTab);
             }
         }
 
