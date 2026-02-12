@@ -6,8 +6,8 @@ using System.Windows.Media;
 using ICSharpCode.AvalonEdit;
 using KID.Models;
 using KID.Services.DI;
+using KID.Services.CodeEditor.Interfaces;
 using KID.Services.Files.Interfaces;
-using KID.Services.Initialize;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.ViewModels.Infrastructure;
@@ -29,6 +29,11 @@ namespace KID.ViewModels
         /// Сервис для работы с файлами кода.
         /// </summary>
         private readonly ICodeFileService codeFileService;
+
+        /// <summary>
+        /// Фабрика для создания редакторов кода.
+        /// </summary>
+        private readonly ICodeEditorFactory codeEditorFactory;
 
         /// <summary>
         /// Сервис локализации.
@@ -81,11 +86,13 @@ namespace KID.ViewModels
         public CodeEditorsViewModel(
             IWindowConfigurationService windowConfigurationService,
             ICodeFileService codeFileService,
-            ILocalizationService localizationService)
+            ILocalizationService localizationService,
+            ICodeEditorFactory codeEditorFactory)
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            this.codeEditorFactory = codeEditorFactory ?? throw new ArgumentNullException(nameof(codeEditorFactory));
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
 
@@ -111,7 +118,7 @@ namespace KID.ViewModels
                 return;
             }
 
-            var codeEditor = CreateCodeEditor(content, windowConfigurationService.Settings);
+            var codeEditor = codeEditorFactory.Create(content, windowConfigurationService.Settings.ProgrammingLanguage);
             var tab = new OpenedFileTab
             {
                 FilePath = normalizedPath,
@@ -412,31 +419,6 @@ namespace KID.ViewModels
 
         private static string GetTabContent(OpenedFileTab tab) =>
             tab.CodeEditor?.Text ?? tab.Content ?? string.Empty;
-
-        private static TextEditor CreateCodeEditor(string content, WindowConfigurationData settings)
-        {
-            var codeEditor = new TextEditor
-            {
-                ShowLineNumbers = true,
-                WordWrap = true,
-                Text = content ?? string.Empty,
-                FontSize = settings.FontSize,
-                FontFamily = new FontFamily(settings.FontFamily),
-                SyntaxHighlighting = ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(settings.ProgrammingLanguage),
-            };
-
-            try
-            {
-                codeEditor.Background = (Brush)Application.Current.FindResource("EditorBackgroundBrush");
-                codeEditor.Foreground = (Brush)Application.Current.FindResource("EditorForegroundBrush");
-            }
-            catch
-            {
-                // Ресурсы темы могут быть ещё не загружены
-            }
-
-            return codeEditor;
-        }
 
         private OpenedFileTab? FindTabByPath(string path)
         {

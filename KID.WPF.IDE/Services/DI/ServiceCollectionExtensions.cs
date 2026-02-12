@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using KID.Services.CodeEditor;
+using KID.Services.CodeEditor.Interfaces;
 using KID.Services.Initialize;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels;
@@ -36,6 +38,9 @@ namespace KID.Services.DI
             // Window Configuration Services
             services.AddSingleton<IWindowConfigurationService, WindowConfigurationService>();
             services.AddSingleton<IWindowInitializationService, WindowInitializationService>();
+
+            // Code Editor Factory
+            services.AddSingleton<ICodeEditorFactory, CodeEditorFactory>();
 
             // Localization Service
             services.AddSingleton<ILocalizationService, LocalizationService>();

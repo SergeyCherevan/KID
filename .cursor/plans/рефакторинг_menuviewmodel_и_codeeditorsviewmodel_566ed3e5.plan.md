@@ -16,7 +16,7 @@ todos:
     status: completed
   - id: code-editor-factory
     content: Создать ICodeEditorFactory и CodeEditorFactory, использовать в CodeEditorsViewModel
-    status: pending
+    status: completed
   - id: async-void-refactor
     content: Заменить async void на async Task с try/catch и MessageBox, добавить локализацию ошибок
     status: pending
