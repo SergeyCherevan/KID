@@ -17,5 +17,9 @@ namespace KID.ViewModels.Interfaces
         ICommand StopCommand { get; }
         ICommand UndoCommand { get; }
         ICommand RedoCommand { get; }
+        ICommand ChangeLanguageCommand { get; }
+        ICommand ChangeThemeCommand { get; }
+        ICommand ChangeFontCommand { get; }
+        ICommand ChangeFontSizeCommand { get; }
     }
 }

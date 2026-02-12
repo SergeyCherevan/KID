@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: imenu-update
     content: Добавить ChangeLanguageCommand, ChangeThemeCommand, ChangeFontCommand, ChangeFontSizeCommand в IMenuViewModel
-    status: pending
+    status: completed
   - id: relaycommand-raise
     content: Добавить RaiseCanExecuteChanged в RelayCommand и заменить CommandManager.InvalidateRequerySuggested
     status: pending
