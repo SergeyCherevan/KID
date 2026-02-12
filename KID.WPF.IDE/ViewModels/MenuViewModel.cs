@@ -15,6 +15,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 
 namespace KID.ViewModels
@@ -113,13 +115,13 @@ namespace KID.ViewModels
             }
 
             NewFileCommand = new RelayCommand(ExecuteNewFile);
-            OpenFileCommand = new RelayCommand(ExecuteOpenFile);
-            SaveFileCommand = new RelayCommand(ExecuteSaveFile, () => CanSaveFile);
-            SaveAsFileCommand = new RelayCommand(ExecuteSaveAsFile);
+            OpenFileCommand = new RelayCommand(() => ExecuteAsync(ExecuteOpenFileAsync, "Error_FileOpenFailed"));
+            SaveFileCommand = new RelayCommand(() => ExecuteAsync(ExecuteSaveFileAsync, "Error_FileSaveFailed"), () => CanSaveFile);
+            SaveAsFileCommand = new RelayCommand(() => ExecuteAsync(ExecuteSaveAsFileAsync, "Error_FileSaveFailed"));
             SaveAndSetAsTemplateCommand = new RelayCommand(
                 ExecuteSaveAndSetAsTemplate,
                 () => codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(codeEditorsViewModel.ActiveFile));
-            RunCommand = new RelayCommand(ExecuteRun, () => !IsStopButtonEnabled);
+            RunCommand = new RelayCommand(() => ExecuteAsync(ExecuteRunAsync, "Error_RunFailed"), () => !IsStopButtonEnabled);
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
@@ -231,13 +233,32 @@ namespace KID.ViewModels
             return localizationService?.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs";
         }
 
-        private async void ExecuteOpenFile()
+        /// <summary>
+        /// Выполняет асинхронное действие с обработкой ошибок и показом MessageBox.
+        /// </summary>
+        private async void ExecuteAsync(Func<Task> asyncAction, string errorMessageKey)
         {
-            if (codeFileService == null || codeEditorsViewModel == null || 
+            try
+            {
+                await asyncAction().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Application.Current.Dispatcher.Invoke(() => MessageBox.Show(
+                    string.Format(localizationService.GetString(errorMessageKey) ?? errorMessageKey, ex.Message),
+                    localizationService.GetString("Error_Title") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error));
+            }
+        }
+
+        private async Task ExecuteOpenFileAsync()
+        {
+            if (codeFileService == null || codeEditorsViewModel == null ||
                 consoleOutputViewModel == null || graphicsOutputViewModel == null ||
                 localizationService == null)
                 return;
-            
+
             var result = await codeFileService.OpenCodeFileWithPathAsync(GetFileFilter());
             if (result != null)
             {
@@ -259,14 +280,14 @@ namespace KID.ViewModels
             }
         }
 
-        private async void ExecuteSaveFile()
+        private async Task ExecuteSaveFileAsync()
         {
             if (codeEditorsViewModel == null || codeFileService == null)
                 return;
 
             if (!CanSaveFile)
             {
-                ExecuteSaveAsFile();
+                await ExecuteSaveAsFileAsync();
                 return;
             }
 
@@ -287,7 +308,7 @@ namespace KID.ViewModels
             }
         }
 
-        private async void ExecuteSaveAsFile()
+        private async Task ExecuteSaveAsFileAsync()
         {
             if (codeEditorsViewModel == null || codeFileService == null)
                 return;
@@ -308,41 +329,39 @@ namespace KID.ViewModels
             }
         }
 
-        private async void ExecuteRun()
+        private async Task ExecuteRunAsync()
         {
-            if (codeEditorsViewModel == null || consoleOutputViewModel == null || 
+            if (codeEditorsViewModel == null || consoleOutputViewModel == null ||
                 graphicsOutputViewModel == null || canvasTextBoxContextFabric == null ||
                 codeExecutionService == null)
                 return;
-            
+
             IsStopButtonEnabled = true;
             cancellationSource = new CancellationTokenSource();
+            try
+            {
+                graphicsOutputViewModel.ResetOutputViewMinSizeToDefault();
 
-            graphicsOutputViewModel.ResetOutputViewMinSizeToDefault();
+                consoleOutputViewModel.Clear();
+                graphicsOutputViewModel.Clear();
 
-            consoleOutputViewModel.Clear();
-            graphicsOutputViewModel.Clear();
+                if (graphicsOutputViewModel.GraphicsCanvasControl == null ||
+                    consoleOutputViewModel.ConsoleOutputControl == null)
+                    return;
 
-            if (graphicsOutputViewModel.GraphicsCanvasControl == null || 
-                consoleOutputViewModel.ConsoleOutputControl == null)
+                var context = canvasTextBoxContextFabric.Create(
+                    graphicsOutputViewModel.GraphicsCanvasControl,
+                    consoleOutputViewModel.ConsoleOutputControl,
+                    cancellationSource.Token);
+
+                var code = codeEditorsViewModel.Text;
+                if (!string.IsNullOrEmpty(code))
+                    await codeExecutionService.ExecuteAsync(code, context);
+            }
+            finally
             {
                 IsStopButtonEnabled = false;
-                return;
             }
-
-            CodeExecutionContext context = canvasTextBoxContextFabric.Create(
-                graphicsOutputViewModel.GraphicsCanvasControl,
-                consoleOutputViewModel.ConsoleOutputControl,
-                cancellationSource.Token
-            );
-
-            var code = codeEditorsViewModel.Text;
-            if (!string.IsNullOrEmpty(code))
-            {
-                await codeExecutionService.ExecuteAsync(code, context);
-            }
-
-            IsStopButtonEnabled = false;
         }
 
         private void ExecuteStop()

@@ -1,5 +1,7 @@
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -271,7 +273,28 @@ namespace KID.ViewModels
         private static bool CanSaveAndSetAsTemplate(OpenedFileTab? tab) =>
             tab != null && !string.IsNullOrEmpty(GetTabContent(tab));
 
+        private void ShowSaveError(Exception ex)
+        {
+            Application.Current.Dispatcher.Invoke(() => MessageBox.Show(
+                string.Format(localizationService.GetString("Error_FileSaveFailed") ?? "Failed to save: {0}", ex.Message),
+                localizationService.GetString("Error_Title") ?? "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error));
+        }
+
         private async void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
+        {
+            try
+            {
+                await ExecuteSaveAndSetAsTemplateAsync(tab);
+            }
+            catch (Exception ex)
+            {
+                ShowSaveError(ex);
+            }
+        }
+
+        private async Task ExecuteSaveAndSetAsTemplateAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null ||
                 windowConfigurationService?.Settings == null || localizationService == null)
@@ -304,6 +327,18 @@ namespace KID.ViewModels
 
         private async void ExecuteSaveFile(OpenedFileTab tab)
         {
+            try
+            {
+                await ExecuteSaveFileAsync(tab);
+            }
+            catch (Exception ex)
+            {
+                ShowSaveError(ex);
+            }
+        }
+
+        private async Task ExecuteSaveFileAsync(OpenedFileTab tab)
+        {
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
                 return;
 
@@ -313,7 +348,7 @@ namespace KID.ViewModels
 
             if (codeFileService.IsNewFilePath(tab.FilePath))
             {
-                ExecuteSaveAsFile(tab);
+                await ExecuteSaveAsFileAsync(tab);
                 return;
             }
 
@@ -322,6 +357,18 @@ namespace KID.ViewModels
         }
 
         private async void ExecuteSaveAsFile(OpenedFileTab tab)
+        {
+            try
+            {
+                await ExecuteSaveAsFileAsync(tab);
+            }
+            catch (Exception ex)
+            {
+                ShowSaveError(ex);
+            }
+        }
+
+        private async Task ExecuteSaveAsFileAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null || localizationService == null)
                 return;

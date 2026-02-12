@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: async-void-refactor
     content: Заменить async void на async Task с try/catch и MessageBox, добавить локализацию ошибок
-    status: pending
+    status: completed
   - id: docs-update
     content: Обновить SUBSYSTEMS.md и ARCHITECTURE.md
     status: pending

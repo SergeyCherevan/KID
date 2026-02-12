@@ -136,6 +136,15 @@
   <data name="Error_FilePathEmpty" xml:space="preserve">
     <value>Путь к файлу не может быть пустым</value>
   </data>
+  <data name="Error_FileOpenFailed" xml:space="preserve">
+    <value>Не удалось открыть файл: {0}</value>
+  </data>
+  <data name="Error_FileSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить файл: {0}</value>
+  </data>
+  <data name="Error_RunFailed" xml:space="preserve">
+    <value>Ошибка при выполнении: {0}</value>
+  </data>
   <data name="Menu_ChangeLanguage" xml:space="preserve">
     <value>Сменить язык</value>
   </data>
