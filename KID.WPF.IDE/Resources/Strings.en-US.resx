@@ -169,5 +169,8 @@
   <data name="TabContext_MoveRight" xml:space="preserve">
     <value>Move Right</value>
   </data>
+  <data name="TabContext_SaveAndSetAsTemplate" xml:space="preserve">
+    <value>Save and set as&#10;template</value>
+  </data>
 </root>
 

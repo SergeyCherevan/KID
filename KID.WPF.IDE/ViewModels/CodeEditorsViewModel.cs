@@ -93,6 +93,7 @@ namespace KID.ViewModels
             SelectFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSelectFile);
             SaveFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveFile, CanSaveTab);
             SaveAsFileCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveAsFile);
+            SaveAndSetAsTemplateCommand = new RelayCommand<OpenedFileTab>(ExecuteSaveAndSetAsTemplate, CanSaveAndSetAsTemplate);
             MoveTabLeftCommand = new RelayCommand<OpenedFileTab>(ExecuteMoveTabLeft, CanMoveTabLeft);
             MoveTabRightCommand = new RelayCommand<OpenedFileTab>(ExecuteMoveTabRight, CanMoveTabRight);
         }
@@ -236,6 +237,7 @@ namespace KID.ViewModels
         public ICommand SelectFileCommand { get; }
         public ICommand SaveFileCommand { get; }
         public ICommand SaveAsFileCommand { get; }
+        public ICommand SaveAndSetAsTemplateCommand { get; }
         public ICommand MoveTabLeftCommand { get; }
         public ICommand MoveTabRightCommand { get; }
 
@@ -256,6 +258,40 @@ namespace KID.ViewModels
         private void ExecuteSelectFile(OpenedFileTab tab) => SelectFile(tab);
 
         private static bool CanSaveTab(OpenedFileTab? tab) => tab?.IsModified == true;
+
+        private static bool CanSaveAndSetAsTemplate(OpenedFileTab? tab) =>
+            tab != null && !string.IsNullOrEmpty(GetTabContent(tab));
+
+        private async void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
+        {
+            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null ||
+                windowConfigurationService?.Settings == null || localizationService == null)
+                return;
+
+            var content = GetTabContent(tab);
+            if (string.IsNullOrEmpty(content))
+                return;
+
+            if (IsNewFilePath(tab.FilePath))
+            {
+                var defaultFileName = "NewFile.cs";
+                var fileFilter = localizationService.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
+                var savedPath = await codeFileService.SaveCodeFileAsync(content, fileFilter, defaultFileName);
+                if (savedPath == null)
+                    return;
+                tab.FilePath = savedPath;
+                tab.UpdateSavedContent(content);
+            }
+            else if (tab.IsModified)
+            {
+                await codeFileService.SaveToPathAsync(tab.FilePath, content);
+                tab.UpdateSavedContent(content);
+            }
+
+            windowConfigurationService.Settings.TemplateCode = content;
+            windowConfigurationService.Settings.TemplateName = tab.FilePath;
+            windowConfigurationService.SaveSettings();
+        }
 
         private async void ExecuteSaveFile(OpenedFileTab tab)
         {

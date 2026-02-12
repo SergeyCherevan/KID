@@ -169,5 +169,8 @@
   <data name="TabContext_MoveRight" xml:space="preserve">
     <value>Перемістити вправо</value>
   </data>
+  <data name="TabContext_SaveAndSetAsTemplate" xml:space="preserve">
+    <value>Зберегти і призначити&#10;як шаблон</value>
+  </data>
 </root>
 

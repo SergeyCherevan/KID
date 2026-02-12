@@ -40,6 +40,7 @@ namespace KID.ViewModels.Interfaces
         ICommand SelectFileCommand { get; }
         ICommand SaveFileCommand { get; }
         ICommand SaveAsFileCommand { get; }
+        ICommand SaveAndSetAsTemplateCommand { get; }
         ICommand MoveTabLeftCommand { get; }
         ICommand MoveTabRightCommand { get; }
 

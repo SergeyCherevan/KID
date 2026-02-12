@@ -85,6 +85,9 @@
                                     <MenuItem Header="{localization:Localization Menu_SaveAs}"
                                               Command="{Binding DataContext.SaveAsFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
                                               CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    <MenuItem Header="{localization:Localization TabContext_SaveAndSetAsTemplate}"
+                                              Command="{Binding DataContext.SaveAndSetAsTemplateCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                     <Separator/>
                                     <MenuItem Header="{localization:Localization TabContext_MoveLeft}"
                                               Command="{Binding DataContext.MoveTabLeftCommand, Source={x:Reference CodeEditorsViewRoot}}"
