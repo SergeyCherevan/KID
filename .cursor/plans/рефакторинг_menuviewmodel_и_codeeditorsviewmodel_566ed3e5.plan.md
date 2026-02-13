@@ -22,7 +22,7 @@ todos:
     status: completed
   - id: docs-update
     content: Обновить SUBSYSTEMS.md и ARCHITECTURE.md
-    status: pending
+    status: completed
 isProject: false
 ---
 

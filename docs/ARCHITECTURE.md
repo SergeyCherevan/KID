@@ -65,9 +65,10 @@
 **MenuViewModel** (`MenuViewModel.cs`)
 - Управление меню приложения
 - Команды: NewFile, OpenFile, SaveFile, SaveAsFile, Run, Stop, Undo, Redo
-- Управление темами, языками интерфейса, шрифтом и размером шрифта
+- Управление темами, языками интерфейса, шрифтом и размером шрифта (через IWindowConfigurationService.SetFont)
 - Состояние кнопок (IsStopButtonEnabled, CanUndo, CanRedo)
 - Зависимость от ICodeEditorsViewModel для работы с вкладками
+- Обработка ошибок async-операций (ExecuteAsync, try/catch, MessageBox с Error_FileOpenFailed, Error_FileSaveFailed, Error_RunFailed)
 
 **CodeEditorsViewModel** (`CodeEditorsViewModel.cs`)
 - Управление панелью редакторов с вкладками
@@ -75,6 +76,9 @@
 - Команды: Undo, Redo, CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
 - Методы: AddFile, CloseFile, SelectFile, SetSyntaxHighlighting
 - Интеграция с AvalonEdit TextEditor (создаётся на каждую вкладку)
+- Создание TextEditor через ICodeEditorFactory (шрифт из IWindowConfigurationService.Settings)
+- Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
+- Обработка ошибок сохранения (try/catch, MessageBox)
 
 **ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
 - Управление консольным выводом
@@ -145,6 +149,7 @@
 - `OpenCodeFileWithPathAsync(string filter)` — открывает файл через диалог, возвращает `OpenFileResult?` (содержимое и путь)
 - `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
 - `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
+- `IsNewFilePath(string path)` — возвращает true для нового несохранённого файла
 - Использует FileDialogService для диалогов
 - Использует FileService для чтения/записи
 
@@ -190,7 +195,16 @@
 - `Themes/LightTheme.xaml` — светлая тема
 - `Themes/DarkTheme.xaml` — тёмная тема
 
-#### 3.5. Initialize (Инициализация)
+#### 3.5. Code Editor (Редактор кода)
+
+**Расположение:** `KID.WPF.IDE/Services/CodeEditor/`
+
+**ICodeEditorFactory** / **CodeEditorFactory** (`CodeEditorFactory.cs`)
+- Создание экземпляров AvalonEdit TextEditor
+- Метод `Create(content, programmingLanguage)` — создаёт редактор с подсветкой синтаксиса и шрифтом из IWindowConfigurationService
+- Используется в CodeEditorsViewModel при AddFile
+
+#### 3.6. Initialize (Инициализация)
 
 **Расположение:** `KID.WPF.IDE/Services/Initialize/`
 
@@ -199,17 +213,15 @@
 - Хранение настроек в JSON файле в AppData
 - Управление шаблонным кодом
 - Настройки: язык, тема, шрифт, размер окна
+- `SetFont(fontFamilyName, fontSize)` — установка шрифта и уведомление подписчиков
+- Событие `FontSettingsChanged` — подписчики: MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel
 
 **WindowInitializationService** (`WindowInitializationService.cs`)
 - Инициализация всех компонентов при запуске
 - Применение настроек из конфигурации
 - Инициализация редактора, консоли, графики
 
-**WindowConfigurationData** (`Models/WindowConfigurationData.cs`)
-- Модель данных для настроек
-- Свойства: ProgrammingLanguage, FontFamily, FontSize, ColorTheme, UILanguage, TemplateCode, TemplateName
-
-#### 3.6. Dependency Injection (DI)
+#### 3.7. Dependency Injection (DI)
 
 **Расположение:** `KID.WPF.IDE/Services/DI/`
 
@@ -246,6 +258,10 @@
 **AvailableTheme** (`AvailableTheme.cs`)
 - Модель доступной темы
 - Свойства: ThemeKey, EnglishName, LocalizedDisplayName
+
+**WindowConfigurationData** (`Models/WindowConfigurationData.cs`)
+- Модель данных для настроек
+- Свойства: ProgrammingLanguage, FontFamily, FontSize, ColorTheme, UILanguage, TemplateCode, TemplateName
 
 ### 5. KIDLibrary Layer (Библиотека для пользовательского кода)
 

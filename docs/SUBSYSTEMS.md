@@ -205,6 +205,7 @@
 - `OpenCodeFileWithPathAsync(string filter)` — открывает файл через диалог, возвращает `OpenFileResult?` (содержимое и путь)
 - `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
 - `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
+- `IsNewFilePath(string path)` — возвращает `true`, если путь указывает на новый несохранённый файл (`/NewFile.cs` или путь оканчивается на `NewFile.cs`)
 
 **Особенности:**
 - Использует FileDialogService для диалогов
@@ -245,7 +246,9 @@
 - Активная вкладка `ActiveFile`, делегирование Text, FilePath, CodeEditor
 - Команды: CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
 - Отслеживание `HasUnsavedChanges`, `IsModified` для каждой вкладки
-- Метод `AddFile(path, content)` — создание новой вкладки (или замена NewFile при открытии, если без изменений)
+- Метод `AddFile(path, content)` — создание новой вкладки через ICodeEditorFactory (или замена NewFile при открытии, если без изменений)
+- Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
+- Обработка ошибок сохранения (try/catch, MessageBox с Error_FileSaveFailed)
 
 **OpenedFileTab** (`KID.WPF.IDE/Models/OpenedFileTab.cs`)
 - Модель вкладки: FilePath, Content, SavedContent, IsModified, CodeEditor, FileName
@@ -383,11 +386,16 @@
 - Загрузка настроек из файла
 - Сохранение настроек в файл
 - Управление шаблонным кодом
+- Централизованное управление настройками шрифта (редактор и консоль)
 
 **Основные методы:**
 - `SetConfigurationFromFile()` — загружает настройки
 - `SetDefaultCode()` — загружает шаблонный код
 - `SaveSettings()` — сохраняет настройки
+- `SetFont(string fontFamilyName, double fontSize)` — устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков через событие `FontSettingsChanged`
+
+**События:**
+- `FontSettingsChanged` — вызывается при изменении шрифта (из SetFont). Подписчики: MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel
 
 **Особенности:**
 - Хранит настройки в JSON файле в `AppData/KID/settings.json`
@@ -403,7 +411,22 @@
 - `TemplateCode` — шаблонный код
 - `TemplateName` — путь к файлу шаблона
 
-#### 6.2. WindowInitializationService
+#### 6.2. CodeEditorFactory
+**Файл:** `KID.WPF.IDE/Services/CodeEditor/CodeEditorFactory.cs`
+
+**Ответственность:**
+- Создание экземпляров AvalonEdit TextEditor с настройками из IWindowConfigurationService
+
+**Основные методы:**
+- `Create(string content, string programmingLanguage)` — создаёт TextEditor с заданным содержимым и подсветкой синтаксиса.
+- Шрифт (FontFamily, FontSize) берёт из `windowConfigurationService.Settings`
+- ShowLineNumbers, WordWrap, кисти темы (EditorBackgroundBrush, EditorForegroundBrush) применяются автоматически
+
+**Связи:**
+- Зависит от IWindowConfigurationService
+- Используется в CodeEditorsViewModel при создании вкладок (AddFile)
+
+#### 6.3. WindowInitializationService
 **Файл:** `KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs`
 
 **Ответственность:**
@@ -420,12 +443,12 @@
 3. Применение темы оформления
 4. Применение языка интерфейса
 5. Инициализация главного окна
-6. Инициализация редактора кода: `codeEditorsViewModel.AddFile(NewFilePath, templateCode)` — создание первой вкладки
+6. Инициализация редактора кода: `codeEditorsViewModel.AddFile(NewFilePath, templateCode)` — создание первой вкладки через ICodeEditorFactory, шрифт уже из Settings
 7. Инициализация консоли
-8. `ApplyCodeEditorSettings()` — отложенное применение шрифта и подсветки синтаксиса (Dispatcher.BeginInvoke с Loaded) после создания TextEditor
+8. Шрифт применяется через FontSettingsChanged — CodeEditorsViewModel и ConsoleOutputViewModel подписаны на событие
 
 **Особенности:**
-- TextEditor создаётся асинхронно во вкладке, поэтому настройки шрифта применяются через BeginInvoke
+- TextEditor создаётся через ICodeEditorFactory с шрифтом из Settings
 
 ## 7. Подсистема Music API
 
@@ -741,6 +764,10 @@
            │              │                      ├──→ FileDialogService
            │              │                      └──→ FileService
            │              │
+           │              ├──→ ICodeEditorFactory ──→ IWindowConfigurationService
+           │              │
+           │              └──→ IWindowConfigurationService (FontSettingsChanged)
+           │
            ├──→ CodeExecutionService
            │         │
            │         ├──→ CSharpCompiler
