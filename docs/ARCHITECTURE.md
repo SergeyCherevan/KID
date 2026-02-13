@@ -6,12 +6,12 @@
 
 ```
 ┌─────────────────────────────────────────┐
-│           Presentation Layer             │
+│           Presentation Layer            │
 │  (Views, XAML, User Interface)          │
 └─────────────────────────────────────────┘
                     ↕
 ┌─────────────────────────────────────────┐
-│         ViewModel Layer                  │
+│         ViewModel Layer                 │
 │  (Business Logic, Commands)             │
 └─────────────────────────────────────────┘
                     ↕
@@ -22,7 +22,7 @@
                     ↕
 ┌─────────────────────────────────────────┐
 │          Model Layer                    │
-│  (Data Models, Domain Objects)           │
+│  (Data Models, Domain Objects)          │
 └─────────────────────────────────────────┘
                     ↕
 ┌─────────────────────────────────────────┐
