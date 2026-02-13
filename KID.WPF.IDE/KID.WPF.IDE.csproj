@@ -9,13 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="UserProjects\**" />
-    <EmbeddedResource Remove="UserProjects\**" />
-    <None Remove="UserProjects\**" />
-    <Page Remove="UserProjects\**" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Remove="Resources\KID.ico" />
   </ItemGroup>
 
