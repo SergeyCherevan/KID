@@ -125,7 +125,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="5" />
-                    <RowDefinition MinHeight="300" />
+                    <RowDefinition MinHeight="300" Height="300" />
                 </Grid.RowDefinitions>
 
                 <!-- Консоль -->
