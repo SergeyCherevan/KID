@@ -194,11 +194,11 @@ namespace KID.ViewModels
         {
             get
             {
-                var activeFile = codeEditorsViewModel.CurrentFileTab;
-                return activeFile != null
-                    && !string.IsNullOrEmpty(activeFile.FilePath)
-                    && !codeFileService.IsNewFilePath(activeFile.FilePath)
-                    && activeFile.IsModified;
+                var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+                return currentFileTab != null
+                    && !string.IsNullOrEmpty(currentFileTab.FilePath)
+                    && !codeFileService.IsNewFilePath(currentFileTab.FilePath)
+                    && currentFileTab.IsModified;
             }
         }
 
@@ -297,24 +297,24 @@ namespace KID.ViewModels
                 return;
             }
 
-            var activeFile = codeEditorsViewModel.CurrentFileTab;
-            if (activeFile == null)
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            if (currentFileTab == null)
                 return;
 
-            var code = activeFile.CurrentContent;
+            var code = currentFileTab.CurrentContent;
             if (!string.IsNullOrEmpty(code))
             {
-                await codeFileService.SaveToPathAsync(activeFile.FilePath, code);
-                codeEditorsViewModel.NotifyActiveFileSaved(code);
+                await codeFileService.SaveToPathAsync(currentFileTab.FilePath, code);
+                codeEditorsViewModel.NotifyCurrentFileTabSaved(code);
             }
         }
 
         private void ExecuteSaveAndSetAsTemplate()
         {
-            var activeFile = codeEditorsViewModel.CurrentFileTab;
-            if (activeFile != null && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(activeFile))
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            if (currentFileTab != null && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(currentFileTab))
             {
-                codeEditorsViewModel.SaveAndSetAsTemplateCommand.Execute(activeFile);
+                codeEditorsViewModel.SaveAndSetAsTemplateCommand.Execute(currentFileTab);
             }
         }
 
@@ -323,23 +323,23 @@ namespace KID.ViewModels
             if (codeEditorsViewModel == null || codeFileService == null)
                 return;
 
-            var activeFile = codeEditorsViewModel.CurrentFileTab;
-            if (activeFile == null)
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            if (currentFileTab == null)
                 return;
 
-            var code = activeFile.CurrentContent;
+            var code = currentFileTab.CurrentContent;
             if (string.IsNullOrEmpty(code))
                 return;
 
-            var defaultFileName = codeFileService.IsNewFilePath(activeFile.FilePath)
+            var defaultFileName = codeFileService.IsNewFilePath(currentFileTab.FilePath)
                 ? "NewFile.cs"
-                : Path.GetFileName(activeFile.FilePath);
+                : Path.GetFileName(currentFileTab.FilePath);
 
             var savedPath = await codeFileService.SaveCodeFileAsync(code, GetFileFilter(), defaultFileName);
             if (savedPath != null)
             {
-                activeFile.FilePath = savedPath;
-                codeEditorsViewModel.NotifyActiveFileSaved(code);
+                currentFileTab.FilePath = savedPath;
+                codeEditorsViewModel.NotifyCurrentFileTabSaved(code);
             }
         }
 
@@ -368,8 +368,8 @@ namespace KID.ViewModels
                     consoleOutputViewModel.ConsoleOutputControl,
                     cancellationSource.Token);
 
-                var activeFile = codeEditorsViewModel.CurrentFileTab;
-                var code = activeFile?.CurrentContent ?? string.Empty;
+                var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+                var code = currentFileTab?.CurrentContent ?? string.Empty;
                 if (!string.IsNullOrEmpty(code))
                     await codeExecutionService.ExecuteAsync(code, context);
             }

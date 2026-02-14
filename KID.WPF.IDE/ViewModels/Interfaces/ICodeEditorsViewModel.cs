@@ -17,7 +17,7 @@ namespace KID.ViewModels.Interfaces
         ObservableCollection<OpenedFileTab> OpenedFiles { get; }
 
         /// <summary>
-        /// Активная вкладка.
+        /// Текущая вкладка.
         /// </summary>
         OpenedFileTab? CurrentFileTab { get; set; }
 
@@ -49,13 +49,13 @@ namespace KID.ViewModels.Interfaces
         void CloseFileTab(OpenedFileTab tab);
 
         /// <summary>
-        /// Делает вкладку активной.
+        /// Делает вкладку текущей.
         /// </summary>
         void SelectFileTab(OpenedFileTab tab);
 
         /// <summary>
-        /// Уведомляет о сохранении активного файла (обновляет SavedContent).
+        /// Уведомляет о сохранении текущей вкладки (обновляет SavedContent).
         /// </summary>
-        void NotifyActiveFileSaved(string content);
+        void NotifyCurrentFileTabSaved(string content);
     }
 }

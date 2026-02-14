@@ -27,7 +27,7 @@ namespace KID.ViewModels
         private readonly ICodeEditorFactory codeEditorFactory;
         private readonly ILocalizationService localizationService;
 
-        private int indexOfActiveFile;
+        private int indexOfCurrentFileTab;
 
         /// <summary>
         /// Коллекция открытых вкладок.
@@ -35,19 +35,19 @@ namespace KID.ViewModels
         public ObservableCollection<OpenedFileTab> OpenedFiles { get; } = new();
 
         /// <summary>
-        /// Активная вкладка.
+        /// Текущая вкладка.
         /// </summary>
         public OpenedFileTab? CurrentFileTab
         {
-            get => OpenedFiles.Count > 0 && indexOfActiveFile >= 0 && indexOfActiveFile < OpenedFiles.Count
-                ? OpenedFiles[indexOfActiveFile]
+            get => OpenedFiles.Count > 0 && indexOfCurrentFileTab >= 0 && indexOfCurrentFileTab < OpenedFiles.Count
+                ? OpenedFiles[indexOfCurrentFileTab]
                 : null;
             set
             {
                 var newIndex = value != null ? OpenedFiles.IndexOf(value) : 0;
                 if (newIndex < 0) newIndex = 0;
 
-                if (SetProperty(ref indexOfActiveFile, newIndex))
+                if (SetProperty(ref indexOfCurrentFileTab, newIndex))
                 {
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
@@ -113,7 +113,7 @@ namespace KID.ViewModels
             };
 
             OpenedFiles.Add(tab);
-            indexOfActiveFile = OpenedFiles.Count - 1;
+            indexOfCurrentFileTab = OpenedFiles.Count - 1;
             OnPropertyChanged(nameof(CurrentFileTab));
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
@@ -135,10 +135,10 @@ namespace KID.ViewModels
             }
             else
             {
-                if (indexOfActiveFile >= OpenedFiles.Count)
-                    indexOfActiveFile = OpenedFiles.Count - 1;
-                else if (index < indexOfActiveFile)
-                    indexOfActiveFile--;
+                if (indexOfCurrentFileTab >= OpenedFiles.Count)
+                    indexOfCurrentFileTab = OpenedFiles.Count - 1;
+                else if (index < indexOfCurrentFileTab)
+                    indexOfCurrentFileTab--;
                 OnPropertyChanged(nameof(CurrentFileTab));
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
@@ -329,7 +329,7 @@ namespace KID.ViewModels
                 return;
 
             OpenedFiles.Move(index, index - 1);
-            UpdateActiveFileIndexAfterMove(index, index - 1);
+            UpdateCurrentFileTabIndexAfterMove(index, index - 1);
             RaiseMoveTabCommandsCanExecute();
         }
 
@@ -343,18 +343,18 @@ namespace KID.ViewModels
                 return;
 
             OpenedFiles.Move(index, index + 1);
-            UpdateActiveFileIndexAfterMove(index, index + 1);
+            UpdateCurrentFileTabIndexAfterMove(index, index + 1);
             RaiseMoveTabCommandsCanExecute();
         }
 
-        private void UpdateActiveFileIndexAfterMove(int oldIndex, int newIndex)
+        private void UpdateCurrentFileTabIndexAfterMove(int oldIndex, int newIndex)
         {
-            if (indexOfActiveFile == oldIndex)
-                indexOfActiveFile = newIndex;
-            else if (oldIndex < indexOfActiveFile && newIndex >= indexOfActiveFile)
-                indexOfActiveFile--;
-            else if (oldIndex > indexOfActiveFile && newIndex <= indexOfActiveFile)
-                indexOfActiveFile++;
+            if (indexOfCurrentFileTab == oldIndex)
+                indexOfCurrentFileTab = newIndex;
+            else if (oldIndex < indexOfCurrentFileTab && newIndex >= indexOfCurrentFileTab)
+                indexOfCurrentFileTab--;
+            else if (oldIndex > indexOfCurrentFileTab && newIndex <= indexOfCurrentFileTab)
+                indexOfCurrentFileTab++;
             OnPropertyChanged(nameof(CurrentFileTab));
         }
 
@@ -407,7 +407,7 @@ namespace KID.ViewModels
         }
 
         /// <inheritdoc />
-        public void NotifyActiveFileSaved(string content)
+        public void NotifyCurrentFileTabSaved(string content)
         {
             CurrentFileTab?.UpdateSavedContent(content);
             OnPropertyChanged(nameof(CurrentFileTab));
