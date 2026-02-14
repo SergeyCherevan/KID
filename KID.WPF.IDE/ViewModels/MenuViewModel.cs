@@ -168,9 +168,7 @@ namespace KID.ViewModels
                 UndoCommand.RaiseCanExecuteChanged();
                 RedoCommand.RaiseCanExecuteChanged();
             }
-            if (e.PropertyName == nameof(ICodeEditorsViewModel.FilePath) ||
-                e.PropertyName == nameof(ICodeEditorsViewModel.ActiveFile) ||
-                e.PropertyName == nameof(ICodeEditorsViewModel.HasUnsavedChanges))
+            if (e.PropertyName == nameof(ICodeEditorsViewModel.ActiveFile))
             {
                 SaveFileCommand.RaiseCanExecuteChanged();
                 SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
@@ -192,9 +190,17 @@ namespace KID.ViewModels
         public bool CanUndo => codeEditorsViewModel.CanUndo;
         public bool CanRedo => codeEditorsViewModel.CanRedo;
 
-        private bool CanSaveFile => !string.IsNullOrEmpty(codeEditorsViewModel.FilePath) &&
-            !codeFileService.IsNewFilePath(codeEditorsViewModel.FilePath) &&
-            codeEditorsViewModel.HasUnsavedChanges;
+        private bool CanSaveFile
+        {
+            get
+            {
+                var activeFile = codeEditorsViewModel.ActiveFile;
+                return activeFile != null
+                    && !string.IsNullOrEmpty(activeFile.FilePath)
+                    && !codeFileService.IsNewFilePath(activeFile.FilePath)
+                    && activeFile.IsModified;
+            }
+        }
 
         public ICommand NewFileCommand { get; }
         public ICommand OpenFileCommand { get; }
@@ -291,10 +297,14 @@ namespace KID.ViewModels
                 return;
             }
 
-            var code = codeEditorsViewModel.Text;
+            var activeFile = codeEditorsViewModel.ActiveFile;
+            if (activeFile == null)
+                return;
+
+            var code = activeFile.CurrentContent;
             if (!string.IsNullOrEmpty(code))
             {
-                await codeFileService.SaveToPathAsync(codeEditorsViewModel.FilePath, code);
+                await codeFileService.SaveToPathAsync(activeFile.FilePath, code);
                 codeEditorsViewModel.NotifyActiveFileSaved(code);
             }
         }
@@ -313,18 +323,22 @@ namespace KID.ViewModels
             if (codeEditorsViewModel == null || codeFileService == null)
                 return;
 
-            var code = codeEditorsViewModel.Text;
+            var activeFile = codeEditorsViewModel.ActiveFile;
+            if (activeFile == null)
+                return;
+
+            var code = activeFile.CurrentContent;
             if (string.IsNullOrEmpty(code))
                 return;
 
-            var defaultFileName = codeFileService.IsNewFilePath(codeEditorsViewModel.FilePath)
+            var defaultFileName = codeFileService.IsNewFilePath(activeFile.FilePath)
                 ? "NewFile.cs"
-                : Path.GetFileName(codeEditorsViewModel.FilePath);
+                : Path.GetFileName(activeFile.FilePath);
 
             var savedPath = await codeFileService.SaveCodeFileAsync(code, GetFileFilter(), defaultFileName);
             if (savedPath != null)
             {
-                codeEditorsViewModel.FilePath = savedPath;
+                activeFile.FilePath = savedPath;
                 codeEditorsViewModel.NotifyActiveFileSaved(code);
             }
         }
@@ -354,7 +368,8 @@ namespace KID.ViewModels
                     consoleOutputViewModel.ConsoleOutputControl,
                     cancellationSource.Token);
 
-                var code = codeEditorsViewModel.Text;
+                var activeFile = codeEditorsViewModel.ActiveFile;
+                var code = activeFile?.CurrentContent ?? string.Empty;
                 if (!string.IsNullOrEmpty(code))
                     await codeExecutionService.ExecuteAsync(code, context);
             }

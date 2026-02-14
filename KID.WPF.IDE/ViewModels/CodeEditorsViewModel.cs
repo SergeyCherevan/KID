@@ -35,7 +35,7 @@ namespace KID.ViewModels
         public ObservableCollection<OpenedFileTab> OpenedFiles { get; } = new();
 
         /// <summary>
-        /// Активная вкладка. Делегирует Text, FilePath, CanUndo, CanRedo.
+        /// Активная вкладка.
         /// </summary>
         public OpenedFileTab? ActiveFile
         {
@@ -49,21 +49,12 @@ namespace KID.ViewModels
 
                 if (SetProperty(ref indexOfActiveFile, newIndex))
                 {
-                    OnPropertyChanged(nameof(Text));
-                    OnPropertyChanged(nameof(FilePath));
-                    OnPropertyChanged(nameof(CodeEditor));
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
-                    OnPropertyChanged(nameof(HasUnsavedChanges));
                     RaiseTabCommandsCanExecute();
                 }
             }
         }
-
-        /// <summary>
-        /// CodeEditor активной вкладки (для обратной совместимости с меню).
-        /// </summary>
-        public TextEditor? CodeEditor => ActiveFile?.CodeEditor;
 
         public CodeEditorsViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -114,10 +105,9 @@ namespace KID.ViewModels
                 tab.NotifyContentChanged();
                 if (tab == ActiveFile)
                 {
-                    OnPropertyChanged(nameof(Text));
+                    OnPropertyChanged(nameof(ActiveFile));
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
-                    OnPropertyChanged(nameof(HasUnsavedChanges));
                     RaiseTabCommandsCanExecute();
                 }
             };
@@ -125,12 +115,8 @@ namespace KID.ViewModels
             OpenedFiles.Add(tab);
             indexOfActiveFile = OpenedFiles.Count - 1;
             OnPropertyChanged(nameof(ActiveFile));
-            OnPropertyChanged(nameof(Text));
-            OnPropertyChanged(nameof(FilePath));
-            OnPropertyChanged(nameof(CodeEditor));
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
-            OnPropertyChanged(nameof(HasUnsavedChanges));
         }
 
         /// <inheritdoc />
@@ -154,12 +140,8 @@ namespace KID.ViewModels
                 else if (index < indexOfActiveFile)
                     indexOfActiveFile--;
                 OnPropertyChanged(nameof(ActiveFile));
-                OnPropertyChanged(nameof(Text));
-                OnPropertyChanged(nameof(FilePath));
-                OnPropertyChanged(nameof(CodeEditor));
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
-                OnPropertyChanged(nameof(HasUnsavedChanges));
             }
         }
 
@@ -168,23 +150,6 @@ namespace KID.ViewModels
         {
             if (tab != null && OpenedFiles.Contains(tab))
                 ActiveFile = tab;
-        }
-
-        public string Text
-        {
-            get => GetActiveContent();
-            set => SetActiveContent(value);
-        }
-
-        /// <inheritdoc />
-        public string FilePath
-        {
-            get => ActiveFile?.FilePath ?? codeFileService.NewFilePath;
-            set
-            {
-                if (ActiveFile != null)
-                    ActiveFile.FilePath = value ?? codeFileService.NewFilePath;
-            }
         }
 
         /// <inheritdoc />
@@ -199,11 +164,6 @@ namespace KID.ViewModels
         public bool CanUndo => ActiveFile?.CodeEditor?.CanUndo ?? false;
 
         public bool CanRedo => ActiveFile?.CodeEditor?.CanRedo ?? false;
-
-        /// <summary>
-        /// true, если в активной вкладке есть несохранённые изменения.
-        /// </summary>
-        public bool HasUnsavedChanges => ActiveFile?.IsModified ?? false;
 
         public RelayCommand UndoCommand { get; }
         public RelayCommand RedoCommand { get; }
@@ -446,26 +406,11 @@ namespace KID.ViewModels
             return null;
         }
 
-        private string GetActiveContent()
-        {
-            if (ActiveFile?.CodeEditor != null)
-                return ActiveFile.CodeEditor.Text;
-            return ActiveFile?.Content ?? string.Empty;
-        }
-
-        private void SetActiveContent(string value)
-        {
-            if (ActiveFile?.CodeEditor != null)
-                ActiveFile.CodeEditor.Text = value;
-            else if (ActiveFile != null)
-                ActiveFile.Content = value ?? string.Empty;
-        }
-
         /// <inheritdoc />
         public void NotifyActiveFileSaved(string content)
         {
             ActiveFile?.UpdateSavedContent(content);
-            OnPropertyChanged(nameof(HasUnsavedChanges));
+            OnPropertyChanged(nameof(ActiveFile));
         }
 
         /// <inheritdoc />

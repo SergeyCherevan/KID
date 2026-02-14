@@ -41,6 +41,11 @@ namespace KID.Models
         }
 
         /// <summary>
+        /// Текущее содержимое вкладки (из CodeEditor или Content).
+        /// </summary>
+        public string CurrentContent => CodeEditor?.Text ?? Content ?? string.Empty;
+
+        /// <summary>
         /// true, если текущее содержимое отличается от SavedContent (есть несохранённые изменения).
         /// </summary>
         public bool IsModified => (CodeEditor?.Text ?? Content) != SavedContent;
@@ -59,6 +64,7 @@ namespace KID.Models
         public void UpdateSavedContent(string content)
         {
             SavedContent = content ?? string.Empty;
+            OnPropertyChanged(nameof(IsModified));
         }
 
         /// <summary>

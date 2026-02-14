@@ -1,4 +1,3 @@
-using ICSharpCode.AvalonEdit;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -13,11 +12,6 @@ namespace KID.ViewModels.Interfaces
     public interface ICodeEditorsViewModel
     {
         /// <summary>
-        /// CodeEditor активной вкладки (для совместимости с меню).
-        /// </summary>
-        TextEditor? CodeEditor { get; }
-
-        /// <summary>
         /// Коллекция открытых вкладок.
         /// </summary>
         ObservableCollection<OpenedFileTab> OpenedFiles { get; }
@@ -27,13 +21,10 @@ namespace KID.ViewModels.Interfaces
         /// </summary>
         OpenedFileTab? ActiveFile { get; set; }
 
-        string Text { get; set; }
-        string FilePath { get; set; }
         FontFamily FontFamily { get; }
         double FontSize { get; }
         bool CanUndo { get; }
         bool CanRedo { get; }
-        bool HasUnsavedChanges { get; }
 
         RelayCommand UndoCommand { get; }
         RelayCommand RedoCommand { get; }
