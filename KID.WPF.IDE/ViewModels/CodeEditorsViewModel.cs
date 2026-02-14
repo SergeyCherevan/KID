@@ -22,24 +22,9 @@ namespace KID.ViewModels
     /// </summary>
     public class CodeEditorsViewModel : ViewModelBase, ICodeEditorsViewModel
     {
-        /// <summary>
-        /// Сервис для работы с настройками окна.
-        /// </summary>
         private readonly IWindowConfigurationService windowConfigurationService;
-
-        /// <summary>
-        /// Сервис для работы с файлами кода.
-        /// </summary>
         private readonly ICodeFileService codeFileService;
-
-        /// <summary>
-        /// Фабрика для создания редакторов кода.
-        /// </summary>
         private readonly ICodeEditorFactory codeEditorFactory;
-
-        /// <summary>
-        /// Сервис локализации.
-        /// </summary>
         private readonly ILocalizationService localizationService;
 
         /// <summary>
