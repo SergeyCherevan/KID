@@ -29,6 +29,7 @@ namespace KID.ViewModels
 
         private int indexOfCurrentFileTab;
 
+
         /// <summary>
         /// Коллекция открытых вкладок.
         /// </summary>
@@ -56,11 +57,35 @@ namespace KID.ViewModels
             }
         }
 
+        public FontFamily FontFamily => new FontFamily(
+            windowConfigurationService.Settings.FontFamily ?? "Consolas");
+
+        public double FontSize => windowConfigurationService.Settings.FontSize > 0
+            ? windowConfigurationService.Settings.FontSize
+            : 14.0;
+
+        public bool CanUndo => CurrentFileTab?.CodeEditor?.CanUndo ?? false;
+
+        public bool CanRedo => CurrentFileTab?.CodeEditor?.CanRedo ?? false;
+
+
+        public RelayCommand UndoCommand { get; }
+        public RelayCommand RedoCommand { get; }
+        public RelayCommand<OpenedFileTab> CloseFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SelectFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SaveFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SaveAsFileCommand { get; }
+        public RelayCommand<OpenedFileTab> SaveAndSetAsTemplateCommand { get; }
+        public RelayCommand<OpenedFileTab> MoveTabLeftCommand { get; }
+        public RelayCommand<OpenedFileTab> MoveTabRightCommand { get; }
+
+
         public CodeEditorsViewModel(
             IWindowConfigurationService windowConfigurationService,
             ICodeFileService codeFileService,
             ILocalizationService localizationService,
-            ICodeEditorFactory codeEditorFactory)
+            ICodeEditorFactory codeEditorFactory
+        )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
@@ -80,7 +105,99 @@ namespace KID.ViewModels
             MoveTabRightCommand = new RelayCommand<OpenedFileTab>(ExecuteMoveTabRight, CanMoveTabRight);
         }
 
-        /// <inheritdoc />
+
+        private void ExecuteUndo()
+        {
+            if (CurrentFileTab?.CodeEditor?.CanUndo == true)
+                CurrentFileTab.CodeEditor.Undo();
+        }
+
+        private void ExecuteRedo()
+        {
+            if (CurrentFileTab?.CodeEditor?.CanRedo == true)
+                CurrentFileTab.CodeEditor.Redo();
+        }
+
+        private void ExecuteCloseFile(OpenedFileTab tab) => CloseFileTab(tab);
+
+        private void ExecuteSelectFile(OpenedFileTab tab) => SelectFileTab(tab);
+
+        private static bool CanSaveTab(OpenedFileTab? tab) => tab?.IsModified == true;
+
+        private static bool CanSaveAndSetAsTemplate(OpenedFileTab? tab) =>
+            tab != null && !string.IsNullOrEmpty(GetTabContent(tab));
+
+        private async void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
+        {
+            try
+            {
+                await ExecuteSaveAndSetAsTemplateAsync(tab);
+            }
+            catch (Exception ex)
+            {
+                ShowSaveError(ex);
+            }
+        }
+
+        private async void ExecuteSaveFile(OpenedFileTab tab)
+        {
+            try
+            {
+                await ExecuteSaveFileAsync(tab);
+            }
+            catch (Exception ex)
+            {
+                ShowSaveError(ex);
+            }
+        }
+
+        private async void ExecuteSaveAsFile(OpenedFileTab tab)
+        {
+            try
+            {
+                await ExecuteSaveAsFileAsync(tab);
+            }
+            catch (Exception ex)
+            {
+                ShowSaveError(ex);
+            }
+        }
+
+        private bool CanMoveTabLeft(OpenedFileTab? tab) =>
+            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) > 0;
+
+        private bool CanMoveTabRight(OpenedFileTab? tab) =>
+            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) < OpenedFiles.Count - 1;
+
+        private void ExecuteMoveTabLeft(OpenedFileTab tab)
+        {
+            if (tab == null || !OpenedFiles.Contains(tab))
+                return;
+
+            var index = OpenedFiles.IndexOf(tab);
+            if (index <= 0)
+                return;
+
+            OpenedFiles.Move(index, index - 1);
+            UpdateCurrentFileTabIndexAfterMove(index, index - 1);
+            RaiseMoveTabCommandsCanExecute();
+        }
+
+        private void ExecuteMoveTabRight(OpenedFileTab tab)
+        {
+            if (tab == null || !OpenedFiles.Contains(tab))
+                return;
+
+            var index = OpenedFiles.IndexOf(tab);
+            if (index < 0 || index >= OpenedFiles.Count - 1)
+                return;
+
+            OpenedFiles.Move(index, index + 1);
+            UpdateCurrentFileTabIndexAfterMove(index, index + 1);
+            RaiseMoveTabCommandsCanExecute();
+        }
+
+
         public void AddFileTab(string path, string content)
         {
             var normalizedPath = path ?? codeFileService.NewFilePath;
@@ -153,48 +270,11 @@ namespace KID.ViewModels
         }
 
         /// <inheritdoc />
-        public FontFamily FontFamily => new FontFamily(
-            windowConfigurationService.Settings.FontFamily ?? "Consolas");
-
-        /// <inheritdoc />
-        public double FontSize => windowConfigurationService.Settings.FontSize > 0
-            ? windowConfigurationService.Settings.FontSize
-            : 14.0;
-
-        public bool CanUndo => CurrentFileTab?.CodeEditor?.CanUndo ?? false;
-
-        public bool CanRedo => CurrentFileTab?.CodeEditor?.CanRedo ?? false;
-
-        public RelayCommand UndoCommand { get; }
-        public RelayCommand RedoCommand { get; }
-        public RelayCommand<OpenedFileTab> CloseFileCommand { get; }
-        public RelayCommand<OpenedFileTab> SelectFileCommand { get; }
-        public RelayCommand<OpenedFileTab> SaveFileCommand { get; }
-        public RelayCommand<OpenedFileTab> SaveAsFileCommand { get; }
-        public RelayCommand<OpenedFileTab> SaveAndSetAsTemplateCommand { get; }
-        public RelayCommand<OpenedFileTab> MoveTabLeftCommand { get; }
-        public RelayCommand<OpenedFileTab> MoveTabRightCommand { get; }
-
-        private void ExecuteUndo()
+        public void NotifyCurrentFileTabSaved(string content)
         {
-            if (CurrentFileTab?.CodeEditor?.CanUndo == true)
-                CurrentFileTab.CodeEditor.Undo();
+            CurrentFileTab?.UpdateSavedContent(content);
+            OnPropertyChanged(nameof(CurrentFileTab));
         }
-
-        private void ExecuteRedo()
-        {
-            if (CurrentFileTab?.CodeEditor?.CanRedo == true)
-                CurrentFileTab.CodeEditor.Redo();
-        }
-
-        private void ExecuteCloseFile(OpenedFileTab tab) => CloseFileTab(tab);
-
-        private void ExecuteSelectFile(OpenedFileTab tab) => SelectFileTab(tab);
-
-        private static bool CanSaveTab(OpenedFileTab? tab) => tab?.IsModified == true;
-
-        private static bool CanSaveAndSetAsTemplate(OpenedFileTab? tab) =>
-            tab != null && !string.IsNullOrEmpty(GetTabContent(tab));
 
         private void ShowSaveError(Exception ex)
         {
@@ -203,18 +283,6 @@ namespace KID.ViewModels
                 localizationService.GetString("Error_Title") ?? "Error",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error));
-        }
-
-        private async void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
-        {
-            try
-            {
-                await ExecuteSaveAndSetAsTemplateAsync(tab);
-            }
-            catch (Exception ex)
-            {
-                ShowSaveError(ex);
-            }
         }
 
         private async Task ExecuteSaveAndSetAsTemplateAsync(OpenedFileTab tab)
@@ -248,18 +316,6 @@ namespace KID.ViewModels
             windowConfigurationService.SaveSettings();
         }
 
-        private async void ExecuteSaveFile(OpenedFileTab tab)
-        {
-            try
-            {
-                await ExecuteSaveFileAsync(tab);
-            }
-            catch (Exception ex)
-            {
-                ShowSaveError(ex);
-            }
-        }
-
         private async Task ExecuteSaveFileAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
@@ -277,18 +333,6 @@ namespace KID.ViewModels
 
             await codeFileService.SaveToPathAsync(tab.FilePath, content);
             tab.UpdateSavedContent(content);
-        }
-
-        private async void ExecuteSaveAsFile(OpenedFileTab tab)
-        {
-            try
-            {
-                await ExecuteSaveAsFileAsync(tab);
-            }
-            catch (Exception ex)
-            {
-                ShowSaveError(ex);
-            }
         }
 
         private async Task ExecuteSaveAsFileAsync(OpenedFileTab tab)
@@ -311,40 +355,6 @@ namespace KID.ViewModels
                 tab.FilePath = savedPath;
                 tab.UpdateSavedContent(content);
             }
-        }
-
-        private bool CanMoveTabLeft(OpenedFileTab? tab) =>
-            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) > 0;
-
-        private bool CanMoveTabRight(OpenedFileTab? tab) =>
-            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) < OpenedFiles.Count - 1;
-
-        private void ExecuteMoveTabLeft(OpenedFileTab tab)
-        {
-            if (tab == null || !OpenedFiles.Contains(tab))
-                return;
-
-            var index = OpenedFiles.IndexOf(tab);
-            if (index <= 0)
-                return;
-
-            OpenedFiles.Move(index, index - 1);
-            UpdateCurrentFileTabIndexAfterMove(index, index - 1);
-            RaiseMoveTabCommandsCanExecute();
-        }
-
-        private void ExecuteMoveTabRight(OpenedFileTab tab)
-        {
-            if (tab == null || !OpenedFiles.Contains(tab))
-                return;
-
-            var index = OpenedFiles.IndexOf(tab);
-            if (index < 0 || index >= OpenedFiles.Count - 1)
-                return;
-
-            OpenedFiles.Move(index, index + 1);
-            UpdateCurrentFileTabIndexAfterMove(index, index + 1);
-            RaiseMoveTabCommandsCanExecute();
         }
 
         private void UpdateCurrentFileTabIndexAfterMove(int oldIndex, int newIndex)
@@ -405,13 +415,5 @@ namespace KID.ViewModels
             }
             return null;
         }
-
-        /// <inheritdoc />
-        public void NotifyCurrentFileTabSaved(string content)
-        {
-            CurrentFileTab?.UpdateSavedContent(content);
-            OnPropertyChanged(nameof(CurrentFileTab));
-        }
-
     }
 }
