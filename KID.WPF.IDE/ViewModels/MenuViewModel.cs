@@ -120,7 +120,7 @@ namespace KID.ViewModels
             SaveAsFileCommand = new RelayCommand(() => ExecuteAsync(ExecuteSaveAsFileAsync, "Error_FileSaveFailed"));
             SaveAndSetAsTemplateCommand = new RelayCommand(
                 ExecuteSaveAndSetAsTemplate,
-                () => codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(codeEditorsViewModel.ActiveFile));
+                () => codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(codeEditorsViewModel.CurrentFileTab));
             RunCommand = new RelayCommand(() => ExecuteAsync(ExecuteRunAsync, "Error_RunFailed"), () => !IsStopButtonEnabled);
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
@@ -168,7 +168,7 @@ namespace KID.ViewModels
                 UndoCommand.RaiseCanExecuteChanged();
                 RedoCommand.RaiseCanExecuteChanged();
             }
-            if (e.PropertyName == nameof(ICodeEditorsViewModel.ActiveFile))
+            if (e.PropertyName == nameof(ICodeEditorsViewModel.CurrentFileTab))
             {
                 SaveFileCommand.RaiseCanExecuteChanged();
                 SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
@@ -194,7 +194,7 @@ namespace KID.ViewModels
         {
             get
             {
-                var activeFile = codeEditorsViewModel.ActiveFile;
+                var activeFile = codeEditorsViewModel.CurrentFileTab;
                 return activeFile != null
                     && !string.IsNullOrEmpty(activeFile.FilePath)
                     && !codeFileService.IsNewFilePath(activeFile.FilePath)
@@ -226,7 +226,7 @@ namespace KID.ViewModels
                 return;
             
             var code = windowConfigurationService.Settings.TemplateCode;
-            codeEditorsViewModel.AddFile(codeFileService.NewFilePath, code ?? string.Empty);
+            codeEditorsViewModel.AddFileTab(codeFileService.NewFilePath, code ?? string.Empty);
             if (!IsStopButtonEnabled)
             {
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
@@ -274,7 +274,7 @@ namespace KID.ViewModels
                     && codeFileService.IsNewFilePath(onlyTab.FilePath)
                     && !onlyTab.IsModified;
 
-                codeEditorsViewModel.AddFile(result.FilePath, result.Code);
+                codeEditorsViewModel.AddFileTab(result.FilePath, result.Code);
                 if (!IsStopButtonEnabled)
                 {
                     consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
@@ -282,7 +282,7 @@ namespace KID.ViewModels
                 }
 
                 if (shouldReplaceNewFile && onlyTab != null)
-                    codeEditorsViewModel.CloseFile(onlyTab);
+                    codeEditorsViewModel.CloseFileTab(onlyTab);
             }
         }
 
@@ -297,7 +297,7 @@ namespace KID.ViewModels
                 return;
             }
 
-            var activeFile = codeEditorsViewModel.ActiveFile;
+            var activeFile = codeEditorsViewModel.CurrentFileTab;
             if (activeFile == null)
                 return;
 
@@ -311,7 +311,7 @@ namespace KID.ViewModels
 
         private void ExecuteSaveAndSetAsTemplate()
         {
-            var activeFile = codeEditorsViewModel.ActiveFile;
+            var activeFile = codeEditorsViewModel.CurrentFileTab;
             if (activeFile != null && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(activeFile))
             {
                 codeEditorsViewModel.SaveAndSetAsTemplateCommand.Execute(activeFile);
@@ -323,7 +323,7 @@ namespace KID.ViewModels
             if (codeEditorsViewModel == null || codeFileService == null)
                 return;
 
-            var activeFile = codeEditorsViewModel.ActiveFile;
+            var activeFile = codeEditorsViewModel.CurrentFileTab;
             if (activeFile == null)
                 return;
 
@@ -368,7 +368,7 @@ namespace KID.ViewModels
                     consoleOutputViewModel.ConsoleOutputControl,
                     cancellationSource.Token);
 
-                var activeFile = codeEditorsViewModel.ActiveFile;
+                var activeFile = codeEditorsViewModel.CurrentFileTab;
                 var code = activeFile?.CurrentContent ?? string.Empty;
                 if (!string.IsNullOrEmpty(code))
                     await codeExecutionService.ExecuteAsync(code, context);

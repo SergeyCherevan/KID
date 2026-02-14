@@ -19,7 +19,7 @@ namespace KID.ViewModels.Interfaces
         /// <summary>
         /// Активная вкладка.
         /// </summary>
-        OpenedFileTab? ActiveFile { get; set; }
+        OpenedFileTab? CurrentFileTab { get; set; }
 
         FontFamily FontFamily { get; }
         double FontSize { get; }
@@ -41,17 +41,17 @@ namespace KID.ViewModels.Interfaces
         /// <summary>
         /// Добавляет файл в новую вкладку или переключается на уже открытый.
         /// </summary>
-        void AddFile(string path, string content);
+        void AddFileTab(string path, string content);
 
         /// <summary>
         /// Закрывает вкладку.
         /// </summary>
-        void CloseFile(OpenedFileTab tab);
+        void CloseFileTab(OpenedFileTab tab);
 
         /// <summary>
         /// Делает вкладку активной.
         /// </summary>
-        void SelectFile(OpenedFileTab tab);
+        void SelectFileTab(OpenedFileTab tab);
 
         /// <summary>
         /// Уведомляет о сохранении активного файла (обновляет SavedContent).

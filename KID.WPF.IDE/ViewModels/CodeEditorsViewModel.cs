@@ -37,7 +37,7 @@ namespace KID.ViewModels
         /// <summary>
         /// Активная вкладка.
         /// </summary>
-        public OpenedFileTab? ActiveFile
+        public OpenedFileTab? CurrentFileTab
         {
             get => OpenedFiles.Count > 0 && indexOfActiveFile >= 0 && indexOfActiveFile < OpenedFiles.Count
                 ? OpenedFiles[indexOfActiveFile]
@@ -81,13 +81,13 @@ namespace KID.ViewModels
         }
 
         /// <inheritdoc />
-        public void AddFile(string path, string content)
+        public void AddFileTab(string path, string content)
         {
             var normalizedPath = path ?? codeFileService.NewFilePath;
             var existing = FindTabByPath(normalizedPath);
             if (existing != null && !(codeFileService.IsNewFilePath(normalizedPath) && existing.IsModified))
             {
-                ActiveFile = existing;
+                CurrentFileTab = existing;
                 return;
             }
 
@@ -103,9 +103,9 @@ namespace KID.ViewModels
             codeEditor.TextChanged += (s, e) =>
             {
                 tab.NotifyContentChanged();
-                if (tab == ActiveFile)
+                if (tab == CurrentFileTab)
                 {
-                    OnPropertyChanged(nameof(ActiveFile));
+                    OnPropertyChanged(nameof(CurrentFileTab));
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
                     RaiseTabCommandsCanExecute();
@@ -114,13 +114,13 @@ namespace KID.ViewModels
 
             OpenedFiles.Add(tab);
             indexOfActiveFile = OpenedFiles.Count - 1;
-            OnPropertyChanged(nameof(ActiveFile));
+            OnPropertyChanged(nameof(CurrentFileTab));
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
         }
 
         /// <inheritdoc />
-        public void CloseFile(OpenedFileTab tab)
+        public void CloseFileTab(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFiles.Contains(tab))
                 return;
@@ -131,7 +131,7 @@ namespace KID.ViewModels
             if (OpenedFiles.Count == 0)
             {
                 var templateCode = windowConfigurationService?.Settings?.TemplateCode ?? string.Empty;
-                AddFile(codeFileService.NewFilePath, templateCode);
+                AddFileTab(codeFileService.NewFilePath, templateCode);
             }
             else
             {
@@ -139,17 +139,17 @@ namespace KID.ViewModels
                     indexOfActiveFile = OpenedFiles.Count - 1;
                 else if (index < indexOfActiveFile)
                     indexOfActiveFile--;
-                OnPropertyChanged(nameof(ActiveFile));
+                OnPropertyChanged(nameof(CurrentFileTab));
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
             }
         }
 
         /// <inheritdoc />
-        public void SelectFile(OpenedFileTab tab)
+        public void SelectFileTab(OpenedFileTab tab)
         {
             if (tab != null && OpenedFiles.Contains(tab))
-                ActiveFile = tab;
+                CurrentFileTab = tab;
         }
 
         /// <inheritdoc />
@@ -161,9 +161,9 @@ namespace KID.ViewModels
             ? windowConfigurationService.Settings.FontSize
             : 14.0;
 
-        public bool CanUndo => ActiveFile?.CodeEditor?.CanUndo ?? false;
+        public bool CanUndo => CurrentFileTab?.CodeEditor?.CanUndo ?? false;
 
-        public bool CanRedo => ActiveFile?.CodeEditor?.CanRedo ?? false;
+        public bool CanRedo => CurrentFileTab?.CodeEditor?.CanRedo ?? false;
 
         public RelayCommand UndoCommand { get; }
         public RelayCommand RedoCommand { get; }
@@ -177,19 +177,19 @@ namespace KID.ViewModels
 
         private void ExecuteUndo()
         {
-            if (ActiveFile?.CodeEditor?.CanUndo == true)
-                ActiveFile.CodeEditor.Undo();
+            if (CurrentFileTab?.CodeEditor?.CanUndo == true)
+                CurrentFileTab.CodeEditor.Undo();
         }
 
         private void ExecuteRedo()
         {
-            if (ActiveFile?.CodeEditor?.CanRedo == true)
-                ActiveFile.CodeEditor.Redo();
+            if (CurrentFileTab?.CodeEditor?.CanRedo == true)
+                CurrentFileTab.CodeEditor.Redo();
         }
 
-        private void ExecuteCloseFile(OpenedFileTab tab) => CloseFile(tab);
+        private void ExecuteCloseFile(OpenedFileTab tab) => CloseFileTab(tab);
 
-        private void ExecuteSelectFile(OpenedFileTab tab) => SelectFile(tab);
+        private void ExecuteSelectFile(OpenedFileTab tab) => SelectFileTab(tab);
 
         private static bool CanSaveTab(OpenedFileTab? tab) => tab?.IsModified == true;
 
@@ -355,7 +355,7 @@ namespace KID.ViewModels
                 indexOfActiveFile--;
             else if (oldIndex > indexOfActiveFile && newIndex <= indexOfActiveFile)
                 indexOfActiveFile++;
-            OnPropertyChanged(nameof(ActiveFile));
+            OnPropertyChanged(nameof(CurrentFileTab));
         }
 
         private void OnFontSettingsChanged(object? sender, EventArgs e)
@@ -409,17 +409,17 @@ namespace KID.ViewModels
         /// <inheritdoc />
         public void NotifyActiveFileSaved(string content)
         {
-            ActiveFile?.UpdateSavedContent(content);
-            OnPropertyChanged(nameof(ActiveFile));
+            CurrentFileTab?.UpdateSavedContent(content);
+            OnPropertyChanged(nameof(CurrentFileTab));
         }
 
         /// <inheritdoc />
         public void SetSyntaxHighlighting(string language)
         {
-            if (ActiveFile?.CodeEditor == null || string.IsNullOrEmpty(language))
+            if (CurrentFileTab?.CodeEditor == null || string.IsNullOrEmpty(language))
                 return;
 
-            ActiveFile.CodeEditor.SyntaxHighlighting =
+            CurrentFileTab.CodeEditor.SyntaxHighlighting =
                 ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(language);
         }
     }
