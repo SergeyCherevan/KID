@@ -43,6 +43,11 @@ namespace KID
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             _windowInitializationService?.Initialize();
+
+            if (DataContext is IMainViewModel mainViewModel)
+            {
+                mainViewModel.RequestDragMove += DragMove;
+            }
         }
 
         void IClosable.Close()

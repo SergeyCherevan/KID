@@ -19,7 +19,6 @@ namespace KID.Services.Initialize
         private readonly ILocalizationService localizationService;
         private readonly IThemeService themeService;
 
-        private readonly IMainViewModel mainViewModel;
         private readonly ICodeEditorsViewModel codeEditorsViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
 
@@ -29,7 +28,6 @@ namespace KID.Services.Initialize
             IWindowConfigurationService windowConfigurationService,
             ILocalizationService localizationService,
             IThemeService themeService,
-            IMainViewModel mainViewModel,
             ICodeEditorsViewModel codeEditorsViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             MainWindow mainWindow
@@ -39,7 +37,6 @@ namespace KID.Services.Initialize
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
 
-            this.mainViewModel = mainViewModel ?? throw new ArgumentNullException(nameof(mainViewModel));
             this.codeEditorsViewModel = codeEditorsViewModel ?? throw new ArgumentNullException(nameof(codeEditorsViewModel));
             this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
 
@@ -57,27 +54,10 @@ namespace KID.Services.Initialize
             // Применяем язык интерфейса из настроек
             InitializeLanguage();
             
-            InitializeMainWindow();
             InitializeCodeEditor();
             InitializeConsole();
 
             mainWindow.UpdateLayout();
-
-            // Применяем шрифт и подсветку синтаксиса после загрузки представления (TextEditor создаётся асинхронно)
-            mainWindow.Dispatcher.BeginInvoke(new Action(ApplyCodeEditorSettings), System.Windows.Threading.DispatcherPriority.Loaded);
-        }
-
-        private void ApplyCodeEditorSettings()
-        {
-            if (codeEditorsViewModel == null || windowConfigurationService?.Settings == null)
-                return;
-
-            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.ProgrammingLanguage))
-            {
-                codeEditorsViewModel.SetSyntaxHighlighting(windowConfigurationService.Settings.ProgrammingLanguage);
-            }
-
-            // Шрифт применяется через FontSettingsChanged — CodeEditorsViewModel подписан на событие
         }
 
         private void InitializeTheme()
@@ -100,14 +80,6 @@ namespace KID.Services.Initialize
             if (!string.IsNullOrEmpty(windowConfigurationService.Settings.UILanguage))
             {
                 localizationService.SetCulture(windowConfigurationService.Settings.UILanguage);
-            }
-        }
-
-        private void InitializeMainWindow()
-        {
-            if (mainViewModel != null && mainWindow != null)
-            {
-                mainViewModel.RequestDragMove += mainWindow.DragMove;
             }
         }
 
