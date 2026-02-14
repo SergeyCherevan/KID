@@ -16,6 +16,10 @@
     
     <UserControl.Resources>
         <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
+        <Style TargetType="avalonedit:TextEditor">
+            <Setter Property="FontFamily" Value="{Binding DataContext.FontFamily, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            <Setter Property="FontSize" Value="{Binding DataContext.FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+        </Style>
         <Style TargetType="TextBlock" x:Key="TabTextStyle">
             <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
             <Setter Property="FontSize" Value="12"/>

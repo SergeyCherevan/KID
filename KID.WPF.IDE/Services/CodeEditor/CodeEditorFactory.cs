@@ -28,11 +28,6 @@ namespace KID.Services.CodeEditor
         public TextEditor Create(string content, string programmingLanguage)
         {
             var settings = windowConfigurationService.Settings;
-            var fontSize = settings.FontSize > 0 ? settings.FontSize : 14.0;
-            var fontFamily = !string.IsNullOrEmpty(settings.FontFamily)
-                ? new FontFamily(settings.FontFamily)
-                : new FontFamily("Consolas");
-
             var syntaxHighlighting = HighlightingManager.Instance.GetDefinition(programmingLanguage);
 
             var codeEditor = new TextEditor
@@ -40,8 +35,6 @@ namespace KID.Services.CodeEditor
                 ShowLineNumbers = true,
                 WordWrap = true,
                 Text = content ?? string.Empty,
-                FontSize = fontSize,
-                FontFamily = fontFamily,
                 SyntaxHighlighting = syntaxHighlighting,
             };
 

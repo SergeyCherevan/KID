@@ -27,7 +27,6 @@ namespace KID.ViewModels
         private readonly ICodeEditorFactory codeEditorFactory;
         private readonly ILocalizationService localizationService;
 
-        private int indexOfCurrentFileTab;
 
 
         /// <summary>
@@ -35,6 +34,7 @@ namespace KID.ViewModels
         /// </summary>
         public ObservableCollection<OpenedFileTab> OpenedFiles { get; } = new();
 
+        private int indexOfCurrentFileTab;
         /// <summary>
         /// Текущая вкладка.
         /// </summary>
@@ -370,20 +370,6 @@ namespace KID.ViewModels
 
         private void OnFontSettingsChanged(object? sender, EventArgs e)
         {
-            var settings = windowConfigurationService?.Settings;
-            if (settings == null) return;
-
-            var fontFamily = new FontFamily(settings.FontFamily ?? "Consolas");
-            var fontSize = settings.FontSize > 0 ? settings.FontSize : 14.0;
-
-            foreach (var tab in OpenedFiles)
-            {
-                if (tab.CodeEditor != null)
-                {
-                    tab.CodeEditor.FontFamily = fontFamily;
-                    tab.CodeEditor.FontSize = fontSize;
-                }
-            }
             OnPropertyChanged(nameof(FontFamily));
             OnPropertyChanged(nameof(FontSize));
         }
