@@ -413,14 +413,5 @@ namespace KID.ViewModels
             OnPropertyChanged(nameof(CurrentFileTab));
         }
 
-        /// <inheritdoc />
-        public void SetSyntaxHighlighting(string language)
-        {
-            if (CurrentFileTab?.CodeEditor == null || string.IsNullOrEmpty(language))
-                return;
-
-            CurrentFileTab.CodeEditor.SyntaxHighlighting =
-                ICSharpCode.AvalonEdit.Highlighting.HighlightingManager.Instance.GetDefinition(language);
-        }
     }
 }

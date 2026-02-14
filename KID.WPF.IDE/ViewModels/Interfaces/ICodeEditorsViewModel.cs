@@ -36,8 +36,6 @@ namespace KID.ViewModels.Interfaces
         RelayCommand<OpenedFileTab> MoveTabLeftCommand { get; }
         RelayCommand<OpenedFileTab> MoveTabRightCommand { get; }
 
-        void SetSyntaxHighlighting(string language);
-
         /// <summary>
         /// Добавляет файл в новую вкладку или переключается на уже открытый.
         /// </summary>
