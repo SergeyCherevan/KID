@@ -14,8 +14,6 @@ namespace KID.ViewModels
     public class ConsoleOutputViewModel : ViewModelBase, IConsoleOutputViewModel
     {
         private readonly IWindowConfigurationService windowConfigurationService;
-        private FontFamily _fontFamily = new FontFamily("Consolas");
-        private double _fontSize = 14;
 
         public TextBox ConsoleOutputControl { get; private set; }
 
@@ -25,23 +23,17 @@ namespace KID.ViewModels
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
         }
 
-        void IConsoleOutputViewModel.Initialize(TextBox consoleOutputControl)
+        public void Initialize(TextBox consoleOutputControl)
         {
             ConsoleOutputControl = consoleOutputControl ?? throw new ArgumentNullException(nameof(consoleOutputControl));
-            ApplyFontFromSettings();
+            OnPropertyChanged(nameof(FontFamily));
+            OnPropertyChanged(nameof(FontSize));
         }
 
-        private void OnFontSettingsChanged(object? sender, EventArgs e) => ApplyFontFromSettings();
-
-        private void ApplyFontFromSettings()
+        private void OnFontSettingsChanged(object? sender, EventArgs e)
         {
-            var settings = windowConfigurationService?.Settings;
-            if (settings == null) return;
-
-            if (!string.IsNullOrEmpty(settings.FontFamily))
-                FontFamily = new FontFamily(settings.FontFamily);
-            if (settings.FontSize > 0)
-                FontSize = settings.FontSize;
+            OnPropertyChanged(nameof(FontFamily));
+            OnPropertyChanged(nameof(FontSize));
         }
 
         public void Clear()
@@ -62,24 +54,13 @@ namespace KID.ViewModels
             }
         }
 
-        public FontFamily FontFamily
-        {
-            get => _fontFamily;
-            set
-            {
-                if (SetProperty(ref _fontFamily, value) && ConsoleOutputControl != null)
-                    ConsoleOutputControl.FontFamily = value;
-            }
-        }
+        /// <inheritdoc />
+        public FontFamily FontFamily => new FontFamily(
+            windowConfigurationService.Settings.FontFamily ?? "Consolas");
 
-        public double FontSize
-        {
-            get => _fontSize;
-            set
-            {
-                if (SetProperty(ref _fontSize, value) && ConsoleOutputControl != null)
-                    ConsoleOutputControl.FontSize = value;
-            }
-        }
+        /// <inheritdoc />
+        public double FontSize => windowConfigurationService.Settings.FontSize > 0
+            ? windowConfigurationService.Settings.FontSize
+            : 14;
     }
 }

@@ -29,8 +29,8 @@ namespace KID.ViewModels.Interfaces
 
         string Text { get; set; }
         string FilePath { get; set; }
-        FontFamily FontFamily { get; set; }
-        double FontSize { get; set; }
+        FontFamily FontFamily { get; }
+        double FontSize { get; }
         bool CanUndo { get; }
         bool CanRedo { get; }
         bool HasUnsavedChanges { get; }

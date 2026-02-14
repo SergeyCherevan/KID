@@ -20,11 +20,11 @@ namespace KID.ViewModels.Interfaces
         /// <summary>
         /// Шрифт для отображения текста в консоли.
         /// </summary>
-        FontFamily FontFamily { get; set; }
+        FontFamily FontFamily { get; }
 
         /// <summary>
         /// Размер шрифта в консоли.
         /// </summary>
-        double FontSize { get; set; }
+        double FontSize { get; }
     }
 }

@@ -207,31 +207,14 @@ namespace KID.ViewModels
             }
         }
 
-        public FontFamily FontFamily
-        {
-            get => ActiveFile?.CodeEditor?.FontFamily ?? new FontFamily("Consolas");
-            set
-            {
-                foreach (var tab in OpenedFiles)
-                {
-                    if (tab.CodeEditor != null)
-                        tab.CodeEditor.FontFamily = value;
-                }
-            }
-        }
+        /// <inheritdoc />
+        public FontFamily FontFamily => new FontFamily(
+            windowConfigurationService.Settings.FontFamily ?? "Consolas");
 
-        public double FontSize
-        {
-            get => ActiveFile?.CodeEditor?.FontSize ?? 14.0;
-            set
-            {
-                foreach (var tab in OpenedFiles)
-                {
-                    if (tab.CodeEditor != null)
-                        tab.CodeEditor.FontSize = value;
-                }
-            }
-        }
+        /// <inheritdoc />
+        public double FontSize => windowConfigurationService.Settings.FontSize > 0
+            ? windowConfigurationService.Settings.FontSize
+            : 14.0;
 
         public bool CanUndo => ActiveFile?.CodeEditor?.CanUndo ?? false;
 
@@ -440,13 +423,19 @@ namespace KID.ViewModels
             var settings = windowConfigurationService?.Settings;
             if (settings == null) return;
 
-            var fontFamily = !string.IsNullOrEmpty(settings.FontFamily)
-                ? new FontFamily(settings.FontFamily)
-                : new FontFamily("Consolas");
+            var fontFamily = new FontFamily(settings.FontFamily ?? "Consolas");
             var fontSize = settings.FontSize > 0 ? settings.FontSize : 14.0;
 
-            FontFamily = fontFamily;
-            FontSize = fontSize;
+            foreach (var tab in OpenedFiles)
+            {
+                if (tab.CodeEditor != null)
+                {
+                    tab.CodeEditor.FontFamily = fontFamily;
+                    tab.CodeEditor.FontSize = fontSize;
+                }
+            }
+            OnPropertyChanged(nameof(FontFamily));
+            OnPropertyChanged(nameof(FontSize));
         }
 
         private void RaiseTabCommandsCanExecute()
