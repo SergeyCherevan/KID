@@ -27,7 +27,7 @@
                 <DataTrigger Value="True">
                     <DataTrigger.Binding>
                         <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
-                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.ActiveFile"/>
+                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
                             <Binding/>
                         </MultiBinding>
                     </DataTrigger.Binding>
@@ -42,7 +42,7 @@
                 <DataTrigger Value="True">
                     <DataTrigger.Binding>
                         <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
-                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.ActiveFile"/>
+                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
                             <Binding/>
                         </MultiBinding>
                     </DataTrigger.Binding>
@@ -109,7 +109,7 @@
                                         <DataTrigger Value="True">
                                             <DataTrigger.Binding>
                                                 <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
-                                                    <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.ActiveFile"/>
+                                                    <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
                                                     <Binding/>
                                                 </MultiBinding>
                                             </DataTrigger.Binding>
@@ -144,7 +144,7 @@
         
         <!-- Редактор кода активной вкладки (растягивается на всю доступную высоту) -->
         <ContentControl Grid.Row="1"
-                        Content="{Binding ActiveFile}"
+                        Content="{Binding CurrentFileTab}"
                         Margin="5">
             <ContentControl.ContentTemplate>
                 <DataTemplate DataType="{x:Type models:OpenedFileTab}">
