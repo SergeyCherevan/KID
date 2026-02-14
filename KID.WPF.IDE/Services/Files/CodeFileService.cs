@@ -54,8 +54,8 @@ namespace KID.Services.Files
             return filePath;
         }
 
-        /// <inheritdoc />
-        public bool IsNewFilePath(string path) => path == "/NewFile.cs";
+        public string NewFilePath => "/NewFile.cs";
+        public bool IsNewFilePath(string path) => path == NewFilePath;
     }
 }
 

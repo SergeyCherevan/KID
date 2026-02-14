@@ -9,6 +9,11 @@ namespace KID.Services.Files.Interfaces
     public interface ICodeFileService
     {
         /// <summary>
+        /// Путь для нового несохранённого файла.
+        /// </summary>
+        string NewFilePath { get; }
+
+        /// <summary>
         /// Открывает файл через диалог и возвращает содержимое и путь.
         /// </summary>
         Task<OpenFileResult?> OpenCodeFileWithPathAsync(string fileFilter);

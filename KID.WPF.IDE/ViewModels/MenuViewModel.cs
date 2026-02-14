@@ -220,7 +220,7 @@ namespace KID.ViewModels
                 return;
             
             var code = windowConfigurationService.Settings.TemplateCode;
-            codeEditorsViewModel.AddFile(CodeEditorsViewModel.NewFilePath, code ?? string.Empty);
+            codeEditorsViewModel.AddFile(codeFileService.NewFilePath, code ?? string.Empty);
             if (!IsStopButtonEnabled)
             {
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");

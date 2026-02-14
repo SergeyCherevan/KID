@@ -26,8 +26,7 @@ namespace KID.ViewModels
         public void Initialize(TextBox consoleOutputControl)
         {
             ConsoleOutputControl = consoleOutputControl ?? throw new ArgumentNullException(nameof(consoleOutputControl));
-            OnPropertyChanged(nameof(FontFamily));
-            OnPropertyChanged(nameof(FontSize));
+            OnFontSettingsChanged(this, EventArgs.Empty);
         }
 
         private void OnFontSettingsChanged(object? sender, EventArgs e)

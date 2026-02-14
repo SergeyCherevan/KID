@@ -1,3 +1,4 @@
+using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.Services.Themes.Interfaces;
@@ -21,6 +22,7 @@ namespace KID.Services.Initialize
 
         private readonly ICodeEditorsViewModel codeEditorsViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
+        private readonly ICodeFileService codeFileService;
 
         private readonly MainWindow mainWindow;
 
@@ -30,6 +32,7 @@ namespace KID.Services.Initialize
             IThemeService themeService,
             ICodeEditorsViewModel codeEditorsViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
+            ICodeFileService codeFileService,
             MainWindow mainWindow
         )
         {
@@ -39,6 +42,7 @@ namespace KID.Services.Initialize
 
             this.codeEditorsViewModel = codeEditorsViewModel ?? throw new ArgumentNullException(nameof(codeEditorsViewModel));
             this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
+            this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
 
             this.mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
         }
@@ -88,10 +92,8 @@ namespace KID.Services.Initialize
             if (codeEditorsViewModel == null || windowConfigurationService?.Settings == null)
                 return;
 
-
-
             var templateCode = windowConfigurationService.Settings.TemplateCode ?? string.Empty;
-            codeEditorsViewModel.AddFile(CodeEditorsViewModel.NewFilePath, templateCode);
+            codeEditorsViewModel.AddFile(codeFileService.NewFilePath, templateCode);
         }
 
         private void InitializeConsole()
@@ -100,8 +102,6 @@ namespace KID.Services.Initialize
                 return;
 
             consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
-
-            // Шрифт применяется в ConsoleOutputViewModel.Initialize через ApplyFontFromSettings
         }
     }
 }

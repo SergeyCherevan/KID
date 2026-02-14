@@ -27,11 +27,6 @@ namespace KID.ViewModels
         private readonly ICodeEditorFactory codeEditorFactory;
         private readonly ILocalizationService localizationService;
 
-        /// <summary>
-        /// Путь для нового несохранённого файла.
-        /// </summary>
-        public const string NewFilePath = "/NewFile.cs";
-
         private int indexOfActiveFile;
 
         /// <summary>
@@ -97,9 +92,9 @@ namespace KID.ViewModels
         /// <inheritdoc />
         public void AddFile(string path, string content)
         {
-            var normalizedPath = path ?? NewFilePath;
+            var normalizedPath = path ?? codeFileService.NewFilePath;
             var existing = FindTabByPath(normalizedPath);
-            if (existing != null && !(normalizedPath == NewFilePath && existing.IsModified))
+            if (existing != null && !(codeFileService.IsNewFilePath(normalizedPath) && existing.IsModified))
             {
                 ActiveFile = existing;
                 return;
@@ -150,7 +145,7 @@ namespace KID.ViewModels
             if (OpenedFiles.Count == 0)
             {
                 var templateCode = windowConfigurationService?.Settings?.TemplateCode ?? string.Empty;
-                AddFile(NewFilePath, templateCode);
+                AddFile(codeFileService.NewFilePath, templateCode);
             }
             else
             {
@@ -184,11 +179,11 @@ namespace KID.ViewModels
         /// <inheritdoc />
         public string FilePath
         {
-            get => ActiveFile?.FilePath ?? NewFilePath;
+            get => ActiveFile?.FilePath ?? codeFileService.NewFilePath;
             set
             {
                 if (ActiveFile != null)
-                    ActiveFile.FilePath = value ?? NewFilePath;
+                    ActiveFile.FilePath = value ?? codeFileService.NewFilePath;
             }
         }
 
