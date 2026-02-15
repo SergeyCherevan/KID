@@ -197,6 +197,48 @@ namespace KID.ViewModels
             RaiseMoveTabCommandsCanExecute();
         }
 
+        /*
+         * Зачем нужен этот метод
+         * ----------------------
+         * Текущая вкладка хранится не ссылкой на объект, а индексом `indexOfCurrentFileTab`.
+         * Свойство `CurrentFileTab` вычисляется как `OpenedFiles[indexOfCurrentFileTab]`.
+         *
+         * Когда мы меняем порядок вкладок через `OpenedFiles.Move(oldIndex, newIndex)`:
+         * - перемещаемая вкладка меняет свой индекс;
+         * - все вкладки между oldIndex и newIndex сдвигаются на 1 позицию.
+         *
+         * Поэтому после Move нужно скорректировать `indexOfCurrentFileTab`, иначе UI начнёт считать
+         * "текущей" другую вкладку (или текущая останется той же, но её индекс окажется неверным).
+         *
+         * Принцип работы
+         * --------------
+         * Рассматриваем три сценария (метод корректен для любого Move, не только на 1 позицию):
+         *
+         * 1) Переместили текущую вкладку (indexOfCurrentFileTab == oldIndex)
+         *    Тогда её новый индекс — это `newIndex`.
+         *
+         * 2) Переместили вкладку слева направо "через" текущую
+         *    Условие: oldIndex < indexOfCurrentFileTab && newIndex >= indexOfCurrentFileTab
+         *    Пример: [A, B, C, D], текущая C (2). Move B: 1 -> 3 => [A, C, D, B]
+         *    Текущая C сдвигается на 1 влево: 2 -> 1, поэтому `indexOfCurrentFileTab--`.
+         *
+         * 3) Переместили вкладку справа налево "через" текущую
+         *    Условие: oldIndex > indexOfCurrentFileTab && newIndex <= indexOfCurrentFileTab
+         *    Пример: [A, B, C, D], текущая C (2). Move D: 3 -> 1 => [A, D, B, C]
+         *    Текущая C сдвигается на 1 вправо: 2 -> 3, поэтому `indexOfCurrentFileTab++`.
+         */
+        private void UpdateCurrentFileTabIndexAfterMove(int oldIndex, int newIndex)
+        {
+            if (indexOfCurrentFileTab == oldIndex)
+                indexOfCurrentFileTab = newIndex;
+            else if (oldIndex < indexOfCurrentFileTab && newIndex >= indexOfCurrentFileTab)
+                indexOfCurrentFileTab--;
+            else if (oldIndex > indexOfCurrentFileTab && newIndex <= indexOfCurrentFileTab)
+                indexOfCurrentFileTab++;
+
+            OnPropertyChanged(nameof(CurrentFileTab));
+        }
+
 
         public void AddFileTab(string path, string content)
         {
@@ -350,17 +392,6 @@ namespace KID.ViewModels
             }
         }
 
-        private void UpdateCurrentFileTabIndexAfterMove(int oldIndex, int newIndex)
-        {
-            if (indexOfCurrentFileTab == oldIndex)
-                indexOfCurrentFileTab = newIndex;
-            else if (oldIndex < indexOfCurrentFileTab && newIndex >= indexOfCurrentFileTab)
-                indexOfCurrentFileTab--;
-            else if (oldIndex > indexOfCurrentFileTab && newIndex <= indexOfCurrentFileTab)
-                indexOfCurrentFileTab++;
-            OnPropertyChanged(nameof(CurrentFileTab));
-        }
-
         private void OnFontSettingsChanged(object? sender, EventArgs e)
         {
             OnPropertyChanged(nameof(FontFamily));
@@ -381,6 +412,5 @@ namespace KID.ViewModels
             MoveTabLeftCommand.RaiseCanExecuteChanged();
             MoveTabRightCommand.RaiseCanExecuteChanged();
         }
-
     }
 }
