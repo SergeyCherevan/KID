@@ -25,11 +25,7 @@ namespace KID.ViewModels
     {
         private readonly ICodeExecutionService codeExecutionService;
         private readonly CanvasTextBoxContextFabric canvasTextBoxContextFabric;
-        private CancellationTokenSource? cancellationSource;
-        private bool isStopButtonEnabled;
-
         private readonly IWindowConfigurationService windowConfigurationService;
-
         private readonly ICodeEditorsViewModel codeEditorsViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
         private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
@@ -37,6 +33,10 @@ namespace KID.ViewModels
         private readonly ILocalizationService localizationService;
         private readonly IThemeService themeService;
         private readonly IFontProviderService fontProviderService;
+        private CancellationTokenSource? cancellationSource;
+        private bool canStop;
+
+
 
         public ObservableCollection<AvailableLanguage> AvailableLanguages { get; }
         public ObservableCollection<AvailableTheme> AvailableThemes { get; }
@@ -62,6 +62,24 @@ namespace KID.ViewModels
         /// Выбранный размер шрифта (для отображения галочки в меню).
         /// </summary>
         public double SelectedFontSize => windowConfigurationService?.Settings?.FontSize ?? 0.0;
+
+
+
+        public ICommand NewFileCommand { get; }
+        public ICommand OpenFileCommand { get; }
+        public RelayCommand SaveFileCommand { get; }
+        public ICommand SaveAsFileCommand { get; }
+        public RelayCommand SaveAndSetAsTemplateCommand { get; }
+        public RelayCommand RunCommand { get; }
+        public RelayCommand StopCommand { get; }
+        public RelayCommand UndoCommand { get; }
+        public RelayCommand RedoCommand { get; }
+        public ICommand ChangeLanguageCommand { get; }
+        public ICommand ChangeThemeCommand { get; }
+        public ICommand ChangeFontCommand { get; }
+        public ICommand ChangeFontSizeCommand { get; }
+
+
 
         public MenuViewModel(
             IWindowConfigurationService windowConfigurationService,
@@ -97,14 +115,14 @@ namespace KID.ViewModels
             // Инициализируем список доступных языков
             var languages = localizationService.GetAvailableLanguages();
             AvailableLanguages = new ObservableCollection<AvailableLanguage>(languages ?? Array.Empty<AvailableLanguage>());
-            
+
             // Обновляем локализованные имена для всех языков
             UpdateLanguageDisplayNames();
 
             // Инициализируем список доступных тем
             var themes = themeService.GetAvailableThemes();
             AvailableThemes = new ObservableCollection<AvailableTheme>(themes ?? Array.Empty<AvailableTheme>());
-            
+
             // Обновляем локализованные имена для всех тем
             UpdateThemeDisplayNames();
 
@@ -121,7 +139,7 @@ namespace KID.ViewModels
             SaveAndSetAsTemplateCommand = new RelayCommand(
                 ExecuteSaveAndSetAsTemplate,
                 () => codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(codeEditorsViewModel.CurrentFileTab));
-            RunCommand = new RelayCommand(() => ExecuteAsync(ExecuteRunAsync, "Error_RunFailed"), () => !IsStopButtonEnabled);
+            RunCommand = new RelayCommand(() => ExecuteAsync(ExecuteRunAsync, "Error_RunFailed"), () => !CanStop);
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
@@ -147,40 +165,14 @@ namespace KID.ViewModels
             RefreshSelectedSettings();
         }
 
-        /// <summary>
-        /// Обновляет отображение галочек у выбранных параметров в меню.
-        /// </summary>
-        private void RefreshSelectedSettings()
-        {
-            OnPropertyChanged(nameof(SelectedThemeKey));
-            OnPropertyChanged(nameof(SelectedCultureCode));
-            OnPropertyChanged(nameof(SelectedFontFamily));
-            OnPropertyChanged(nameof(SelectedFontSize));
-        }
 
-        private void CodeEditorViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(ICodeEditorsViewModel.CanUndo) ||
-                e.PropertyName == nameof(ICodeEditorsViewModel.CanRedo))
-            {
-                OnPropertyChanged(nameof(CanUndo));
-                OnPropertyChanged(nameof(CanRedo));
-                UndoCommand.RaiseCanExecuteChanged();
-                RedoCommand.RaiseCanExecuteChanged();
-            }
-            if (e.PropertyName == nameof(ICodeEditorsViewModel.CurrentFileTab))
-            {
-                SaveFileCommand.RaiseCanExecuteChanged();
-                SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
-            }
-        }
 
-        public bool IsStopButtonEnabled
+        public bool CanStop
         {
-            get => isStopButtonEnabled;
+            get => canStop;
             set
             {
-                if (SetProperty(ref isStopButtonEnabled, value))
+                if (SetProperty(ref canStop, value))
                 {
                     RunCommand.RaiseCanExecuteChanged();
                     StopCommand.RaiseCanExecuteChanged();
@@ -202,32 +194,18 @@ namespace KID.ViewModels
             }
         }
 
-        public ICommand NewFileCommand { get; }
-        public ICommand OpenFileCommand { get; }
-        public RelayCommand SaveFileCommand { get; }
-        public ICommand SaveAsFileCommand { get; }
-        public RelayCommand SaveAndSetAsTemplateCommand { get; }
-        public RelayCommand RunCommand { get; }
-        public RelayCommand StopCommand { get; }
-        public RelayCommand UndoCommand { get; }
-        public RelayCommand RedoCommand { get; }
-        public ICommand ChangeLanguageCommand { get; }
-        public ICommand ChangeThemeCommand { get; }
-        public ICommand ChangeFontCommand { get; }
-        public ICommand ChangeFontSizeCommand { get; }
-
         private void ExecuteNewFile()
         {
-            if (windowConfigurationService?.Settings == null || 
-                codeEditorsViewModel == null || 
-                consoleOutputViewModel == null || 
+            if (windowConfigurationService?.Settings == null ||
+                codeEditorsViewModel == null ||
+                consoleOutputViewModel == null ||
                 graphicsOutputViewModel == null ||
                 localizationService == null)
                 return;
-            
+
             var code = windowConfigurationService.Settings.TemplateCode;
             codeEditorsViewModel.AddFileTab(codeFileService.NewFilePath, code ?? string.Empty);
-            if (!IsStopButtonEnabled)
+            if (!CanStop)
             {
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
@@ -275,7 +253,7 @@ namespace KID.ViewModels
                     && !onlyTab.IsModified;
 
                 codeEditorsViewModel.AddFileTab(result.FilePath, result.Code);
-                if (!IsStopButtonEnabled)
+                if (!CanStop)
                 {
                     consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                     graphicsOutputViewModel.Clear();
@@ -350,7 +328,7 @@ namespace KID.ViewModels
                 codeExecutionService == null)
                 return;
 
-            IsStopButtonEnabled = true;
+            CanStop = true;
             cancellationSource = new CancellationTokenSource();
             try
             {
@@ -375,14 +353,14 @@ namespace KID.ViewModels
             }
             finally
             {
-                IsStopButtonEnabled = false;
+                CanStop = false;
             }
         }
 
         private void ExecuteStop()
         {
             cancellationSource?.Cancel();
-            IsStopButtonEnabled = false;
+            CanStop = false;
         }
 
         private void ExecuteUndo()
@@ -403,64 +381,32 @@ namespace KID.ViewModels
 
         private void ChangeLanguage(AvailableLanguage language)
         {
-            if (language == null || 
-                localizationService == null || 
+            if (language == null ||
+                localizationService == null ||
                 windowConfigurationService?.Settings == null)
                 return;
-            
+
             localizationService.SetCulture(language.CultureCode);
-            
+
             // Сохраняем выбранный язык в настройках
             windowConfigurationService.Settings.UILanguage = language.CultureCode;
             windowConfigurationService.SaveSettings();
             OnPropertyChanged(nameof(SelectedCultureCode));
         }
 
-        private void UpdateLanguageDisplayNames()
-        {
-            if (AvailableLanguages == null || localizationService == null)
-                return;
-            
-            foreach (var language in AvailableLanguages)
-            {
-                if (language == null)
-                    continue;
-                
-                // Получаем локализованное название языка
-                var key = $"Language_{language.EnglishName}";
-                language.LocalizedDisplayName = localizationService.GetString(key);
-            }
-        }
-
         private void ChangeTheme(AvailableTheme theme)
         {
-            if (theme == null || 
-                themeService == null || 
+            if (theme == null ||
+                themeService == null ||
                 windowConfigurationService?.Settings == null)
                 return;
-            
+
             themeService.ApplyTheme(theme.ThemeKey);
-            
+
             // Сохраняем выбранную тему в настройках
             windowConfigurationService.Settings.ColorTheme = theme.ThemeKey;
             windowConfigurationService.SaveSettings();
             OnPropertyChanged(nameof(SelectedThemeKey));
-        }
-
-        private void UpdateThemeDisplayNames()
-        {
-            if (AvailableThemes == null || localizationService == null)
-                return;
-            
-            foreach (var theme in AvailableThemes)
-            {
-                if (theme == null)
-                    continue;
-                
-                // Получаем локализованное название темы
-                var key = $"Theme_{theme.EnglishName}";
-                theme.LocalizedDisplayName = localizationService.GetString(key);
-            }
         }
 
         private void ChangeFont(string? fontFamilyName)
@@ -481,6 +427,68 @@ namespace KID.ViewModels
 
             var fontFamily = windowConfigurationService.Settings.FontFamily ?? "Consolas";
             windowConfigurationService.SetFont(fontFamily, fontSize);
+        }
+
+
+
+        /// <summary>
+        /// Обновляет отображение галочек у выбранных параметров в меню.
+        /// </summary>
+        private void RefreshSelectedSettings()
+        {
+            OnPropertyChanged(nameof(SelectedThemeKey));
+            OnPropertyChanged(nameof(SelectedCultureCode));
+            OnPropertyChanged(nameof(SelectedFontFamily));
+            OnPropertyChanged(nameof(SelectedFontSize));
+        }
+
+        private void CodeEditorViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(ICodeEditorsViewModel.CanUndo) ||
+                e.PropertyName == nameof(ICodeEditorsViewModel.CanRedo))
+            {
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
+                UndoCommand.RaiseCanExecuteChanged();
+                RedoCommand.RaiseCanExecuteChanged();
+            }
+            if (e.PropertyName == nameof(ICodeEditorsViewModel.CurrentFileTab))
+            {
+                SaveFileCommand.RaiseCanExecuteChanged();
+                SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private void UpdateLanguageDisplayNames()
+        {
+            if (AvailableLanguages == null || localizationService == null)
+                return;
+
+            foreach (var language in AvailableLanguages)
+            {
+                if (language == null)
+                    continue;
+
+                // Получаем локализованное название языка
+                var key = $"Language_{language.EnglishName}";
+                language.LocalizedDisplayName = localizationService.GetString(key);
+            }
+        }
+
+        private void UpdateThemeDisplayNames()
+        {
+            if (AvailableThemes == null || localizationService == null)
+                return;
+
+            foreach (var theme in AvailableThemes)
+            {
+                if (theme == null)
+                    continue;
+
+                // Получаем локализованное название темы
+                var key = $"Theme_{theme.EnglishName}";
+                theme.LocalizedDisplayName = localizationService.GetString(key);
+            }
         }
     }
 }

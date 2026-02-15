@@ -109,8 +109,8 @@
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="{localization:Localization Menu_Run}" InputGestureText="Ctrl+F5" Command="{Binding RunCommand}" IsEnabled="{Binding IsStopButtonEnabled, Converter={StaticResource InverseBooleanConverter}}" />
-            <MenuItem Header="{localization:Localization Menu_Stop}" InputGestureText="Shift+F5" Command="{Binding StopCommand}" IsEnabled="{Binding IsStopButtonEnabled}" />
+            <MenuItem Header="{localization:Localization Menu_Run}" InputGestureText="Ctrl+F5" Command="{Binding RunCommand}" IsEnabled="{Binding CanStop, Converter={StaticResource InverseBooleanConverter}}" />
+            <MenuItem Header="{localization:Localization Menu_Stop}" InputGestureText="Shift+F5" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}" />
         </Menu>
     </StackPanel>
 </UserControl>

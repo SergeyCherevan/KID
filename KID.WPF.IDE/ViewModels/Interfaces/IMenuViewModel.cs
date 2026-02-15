@@ -5,7 +5,7 @@ namespace KID.ViewModels.Interfaces
 {
     public interface IMenuViewModel
     {
-        bool IsStopButtonEnabled { get; set; }
+        bool CanStop { get; set; }
         bool CanUndo { get; }
         bool CanRedo { get; }
 
