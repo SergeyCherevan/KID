@@ -9,7 +9,6 @@ namespace KID.Models
     public class OpenedFileTab : ViewModelBase
     {
         private string filePath = string.Empty;
-        private string content = string.Empty;
         private string savedContent = string.Empty;
         private TextEditor? codeEditor;
 
@@ -23,15 +22,6 @@ namespace KID.Models
         }
 
         /// <summary>
-        /// Текст содержимого файла (fallback до загрузки CodeEditor).
-        /// </summary>
-        public string Content
-        {
-            get => content;
-            set => SetProperty(ref content, value ?? string.Empty);
-        }
-
-        /// <summary>
         /// Текст на момент последнего сохранения или открытия. Для NewFile — шаблон по умолчанию.
         /// </summary>
         public string SavedContent
@@ -41,14 +31,14 @@ namespace KID.Models
         }
 
         /// <summary>
-        /// Текущее содержимое вкладки (из CodeEditor или Content).
+        /// Текущее содержимое вкладки.
         /// </summary>
-        public string CurrentContent => CodeEditor?.Text ?? Content ?? string.Empty;
+        public string CurrentContent => CodeEditor?.Text ?? string.Empty;
 
         /// <summary>
         /// true, если текущее содержимое отличается от SavedContent (есть несохранённые изменения).
         /// </summary>
-        public bool IsModified => (CodeEditor?.Text ?? Content) != SavedContent;
+        public bool IsModified => (CodeEditor?.Text ?? string.Empty) != SavedContent;
 
         /// <summary>
         /// Вызывается при изменении текста в редакторе для обновления IsModified.

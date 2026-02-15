@@ -125,7 +125,7 @@ namespace KID.ViewModels
         private static bool CanSaveTab(OpenedFileTab? tab) => tab?.IsModified == true;
 
         private static bool CanSaveAndSetAsTemplate(OpenedFileTab? tab) =>
-            tab != null && !string.IsNullOrEmpty(GetTabContent(tab));
+            tab != null && !string.IsNullOrEmpty(tab.CurrentContent);
 
         private async void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
         {
@@ -206,7 +206,6 @@ namespace KID.ViewModels
             var tab = new OpenedFileTab
             {
                 FilePath = normalizedPath,
-                Content = content,
                 CodeEditor = codeEditor
             };
             tab.UpdateSavedContent(content);
@@ -285,7 +284,7 @@ namespace KID.ViewModels
                 windowConfigurationService?.Settings == null || localizationService == null)
                 return;
 
-            var content = GetTabContent(tab);
+            var content = tab.CurrentContent;
             if (string.IsNullOrEmpty(content))
                 return;
 
@@ -315,7 +314,7 @@ namespace KID.ViewModels
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
                 return;
 
-            var content = GetTabContent(tab);
+            var content = tab.CurrentContent;
             if (string.IsNullOrEmpty(content))
                 return;
 
@@ -334,7 +333,7 @@ namespace KID.ViewModels
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null || localizationService == null)
                 return;
 
-            var content = GetTabContent(tab);
+            var content = tab.CurrentContent;
             if (string.IsNullOrEmpty(content))
                 return;
 
@@ -383,17 +382,5 @@ namespace KID.ViewModels
             MoveTabRightCommand.RaiseCanExecuteChanged();
         }
 
-        private static string GetTabContent(OpenedFileTab tab) =>
-            tab.CodeEditor?.Text ?? tab.Content ?? string.Empty;
-
-        private OpenedFileTab? FindTabByPath(string path)
-        {
-            foreach (var tab in OpenedFiles)
-            {
-                if (string.Equals(tab.FilePath, path, StringComparison.OrdinalIgnoreCase))
-                    return tab;
-            }
-            return null;
-        }
     }
 }
