@@ -34,7 +34,6 @@ namespace KID.ViewModels
         private readonly IThemeService themeService;
         private readonly IFontProviderService fontProviderService;
         private CancellationTokenSource? cancellationSource;
-        private bool canStop;
 
 
 
@@ -167,6 +166,7 @@ namespace KID.ViewModels
 
 
 
+        private bool canStop;
         public bool CanStop
         {
             get => canStop;
@@ -181,7 +181,6 @@ namespace KID.ViewModels
         }
         public bool CanUndo => codeEditorsViewModel.CanUndo;
         public bool CanRedo => codeEditorsViewModel.CanRedo;
-
         private bool CanSaveFile
         {
             get
@@ -193,6 +192,8 @@ namespace KID.ViewModels
                     && currentFileTab.IsModified;
             }
         }
+
+
 
         private void ExecuteNewFile()
         {
@@ -210,11 +211,6 @@ namespace KID.ViewModels
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
             }
-        }
-
-        private string GetFileFilter()
-        {
-            return localizationService?.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs";
         }
 
         /// <summary>
@@ -236,6 +232,8 @@ namespace KID.ViewModels
             }
         }
 
+        private string FileFilter => localizationService?.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs";
+
         private async Task ExecuteOpenFileAsync()
         {
             if (codeFileService == null || codeEditorsViewModel == null ||
@@ -243,7 +241,7 @@ namespace KID.ViewModels
                 localizationService == null)
                 return;
 
-            var result = await codeFileService.OpenCodeFileWithPathAsync(GetFileFilter());
+            var result = await codeFileService.OpenCodeFileWithPathAsync(FileFilter);
             if (result != null)
             {
                 var openedFiles = codeEditorsViewModel.OpenedFiles;
@@ -259,8 +257,8 @@ namespace KID.ViewModels
                     graphicsOutputViewModel.Clear();
                 }
 
-                if (shouldReplaceNewFile && onlyTab != null)
-                    codeEditorsViewModel.CloseFileTab(onlyTab);
+                if (shouldReplaceNewFile)
+                    codeEditorsViewModel.CloseFileTab(onlyTab!);
             }
         }
 
@@ -287,15 +285,6 @@ namespace KID.ViewModels
             }
         }
 
-        private void ExecuteSaveAndSetAsTemplate()
-        {
-            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
-            if (currentFileTab != null && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(currentFileTab))
-            {
-                codeEditorsViewModel.SaveAndSetAsTemplateCommand.Execute(currentFileTab);
-            }
-        }
-
         private async Task ExecuteSaveAsFileAsync()
         {
             if (codeEditorsViewModel == null || codeFileService == null)
@@ -313,11 +302,20 @@ namespace KID.ViewModels
                 ? "NewFile.cs"
                 : Path.GetFileName(currentFileTab.FilePath);
 
-            var savedPath = await codeFileService.SaveCodeFileAsync(code, GetFileFilter(), defaultFileName);
+            var savedPath = await codeFileService.SaveCodeFileAsync(code, FileFilter, defaultFileName);
             if (savedPath != null)
             {
                 currentFileTab.FilePath = savedPath;
                 codeEditorsViewModel.NotifyCurrentFileTabSaved(code);
+            }
+        }
+
+        private void ExecuteSaveAndSetAsTemplate()
+        {
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            if (currentFileTab != null && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(currentFileTab))
+            {
+                codeEditorsViewModel.SaveAndSetAsTemplateCommand.Execute(currentFileTab);
             }
         }
 

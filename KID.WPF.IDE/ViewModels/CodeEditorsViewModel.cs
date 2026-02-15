@@ -201,12 +201,6 @@ namespace KID.ViewModels
         public void AddFileTab(string path, string content)
         {
             var normalizedPath = path ?? codeFileService.NewFilePath;
-            var existing = FindTabByPath(normalizedPath);
-            if (existing != null && !(codeFileService.IsNewFilePath(normalizedPath) && existing.IsModified))
-            {
-                CurrentFileTab = existing;
-                return;
-            }
 
             var codeEditor = codeEditorFactory.Create(content, windowConfigurationService.Settings.ProgrammingLanguage);
             var tab = new OpenedFileTab
