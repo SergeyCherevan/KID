@@ -38,16 +38,6 @@ namespace KID.Services.CodeEditor
                 SyntaxHighlighting = syntaxHighlighting,
             };
 
-            try
-            {
-                codeEditor.Background = (Brush)Application.Current.FindResource("EditorBackgroundBrush");
-                codeEditor.Foreground = (Brush)Application.Current.FindResource("EditorForegroundBrush");
-            }
-            catch
-            {
-                // Ресурсы темы могут быть ещё не загружены
-            }
-
             return codeEditor;
         }
     }

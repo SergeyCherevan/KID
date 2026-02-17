@@ -17,6 +17,8 @@
     <UserControl.Resources>
         <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
         <Style TargetType="avalonedit:TextEditor">
+            <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}"/>
             <Setter Property="FontFamily" Value="{Binding DataContext.FontFamily, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
             <Setter Property="FontSize" Value="{Binding DataContext.FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
         </Style>
