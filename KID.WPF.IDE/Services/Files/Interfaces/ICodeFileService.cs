@@ -14,6 +14,11 @@ namespace KID.Services.Files.Interfaces
         string NewFilePath { get; }
 
         /// <summary>
+        /// Фильтр файлов кода для диалогов открытия и сохранения.
+        /// </summary>
+        string CodeFileFilter { get; }
+
+        /// <summary>
         /// Открывает файл через диалог и возвращает содержимое и путь.
         /// </summary>
         Task<OpenFileResult?> OpenCodeFileWithPathAsync(string fileFilter);

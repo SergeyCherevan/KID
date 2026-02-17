@@ -65,20 +65,21 @@
 **MenuViewModel** (`MenuViewModel.cs`)
 - Управление меню приложения
 - Команды: NewFile, OpenFile, SaveFile, SaveAsFile, Run, Stop, Undo, Redo
+- Делегирует Save/SaveAs в CodeEditorsViewModel через `CurrentFileTab` и табовые команды (`SaveFileCommand`, `SaveAsFileCommand`)
 - Управление темами, языками интерфейса, шрифтом и размером шрифта (через IWindowConfigurationService.SetFont)
 - Состояние кнопок (IsStopButtonEnabled, CanUndo, CanRedo)
 - Зависимость от ICodeEditorsViewModel для работы с вкладками
-- Обработка ошибок async-операций (ExecuteAsync, try/catch, MessageBox с Error_FileOpenFailed, Error_FileSaveFailed, Error_RunFailed)
+- Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
 **CodeEditorsViewModel** (`CodeEditorsViewModel.cs`)
 - Управление панелью редакторов с вкладками
-- Свойства: OpenedFiles, ActiveFile, Text, FilePath, CodeEditor, FontFamily, FontSize, CanUndo, CanRedo, HasUnsavedChanges
+- Свойства: OpenedFiles, CurrentFileTab, FontFamily, FontSize, CanUndo, CanRedo
 - Команды: Undo, Redo, CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
 - Методы: AddFile, CloseFile, SelectFile, SetSyntaxHighlighting
 - Интеграция с AvalonEdit TextEditor (создаётся на каждую вкладку)
 - Создание TextEditor через ICodeEditorFactory (шрифт из IWindowConfigurationService.Settings)
 - Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
-- Обработка ошибок сохранения (try/catch, MessageBox)
+- Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
 **ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
 - Управление консольным выводом
@@ -150,8 +151,18 @@
 - `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
 - `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
 - `IsNewFilePath(string path)` — возвращает true для нового несохранённого файла
+- `CodeFileFilter` — единый локализуемый фильтр для диалогов файлов кода
 - Использует FileDialogService для диалогов
 - Использует FileService для чтения/записи
+
+#### 3.2.1. Errors (Обработка ошибок async-операций)
+
+**Расположение:** `KID.WPF.IDE/Services/Errors/`
+
+**IAsyncOperationErrorHandler / AsyncOperationErrorHandler**
+- Единообразная обработка исключений асинхронных операций в UI-слое
+- Показ локализованного MessageBox по ключу ошибки
+- Используется в MenuViewModel и CodeEditorsViewModel
 
 **FileDialogService** (`FileDialogService.cs`)
 - Диалоги открытия/сохранения файлов

@@ -25,7 +25,6 @@ namespace KID.ViewModels.Interfaces
         double FontSize { get; }
         bool CanUndo { get; }
         bool CanRedo { get; }
-
         RelayCommand UndoCommand { get; }
         RelayCommand RedoCommand { get; }
         RelayCommand<OpenedFileTab> CloseFileCommand { get; }

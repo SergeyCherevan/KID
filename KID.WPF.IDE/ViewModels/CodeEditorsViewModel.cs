@@ -2,16 +2,13 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using ICSharpCode.AvalonEdit;
 using KID.Models;
-using KID.Services.DI;
 using KID.Services.CodeEditor.Interfaces;
+using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
-using KID.Services.Localization.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 
@@ -25,7 +22,7 @@ namespace KID.ViewModels
         private readonly IWindowConfigurationService windowConfigurationService;
         private readonly ICodeFileService codeFileService;
         private readonly ICodeEditorFactory codeEditorFactory;
-        private readonly ILocalizationService localizationService;
+        private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
 
 
 
@@ -83,14 +80,14 @@ namespace KID.ViewModels
         public CodeEditorsViewModel(
             IWindowConfigurationService windowConfigurationService,
             ICodeFileService codeFileService,
-            ILocalizationService localizationService,
-            ICodeEditorFactory codeEditorFactory
+            ICodeEditorFactory codeEditorFactory,
+            IAsyncOperationErrorHandler asyncOperationErrorHandler
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
-            this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.codeEditorFactory = codeEditorFactory ?? throw new ArgumentNullException(nameof(codeEditorFactory));
+            this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
 
@@ -129,38 +126,23 @@ namespace KID.ViewModels
 
         private async void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
         {
-            try
-            {
-                await ExecuteSaveAndSetAsTemplateAsync(tab);
-            }
-            catch (Exception ex)
-            {
-                ShowSaveError(ex);
-            }
+            await asyncOperationErrorHandler.ExecuteAsync(
+                () => ExecuteSaveAndSetAsTemplateAsync(tab),
+                "Error_FileSaveFailed");
         }
 
         private async void ExecuteSaveFile(OpenedFileTab tab)
         {
-            try
-            {
-                await ExecuteSaveFileAsync(tab);
-            }
-            catch (Exception ex)
-            {
-                ShowSaveError(ex);
-            }
+            await asyncOperationErrorHandler.ExecuteAsync(
+                () => ExecuteSaveFileAsync(tab),
+                "Error_FileSaveFailed");
         }
 
         private async void ExecuteSaveAsFile(OpenedFileTab tab)
         {
-            try
-            {
-                await ExecuteSaveAsFileAsync(tab);
-            }
-            catch (Exception ex)
-            {
-                ShowSaveError(ex);
-            }
+            await asyncOperationErrorHandler.ExecuteAsync(
+                () => ExecuteSaveAsFileAsync(tab),
+                "Error_FileSaveFailed");
         }
 
         private bool CanMoveTabLeft(OpenedFileTab? tab) =>
@@ -311,19 +293,10 @@ namespace KID.ViewModels
             OnPropertyChanged(nameof(CurrentFileTab));
         }
 
-        private void ShowSaveError(Exception ex)
-        {
-            Application.Current.Dispatcher.Invoke(() => MessageBox.Show(
-                string.Format(localizationService.GetString("Error_FileSaveFailed") ?? "Failed to save: {0}", ex.Message),
-                localizationService.GetString("Error_Title") ?? "Error",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error));
-        }
-
         private async Task ExecuteSaveAndSetAsTemplateAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null ||
-                windowConfigurationService?.Settings == null || localizationService == null)
+                windowConfigurationService?.Settings == null)
                 return;
 
             var content = tab.CurrentContent;
@@ -333,8 +306,7 @@ namespace KID.ViewModels
             if (codeFileService.IsNewFilePath(tab.FilePath))
             {
                 var defaultFileName = "NewFile.cs";
-                var fileFilter = localizationService.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
-                var savedPath = await codeFileService.SaveCodeFileAsync(content, fileFilter, defaultFileName);
+                var savedPath = await codeFileService.SaveCodeFileAsync(content, codeFileService.CodeFileFilter, defaultFileName);
                 if (savedPath == null)
                     return;
                 tab.FilePath = savedPath;
@@ -372,7 +344,7 @@ namespace KID.ViewModels
 
         private async Task ExecuteSaveAsFileAsync(OpenedFileTab tab)
         {
-            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null || localizationService == null)
+            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
                 return;
 
             var content = tab.CurrentContent;
@@ -383,8 +355,7 @@ namespace KID.ViewModels
                 ? "NewFile.cs"
                 : Path.GetFileName(tab.FilePath);
 
-            var fileFilter = localizationService.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
-            var savedPath = await codeFileService.SaveCodeFileAsync(content, fileFilter, defaultFileName);
+            var savedPath = await codeFileService.SaveCodeFileAsync(content, codeFileService.CodeFileFilter, defaultFileName);
             if (savedPath != null)
             {
                 tab.FilePath = savedPath;

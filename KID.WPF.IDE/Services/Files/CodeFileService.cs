@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using KID.Services.Files.Interfaces;
+using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.Files
 {
@@ -10,11 +11,16 @@ namespace KID.Services.Files
     {
         private readonly IFileService fileService;
         private readonly IFileDialogService fileDialogService;
+        private readonly ILocalizationService localizationService;
 
-        public CodeFileService(IFileService fileService, IFileDialogService fileDialogService)
+        public CodeFileService(
+            IFileService fileService,
+            IFileDialogService fileDialogService,
+            ILocalizationService localizationService)
         {
             this.fileService = fileService ?? throw new System.ArgumentNullException(nameof(fileService));
             this.fileDialogService = fileDialogService ?? throw new System.ArgumentNullException(nameof(fileDialogService));
+            this.localizationService = localizationService ?? throw new System.ArgumentNullException(nameof(localizationService));
         }
 
         /// <inheritdoc />
@@ -55,6 +61,9 @@ namespace KID.Services.Files
         }
 
         public string NewFilePath => "/NewFile.cs";
+        public string CodeFileFilter =>
+            localizationService.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs|All Files (*.*)|*.*";
+
         public bool IsNewFilePath(string path) => path == NewFilePath;
     }
 }

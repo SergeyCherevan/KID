@@ -1,22 +1,18 @@
-using System.IO;
 using KID.Models;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
-using KID.Services.Files;
+using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Fonts.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.Services.Themes.Interfaces;
-using System.Windows.Media;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 
 namespace KID.ViewModels
@@ -30,6 +26,7 @@ namespace KID.ViewModels
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
         private readonly IGraphicsOutputViewModel graphicsOutputViewModel;
         private readonly ICodeFileService codeFileService;
+        private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
         private readonly ILocalizationService localizationService;
         private readonly IThemeService themeService;
         private readonly IFontProviderService fontProviderService;
@@ -88,6 +85,7 @@ namespace KID.ViewModels
             IConsoleOutputViewModel consoleOutputViewModel,
             IGraphicsOutputViewModel graphicsOutputViewModel,
             ICodeFileService codeFileService,
+            IAsyncOperationErrorHandler asyncOperationErrorHandler,
             ILocalizationService localizationService,
             IThemeService themeService,
             IFontProviderService fontProviderService
@@ -101,6 +99,7 @@ namespace KID.ViewModels
             this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
             this.graphicsOutputViewModel = graphicsOutputViewModel ?? throw new ArgumentNullException(nameof(graphicsOutputViewModel));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
+            this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.fontProviderService = fontProviderService ?? throw new ArgumentNullException(nameof(fontProviderService));
@@ -132,13 +131,18 @@ namespace KID.ViewModels
             }
 
             NewFileCommand = new RelayCommand(ExecuteNewFile);
-            OpenFileCommand = new RelayCommand(() => ExecuteAsync(ExecuteOpenFileAsync, "Error_FileOpenFailed"));
-            SaveFileCommand = new RelayCommand(() => ExecuteAsync(ExecuteSaveFileAsync, "Error_FileSaveFailed"), () => CanSaveFile);
-            SaveAsFileCommand = new RelayCommand(() => ExecuteAsync(ExecuteSaveAsFileAsync, "Error_FileSaveFailed"));
+            OpenFileCommand = new RelayCommand(ExecuteOpenFile);
+            SaveFileCommand = new RelayCommand(ExecuteSaveFile, CanExecuteSaveFile);
+            SaveAsFileCommand = new RelayCommand(ExecuteSaveAsFile, CanExecuteSaveAsFile);
             SaveAndSetAsTemplateCommand = new RelayCommand(
                 ExecuteSaveAndSetAsTemplate,
-                () => codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(codeEditorsViewModel.CurrentFileTab));
-            RunCommand = new RelayCommand(() => ExecuteAsync(ExecuteRunAsync, "Error_RunFailed"), () => !CanStop);
+                () =>
+                {
+                    var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+                    return currentFileTab != null
+                        && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(currentFileTab);
+                });
+            RunCommand = new RelayCommand(ExecuteRun, () => !CanStop);
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
@@ -181,17 +185,6 @@ namespace KID.ViewModels
         }
         public bool CanUndo => codeEditorsViewModel.CanUndo;
         public bool CanRedo => codeEditorsViewModel.CanRedo;
-        private bool CanSaveFile
-        {
-            get
-            {
-                var currentFileTab = codeEditorsViewModel.CurrentFileTab;
-                return currentFileTab != null
-                    && !string.IsNullOrEmpty(currentFileTab.FilePath)
-                    && !codeFileService.IsNewFilePath(currentFileTab.FilePath)
-                    && currentFileTab.IsModified;
-            }
-        }
 
 
 
@@ -213,26 +206,9 @@ namespace KID.ViewModels
             }
         }
 
-        /// <summary>
-        /// Выполняет асинхронное действие с обработкой ошибок и показом MessageBox.
-        /// </summary>
-        private async void ExecuteAsync(Func<Task> asyncAction, string errorMessageKey)
-        {
-            try
-            {
-                await asyncAction().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                Application.Current.Dispatcher.Invoke(() => MessageBox.Show(
-                    string.Format(localizationService.GetString(errorMessageKey) ?? errorMessageKey, ex.Message),
-                    localizationService.GetString("Error_Title") ?? "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error));
-            }
+        private async void ExecuteOpenFile() {
+            await asyncOperationErrorHandler.ExecuteAsync(ExecuteOpenFileAsync, "Error_FileOpenFailed");
         }
-
-        private string FileFilter => localizationService?.GetString("FileFilter_CSharp") ?? "C# Files (*.cs)|*.cs";
 
         private async Task ExecuteOpenFileAsync()
         {
@@ -241,7 +217,7 @@ namespace KID.ViewModels
                 localizationService == null)
                 return;
 
-            var result = await codeFileService.OpenCodeFileWithPathAsync(FileFilter);
+            var result = await codeFileService.OpenCodeFileWithPathAsync(codeFileService.CodeFileFilter);
             if (result != null)
             {
                 var openedFiles = codeEditorsViewModel.OpenedFiles;
@@ -262,54 +238,6 @@ namespace KID.ViewModels
             }
         }
 
-        private async Task ExecuteSaveFileAsync()
-        {
-            if (codeEditorsViewModel == null || codeFileService == null)
-                return;
-
-            if (!CanSaveFile)
-            {
-                await ExecuteSaveAsFileAsync();
-                return;
-            }
-
-            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
-            if (currentFileTab == null)
-                return;
-
-            var code = currentFileTab.CurrentContent;
-            if (!string.IsNullOrEmpty(code))
-            {
-                await codeFileService.SaveToPathAsync(currentFileTab.FilePath, code);
-                codeEditorsViewModel.NotifyCurrentFileTabSaved(code);
-            }
-        }
-
-        private async Task ExecuteSaveAsFileAsync()
-        {
-            if (codeEditorsViewModel == null || codeFileService == null)
-                return;
-
-            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
-            if (currentFileTab == null)
-                return;
-
-            var code = currentFileTab.CurrentContent;
-            if (string.IsNullOrEmpty(code))
-                return;
-
-            var defaultFileName = codeFileService.IsNewFilePath(currentFileTab.FilePath)
-                ? "NewFile.cs"
-                : Path.GetFileName(currentFileTab.FilePath);
-
-            var savedPath = await codeFileService.SaveCodeFileAsync(code, FileFilter, defaultFileName);
-            if (savedPath != null)
-            {
-                currentFileTab.FilePath = savedPath;
-                codeEditorsViewModel.NotifyCurrentFileTabSaved(code);
-            }
-        }
-
         private void ExecuteSaveAndSetAsTemplate()
         {
             var currentFileTab = codeEditorsViewModel.CurrentFileTab;
@@ -319,7 +247,33 @@ namespace KID.ViewModels
             }
         }
 
-        private async Task ExecuteRunAsync()
+        private bool CanExecuteSaveFile()
+        {
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            return currentFileTab != null && codeEditorsViewModel.SaveFileCommand.CanExecute(currentFileTab);
+        }
+
+        private void ExecuteSaveFile()
+        {
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            if (currentFileTab != null && codeEditorsViewModel.SaveFileCommand.CanExecute(currentFileTab))
+            {
+                codeEditorsViewModel.SaveFileCommand.Execute(currentFileTab);
+            }
+        }
+
+        private bool CanExecuteSaveAsFile() => codeEditorsViewModel.CurrentFileTab != null;
+
+        private void ExecuteSaveAsFile()
+        {
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            if (currentFileTab != null)
+            {
+                codeEditorsViewModel.SaveAsFileCommand.Execute(currentFileTab);
+            }
+        }
+
+        private async void ExecuteRun()
         {
             if (codeEditorsViewModel == null || consoleOutputViewModel == null ||
                 graphicsOutputViewModel == null || canvasTextBoxContextFabric == null ||
@@ -365,7 +319,7 @@ namespace KID.ViewModels
         {
             if (codeEditorsViewModel?.UndoCommand != null)
             {
-                codeEditorsViewModel.UndoCommand.Execute(null);
+                codeEditorsViewModel.UndoCommand.Execute(null!);
             }
         }
 
@@ -373,7 +327,7 @@ namespace KID.ViewModels
         {
             if (codeEditorsViewModel?.RedoCommand != null)
             {
-                codeEditorsViewModel.RedoCommand.Execute(null);
+                codeEditorsViewModel.RedoCommand.Execute(null!);
             }
         }
 
@@ -453,6 +407,8 @@ namespace KID.ViewModels
             if (e.PropertyName == nameof(ICodeEditorsViewModel.CurrentFileTab))
             {
                 SaveFileCommand.RaiseCanExecuteChanged();
+                if (SaveAsFileCommand is RelayCommand saveAsCommand)
+                    saveAsCommand.RaiseCanExecuteChanged();
                 SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
             }
         }

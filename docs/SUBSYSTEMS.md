@@ -206,6 +206,7 @@
 - `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
 - `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
 - `IsNewFilePath(string path)` — возвращает `true`, если путь указывает на новый несохранённый файл (`/NewFile.cs` или путь оканчивается на `NewFile.cs`)
+- `CodeFileFilter` — единый локализуемый фильтр для диалогов открытия/сохранения кода
 
 **Особенности:**
 - Использует FileDialogService для диалогов
@@ -248,7 +249,22 @@
 - Отслеживание `HasUnsavedChanges`, `IsModified` для каждой вкладки
 - Метод `AddFile(path, content)` — создание новой вкладки через ICodeEditorFactory (или замена NewFile при открытии, если без изменений)
 - Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
-- Обработка ошибок сохранения (try/catch, MessageBox с Error_FileSaveFailed)
+- Обработка ошибок async-операций через IAsyncOperationErrorHandler
+
+## 3.6. Подсистема обработки ошибок async-операций (Errors)
+
+### Назначение
+Единообразная обработка исключений асинхронных операций UI-слоя с локализованными сообщениями.
+
+### Компоненты
+
+#### 3.6.1. IAsyncOperationErrorHandler / AsyncOperationErrorHandler
+**Файлы:** `KID.WPF.IDE/Services/Errors/Interfaces/IAsyncOperationErrorHandler.cs`, `KID.WPF.IDE/Services/Errors/AsyncOperationErrorHandler.cs`
+
+**Ответственность:**
+- Выполнение `Func<Task>` с перехватом исключений
+- Показ локализованного MessageBox по ключу ошибки
+- Унификация логики обработки ошибок в `MenuViewModel` и `CodeEditorsViewModel`
 
 **OpenedFileTab** (`KID.WPF.IDE/Models/OpenedFileTab.cs`)
 - Модель вкладки: FilePath, Content, SavedContent, IsModified, CodeEditor, FileName
