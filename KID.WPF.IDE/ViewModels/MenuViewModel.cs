@@ -199,7 +199,7 @@ namespace KID.ViewModels
                 return;
 
             var code = windowConfigurationService.Settings.TemplateCode;
-            codeEditorsViewModel.AddFileTab(codeFileService.NewFilePath, code ?? string.Empty);
+            codeEditorsViewModel.CreateAndAddFileTab(codeFileService.NewFilePath, code ?? string.Empty);
             if (!CanStop)
             {
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
@@ -227,7 +227,7 @@ namespace KID.ViewModels
                     && codeFileService.IsNewFilePath(onlyTab.FilePath)
                     && !onlyTab.IsModified;
 
-                codeEditorsViewModel.AddFileTab(result.FilePath, result.Code);
+                codeEditorsViewModel.CreateAndAddFileTab(result.FilePath, result.Code);
                 if (!CanStop)
                 {
                     consoleOutputViewModel.Text = localizationService.GetString("Console_Output");

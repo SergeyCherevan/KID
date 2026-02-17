@@ -93,7 +93,7 @@ namespace KID.Services.Initialize
                 return;
 
             var templateCode = windowConfigurationService.Settings.TemplateCode ?? string.Empty;
-            codeEditorsViewModel.AddFileTab(codeFileService.NewFilePath, templateCode);
+            codeEditorsViewModel.CreateAndAddFileTab(codeFileService.NewFilePath, templateCode);
         }
 
         private void InitializeConsole()

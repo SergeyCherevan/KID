@@ -38,7 +38,7 @@ namespace KID.ViewModels.Interfaces
         /// <summary>
         /// Добавляет файл в новую вкладку или переключается на уже открытый.
         /// </summary>
-        void AddFileTab(string path, string content);
+        void CreateAndAddFileTab(string path, string content);
 
         /// <summary>
         /// Закрывает вкладку.

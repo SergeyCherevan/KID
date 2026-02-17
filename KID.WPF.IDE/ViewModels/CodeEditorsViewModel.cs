@@ -222,7 +222,7 @@ namespace KID.ViewModels
         }
 
 
-        public void AddFileTab(string path, string content)
+        public void CreateAndAddFileTab(string path, string content)
         {
             var normalizedPath = path ?? codeFileService.NewFilePath;
 
@@ -265,7 +265,7 @@ namespace KID.ViewModels
             if (OpenedFiles.Count == 0)
             {
                 var templateCode = windowConfigurationService?.Settings?.TemplateCode ?? string.Empty;
-                AddFileTab(codeFileService.NewFilePath, templateCode);
+                CreateAndAddFileTab(codeFileService.NewFilePath, templateCode);
             }
             else
             {
