@@ -1,5 +1,3 @@
-using KID.Models;
-
 namespace KID.Services.Localization.Interfaces
 {
     public interface ILocalizationService
@@ -9,7 +7,9 @@ namespace KID.Services.Localization.Interfaces
         void SetCulture(string cultureCode);
         string CurrentCulture { get; }
         event EventHandler? CultureChanged;
-        IEnumerable<AvailableLanguage> GetAvailableLanguages();
+        IEnumerable<string> GetAvailableLanguages();
+        string GetCultureCodeByLanguageKey(string languageKey);
+        string GetLanguageKeyByCultureCode(string cultureCode);
     }
 }
 

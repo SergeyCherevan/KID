@@ -20,8 +20,28 @@ namespace KID.Services.Initialize.Interfaces
         event EventHandler FontSettingsChanged;
 
         /// <summary>
+        /// Событие при изменении языка интерфейса.
+        /// </summary>
+        event EventHandler UILanguageSettingsChanged;
+
+        /// <summary>
+        /// Событие при изменении цветовой темы.
+        /// </summary>
+        event EventHandler ColorThemeSettingsChanged;
+
+        /// <summary>
         /// Устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков.
         /// </summary>
         void SetFont(string fontFamilyName, double fontSize);
+
+        /// <summary>
+        /// Устанавливает язык интерфейса, сохраняет настройки и уведомляет подписчиков.
+        /// </summary>
+        void SetUILanguage(string cultureCode);
+
+        /// <summary>
+        /// Устанавливает ключ темы, сохраняет настройки и уведомляет подписчиков.
+        /// </summary>
+        void SetColorTheme(string themeKey);
     }
 }

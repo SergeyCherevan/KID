@@ -142,6 +142,9 @@
   <data name="Error_FileSaveFailed" xml:space="preserve">
     <value>Не удалось сохранить файл: {0}</value>
   </data>
+  <data name="Error_SettingsSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить настройки: {0}</value>
+  </data>
   <data name="Error_RunFailed" xml:space="preserve">
     <value>Ошибка при выполнении: {0}</value>
   </data>

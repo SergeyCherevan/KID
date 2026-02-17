@@ -1,30 +1,32 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Windows;
-using KID.Models;
-using KID.Services.Localization.Interfaces;
+using KID.Services.Initialize.Interfaces;
 using KID.Services.Themes.Interfaces;
 
 namespace KID.Services.Themes
 {
     public class ThemeService : IThemeService
     {
-        private readonly ILocalizationService _localizationService;
-        private string _currentTheme = "Light";
+        private readonly IWindowConfigurationService _windowConfigurationService;
+        private string _currentTheme = "Theme_Light";
         private readonly App _app;
 
         public string CurrentTheme => _currentTheme;
 
-        public ThemeService(ILocalizationService localizationService, App app)
+        public ThemeService(IWindowConfigurationService windowConfigurationService, App app)
         {
-            _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            _windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
             _app = app ?? throw new ArgumentNullException(nameof(app));
         }
 
         public void ApplyTheme(string themeKey)
         {
             if (string.IsNullOrEmpty(themeKey))
+                return;
+
+            var normalizedThemeKey = NormalizeThemeKey(themeKey);
+            if (string.IsNullOrEmpty(normalizedThemeKey))
                 return;
 
             try
@@ -36,10 +38,10 @@ namespace KID.Services.Themes
                 _app.Resources.MergedDictionaries.Clear();
 
                 // Загружаем новую тему
-                var themePath = themeKey switch
+                var themePath = normalizedThemeKey switch
                 {
-                    "Light" => "Themes/LightTheme.xaml",
-                    "Dark" => "Themes/DarkTheme.xaml",
+                    "Theme_Light" => "Themes/LightTheme.xaml",
+                    "Theme_Dark" => "Themes/DarkTheme.xaml",
                     _ => "Themes/LightTheme.xaml"
                 };
 
@@ -47,7 +49,8 @@ namespace KID.Services.Themes
                 var themeDictionary = new ResourceDictionary { Source = themeUri };
                 _app.Resources.MergedDictionaries.Add(themeDictionary);
 
-                _currentTheme = themeKey;
+                _currentTheme = normalizedThemeKey;
+                _windowConfigurationService.SetColorTheme(normalizedThemeKey);
             }
             catch (Exception)
             {
@@ -55,30 +58,25 @@ namespace KID.Services.Themes
             }
         }
 
-        public IEnumerable<AvailableTheme> GetAvailableThemes()
+        public IEnumerable<string> GetAvailableThemes()
         {
-            var themes = new List<AvailableTheme>
+            return new List<string>
             {
-                new AvailableTheme
-                {
-                    ThemeKey = "Light",
-                    EnglishName = "Light"
-                },
-                new AvailableTheme
-                {
-                    ThemeKey = "Dark",
-                    EnglishName = "Dark"
-                }
+                "Theme_Light",
+                "Theme_Dark"
             };
+        }
 
-            // Обновляем локализованные названия
-            foreach (var theme in themes)
+        private static string NormalizeThemeKey(string themeKey)
+        {
+            return themeKey switch
             {
-                var key = $"Theme_{theme.EnglishName}";
-                theme.LocalizedDisplayName = _localizationService.GetString(key);
-            }
-
-            return themes;
+                "Light" => "Theme_Light",
+                "Dark" => "Theme_Dark",
+                "Theme_Light" => "Theme_Light",
+                "Theme_Dark" => "Theme_Dark",
+                _ => string.Empty
+            };
         }
     }
 }

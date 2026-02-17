@@ -66,7 +66,9 @@
 - Управление меню приложения
 - Команды: NewFile, OpenFile, SaveFile, SaveAsFile, Run, Stop, Undo, Redo
 - Делегирует Save/SaveAs в CodeEditorsViewModel через `CurrentFileTab` и табовые команды (`SaveFileCommand`, `SaveAsFileCommand`)
-- Управление темами, языками интерфейса, шрифтом и размером шрифта (через IWindowConfigurationService.SetFont)
+- Управление темами, языками интерфейса, шрифтом и размером шрифта
+- Хранит в `AvailableLanguages` и `AvailableThemes` универсальные строковые ключи локализации
+- Подписывается на события `IWindowConfigurationService`: `UILanguageSettingsChanged`, `ColorThemeSettingsChanged`, `FontSettingsChanged`
 - Состояние кнопок (IsStopButtonEnabled, CanUndo, CanRedo)
 - Зависимость от ICodeEditorsViewModel для работы с вкладками
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
@@ -180,8 +182,9 @@
 - Управление локализацией интерфейса
 - Загрузка строк из .resx файлов
 - Поддержка множественных языков (ru-RU, en-US, uk-UA)
+- Возвращает список доступных языков как ключи локализации (`Language_*`)
 - Событие CultureChanged для обновления UI
-- Кэширование списка доступных языков
+- При `SetCulture` обновляет `IWindowConfigurationService` через API `SetUILanguage(...)`
 
 **LocalizationMarkupExtension** (`LocalizationMarkupExtension.cs`)
 - XAML расширение для привязки локализованных строк
@@ -200,7 +203,8 @@
 - Управление темами оформления
 - Применение тем (Light, Dark)
 - Загрузка ResourceDictionary из XAML файлов
-- Локализация названий тем
+- Возвращает список тем как универсальные ключи локализации (`Theme_*`)
+- После применения темы обновляет `IWindowConfigurationService` через API `SetColorTheme(...)`
 
 **Файлы тем:**
 - `Themes/LightTheme.xaml` — светлая тема
@@ -225,7 +229,9 @@
 - Управление шаблонным кодом
 - Настройки: язык, тема, шрифт, размер окна
 - `SetFont(fontFamilyName, fontSize)` — установка шрифта и уведомление подписчиков
-- Событие `FontSettingsChanged` — подписчики: MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel
+- `SetUILanguage(cultureCode)` — установка языка UI, сохранение и уведомление подписчиков
+- `SetColorTheme(themeKey)` — установка темы, сохранение и уведомление подписчиков
+- События: `FontSettingsChanged`, `UILanguageSettingsChanged`, `ColorThemeSettingsChanged`
 
 **WindowInitializationService** (`WindowInitializationService.cs`)
 - Инициализация всех компонентов при запуске

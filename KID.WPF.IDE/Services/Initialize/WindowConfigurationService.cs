@@ -1,30 +1,30 @@
 using KID.Models;
+using KID.Services.Errors.Interfaces;
 using KID.Services.Initialize.Interfaces;
-using KID.Services.Localization.Interfaces;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace KID.Services.Initialize
 {
     public class WindowConfigurationService : IWindowConfigurationService
     {
-        private readonly ILocalizationService _localizationService;
+        private readonly IAsyncOperationErrorHandler _asyncOperationErrorHandler;
         private readonly string _settingsPath;
 
         public WindowConfigurationData Settings { get; set; } = new WindowConfigurationData();
 
         /// <inheritdoc />
         public event EventHandler? FontSettingsChanged;
+        /// <inheritdoc />
+        public event EventHandler? UILanguageSettingsChanged;
+        /// <inheritdoc />
+        public event EventHandler? ColorThemeSettingsChanged;
 
-        public WindowConfigurationService(ILocalizationService localizationService)
+        public WindowConfigurationService(IAsyncOperationErrorHandler asyncOperationErrorHandler)
         {
-            _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            _asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
             
             // Путь к файлу настроек в AppData
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -64,13 +64,11 @@ namespace KID.Services.Initialize
                     SaveSettings();
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show(
-                    _localizationService.GetString("Error_ConfigLoadFailed"),
-                    _localizationService.GetString("Error_Title"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                ExecuteWithErrorHandling(
+                    () => throw new InvalidOperationException(ex.Message, ex),
+                    "Error_ConfigLoadFailed");
                 Settings = new WindowConfigurationData();
             }
         }
@@ -90,13 +88,11 @@ namespace KID.Services.Initialize
                     Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show(
-                    _localizationService.GetString("Error_TemplateLoadFailed"),
-                    _localizationService.GetString("Error_Title"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                ExecuteWithErrorHandling(
+                    () => throw new InvalidOperationException(ex.Message, ex),
+                    "Error_TemplateLoadFailed");
                 Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
             }
         }
@@ -114,11 +110,7 @@ namespace KID.Services.Initialize
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Не удалось сохранить настройки: {ex.Message}",
-                    _localizationService.GetString("Error_Title"),
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                ExecuteWithErrorHandling(() => throw new InvalidOperationException(ex.Message, ex), "Error_SettingsSaveFailed");
             }
         }
 
@@ -131,6 +123,46 @@ namespace KID.Services.Initialize
                 Settings.FontSize = fontSize;
             SaveSettings();
             FontSettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <inheritdoc />
+        public void SetUILanguage(string cultureCode)
+        {
+            if (string.IsNullOrWhiteSpace(cultureCode))
+                return;
+
+            if (string.Equals(Settings.UILanguage, cultureCode, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            Settings.UILanguage = cultureCode;
+            SaveSettings();
+            UILanguageSettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <inheritdoc />
+        public void SetColorTheme(string themeKey)
+        {
+            if (string.IsNullOrWhiteSpace(themeKey))
+                return;
+
+            if (string.Equals(Settings.ColorTheme, themeKey, StringComparison.Ordinal))
+                return;
+
+            Settings.ColorTheme = themeKey;
+            SaveSettings();
+            ColorThemeSettingsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void ExecuteWithErrorHandling(Action action, string errorMessageKey)
+        {
+            _asyncOperationErrorHandler
+                .ExecuteAsync(() =>
+                {
+                    action();
+                    return Task.CompletedTask;
+                }, errorMessageKey)
+                .GetAwaiter()
+                .GetResult();
         }
     }
 }

@@ -74,7 +74,7 @@ namespace KID.Services.Initialize
             else
             {
                 // Если тема не указана, используем светлую по умолчанию
-                themeService.ApplyTheme("Light");
+                themeService.ApplyTheme("Theme_Light");
             }
         }
 

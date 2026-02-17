@@ -11,6 +11,7 @@
     <UserControl.Resources>
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
         <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
+        <converters:LocalizationKeyToTextConverter x:Key="LocalizationKeyToTextConverter" />
     </UserControl.Resources>
 
     <UserControl.DataContext>
@@ -36,7 +37,14 @@
                          ItemsSource="{Binding AvailableThemes}">
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
-                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Header">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource LocalizationKeyToTextConverter}" Mode="OneWay">
+                                        <Binding Path="." />
+                                        <Binding Path="DataContext.SelectedCultureCode" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
                             <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeThemeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
@@ -44,7 +52,7 @@
                                 <Setter.Value>
                                     <MultiBinding Converter="{StaticResource EqualityToBoolConverter}" Mode="OneWay">
                                         <Binding Path="DataContext.SelectedThemeKey" RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                        <Binding Path="ThemeKey" />
+                                        <Binding Path="." />
                                     </MultiBinding>
                                 </Setter.Value>
                             </Setter>
@@ -55,15 +63,22 @@
                          ItemsSource="{Binding AvailableLanguages}">
                     <MenuItem.ItemContainerStyle>
                         <Style TargetType="MenuItem">
-                            <Setter Property="Header" Value="{Binding LocalizedDisplayName}" />
+                            <Setter Property="Header">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource LocalizationKeyToTextConverter}" Mode="OneWay">
+                                        <Binding Path="." />
+                                        <Binding Path="DataContext.SelectedCultureCode" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
                             <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeLanguageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
                             <Setter Property="CommandParameter" Value="{Binding}" />
                             <Setter Property="IsChecked">
                                 <Setter.Value>
                                     <MultiBinding Converter="{StaticResource EqualityToBoolConverter}" Mode="OneWay">
-                                        <Binding Path="DataContext.SelectedCultureCode" RelativeSource="{RelativeSource AncestorType=UserControl}" />
-                                        <Binding Path="CultureCode" />
+                                        <Binding Path="DataContext.SelectedLanguageKey" RelativeSource="{RelativeSource AncestorType=UserControl}" />
+                                        <Binding Path="." />
                                     </MultiBinding>
                                 </Setter.Value>
                             </Setter>

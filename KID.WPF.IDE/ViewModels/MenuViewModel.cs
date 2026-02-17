@@ -1,4 +1,3 @@
-using KID.Models;
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Errors.Interfaces;
@@ -34,8 +33,8 @@ namespace KID.ViewModels
 
 
 
-        public ObservableCollection<AvailableLanguage> AvailableLanguages { get; }
-        public ObservableCollection<AvailableTheme> AvailableThemes { get; }
+        public ObservableCollection<string> AvailableLanguages { get; }
+        public ObservableCollection<string> AvailableThemes { get; }
         public ObservableCollection<string> AvailableFonts { get; }
         public ObservableCollection<double> AvailableFontSizes { get; }
 
@@ -48,6 +47,11 @@ namespace KID.ViewModels
         /// Выбранный язык интерфейса (для отображения галочки в меню).
         /// </summary>
         public string SelectedCultureCode => windowConfigurationService?.Settings?.UILanguage ?? string.Empty;
+
+        /// <summary>
+        /// Выбранный ключ языка интерфейса (для отображения галочки в меню).
+        /// </summary>
+        public string SelectedLanguageKey => localizationService.GetLanguageKeyByCultureCode(SelectedCultureCode);
 
         /// <summary>
         /// Выбранный шрифт (для отображения галочки в меню).
@@ -112,17 +116,11 @@ namespace KID.ViewModels
 
             // Инициализируем список доступных языков
             var languages = localizationService.GetAvailableLanguages();
-            AvailableLanguages = new ObservableCollection<AvailableLanguage>(languages ?? Array.Empty<AvailableLanguage>());
-
-            // Обновляем локализованные имена для всех языков
-            UpdateLanguageDisplayNames();
+            AvailableLanguages = new ObservableCollection<string>(languages ?? Array.Empty<string>());
 
             // Инициализируем список доступных тем
             var themes = themeService.GetAvailableThemes();
-            AvailableThemes = new ObservableCollection<AvailableTheme>(themes ?? Array.Empty<AvailableTheme>());
-
-            // Обновляем локализованные имена для всех тем
-            UpdateThemeDisplayNames();
+            AvailableThemes = new ObservableCollection<string>(themes ?? Array.Empty<string>());
 
             // Подписываемся на изменения свойств codeEditorsViewModel
             if (codeEditorsViewModel is INotifyPropertyChanged notifyPropertyChanged)
@@ -146,18 +144,21 @@ namespace KID.ViewModels
             StopCommand = new RelayCommand(ExecuteStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
-            ChangeLanguageCommand = new RelayCommand<AvailableLanguage>(lang => ChangeLanguage(lang));
-            ChangeThemeCommand = new RelayCommand<AvailableTheme>(theme => ChangeTheme(theme));
+            ChangeLanguageCommand = new RelayCommand<string>(key => ChangeLanguage(key));
+            ChangeThemeCommand = new RelayCommand<string>(key => ChangeTheme(key));
             ChangeFontCommand = new RelayCommand<string>(font => ChangeFont(font));
             ChangeFontSizeCommand = new RelayCommand<double>(fontSize => ChangeFontSize(fontSize));
 
-            // Подписываемся на изменение культуры для обновления UI
-            localizationService.CultureChanged += (s, e) =>
+            localizationService.CultureChanged += (s, e) => OnPropertyChanged(nameof(SelectedLanguageKey));
+
+            windowConfigurationService.UILanguageSettingsChanged += (s, e) =>
             {
-                OnPropertyChanged(string.Empty);
-                UpdateLanguageDisplayNames();
-                UpdateThemeDisplayNames();
+                OnPropertyChanged(nameof(SelectedCultureCode));
+                OnPropertyChanged(nameof(SelectedLanguageKey));
             };
+
+            windowConfigurationService.ColorThemeSettingsChanged += (s, e) =>
+                OnPropertyChanged(nameof(SelectedThemeKey));
 
             windowConfigurationService.FontSettingsChanged += (s, e) =>
             {
@@ -331,34 +332,22 @@ namespace KID.ViewModels
             }
         }
 
-        private void ChangeLanguage(AvailableLanguage language)
+        private void ChangeLanguage(string? languageKey)
         {
-            if (language == null ||
-                localizationService == null ||
-                windowConfigurationService?.Settings == null)
+            if (string.IsNullOrWhiteSpace(languageKey) || localizationService == null)
                 return;
 
-            localizationService.SetCulture(language.CultureCode);
-
-            // Сохраняем выбранный язык в настройках
-            windowConfigurationService.Settings.UILanguage = language.CultureCode;
-            windowConfigurationService.SaveSettings();
-            OnPropertyChanged(nameof(SelectedCultureCode));
+            var cultureCode = localizationService.GetCultureCodeByLanguageKey(languageKey);
+            if (!string.IsNullOrWhiteSpace(cultureCode))
+                localizationService.SetCulture(cultureCode);
         }
 
-        private void ChangeTheme(AvailableTheme theme)
+        private void ChangeTheme(string? themeKey)
         {
-            if (theme == null ||
-                themeService == null ||
-                windowConfigurationService?.Settings == null)
+            if (string.IsNullOrWhiteSpace(themeKey) || themeService == null)
                 return;
 
-            themeService.ApplyTheme(theme.ThemeKey);
-
-            // Сохраняем выбранную тему в настройках
-            windowConfigurationService.Settings.ColorTheme = theme.ThemeKey;
-            windowConfigurationService.SaveSettings();
-            OnPropertyChanged(nameof(SelectedThemeKey));
+            themeService.ApplyTheme(themeKey);
         }
 
         private void ChangeFont(string? fontFamilyName)
@@ -390,6 +379,7 @@ namespace KID.ViewModels
         {
             OnPropertyChanged(nameof(SelectedThemeKey));
             OnPropertyChanged(nameof(SelectedCultureCode));
+            OnPropertyChanged(nameof(SelectedLanguageKey));
             OnPropertyChanged(nameof(SelectedFontFamily));
             OnPropertyChanged(nameof(SelectedFontSize));
         }
@@ -413,36 +403,5 @@ namespace KID.ViewModels
             }
         }
 
-        private void UpdateLanguageDisplayNames()
-        {
-            if (AvailableLanguages == null || localizationService == null)
-                return;
-
-            foreach (var language in AvailableLanguages)
-            {
-                if (language == null)
-                    continue;
-
-                // Получаем локализованное название языка
-                var key = $"Language_{language.EnglishName}";
-                language.LocalizedDisplayName = localizationService.GetString(key);
-            }
-        }
-
-        private void UpdateThemeDisplayNames()
-        {
-            if (AvailableThemes == null || localizationService == null)
-                return;
-
-            foreach (var theme in AvailableThemes)
-            {
-                if (theme == null)
-                    continue;
-
-                // Получаем локализованное название темы
-                var key = $"Theme_{theme.EnglishName}";
-                theme.LocalizedDisplayName = localizationService.GetString(key);
-            }
-        }
     }
 }
