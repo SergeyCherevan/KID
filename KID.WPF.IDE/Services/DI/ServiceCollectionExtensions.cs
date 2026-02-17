@@ -19,6 +19,8 @@ using KID.Services.Fonts;
 using KID.Services.Fonts.Interfaces;
 using KID.Services.Errors;
 using KID.Services.Errors.Interfaces;
+using KID.Services.WindowInterop;
+using KID.Services.WindowInterop.Interfaces;
 
 namespace KID.Services.DI
 {
@@ -40,6 +42,7 @@ namespace KID.Services.DI
             // Window Configuration Services
             services.AddSingleton<IWindowConfigurationService, WindowConfigurationService>();
             services.AddSingleton<IWindowInitializationService, WindowInitializationService>();
+            services.AddSingleton<IMainWindowWinAPIInteropService, MainWindowWinAPIInteropService>();
 
             // Code Editor Factory
             services.AddSingleton<ICodeEditorFactory, CodeEditorFactory>();

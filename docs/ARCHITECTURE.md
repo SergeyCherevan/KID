@@ -255,6 +255,16 @@
 - XAML расширение для получения сервисов из DI контейнера
 - Использование: `<di:ServiceProviderExtension ServiceType="{x:Type ...}" />`
 
+#### 3.8. Window Interop (WinAPI-интеграция окна)
+
+**Расположение:** `KID.WPF.IDE/Services/WindowInterop/`
+
+**IMainWindowWinAPIInteropService** / **MainWindowWinAPIInteropService** (`WindowInteropService.cs`)
+- Инкапсулирует WinAPI-логику главного окна (`WM_GETMINMAXINFO`, регион окна)
+- Применяет прямоугольный `window region` для устранения артефактов скругления углов
+- Корректирует размеры и позицию окна при максимизации на Windows 10/11
+- Вызывается из `MainWindow`, который оставлен orchestration-слоем WPF-событий
+
 ### 4. Model Layer (Слой моделей)
 
 **Расположение:** `KID.WPF.IDE/Models/`
