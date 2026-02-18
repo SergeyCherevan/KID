@@ -83,8 +83,8 @@ namespace KID
         /// <param name="graphicElements">Графические элементы спрайта.</param>
         public Sprite(double x, double y, params UIElement[] graphicElements)
         {
-            GraphicElements = graphicElements?.Where(e => e != null).ToList() ?? [];
             SetPosition(x, y);
+            GraphicElements = graphicElements?.Where(e => e != null).ToList() ?? [];
         }
 
         /// <summary>
@@ -95,8 +95,8 @@ namespace KID
         /// <param name="graphicElements">Графические элементы спрайта.</param>
         public Sprite(double x, double y, IEnumerable<UIElement> graphicElements)
         {
-            GraphicElements = graphicElements?.Where(e => e != null).ToList() ?? [];
             SetPosition(x, y);
+            GraphicElements = graphicElements?.Where(e => e != null).ToList() ?? [];
         }
 
         /// <summary>
@@ -107,8 +107,8 @@ namespace KID
         /// <param name="imagePath">Путь к изображению.</param>
         public Sprite(double x, double y, string imagePath)
         {
-            GraphicElements = [Graphics.Image(x, y, imagePath)];
             SetPosition(x, y);
+            GraphicElements = [Graphics.Image(x, y, imagePath)];
         }
     }
 }
