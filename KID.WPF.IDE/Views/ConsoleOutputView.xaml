@@ -12,6 +12,8 @@
     <TextBox Name="ConsoleOutputControl"
              IsReadOnly="True"
              VerticalScrollBarVisibility="Auto"
+             HorizontalScrollBarVisibility="Auto"
+             TextWrapping="NoWrap"
              FontFamily="{Binding FontFamily}"
              FontSize="{Binding FontSize}"
              Background="{DynamicResource ConsoleBrush}"
