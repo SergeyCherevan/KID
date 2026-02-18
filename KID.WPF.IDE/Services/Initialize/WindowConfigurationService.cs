@@ -115,12 +115,12 @@ namespace KID.Services.Initialize
         }
 
         /// <inheritdoc />
-        public void SetFont(string fontFamilyName, double fontSize)
+        public void SetFont(string? fontFamilyName, double? fontSize)
         {
             if (!string.IsNullOrEmpty(fontFamilyName))
                 Settings.FontFamily = fontFamilyName;
-            if (fontSize > 0)
-                Settings.FontSize = fontSize;
+            if (fontSize.HasValue && fontSize > 0)
+                Settings.FontSize = fontSize.Value;
             SaveSettings();
             FontSettingsChanged?.Invoke(this, EventArgs.Empty);
         }

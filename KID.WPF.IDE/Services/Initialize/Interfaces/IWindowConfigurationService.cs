@@ -31,8 +31,9 @@ namespace KID.Services.Initialize.Interfaces
 
         /// <summary>
         /// Устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков.
+        /// Если fontFamilyName или fontSize равны null, сохраняет текущие значения из Settings.
         /// </summary>
-        void SetFont(string fontFamilyName, double fontSize);
+        void SetFont(string? fontFamilyName, double? fontSize);
 
         /// <summary>
         /// Устанавливает язык интерфейса, сохраняет настройки и уведомляет подписчиков.

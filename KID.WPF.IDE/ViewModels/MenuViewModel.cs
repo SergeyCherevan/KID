@@ -355,10 +355,7 @@ namespace KID.ViewModels
             if (string.IsNullOrEmpty(fontFamilyName) || windowConfigurationService?.Settings == null)
                 return;
 
-            var fontSize = windowConfigurationService.Settings.FontSize > 0
-                ? windowConfigurationService.Settings.FontSize
-                : 14.0;
-            windowConfigurationService.SetFont(fontFamilyName, fontSize);
+            windowConfigurationService.SetFont(fontFamilyName, null);
         }
 
         private void ChangeFontSize(double fontSize)
@@ -366,8 +363,7 @@ namespace KID.ViewModels
             if (fontSize <= 0 || windowConfigurationService?.Settings == null)
                 return;
 
-            var fontFamily = windowConfigurationService.Settings.FontFamily ?? "Consolas";
-            windowConfigurationService.SetFont(fontFamily, fontSize);
+            windowConfigurationService.SetFont(null, fontSize);
         }
 
 
