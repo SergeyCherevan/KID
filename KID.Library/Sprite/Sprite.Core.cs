@@ -50,6 +50,15 @@ namespace KID
         }
 
         /// <summary>
+        /// Позиция anchor спрайта.
+        /// </summary>
+        public virtual Point Position
+        {
+            get => new Point(X, Y);
+            set => SetPosition(value.X, value.Y);
+        }
+
+        /// <summary>
         /// Список графических элементов, из которых состоит спрайт.
         /// </summary>
         public virtual List<UIElement> GraphicElements { get; set; } = [];
