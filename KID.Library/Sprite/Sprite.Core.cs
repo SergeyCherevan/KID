@@ -98,6 +98,18 @@ namespace KID
             GraphicElements = graphicElements?.Where(e => e != null).ToList() ?? [];
             SetPosition(x, y);
         }
+
+        /// <summary>
+        /// Создаёт спрайт с anchor в (x, y) и заданным изображением.
+        /// </summary>
+        /// <param name="x">X координата anchor.</param>
+        /// <param name="y">Y координата anchor.</param>
+        /// <param name="imagePath">Путь к изображению.</param>
+        public Sprite(double x, double y, string imagePath)
+        {
+            GraphicElements = [Graphics.Image(x, y, imagePath)];
+            SetPosition(x, y);
+        }
     }
 }
 
