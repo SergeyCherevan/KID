@@ -68,84 +68,134 @@
         <Border Grid.Row="0"
                 Background="{DynamicResource TabBarBackgroundBrush}"
                 Padding="7,5,2,0">
-            <ItemsControl ItemsSource="{Binding OpenedFiles}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Orientation="Horizontal"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border Margin="2,0,0,0"
-                                Padding="10,2,4,2"
-                                MinWidth="80"
-                                Cursor="Hand">
-                            <Border.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="{localization:Localization TabContext_Close}"
-                                              Command="{Binding DataContext.CloseFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
-                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                    <MenuItem Header="{localization:Localization Menu_Save}"
-                                              Command="{Binding DataContext.SaveFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
-                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                    <MenuItem Header="{localization:Localization Menu_SaveAs}"
-                                              Command="{Binding DataContext.SaveAsFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
-                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                    <MenuItem Header="{localization:Localization TabContext_SaveAndSetAsTemplate}"
-                                              Command="{Binding DataContext.SaveAndSetAsTemplateCommand, Source={x:Reference CodeEditorsViewRoot}}"
-                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                    <Separator/>
-                                    <MenuItem Header="{localization:Localization TabContext_MoveLeft}"
-                                              Command="{Binding DataContext.MoveTabLeftCommand, Source={x:Reference CodeEditorsViewRoot}}"
-                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                    <MenuItem Header="{localization:Localization TabContext_MoveRight}"
-                                              Command="{Binding DataContext.MoveTabRightCommand, Source={x:Reference CodeEditorsViewRoot}}"
-                                              CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                </ContextMenu>
-                            </Border.ContextMenu>
-                            <Border.InputBindings>
-                                <MouseBinding Gesture="LeftClick"
-                                              Command="{Binding DataContext.SelectFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                              CommandParameter="{Binding}"/>
-                            </Border.InputBindings>
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Background" Value="{DynamicResource TabInactiveBrush}"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Value="True">
-                                            <DataTrigger.Binding>
-                                                <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
-                                                    <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
-                                                    <Binding/>
-                                                </MultiBinding>
-                                            </DataTrigger.Binding>
-                                            <Setter Property="Background" Value="{DynamicResource TabActiveBrush}"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <DockPanel>
-                                <TextBlock Text="{Binding FileName}"
-                                           Style="{StaticResource TabTextStyle}"
-                                           DockPanel.Dock="Left"
-                                           Margin="0,0,8,0"/>
-                                <Button Content="×"
-                                        Width="18"
-                                        Height="18"
-                                        Padding="0"
-                                        FontSize="12"
-                                        Cursor="Hand"
-                                        VerticalAlignment="Center"
-                                        Background="Transparent"
-                                        BorderThickness="0"
-                                        Style="{StaticResource TabCloseButtonStyle}"
-                                        Command="{Binding DataContext.CloseFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                        CommandParameter="{Binding}"/>
-                            </DockPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          CanContentScroll="False">
+                <ScrollViewer.Resources>
+                    <Style x:Key="ThinTabScrollThumbStyle" TargetType="Thumb">
+                        <Setter Property="Background" Value="{DynamicResource WindowBrush}"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Thumb">
+                                    <Border Background="{TemplateBinding Background}"
+                                            CornerRadius="2"/>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                    <Style TargetType="ScrollBar">
+                        <Style.Triggers>
+                            <Trigger Property="Orientation" Value="Horizontal">
+                                <Setter Property="Height" Value="4"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ScrollBar">
+                                            <Grid Background="Transparent"
+                                                  Height="{TemplateBinding Height}">
+                                                <Track x:Name="PART_Track"
+                                                       Focusable="False"
+                                                       IsDirectionReversed="False">
+                                                    <Track.DecreaseRepeatButton>
+                                                        <RepeatButton Command="ScrollBar.PageLeftCommand"
+                                                                      Opacity="0"
+                                                                      IsTabStop="False"/>
+                                                    </Track.DecreaseRepeatButton>
+                                                    <Track.Thumb>
+                                                        <Thumb Style="{StaticResource ThinTabScrollThumbStyle}"/>
+                                                    </Track.Thumb>
+                                                    <Track.IncreaseRepeatButton>
+                                                        <RepeatButton Command="ScrollBar.PageRightCommand"
+                                                                      Opacity="0"
+                                                                      IsTabStop="False"/>
+                                                    </Track.IncreaseRepeatButton>
+                                                </Track>
+                                            </Grid>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Resources>
+                <ItemsControl ItemsSource="{Binding OpenedFiles}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="2,0,0,0"
+                                    Padding="10,2,4,2"
+                                    MinWidth="80"
+                                    Cursor="Hand">
+                                <Border.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{localization:Localization TabContext_Close}"
+                                                  Command="{Binding DataContext.CloseFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        <MenuItem Header="{localization:Localization Menu_Save}"
+                                                  Command="{Binding DataContext.SaveFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        <MenuItem Header="{localization:Localization Menu_SaveAs}"
+                                                  Command="{Binding DataContext.SaveAsFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        <MenuItem Header="{localization:Localization TabContext_SaveAndSetAsTemplate}"
+                                                  Command="{Binding DataContext.SaveAndSetAsTemplateCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        <Separator/>
+                                        <MenuItem Header="{localization:Localization TabContext_MoveLeft}"
+                                                  Command="{Binding DataContext.MoveTabLeftCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                        <MenuItem Header="{localization:Localization TabContext_MoveRight}"
+                                                  Command="{Binding DataContext.MoveTabRightCommand, Source={x:Reference CodeEditorsViewRoot}}"
+                                                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                    </ContextMenu>
+                                </Border.ContextMenu>
+                                <Border.InputBindings>
+                                    <MouseBinding Gesture="LeftClick"
+                                                  Command="{Binding DataContext.SelectFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                  CommandParameter="{Binding}"/>
+                                </Border.InputBindings>
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource TabInactiveBrush}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Value="True">
+                                                <DataTrigger.Binding>
+                                                    <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
+                                                        <Binding/>
+                                                    </MultiBinding>
+                                                </DataTrigger.Binding>
+                                                <Setter Property="Background" Value="{DynamicResource TabActiveBrush}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <DockPanel>
+                                    <TextBlock Text="{Binding FileName}"
+                                               Style="{StaticResource TabTextStyle}"
+                                               DockPanel.Dock="Left"
+                                               Margin="0,0,8,0"/>
+                                    <Button Content="×"
+                                            Width="18"
+                                            Height="18"
+                                            Padding="0"
+                                            FontSize="12"
+                                            Cursor="Hand"
+                                            VerticalAlignment="Center"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Style="{StaticResource TabCloseButtonStyle}"
+                                            Command="{Binding DataContext.CloseFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                            CommandParameter="{Binding}"/>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </Border>
         
         <!-- Редактор кода текущей вкладки (растягивается на всю доступную высоту) -->
