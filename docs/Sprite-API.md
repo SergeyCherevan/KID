@@ -35,11 +35,32 @@ for (int i = 0; i < 120; i++)
 }
 ```
 
-## Координаты: `X`, `Y` (anchor)
+## Координаты: `X`, `Y`, `Position` (anchor)
 
 - `Sprite.X` и `Sprite.Y` — это **абсолютная точка-опора (anchor)** спрайта.
+- `Sprite.Position` (тип `Point`) — чтение и запись позиции anchor одним свойством; присвоение эквивалентно установке `X` и `Y`.
 - Все элементы спрайта смещаются вместе с anchor.
 - Перемещение реализовано через `RenderTransform`, поэтому корректно работает и для элементов, у которых не задан `Canvas.Left/Top` (например, `Line`, `Polygon`, `Path`).
+
+## Конструкторы
+
+- `Sprite()` — спрайт с anchor в (0, 0) и пустым списком элементов.
+- `Sprite(double x, double y, params UIElement[] graphicElements)` — anchor в (x, y), заданные графические элементы; нулевые элементы отфильтровываются.
+- `Sprite(double x, double y, IEnumerable<UIElement> graphicElements)` — то же с коллекцией элементов.
+- `Sprite(double x, double y, string imagePath)` — спрайт с anchor в (x, y) и одним элементом — изображением по указанному пути (создаётся через `Graphics.Image`).
+
+Во всех конструкторах список `GraphicElements` инициализируется единообразно (включая фильтрацию null).
+
+Пример — спрайт из изображения и работа с `Position`:
+
+```csharp
+// Спрайт из одного изображения
+var hero = new Sprite(100, 50, "hero.png");
+
+// Чтение и запись позиции anchor через Position
+var p = hero.Position;
+hero.Position = new Point(p.X + 10, p.Y);
+```
 
 ## Видимость: `Show()` / `Hide()` / `IsVisible`
 

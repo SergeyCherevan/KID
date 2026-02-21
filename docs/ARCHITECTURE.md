@@ -259,7 +259,7 @@
 
 **Расположение:** `KID.WPF.IDE/Services/WindowInterop/`
 
-**IMainWindowWinAPIInteropService** / **MainWindowWinAPIInteropService** (`WindowInteropService.cs`)
+**IMainWindowWinAPIInteropService** (`Interfaces/IMainWindowWinAPIInteropService.cs`) / **MainWindowWinAPIInteropService** (`MainWindowWinAPIInteropService.cs`)
 - Инкапсулирует WinAPI-логику главного окна (`WM_GETMINMAXINFO`, регион окна)
 - Применяет прямоугольный `window region` для устранения артефактов скругления углов
 - Корректирует размеры и позицию окна при максимизации на Windows 10/11
