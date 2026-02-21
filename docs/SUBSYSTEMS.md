@@ -427,20 +427,22 @@
 - `TemplateCode` — шаблонный код
 - `TemplateName` — путь к файлу шаблона
 
-#### 6.2. CodeEditorFactory
-**Файл:** `KID.WPF.IDE/Services/CodeEditor/CodeEditorFactory.cs`
+#### 6.2. Редактор кода (RoslynCodeEditor, RoslynHostService, фабрика)
+
+**Файлы:**
+- `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
+- `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — сервис RoslynHost с ссылками на KID.Library и NAudio
+- `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
+- `KID.WPF.IDE/Services/CodeEditor/AvalonTextEditorFactory.cs` — запасная фабрика на AvalonEdit (не регистрируется в DI по умолчанию)
 
 **Ответственность:**
-- Создание экземпляров AvalonEdit TextEditor с настройками из IWindowConfigurationService
-
-**Основные методы:**
-- `Create(string content, string programmingLanguage)` — создаёт TextEditor с заданным содержимым и подсветкой синтаксиса.
-- Шрифт (FontFamily, FontSize) берёт из `windowConfigurationService.Settings`
-- ShowLineNumbers, WordWrap, кисти темы (EditorBackgroundBrush, EditorForegroundBrush) применяются автоматически
+- **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost с references и импортами (System, KID, NAudio.Wave) для IntelliSense в редакторе.
+- **ICodeEditorFactory / RoslynCodeEditorFactory:** создание экземпляров RoslynCodeEditor (наследник AvalonEdit TextEditor) с вызовом Initialize(roslynHost, colors, workingDirectory, content). ShowLineNumbers, WordWrap; шрифт и тема применяются через стили в CodeEditorsView.xaml.
 
 **Связи:**
-- Зависит от IWindowConfigurationService
+- RoslynCodeEditorFactory зависит от IRoslynHostService и IWindowConfigurationService
 - Используется в CodeEditorsViewModel при создании вкладок (AddFile)
+- Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize)
 
 #### 6.3. WindowInitializationService
 **Файл:** `KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs`
@@ -459,12 +461,12 @@
 3. Применение темы оформления
 4. Применение языка интерфейса
 5. Инициализация главного окна
-6. Инициализация редактора кода: `codeEditorsViewModel.AddFile(NewFilePath, templateCode)` — создание первой вкладки через ICodeEditorFactory, шрифт уже из Settings
+6. Инициализация редактора кода: `codeEditorsViewModel.AddFile(NewFilePath, templateCode)` — создание первой вкладки через ICodeEditorFactory (RoslynCodeEditorFactory), шрифт из стилей и Settings
 7. Инициализация консоли
 8. Шрифт применяется через FontSettingsChanged — CodeEditorsViewModel и ConsoleOutputViewModel подписаны на событие
 
 **Особенности:**
-- TextEditor создаётся через ICodeEditorFactory с шрифтом из Settings
+- Редактор (RoslynCodeEditor) создаётся через ICodeEditorFactory с шрифтом из стилей и Settings
 
 ## 7. Подсистема Music API
 
@@ -780,7 +782,7 @@
            │              │                      ├──→ FileDialogService
            │              │                      └──→ FileService
            │              │
-           │              ├──→ ICodeEditorFactory ──→ IWindowConfigurationService
+           │              ├──→ ICodeEditorFactory (RoslynCodeEditorFactory) ──→ IRoslynHostService, IWindowConfigurationService
            │              │
            │              └──→ IWindowConfigurationService (FontSettingsChanged)
            │

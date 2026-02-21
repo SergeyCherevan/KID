@@ -44,8 +44,11 @@ namespace KID.Services.DI
             services.AddSingleton<IWindowInitializationService, WindowInitializationService>();
             services.AddSingleton<IMainWindowWinAPIInteropService, MainWindowWinAPIInteropService>();
 
+            // Roslyn host для редактора (IntelliSense, KID.Library, NAudio)
+            services.AddSingleton<IRoslynHostService, RoslynHostService>();
+
             // Code Editor Factory
-            services.AddSingleton<ICodeEditorFactory, CodeEditorFactory>();
+            services.AddSingleton<ICodeEditorFactory, RoslynCodeEditorFactory>();
 
             // Localization Service
             services.AddSingleton<ILocalizationService, LocalizationService>();

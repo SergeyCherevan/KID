@@ -8,9 +8,9 @@ using KID.Services.Initialize.Interfaces;
 namespace KID.Services.CodeEditor
 {
     /// <summary>
-    /// Реализация фабрики редакторов кода. Создаёт TextEditor с настройками из IWindowConfigurationService.
+    /// Реализация фабрики редакторов кода на базе AvalonEdit. Создаёт TextEditor с настройками из IWindowConfigurationService.
     /// </summary>
-    public class CodeEditorFactory : ICodeEditorFactory
+    public class AvalonTextEditorFactory : ICodeEditorFactory
     {
         private readonly IWindowConfigurationService windowConfigurationService;
 
@@ -18,7 +18,7 @@ namespace KID.Services.CodeEditor
         /// Создаёт экземпляр фабрики.
         /// </summary>
         /// <param name="windowConfigurationService">Сервис настроек окна (шрифт, тема).</param>
-        public CodeEditorFactory(IWindowConfigurationService windowConfigurationService)
+        public AvalonTextEditorFactory(IWindowConfigurationService windowConfigurationService)
         {
             this.windowConfigurationService = windowConfigurationService
                 ?? throw new System.ArgumentNullException(nameof(windowConfigurationService));

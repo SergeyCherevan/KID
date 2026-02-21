@@ -79,7 +79,7 @@
 - Команды: Undo, Redo, CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
 - Методы: AddFile, CloseFile, SelectFile, SetSyntaxHighlighting
 - Интеграция с AvalonEdit TextEditor (создаётся на каждую вкладку)
-- Создание TextEditor через ICodeEditorFactory (шрифт из IWindowConfigurationService.Settings)
+- Создание RoslynCodeEditor через ICodeEditorFactory (RoslynCodeEditorFactory; шрифт из стилей и IWindowConfigurationService.Settings)
 - Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
@@ -214,9 +214,10 @@
 
 **Расположение:** `KID.WPF.IDE/Services/CodeEditor/`
 
-**ICodeEditorFactory** / **CodeEditorFactory** (`CodeEditorFactory.cs`)
-- Создание экземпляров AvalonEdit TextEditor
-- Метод `Create(content, programmingLanguage)` — создаёт редактор с подсветкой синтаксиса и шрифтом из IWindowConfigurationService
+**ICodeEditorFactory** / **RoslynCodeEditorFactory** (`RoslynCodeEditorFactory.cs`)
+- Создание экземпляров RoslynCodeEditor (RoslynPad, наследник AvalonEdit TextEditor) с IntelliSense и подсветкой через Roslyn
+- Метод `Create(content, programmingLanguage)` — создаёт редактор, инициализирует через IRoslynHostService (workingDirectory, content)
+- **IRoslynHostService** / **RoslynHostService** — единый RoslynHost с ссылками на KID.Library, NAudio и импортами (System, KID)
 - Используется в CodeEditorsViewModel при AddFile
 
 #### 3.6. Initialize (Инициализация)
