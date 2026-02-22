@@ -21,10 +21,13 @@ namespace KID.Services.CodeEditor
             var references = RoslynHostReferences.NamespaceDefault.With(
                 typeNamespaceImports: new[]
                 {
-                    typeof(object),
-                    typeof(PlaybackState),
+                    typeof(System.Object),
+                    typeof(System.Console),
+                    typeof(System.Linq.Enumerable),
+                    typeof(NAudio.Wave.PlaybackState),
                     typeof(KID.Graphics)
-                });
+                }
+            );
 
             // Не добавлять typeof(RoslynHost).Assembly — хост уже включает её в состав по умолчанию; дублирование даёт CompositionFailedException (два экспорта DocumentationProviderService).
             _host = new RoslynHost(
@@ -33,7 +36,8 @@ namespace KID.Services.CodeEditor
                     Assembly.Load("RoslynPad.Roslyn.Windows"),
                     Assembly.Load("RoslynPad.Editor.Windows")
                 },
-                references: references);
+                references: references
+            );
 
             return _host;
         }
