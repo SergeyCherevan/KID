@@ -217,7 +217,7 @@
 **ICodeEditorFactory** / **RoslynCodeEditorFactory** (`RoslynCodeEditorFactory.cs`)
 - Создание экземпляров RoslynCodeEditor (RoslynPad, наследник AvalonEdit TextEditor) с IntelliSense и подсветкой через Roslyn
 - Метод `Create(content, programmingLanguage)` — создаёт редактор, инициализирует через IRoslynHostService (workingDirectory, content)
-- **IRoslynHostService** / **RoslynHostService** — единый RoslynHost с ссылками на KID.Library, NAudio и импортами (System, KID)
+- **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; набор сборок и импортов получает от **IRoslynReferenceProvider** (KidIdeRoslynReferenceProvider: рефлексия над AppDomain, тот же источник, что и при выполнении кода)
 - Используется в CodeEditorsViewModel при AddFile
 
 #### 3.6. Initialize (Инициализация)

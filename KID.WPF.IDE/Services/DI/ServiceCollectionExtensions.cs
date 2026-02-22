@@ -44,7 +44,9 @@ namespace KID.Services.DI
             services.AddSingleton<IWindowInitializationService, WindowInitializationService>();
             services.AddSingleton<IMainWindowWinAPIInteropService, MainWindowWinAPIInteropService>();
 
-            // Roslyn host для редактора (IntelliSense, KID.Library, NAudio)
+            // Провайдер ссылок для Roslyn (сборки и импорты из рефлексии над доменом — тот же источник, что и при выполнении кода)
+            services.AddSingleton<IRoslynReferenceProvider, KidIdeRoslynReferenceProvider>();
+            // Roslyn host для редактора (IntelliSense)
             services.AddSingleton<IRoslynHostService, RoslynHostService>();
 
             // Code Editor Factory

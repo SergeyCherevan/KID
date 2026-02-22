@@ -427,19 +427,23 @@
 - `TemplateCode` — шаблонный код
 - `TemplateName` — путь к файлу шаблона
 
-#### 6.2. Редактор кода (RoslynCodeEditor, RoslynHostService, фабрика)
+#### 6.2. Редактор кода (RoslynCodeEditor, RoslynHostService, провайдер ссылок, фабрика)
 
 **Файлы:**
 - `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
-- `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — сервис RoslynHost с ссылками на KID.Library и NAudio
+- `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — создание и кэширование RoslynHost; набор ссылок и импортов берёт из IRoslynReferenceProvider
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
+- `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynReferenceProvider.cs` — интерфейс провайдера сборок и типов для импортов
+- `KID.WPF.IDE/Services/CodeEditor/KidIdeRoslynReferenceProvider.cs` — реализация: GetAssemblies() и GetTypeNamespaceImports() через рефлексию (AppDomain.CurrentDomain.GetAssemblies() с тем же фильтром, что и CSharpCompiler; типы для usings — по одному на пространство имён из этих сборок, фильтр System/KID/NAudio)
 - `KID.WPF.IDE/Services/CodeEditor/AvalonTextEditorFactory.cs` — запасная фабрика на AvalonEdit (не регистрируется в DI по умолчанию)
 
 **Ответственность:**
-- **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost с references и импортами (System, KID, NAudio.Wave) для IntelliSense в редакторе.
-- **ICodeEditorFactory / RoslynCodeEditorFactory:** создание экземпляров RoslynCodeEditor (наследник AvalonEdit TextEditor) с вызовом Initialize(roslynHost, colors, workingDirectory, content). ShowLineNumbers, WordWrap; шрифт и тема применяются через стили в CodeEditorsView.xaml.
+- **IRoslynReferenceProvider / KidIdeRoslynReferenceProvider:** формирует список сборок и типов для глобальных usings через рефлексию над загруженным доменом — тот же источник, что и при компиляции кода (CSharpCompiler).
+- **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost; получает сборки и типы от провайдера, передаёт в RoslynHostReferences, создаёт хост с additionalAssemblies для RoslynPad (MEF).
+- **ICodeEditorFactory / RoslynCodeEditorFactory:** создание экземпляров RoslynCodeEditor с вызовом Initialize(roslynHost, colors, workingDirectory, content). ShowLineNumbers, WordWrap; шрифт и тема через стили в CodeEditorsView.xaml.
 
 **Связи:**
+- RoslynHostService зависит от IRoslynReferenceProvider
 - RoslynCodeEditorFactory зависит от IRoslynHostService и IWindowConfigurationService
 - Используется в CodeEditorsViewModel при создании вкладок (AddFile)
 - Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize)
@@ -783,6 +787,7 @@
            │              │                      └──→ FileService
            │              │
            │              ├──→ ICodeEditorFactory (RoslynCodeEditorFactory) ──→ IRoslynHostService, IWindowConfigurationService
+           │              │         IRoslynHostService ──→ IRoslynReferenceProvider
            │              │
            │              └──→ IWindowConfigurationService (FontSettingsChanged)
            │
