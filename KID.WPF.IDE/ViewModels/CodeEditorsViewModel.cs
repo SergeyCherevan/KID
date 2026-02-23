@@ -5,12 +5,14 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 using KID.Models;
+using KID.Services.CodeEditor;
 using KID.Services.CodeEditor.Interfaces;
 using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
+using RoslynPad.Editor;
 
 namespace KID.ViewModels
 {
@@ -24,7 +26,8 @@ namespace KID.ViewModels
         private readonly ICodeEditorFactory codeEditorFactory;
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
 
-
+        private static readonly ClassificationHighlightColors LightHighlightColors = new();
+        private static readonly DarkClassificationHighlightColors DarkHighlightColors = new();
 
         /// <summary>
         /// Коллекция открытых вкладок.
@@ -61,6 +64,12 @@ namespace KID.ViewModels
             ? windowConfigurationService.Settings.FontSize
             : 14.0;
 
+        /// <inheritdoc />
+        public IClassificationHighlightColors ClassificationHighlightColors =>
+            string.Equals(windowConfigurationService.Settings.ColorTheme, "Dark", StringComparison.OrdinalIgnoreCase)
+                ? DarkHighlightColors
+                : LightHighlightColors;
+
         public bool CanUndo => CurrentFileTab?.CodeEditor?.CanUndo ?? false;
 
         public bool CanRedo => CurrentFileTab?.CodeEditor?.CanRedo ?? false;
@@ -90,6 +99,7 @@ namespace KID.ViewModels
             this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
+            windowConfigurationService.ColorThemeSettingsChanged += OnColorThemeSettingsChanged;
 
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
@@ -367,6 +377,11 @@ namespace KID.ViewModels
         {
             OnPropertyChanged(nameof(FontFamily));
             OnPropertyChanged(nameof(FontSize));
+        }
+
+        private void OnColorThemeSettingsChanged(object? sender, EventArgs e)
+        {
+            OnPropertyChanged(nameof(ClassificationHighlightColors));
         }
 
         private void RaiseTabCommandsCanExecute()

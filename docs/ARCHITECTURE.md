@@ -75,12 +75,12 @@
 
 **CodeEditorsViewModel** (`CodeEditorsViewModel.cs`)
 - Управление панелью редакторов с вкладками
-- Свойства: OpenedFiles, CurrentFileTab, FontFamily, FontSize, CanUndo, CanRedo
+- Свойства: OpenedFiles, CurrentFileTab, FontFamily, FontSize, ClassificationHighlightColors (палитра подсветки в зависимости от темы), CanUndo, CanRedo
 - Команды: Undo, Redo, CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
 - Методы: AddFile, CloseFile, SelectFile, SetSyntaxHighlighting
 - Интеграция с AvalonEdit TextEditor (создаётся на каждую вкладку)
 - Создание RoslynCodeEditor через ICodeEditorFactory (RoslynCodeEditorFactory; шрифт из стилей и IWindowConfigurationService.Settings)
-- Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
+- Подписка на FontSettingsChanged для обновления шрифта во всех вкладках; на ColorThemeSettingsChanged — для обновления ClassificationHighlightColors (светлая/тёмная палитра)
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
 **ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
@@ -218,7 +218,8 @@
 - Создание экземпляров RoslynCodeEditor (RoslynPad, наследник AvalonEdit TextEditor) с IntelliSense и подсветкой через Roslyn
 - Метод `Create(content, programmingLanguage)` — создаёт редактор, инициализирует через IRoslynHostService (workingDirectory, content)
 - **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; набор сборок и импортов получает от **IRoslynReferenceProvider** (KidIdeRoslynReferenceProvider: рефлексия над AppDomain, тот же источник, что и при выполнении кода)
-- Используется в CodeEditorsViewModel при AddFile
+- **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — ClassificationHighlightColors из RoslynPad
+- Используется в CodeEditorsViewModel при AddFile; палитра подсветки привязывается к редактору из ViewModel (ClassificationHighlightColors) в зависимости от ColorTheme
 
 #### 3.6. Initialize (Инициализация)
 

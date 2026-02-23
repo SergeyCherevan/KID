@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using KID.Models;
 using KID.ViewModels.Infrastructure;
+using RoslynPad.Editor;
 
 namespace KID.ViewModels.Interfaces
 {
@@ -23,6 +24,10 @@ namespace KID.ViewModels.Interfaces
 
         FontFamily FontFamily { get; }
         double FontSize { get; }
+        /// <summary>
+        /// Палитра цветов синтаксической подсветки редактора в зависимости от текущей темы (светлая/тёмная).
+        /// </summary>
+        IClassificationHighlightColors ClassificationHighlightColors { get; }
         bool CanUndo { get; }
         bool CanRedo { get; }
         RelayCommand UndoCommand { get; }

@@ -431,6 +431,7 @@
 
 **Файлы:**
 - `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
+- `KID.WPF.IDE/Services/CodeEditor/DarkClassificationHighlightColors.cs` — палитра синтаксической подсветки для тёмной темы (фон #1E1E1E, в духе VS Dark)
 - `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — создание и кэширование RoslynHost; набор ссылок и импортов берёт из IRoslynReferenceProvider
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynReferenceProvider.cs` — интерфейс провайдера сборок и типов для импортов
@@ -441,12 +442,13 @@
 - **IRoslynReferenceProvider / KidIdeRoslynReferenceProvider:** формирует список сборок и типов для глобальных usings через рефлексию над загруженным доменом — тот же источник, что и при компиляции кода (CSharpCompiler).
 - **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost; получает сборки и типы от провайдера, передаёт в RoslynHostReferences, создаёт хост с additionalAssemblies для RoslynPad (MEF).
 - **ICodeEditorFactory / RoslynCodeEditorFactory:** создание экземпляров RoslynCodeEditor с вызовом Initialize(roslynHost, colors, workingDirectory, content). ShowLineNumbers, WordWrap; шрифт и тема через стили в CodeEditorsView.xaml.
+- **Тёмная тема редактора:** фон редактора в DarkTheme.xaml — #1E1E1E; палитра подсветки — DarkClassificationHighlightColors. CodeEditorsViewModel.ClassificationHighlightColors возвращает ClassificationHighlightColors (светлая) или DarkClassificationHighlightColors (тёмная) в зависимости от Settings.ColorTheme; привязка к RoslynCodeEditor через стиль в CodeEditorsView.xaml. При смене темы подписка на ColorThemeSettingsChanged обновляет свойство.
 
 **Связи:**
 - RoslynHostService зависит от IRoslynReferenceProvider
 - RoslynCodeEditorFactory зависит от IRoslynHostService и IWindowConfigurationService
 - Используется в CodeEditorsViewModel при создании вкладок (AddFile)
-- Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize)
+- Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize, ClassificationHighlightColors)
 
 #### 6.3. WindowInitializationService
 **Файл:** `KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs`

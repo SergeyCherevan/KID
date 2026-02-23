@@ -28,6 +28,7 @@
             <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}"/>
             <Setter Property="FontFamily" Value="{Binding DataContext.FontFamily, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
             <Setter Property="FontSize" Value="{Binding DataContext.FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            <Setter Property="ClassificationHighlightColors" Value="{Binding DataContext.ClassificationHighlightColors, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
         </Style>
         <Style TargetType="TextBlock" x:Key="TabTextStyle">
             <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
