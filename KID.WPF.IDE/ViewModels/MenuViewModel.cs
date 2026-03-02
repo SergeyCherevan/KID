@@ -221,7 +221,7 @@ namespace KID.ViewModels
             var result = await codeFileService.OpenCodeFileWithPathAsync(codeFileService.CodeFileFilter);
             if (result != null)
             {
-                var openedFiles = codeEditorsViewModel.OpenedFiles;
+                var openedFiles = codeEditorsViewModel.OpenedFileTabs;
                 var onlyTab = openedFiles.Count == 1 ? openedFiles[0] : null;
                 var shouldReplaceNewFile = onlyTab != null
                     && codeFileService.IsNewFilePath(onlyTab.FilePath)

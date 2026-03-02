@@ -29,7 +29,7 @@ namespace KID.ViewModels
         /// <summary>
         /// Коллекция открытых вкладок.
         /// </summary>
-        public ObservableCollection<OpenedFileTab> OpenedFiles { get; } = new();
+        public ObservableCollection<OpenedFileTab> OpenedFileTabs { get; } = new();
 
         private int indexOfCurrentFileTab;
         /// <summary>
@@ -37,12 +37,12 @@ namespace KID.ViewModels
         /// </summary>
         public OpenedFileTab? CurrentFileTab
         {
-            get => OpenedFiles.Count > 0 && indexOfCurrentFileTab >= 0 && indexOfCurrentFileTab < OpenedFiles.Count
-                ? OpenedFiles[indexOfCurrentFileTab]
+            get => OpenedFileTabs.Count > 0 && indexOfCurrentFileTab >= 0 && indexOfCurrentFileTab < OpenedFileTabs.Count
+                ? OpenedFileTabs[indexOfCurrentFileTab]
                 : null;
             set
             {
-                var newIndex = value != null ? OpenedFiles.IndexOf(value) : 0;
+                var newIndex = value != null ? OpenedFileTabs.IndexOf(value) : 0;
                 if (newIndex < 0) newIndex = 0;
 
                 if (SetProperty(ref indexOfCurrentFileTab, newIndex))
@@ -146,35 +146,35 @@ namespace KID.ViewModels
         }
 
         private bool CanMoveTabLeft(OpenedFileTab? tab) =>
-            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) > 0;
+            tab != null && OpenedFileTabs.Contains(tab) && OpenedFileTabs.IndexOf(tab) > 0;
 
         private bool CanMoveTabRight(OpenedFileTab? tab) =>
-            tab != null && OpenedFiles.Contains(tab) && OpenedFiles.IndexOf(tab) < OpenedFiles.Count - 1;
+            tab != null && OpenedFileTabs.Contains(tab) && OpenedFileTabs.IndexOf(tab) < OpenedFileTabs.Count - 1;
 
         private void ExecuteMoveTabLeft(OpenedFileTab tab)
         {
-            if (tab == null || !OpenedFiles.Contains(tab))
+            if (tab == null || !OpenedFileTabs.Contains(tab))
                 return;
 
-            var index = OpenedFiles.IndexOf(tab);
+            var index = OpenedFileTabs.IndexOf(tab);
             if (index <= 0)
                 return;
 
-            OpenedFiles.Move(index, index - 1);
+            OpenedFileTabs.Move(index, index - 1);
             UpdateCurrentFileTabIndexAfterMove(index, index - 1);
             RaiseMoveTabCommandsCanExecute();
         }
 
         private void ExecuteMoveTabRight(OpenedFileTab tab)
         {
-            if (tab == null || !OpenedFiles.Contains(tab))
+            if (tab == null || !OpenedFileTabs.Contains(tab))
                 return;
 
-            var index = OpenedFiles.IndexOf(tab);
-            if (index < 0 || index >= OpenedFiles.Count - 1)
+            var index = OpenedFileTabs.IndexOf(tab);
+            if (index < 0 || index >= OpenedFileTabs.Count - 1)
                 return;
 
-            OpenedFiles.Move(index, index + 1);
+            OpenedFileTabs.Move(index, index + 1);
             UpdateCurrentFileTabIndexAfterMove(index, index + 1);
             RaiseMoveTabCommandsCanExecute();
         }
@@ -183,9 +183,9 @@ namespace KID.ViewModels
          * Зачем нужен этот метод
          * ----------------------
          * Текущая вкладка хранится не ссылкой на объект, а индексом `indexOfCurrentFileTab`.
-         * Свойство `CurrentFileTab` вычисляется как `OpenedFiles[indexOfCurrentFileTab]`.
+         * Свойство `CurrentFileTab` вычисляется как `OpenedFileTabs[indexOfCurrentFileTab]`.
          *
-         * Когда мы меняем порядок вкладок через `OpenedFiles.Move(oldIndex, newIndex)`:
+         * Когда мы меняем порядок вкладок через `OpenedFileTabs.Move(oldIndex, newIndex)`:
          * - перемещаемая вкладка меняет свой индекс;
          * - все вкладки между oldIndex и newIndex сдвигаются на 1 позицию.
          *
@@ -246,8 +246,8 @@ namespace KID.ViewModels
                 }
             };
 
-            OpenedFiles.Add(tab);
-            indexOfCurrentFileTab = OpenedFiles.Count - 1;
+            OpenedFileTabs.Add(tab);
+            indexOfCurrentFileTab = OpenedFileTabs.Count - 1;
             OnPropertyChanged(nameof(CurrentFileTab));
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
@@ -256,21 +256,21 @@ namespace KID.ViewModels
         /// <inheritdoc />
         public void CloseFileTab(OpenedFileTab tab)
         {
-            if (tab == null || !OpenedFiles.Contains(tab))
+            if (tab == null || !OpenedFileTabs.Contains(tab))
                 return;
 
-            var index = OpenedFiles.IndexOf(tab);
-            OpenedFiles.Remove(tab);
+            var index = OpenedFileTabs.IndexOf(tab);
+            OpenedFileTabs.Remove(tab);
 
-            if (OpenedFiles.Count == 0)
+            if (OpenedFileTabs.Count == 0)
             {
                 var templateCode = windowConfigurationService?.Settings?.TemplateCode ?? string.Empty;
                 CreateAndAddFileTab(codeFileService.NewFilePath, templateCode);
             }
             else
             {
-                if (indexOfCurrentFileTab >= OpenedFiles.Count)
-                    indexOfCurrentFileTab = OpenedFiles.Count - 1;
+                if (indexOfCurrentFileTab >= OpenedFileTabs.Count)
+                    indexOfCurrentFileTab = OpenedFileTabs.Count - 1;
                 else if (index < indexOfCurrentFileTab)
                     indexOfCurrentFileTab--;
                 OnPropertyChanged(nameof(CurrentFileTab));
@@ -282,20 +282,13 @@ namespace KID.ViewModels
         /// <inheritdoc />
         public void SelectFileTab(OpenedFileTab tab)
         {
-            if (tab != null && OpenedFiles.Contains(tab))
+            if (tab != null && OpenedFileTabs.Contains(tab))
                 CurrentFileTab = tab;
-        }
-
-        /// <inheritdoc />
-        public void NotifyCurrentFileTabSaved(string content)
-        {
-            CurrentFileTab?.UpdateSavedContent(content);
-            OnPropertyChanged(nameof(CurrentFileTab));
         }
 
         private async Task ExecuteSaveAndSetAsTemplateAsync(OpenedFileTab tab)
         {
-            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null ||
+            if (tab == null || !OpenedFileTabs.Contains(tab) || codeFileService == null ||
                 windowConfigurationService?.Settings == null)
                 return;
 
@@ -325,7 +318,7 @@ namespace KID.ViewModels
 
         private async Task ExecuteSaveFileAsync(OpenedFileTab tab)
         {
-            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
+            if (tab == null || !OpenedFileTabs.Contains(tab) || codeFileService == null)
                 return;
 
             var content = tab.CurrentContent;
@@ -344,7 +337,7 @@ namespace KID.ViewModels
 
         private async Task ExecuteSaveAsFileAsync(OpenedFileTab tab)
         {
-            if (tab == null || !OpenedFiles.Contains(tab) || codeFileService == null)
+            if (tab == null || !OpenedFileTabs.Contains(tab) || codeFileService == null)
                 return;
 
             var content = tab.CurrentContent;
