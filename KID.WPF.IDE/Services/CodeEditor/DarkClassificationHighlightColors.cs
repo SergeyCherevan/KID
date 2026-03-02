@@ -13,7 +13,7 @@ namespace KID.Services.CodeEditor;
 /// </summary>
 public class DarkClassificationHighlightColors : IClassificationHighlightColors
 {
-    private static readonly Color DefaultForeground = Color.FromRgb(0xD4, 0xD4, 0xD4);
+    private static readonly Color DefaultForeground = Color.FromRgb(0xFF, 0xFF, 0xFF);
     private static readonly Color KeywordColor = Color.FromRgb(0x56, 0x9C, 0xD6);
     private static readonly Color TypeColor = Color.FromRgb(0x4E, 0xC9, 0xB0);
     private static readonly Color MethodColor = Color.FromRgb(0xDC, 0xDC, 0xAA);

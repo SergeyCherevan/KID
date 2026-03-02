@@ -48,6 +48,8 @@ namespace KID.Services.DI
             services.AddSingleton<IRoslynReferenceProvider, KidIdeRoslynReferenceProvider>();
             // Roslyn host для редактора (IntelliSense)
             services.AddSingleton<IRoslynHostService, RoslynHostService>();
+            // Палитра подсветки редактора в зависимости от темы (светлая/тёмная)
+            services.AddSingleton<IClassificationHighlightColorsProvider, ClassificationHighlightColorsProvider>();
 
             // Code Editor Factory
             services.AddSingleton<ICodeEditorFactory, RoslynCodeEditorFactory>();

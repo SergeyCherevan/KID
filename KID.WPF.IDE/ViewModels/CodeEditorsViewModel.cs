@@ -382,6 +382,13 @@ namespace KID.ViewModels
         private void OnColorThemeSettingsChanged(object? sender, EventArgs e)
         {
             OnPropertyChanged(nameof(ClassificationHighlightColors));
+            var colors = ClassificationHighlightColors;
+            foreach (var tab in OpenedFiles)
+            {
+                if (tab.CodeEditor is RoslynCodeEditor roslynEditor)
+                    roslynEditor.ClassificationHighlightColors = colors;
+            }
+            OnPropertyChanged(nameof(CurrentFileTab));
         }
 
         private void RaiseTabCommandsCanExecute()
