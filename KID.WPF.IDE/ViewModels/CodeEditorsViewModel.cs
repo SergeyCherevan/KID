@@ -66,7 +66,7 @@ namespace KID.ViewModels
 
         /// <inheritdoc />
         public IClassificationHighlightColors ClassificationHighlightColors =>
-            string.Equals(windowConfigurationService.Settings.ColorTheme, "Dark", StringComparison.OrdinalIgnoreCase)
+            string.Equals(windowConfigurationService.Settings.ColorTheme, "Theme_Dark", StringComparison.OrdinalIgnoreCase)
                 ? DarkHighlightColors
                 : LightHighlightColors;
 

@@ -24,7 +24,7 @@ public class ClassificationHighlightColorsProvider : IClassificationHighlightCol
 
     /// <inheritdoc />
     public IClassificationHighlightColors GetColors() =>
-        string.Equals(_windowConfigurationService.Settings.ColorTheme, "Dark", System.StringComparison.OrdinalIgnoreCase)
+        string.Equals(_windowConfigurationService.Settings.ColorTheme, "Theme_Dark", System.StringComparison.OrdinalIgnoreCase)
             ? DarkColors
             : LightColors;
 }
