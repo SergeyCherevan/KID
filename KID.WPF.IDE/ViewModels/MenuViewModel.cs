@@ -6,6 +6,7 @@ using KID.Services.Fonts.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.Services.Themes.Interfaces;
+using KID.Models;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 using System;
@@ -28,20 +29,21 @@ namespace KID.ViewModels
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
         private readonly ILocalizationService localizationService;
         private readonly IThemeService themeService;
+        private readonly IThemeProviderService themeProviderService;
         private readonly IFontProviderService fontProviderService;
         private CancellationTokenSource? cancellationSource;
 
 
 
         public ObservableCollection<string> AvailableLanguages { get; }
-        public ObservableCollection<string> AvailableThemes { get; }
+        public ObservableCollection<ThemeDefinition> AvailableThemes { get; }
         public ObservableCollection<string> AvailableFonts { get; }
         public ObservableCollection<double> AvailableFontSizes { get; }
 
         /// <summary>
         /// Выбранная тема (для отображения галочки в меню).
         /// </summary>
-        public string SelectedThemeKey => windowConfigurationService?.Settings?.ColorTheme ?? string.Empty;
+        public string SelectedThemeKey => themeService.CurrentTheme.LocalizationKey;
 
         /// <summary>
         /// Выбранный язык интерфейса (для отображения галочки в меню).
@@ -75,7 +77,7 @@ namespace KID.ViewModels
         public RelayCommand UndoCommand { get; }
         public RelayCommand RedoCommand { get; }
         public ICommand ChangeLanguageCommand { get; }
-        public ICommand ChangeThemeCommand { get; }
+        public RelayCommand<ThemeDefinition> ChangeThemeCommand { get; }
         public ICommand ChangeFontCommand { get; }
         public ICommand ChangeFontSizeCommand { get; }
 
@@ -92,6 +94,7 @@ namespace KID.ViewModels
             IAsyncOperationErrorHandler asyncOperationErrorHandler,
             ILocalizationService localizationService,
             IThemeService themeService,
+            IThemeProviderService themeProviderService,
             IFontProviderService fontProviderService
         )
         {
@@ -106,6 +109,7 @@ namespace KID.ViewModels
             this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
+            this.themeProviderService = themeProviderService ?? throw new ArgumentNullException(nameof(themeProviderService));
             this.fontProviderService = fontProviderService ?? throw new ArgumentNullException(nameof(fontProviderService));
 
             // Инициализируем список доступных шрифтов и размеров
@@ -119,8 +123,8 @@ namespace KID.ViewModels
             AvailableLanguages = new ObservableCollection<string>(languages ?? Array.Empty<string>());
 
             // Инициализируем список доступных тем
-            var themes = themeService.GetAvailableThemes();
-            AvailableThemes = new ObservableCollection<string>(themes ?? Array.Empty<string>());
+            var themes = themeProviderService.GetAvailableThemes();
+            AvailableThemes = new ObservableCollection<ThemeDefinition>(themes);
 
             // Подписываемся на изменения свойств codeEditorsViewModel
             if (codeEditorsViewModel is INotifyPropertyChanged notifyPropertyChanged)
@@ -145,7 +149,7 @@ namespace KID.ViewModels
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             ChangeLanguageCommand = new RelayCommand<string>(key => ChangeLanguage(key));
-            ChangeThemeCommand = new RelayCommand<string>(key => ChangeTheme(key));
+            ChangeThemeCommand = new RelayCommand<ThemeDefinition>(ChangeTheme);
             ChangeFontCommand = new RelayCommand<string>(font => ChangeFont(font));
             ChangeFontSizeCommand = new RelayCommand<double>(fontSize => ChangeFontSize(fontSize));
 
@@ -157,7 +161,7 @@ namespace KID.ViewModels
                 OnPropertyChanged(nameof(SelectedLanguageKey));
             };
 
-            windowConfigurationService.ColorThemeSettingsChanged += (s, e) =>
+            themeService.ThemeChanged += (s, e) =>
                 OnPropertyChanged(nameof(SelectedThemeKey));
 
             windowConfigurationService.FontSettingsChanged += (s, e) =>
@@ -342,12 +346,12 @@ namespace KID.ViewModels
                 localizationService.SetCulture(cultureCode);
         }
 
-        private void ChangeTheme(string? themeKey)
+        private void ChangeTheme(ThemeDefinition? theme)
         {
-            if (string.IsNullOrWhiteSpace(themeKey) || themeService == null)
+            if (theme == null)
                 return;
 
-            themeService.ApplyTheme(themeKey);
+            themeService.ApplyTheme(theme.LocalizationKey);
         }
 
         private void ChangeFont(string? fontFamilyName)

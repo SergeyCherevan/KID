@@ -1,82 +1,93 @@
 using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
+using KID.Models;
+using KID.Services.Errors.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Themes.Interfaces;
 
-namespace KID.Services.Themes
+namespace KID.Services.Themes;
+
+public sealed class ThemeService : IThemeService
 {
-    public class ThemeService : IThemeService
+    private readonly IThemeProviderService themeProviderService;
+    private readonly IWindowConfigurationService windowConfigurationService;
+    private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
+    private readonly App app;
+
+    public ThemeDefinition CurrentTheme { get; private set; }
+
+    public event EventHandler? ThemeChanged;
+
+    public ThemeService(
+        IThemeProviderService themeProviderService,
+        IWindowConfigurationService windowConfigurationService,
+        IAsyncOperationErrorHandler asyncOperationErrorHandler,
+        App app)
     {
-        private readonly IWindowConfigurationService _windowConfigurationService;
-        private string _currentTheme = "Theme_Light";
-        private readonly App _app;
+        this.themeProviderService = themeProviderService ?? throw new ArgumentNullException(nameof(themeProviderService));
+        this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
+        this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
+        this.app = app ?? throw new ArgumentNullException(nameof(app));
 
-        public string CurrentTheme => _currentTheme;
+        CurrentTheme = themeProviderService.GetDefaultTheme();
+    }
 
-        public ThemeService(IWindowConfigurationService windowConfigurationService, App app)
+    public void ApplyTheme(string? localizationKey)
+    {
+        var migratedKey = LegacyThemeKeyMigrator.Migrate(localizationKey);
+        var requestedTheme = themeProviderService.TryGetTheme(migratedKey, out var resolvedTheme)
+            ? resolvedTheme
+            : themeProviderService.GetDefaultTheme();
+
+        if (TryApplyTheme(requestedTheme, out var requestedError))
+            return;
+
+        var defaultTheme = themeProviderService.GetDefaultTheme();
+        if (!string.Equals(
+                requestedTheme.LocalizationKey,
+                defaultTheme.LocalizationKey,
+                StringComparison.Ordinal) &&
+            TryApplyTheme(defaultTheme, out _))
         {
-            _windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
-            _app = app ?? throw new ArgumentNullException(nameof(app));
+            ReportThemeLoadFailure(requestedError!);
+            return;
         }
 
-        public void ApplyTheme(string themeKey)
+        ReportThemeLoadFailure(requestedError!);
+    }
+
+    private bool TryApplyTheme(ThemeDefinition theme, out Exception? error)
+    {
+        try
         {
-            if (string.IsNullOrEmpty(themeKey))
-                return;
+            var themeUri = new Uri($"/{theme.ResourcePath}", UriKind.Relative);
+            var themeDictionary = new ResourceDictionary { Source = themeUri };
 
-            var normalizedThemeKey = NormalizeThemeKey(themeKey);
-            if (string.IsNullOrEmpty(normalizedThemeKey))
-                return;
+            if (app.Resources == null)
+                throw new InvalidOperationException("Application resources are not available.");
 
-            try
-            {
-                if (_app?.Resources == null)
-                    return;
+            app.Resources.MergedDictionaries.Clear();
+            app.Resources.MergedDictionaries.Add(themeDictionary);
 
-                // Очищаем текущие темы
-                _app.Resources.MergedDictionaries.Clear();
+            CurrentTheme = theme;
+            windowConfigurationService.SetColorTheme(theme.LocalizationKey);
+            ThemeChanged?.Invoke(this, EventArgs.Empty);
 
-                // Загружаем новую тему
-                var themePath = normalizedThemeKey switch
-                {
-                    "Theme_Light" => "Themes/LightTheme.xaml",
-                    "Theme_Dark" => "Themes/DarkTheme.xaml",
-                    _ => "Themes/LightTheme.xaml"
-                };
-
-                var themeUri = new Uri($"/{themePath}", UriKind.Relative);
-                var themeDictionary = new ResourceDictionary { Source = themeUri };
-                _app.Resources.MergedDictionaries.Add(themeDictionary);
-
-                _currentTheme = normalizedThemeKey;
-                _windowConfigurationService.SetColorTheme(normalizedThemeKey);
-            }
-            catch (Exception)
-            {
-                // Игнорируем ошибки при применении темы
-            }
+            error = null;
+            return true;
         }
-
-        public IEnumerable<string> GetAvailableThemes()
+        catch (Exception ex)
         {
-            return new List<string>
-            {
-                "Theme_Light",
-                "Theme_Dark"
-            };
+            error = ex;
+            return false;
         }
+    }
 
-        private static string NormalizeThemeKey(string themeKey)
-        {
-            return themeKey switch
-            {
-                "Light" => "Theme_Light",
-                "Dark" => "Theme_Dark",
-                "Theme_Light" => "Theme_Light",
-                "Theme_Dark" => "Theme_Dark",
-                _ => string.Empty
-            };
-        }
+    private void ReportThemeLoadFailure(Exception exception)
+    {
+        _ = asyncOperationErrorHandler.ExecuteAsync(
+            () => Task.FromException(exception),
+            "Error_ThemeLoadFailed");
     }
 }

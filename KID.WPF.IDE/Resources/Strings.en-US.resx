@@ -145,6 +145,9 @@
   <data name="Error_SettingsSaveFailed" xml:space="preserve">
     <value>Failed to save settings: {0}</value>
   </data>
+  <data name="Error_ThemeLoadFailed" xml:space="preserve">
+    <value>Failed to load the selected theme: {0}</value>
+  </data>
   <data name="Error_RunFailed" xml:space="preserve">
     <value>Execution error: {0}</value>
   </data>

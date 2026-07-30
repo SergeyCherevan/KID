@@ -1,30 +1,36 @@
+using System;
 using KID.Services.CodeEditor.Interfaces;
-using KID.Services.Initialize.Interfaces;
+using KID.Services.Themes;
 using RoslynPad.Editor;
 
 namespace KID.Services.CodeEditor;
 
 /// <summary>
-/// Провайдер палитры подсветки: возвращает светлую или тёмную палитру в зависимости от Settings.ColorTheme.
+/// Возвращает палитру синтаксической подсветки, объявленную текущей XAML-темой.
 /// </summary>
-public class ClassificationHighlightColorsProvider : IClassificationHighlightColorsProvider
+public sealed class ClassificationHighlightColorsProvider : IClassificationHighlightColorsProvider
 {
     private static readonly ClassificationHighlightColors LightColors = new();
     private static readonly DarkClassificationHighlightColors DarkColors = new();
 
-    private readonly IWindowConfigurationService _windowConfigurationService;
+    private readonly App app;
 
-    /// <summary>
-    /// Создаёт провайдер.
-    /// </summary>
-    public ClassificationHighlightColorsProvider(IWindowConfigurationService windowConfigurationService)
+    public ClassificationHighlightColorsProvider(App app)
     {
-        _windowConfigurationService = windowConfigurationService ?? throw new System.ArgumentNullException(nameof(windowConfigurationService));
+        this.app = app ?? throw new ArgumentNullException(nameof(app));
     }
 
     /// <inheritdoc />
     public IClassificationHighlightColors GetColors() =>
-        string.Equals(_windowConfigurationService.Settings.ColorTheme, "Theme_Dark", System.StringComparison.OrdinalIgnoreCase)
-            ? DarkColors
-            : LightColors;
+        GetCurrentPaletteKind() switch
+        {
+            EditorPaletteKind.Dark => DarkColors,
+            EditorPaletteKind.Light => LightColors,
+            _ => LightColors
+        };
+
+    private EditorPaletteKind GetCurrentPaletteKind() =>
+        app.TryFindResource(ThemeResourceKeys.CodeEditorPaletteKind) is EditorPaletteKind paletteKind
+            ? paletteKind
+            : EditorPaletteKind.Light;
 }

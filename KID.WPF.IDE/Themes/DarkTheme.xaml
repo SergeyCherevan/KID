@@ -1,5 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:themes="clr-namespace:KID.Services.Themes">
+
+    <x:Static x:Key="CodeEditorPaletteKind" Member="themes:EditorPaletteKind.Dark" />
     
     <!-- Цвета -->
     <Color x:Key="WindowBackground">#1F1F1F</Color>

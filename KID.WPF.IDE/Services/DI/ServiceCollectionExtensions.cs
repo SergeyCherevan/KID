@@ -58,6 +58,7 @@ namespace KID.Services.DI
             services.AddSingleton<ILocalizationService, LocalizationService>();
 
             // Theme Service
+            services.AddSingleton<IThemeProviderService, ThemeProviderService>();
             services.AddSingleton<IThemeService, ThemeService>();
 
             // Font Provider Service

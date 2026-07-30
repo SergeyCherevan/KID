@@ -249,6 +249,7 @@
 - Отслеживание `HasUnsavedChanges`, `IsModified` для каждой вкладки
 - Метод `AddFile(path, content)` — создание новой вкладки через ICodeEditorFactory (или замена NewFile при открытии, если без изменений)
 - Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
+- Подписка на `IThemeService.ThemeChanged` для обновления палитры всех открытых редакторов
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
 ## 3.6. Подсистема обработки ошибок async-операций (Errors)
@@ -347,34 +348,46 @@
 
 ### Компоненты
 
-#### 4.1. ThemeService
+#### 4.1. ThemeProviderService
+**Файл:** `KID.WPF.IDE/Services/Themes/ThemeProviderService.cs`
+
+**Ответственность:**
+- Чтение каталога из `Resources/AvailableThemes.resx`
+- Валидация пар `LocalizationKey` / `ResourcePath`
+- Сохранение порядка тем, устранение дубликатов и Light-fallback
+- Поиск определения темы по стабильному ключу локализации
+
+#### 4.2. ThemeService
 **Файл:** `KID.WPF.IDE/Services/Themes/ThemeService.cs`
 
 **Ответственность:**
-- Применение тем оформления
-- Управление списком доступных тем
-- Локализация названий тем
+- Применение `ThemeDefinition`, полученного из provider
+- Загрузка XAML-словаря и сохранение только успешно применённой темы
+- Публикация `ThemeChanged`
+- Миграция старых значений `Light` и `Dark`
 
 **Основные методы:**
-- `ApplyTheme(string themeKey)` — применяет тему
-- `GetAvailableThemes()` — получает список тем
+- `ApplyTheme(string localizationKey)` — разрешает определение темы и применяет его
 
 **Особенности:**
 - Загружает ResourceDictionary из XAML файлов
 - Очищает предыдущие темы перед применением новой
-- Поддерживает Light и Dark темы
+- Сохраняет `LocalizationKey` темы только после успешной загрузки
+- При неизвестной или повреждённой теме использует Light-fallback
 
 **Доступные темы:**
 - Light — светлая тема
 - Dark — тёмная тема
 
-#### 4.2. Файлы тем
+#### 4.3. Файлы тем
 
 **LightTheme.xaml** (`KID.WPF.IDE/Themes/LightTheme.xaml`)
 - Светлая цветовая схема
 - Определяет кисти, цвета, стили для светлой темы
+- Предоставляет `EditorPaletteKind.Light` для RoslynPad
 
 **DarkTheme.xaml** (`KID.WPF.IDE/Themes/DarkTheme.xaml`)
+- Предоставляет `EditorPaletteKind.Dark` для RoslynPad
 - Тёмная цветовая схема
 - Определяет кисти, цвета, стили для тёмной темы
 

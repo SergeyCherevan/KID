@@ -67,8 +67,8 @@
 - Команды: NewFile, OpenFile, SaveFile, SaveAsFile, Run, Stop, Undo, Redo
 - Делегирует Save/SaveAs в CodeEditorsViewModel через `CurrentFileTab` и табовые команды (`SaveFileCommand`, `SaveAsFileCommand`)
 - Управление темами, языками интерфейса, шрифтом и размером шрифта
-- Хранит в `AvailableLanguages` и `AvailableThemes` универсальные строковые ключи локализации
-- Подписывается на события `IWindowConfigurationService`: `UILanguageSettingsChanged`, `ColorThemeSettingsChanged`, `FontSettingsChanged`
+- Хранит языки как строковые ключи, а темы как `ThemeDefinition`; каталог тем получает через `IThemeProviderService`
+- Подписывается на `IThemeService.ThemeChanged` и события настроек языка и шрифта
 - Состояние кнопок (IsStopButtonEnabled, CanUndo, CanRedo)
 - Зависимость от ICodeEditorsViewModel для работы с вкладками
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
@@ -80,7 +80,7 @@
 - Методы: AddFile, CloseFile, SelectFile, SetSyntaxHighlighting
 - Интеграция с AvalonEdit TextEditor (создаётся на каждую вкладку)
 - Создание RoslynCodeEditor через ICodeEditorFactory (RoslynCodeEditorFactory; шрифт из стилей и IWindowConfigurationService.Settings)
-- Подписка на FontSettingsChanged для обновления шрифта во всех вкладках; на ColorThemeSettingsChanged — для обновления ClassificationHighlightColors (светлая/тёмная палитра)
+- Подписка на `FontSettingsChanged` для обновления шрифта и на `IThemeService.ThemeChanged` для обновления палитры во всех открытых редакторах
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
 **ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
@@ -200,11 +200,15 @@
 **Расположение:** `KID.WPF.IDE/Services/Themes/`
 
 **ThemeService** (`ThemeService.cs`)
-- Управление темами оформления
-- Применение тем (Light, Dark)
-- Загрузка ResourceDictionary из XAML файлов
-- Возвращает список тем как универсальные ключи локализации (`Theme_*`)
-- После применения темы обновляет `IWindowConfigurationService` через API `SetColorTheme(...)`
+- Применяет выбранный `ThemeDefinition`, загружая его `ResourceDictionary`
+- Хранит только успешно применённую тему в `CurrentTheme`
+- После успешного применения сохраняет `LocalizationKey` через `SetColorTheme(...)` и публикует `ThemeChanged`
+- Разрешает legacy-значения `Light`/`Dark` и использует безопасную Light-тему как fallback
+
+**ThemeProviderService** (`ThemeProviderService.cs`)
+- Читает упорядоченный каталог тем из `Resources/AvailableThemes.resx`
+- Валидирует пары `LocalizationKey` / `ResourcePath`, устраняет дубликаты и предоставляет fallback
+- Отделяет список доступных тем от логики их применения
 
 **Файлы тем:**
 - `Themes/LightTheme.xaml` — светлая тема
@@ -218,8 +222,8 @@
 - Создание экземпляров RoslynCodeEditor (RoslynPad, наследник AvalonEdit TextEditor) с IntelliSense и подсветкой через Roslyn
 - Метод `Create(content, programmingLanguage)` — создаёт редактор, инициализирует через IRoslynHostService (workingDirectory, content)
 - **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; набор сборок и импортов получает от **IRoslynReferenceProvider** (KidIdeRoslynReferenceProvider: рефлексия над AppDomain, тот же источник, что и при выполнении кода)
-- **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — ClassificationHighlightColors из RoslynPad
-- Используется в CodeEditorsViewModel при AddFile; палитра подсветки привязывается к редактору из ViewModel (ClassificationHighlightColors) в зависимости от ColorTheme
+- **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — `ClassificationHighlightColors` из RoslynPad
+- `ClassificationHighlightColorsProvider` читает `EditorPaletteKind` из ресурсов активной XAML-темы и не зависит от строкового ключа темы
 
 #### 3.6. Initialize (Инициализация)
 
@@ -232,8 +236,8 @@
 - Настройки: язык, тема, шрифт, размер окна
 - `SetFont(fontFamilyName, fontSize)` — установка шрифта и уведомление подписчиков
 - `SetUILanguage(cultureCode)` — установка языка UI, сохранение и уведомление подписчиков
-- `SetColorTheme(themeKey)` — установка темы, сохранение и уведомление подписчиков
-- События: `FontSettingsChanged`, `UILanguageSettingsChanged`, `ColorThemeSettingsChanged`
+- `SetColorTheme(themeKey)` — сохранение ключа успешно применённой темы
+- События: `FontSettingsChanged`, `UILanguageSettingsChanged`; успешную смену темы сообщает `IThemeService.ThemeChanged`
 
 **WindowInitializationService** (`WindowInitializationService.cs`)
 - Инициализация всех компонентов при запуске

@@ -9,6 +9,7 @@ using KID.Services.CodeEditor.Interfaces;
 using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
+using KID.Services.Themes.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
 using RoslynPad.Editor;
@@ -24,6 +25,7 @@ namespace KID.ViewModels
         private readonly ICodeFileService codeFileService;
         private readonly ICodeEditorFactory codeEditorFactory;
         private readonly IClassificationHighlightColorsProvider classificationHighlightColorsProvider;
+        private readonly IThemeService themeService;
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
 
         /// <summary>
@@ -86,6 +88,7 @@ namespace KID.ViewModels
             ICodeFileService codeFileService,
             ICodeEditorFactory codeEditorFactory,
             IClassificationHighlightColorsProvider classificationHighlightColorsProvider,
+            IThemeService themeService,
             IAsyncOperationErrorHandler asyncOperationErrorHandler
         )
         {
@@ -93,10 +96,11 @@ namespace KID.ViewModels
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.codeEditorFactory = codeEditorFactory ?? throw new ArgumentNullException(nameof(codeEditorFactory));
             this.classificationHighlightColorsProvider = classificationHighlightColorsProvider ?? throw new ArgumentNullException(nameof(classificationHighlightColorsProvider));
+            this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
-            windowConfigurationService.ColorThemeSettingsChanged += OnColorThemeSettingsChanged;
+            themeService.ThemeChanged += OnThemeChanged;
 
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
@@ -376,7 +380,7 @@ namespace KID.ViewModels
             OnPropertyChanged(nameof(FontSize));
         }
 
-        private void OnColorThemeSettingsChanged(object? sender, EventArgs e)
+        private void OnThemeChanged(object? sender, EventArgs e)
         {
             OnPropertyChanged(nameof(ClassificationHighlightColors));
             var colors = ClassificationHighlightColors;
