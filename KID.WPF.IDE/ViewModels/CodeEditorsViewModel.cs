@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 using KID.Models;
-using KID.Services.CodeEditor;
 using KID.Services.CodeEditor.Interfaces;
 using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
@@ -24,10 +23,8 @@ namespace KID.ViewModels
         private readonly IWindowConfigurationService windowConfigurationService;
         private readonly ICodeFileService codeFileService;
         private readonly ICodeEditorFactory codeEditorFactory;
+        private readonly IClassificationHighlightColorsProvider classificationHighlightColorsProvider;
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
-
-        private static readonly ClassificationHighlightColors LightHighlightColors = new();
-        private static readonly DarkClassificationHighlightColors DarkHighlightColors = new();
 
         /// <summary>
         /// Коллекция открытых вкладок.
@@ -66,9 +63,7 @@ namespace KID.ViewModels
 
         /// <inheritdoc />
         public IClassificationHighlightColors ClassificationHighlightColors =>
-            string.Equals(windowConfigurationService.Settings.ColorTheme, "Theme_Dark", StringComparison.OrdinalIgnoreCase)
-                ? DarkHighlightColors
-                : LightHighlightColors;
+            classificationHighlightColorsProvider.GetColors();
 
         public bool CanUndo => CurrentFileTab?.CodeEditor?.CanUndo ?? false;
 
@@ -90,12 +85,14 @@ namespace KID.ViewModels
             IWindowConfigurationService windowConfigurationService,
             ICodeFileService codeFileService,
             ICodeEditorFactory codeEditorFactory,
+            IClassificationHighlightColorsProvider classificationHighlightColorsProvider,
             IAsyncOperationErrorHandler asyncOperationErrorHandler
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.codeEditorFactory = codeEditorFactory ?? throw new ArgumentNullException(nameof(codeEditorFactory));
+            this.classificationHighlightColorsProvider = classificationHighlightColorsProvider ?? throw new ArgumentNullException(nameof(classificationHighlightColorsProvider));
             this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
