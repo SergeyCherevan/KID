@@ -14,19 +14,19 @@ namespace KID.Services.CodeEditor
     public class RoslynCodeEditorFactory : ICodeEditorFactory
     {
         private readonly IRoslynHostService _roslynHostService;
-        private readonly IWindowConfigurationService _windowConfigurationService;
+        private readonly IClassificationHighlightColorsProvider _highlightColorsProvider;
 
         /// <summary>
         /// Создаёт экземпляр фабрики.
         /// </summary>
         /// <param name="roslynHostService">Сервис RoslynHost с настройками ссылок и импортов.</param>
-        /// <param name="windowConfigurationService">Сервис настроек окна (шрифт, тема).</param>
+        /// <param name="highlightColorsProvider">Провайдер палитры подсветки в зависимости от темы.</param>
         public RoslynCodeEditorFactory(
             IRoslynHostService roslynHostService,
-            IWindowConfigurationService windowConfigurationService)
+            IClassificationHighlightColorsProvider highlightColorsProvider)
         {
             _roslynHostService = roslynHostService ?? throw new System.ArgumentNullException(nameof(roslynHostService));
-            _windowConfigurationService = windowConfigurationService ?? throw new System.ArgumentNullException(nameof(windowConfigurationService));
+            _highlightColorsProvider = highlightColorsProvider ?? throw new System.ArgumentNullException(nameof(highlightColorsProvider));
         }
 
         /// <inheritdoc />
@@ -34,11 +34,12 @@ namespace KID.Services.CodeEditor
         {
             var workingDirectory = Directory.GetCurrentDirectory();
             var roslynHost = _roslynHostService.GetHost();
+            var highlightColors = _highlightColorsProvider.GetColors();
             var editor = new RoslynCodeEditor();
 #pragma warning disable VSTHRD002 // Синхронное ожидание: ICodeEditorFactory.Create синхронный; при необходимости вынести инициализацию в асинхронный сценарий.
             _ = editor.InitializeAsync(
                     roslynHost,
-                    new ClassificationHighlightColors(),
+                    highlightColors,
                     workingDirectory,
                     content ?? string.Empty,
                     SourceCodeKind.Regular)
@@ -46,6 +47,7 @@ namespace KID.Services.CodeEditor
                 .GetResult();
 #pragma warning restore VSTHRD002
 
+            editor.ClassificationHighlightColors = highlightColors;
             editor.ShowLineNumbers = true;
             editor.WordWrap = true;
 

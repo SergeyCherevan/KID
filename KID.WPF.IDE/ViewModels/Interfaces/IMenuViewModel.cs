@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using KID.Models;
 using KID.ViewModels.Infrastructure;
 using System.Windows.Input;
 
@@ -8,6 +10,7 @@ namespace KID.ViewModels.Interfaces
         bool CanStop { get; set; }
         bool CanUndo { get; }
         bool CanRedo { get; }
+        ObservableCollection<ThemeDefinition> AvailableThemes { get; }
 
         ICommand NewFileCommand { get; }
         ICommand OpenFileCommand { get; }
@@ -19,7 +22,7 @@ namespace KID.ViewModels.Interfaces
         RelayCommand UndoCommand { get; }
         RelayCommand RedoCommand { get; }
         ICommand ChangeLanguageCommand { get; }
-        ICommand ChangeThemeCommand { get; }
+        RelayCommand<ThemeDefinition> ChangeThemeCommand { get; }
         ICommand ChangeFontCommand { get; }
         ICommand ChangeFontSizeCommand { get; }
     }

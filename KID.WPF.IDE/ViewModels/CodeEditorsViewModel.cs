@@ -9,8 +9,10 @@ using KID.Services.CodeEditor.Interfaces;
 using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
+using KID.Services.Themes.Interfaces;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
+using RoslynPad.Editor;
 
 namespace KID.ViewModels
 {
@@ -22,9 +24,9 @@ namespace KID.ViewModels
         private readonly IWindowConfigurationService windowConfigurationService;
         private readonly ICodeFileService codeFileService;
         private readonly ICodeEditorFactory codeEditorFactory;
+        private readonly IClassificationHighlightColorsProvider classificationHighlightColorsProvider;
+        private readonly IThemeService themeService;
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
-
-
 
         /// <summary>
         /// Коллекция открытых вкладок.
@@ -61,6 +63,10 @@ namespace KID.ViewModels
             ? windowConfigurationService.Settings.FontSize
             : 14.0;
 
+        /// <inheritdoc />
+        public IClassificationHighlightColors ClassificationHighlightColors =>
+            classificationHighlightColorsProvider.GetColors();
+
         public bool CanUndo => CurrentFileTab?.CodeEditor?.CanUndo ?? false;
 
         public bool CanRedo => CurrentFileTab?.CodeEditor?.CanRedo ?? false;
@@ -81,15 +87,20 @@ namespace KID.ViewModels
             IWindowConfigurationService windowConfigurationService,
             ICodeFileService codeFileService,
             ICodeEditorFactory codeEditorFactory,
+            IClassificationHighlightColorsProvider classificationHighlightColorsProvider,
+            IThemeService themeService,
             IAsyncOperationErrorHandler asyncOperationErrorHandler
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.codeEditorFactory = codeEditorFactory ?? throw new ArgumentNullException(nameof(codeEditorFactory));
+            this.classificationHighlightColorsProvider = classificationHighlightColorsProvider ?? throw new ArgumentNullException(nameof(classificationHighlightColorsProvider));
+            this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
+            themeService.ThemeChanged += OnThemeChanged;
 
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
@@ -360,6 +371,18 @@ namespace KID.ViewModels
         {
             OnPropertyChanged(nameof(FontFamily));
             OnPropertyChanged(nameof(FontSize));
+        }
+
+        private void OnThemeChanged(object? sender, EventArgs e)
+        {
+            OnPropertyChanged(nameof(ClassificationHighlightColors));
+            var colors = ClassificationHighlightColors;
+            foreach (var tab in OpenedFiles)
+            {
+                if (tab.CodeEditor is RoslynCodeEditor roslynEditor)
+                    roslynEditor.ClassificationHighlightColors = colors;
+            }
+            OnPropertyChanged(nameof(CurrentFileTab));
         }
 
         private void RaiseTabCommandsCanExecute()

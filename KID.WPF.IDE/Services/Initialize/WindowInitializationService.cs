@@ -66,16 +66,7 @@ namespace KID.Services.Initialize
 
         private void InitializeTheme()
         {
-            // Применяем тему из настроек
-            if (!string.IsNullOrEmpty(windowConfigurationService.Settings.ColorTheme))
-            {
-                themeService.ApplyTheme(windowConfigurationService.Settings.ColorTheme);
-            }
-            else
-            {
-                // Если тема не указана, используем светлую по умолчанию
-                themeService.ApplyTheme("Theme_Light");
-            }
+            themeService.ApplyTheme(windowConfigurationService.Settings.ColorTheme);
         }
 
         private void InitializeLanguage()

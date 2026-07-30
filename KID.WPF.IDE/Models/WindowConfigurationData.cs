@@ -6,7 +6,7 @@ namespace KID.Models
     public class WindowConfigurationData
     {
         // Цветовая тема
-        public string ColorTheme { get; set; } = "Light"; // Light, Dark
+        public string ColorTheme { get; set; } = "Theme_Light";
 
         // Язык интерфейса
         public string UILanguage { get; set; } = "ru-RU"; // ru-RU, en-US, uk-UA

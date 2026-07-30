@@ -19,8 +19,6 @@ namespace KID.Services.Initialize
         public event EventHandler? FontSettingsChanged;
         /// <inheritdoc />
         public event EventHandler? UILanguageSettingsChanged;
-        /// <inheritdoc />
-        public event EventHandler? ColorThemeSettingsChanged;
 
         public WindowConfigurationService(IAsyncOperationErrorHandler asyncOperationErrorHandler)
         {
@@ -150,7 +148,6 @@ namespace KID.Services.Initialize
 
             Settings.ColorTheme = themeKey;
             SaveSettings();
-            ColorThemeSettingsChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void ExecuteWithErrorHandling(Action action, string errorMessageKey)

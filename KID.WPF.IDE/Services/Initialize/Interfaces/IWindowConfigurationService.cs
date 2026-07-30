@@ -25,11 +25,6 @@ namespace KID.Services.Initialize.Interfaces
         event EventHandler UILanguageSettingsChanged;
 
         /// <summary>
-        /// Событие при изменении цветовой темы.
-        /// </summary>
-        event EventHandler ColorThemeSettingsChanged;
-
-        /// <summary>
         /// Устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков.
         /// Если fontFamilyName или fontSize равны null, сохраняет текущие значения из Settings.
         /// </summary>
@@ -41,7 +36,7 @@ namespace KID.Services.Initialize.Interfaces
         void SetUILanguage(string cultureCode);
 
         /// <summary>
-        /// Устанавливает ключ темы, сохраняет настройки и уведомляет подписчиков.
+        /// Устанавливает ключ темы и сохраняет настройки.
         /// </summary>
         void SetColorTheme(string themeKey);
     }

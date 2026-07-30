@@ -249,6 +249,7 @@
 - Отслеживание `HasUnsavedChanges`, `IsModified` для каждой вкладки
 - Метод `AddFile(path, content)` — создание новой вкладки через ICodeEditorFactory (или замена NewFile при открытии, если без изменений)
 - Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
+- Подписка на `IThemeService.ThemeChanged` для обновления палитры всех открытых редакторов
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
 ## 3.6. Подсистема обработки ошибок async-операций (Errors)
@@ -347,34 +348,46 @@
 
 ### Компоненты
 
-#### 4.1. ThemeService
+#### 4.1. ThemeProviderService
+**Файл:** `KID.WPF.IDE/Services/Themes/ThemeProviderService.cs`
+
+**Ответственность:**
+- Чтение каталога из `Resources/AvailableThemes.resx`
+- Валидация пар `LocalizationKey` / `ResourcePath`
+- Сохранение порядка тем, устранение дубликатов и Light-fallback
+- Поиск определения темы по стабильному ключу локализации
+
+#### 4.2. ThemeService
 **Файл:** `KID.WPF.IDE/Services/Themes/ThemeService.cs`
 
 **Ответственность:**
-- Применение тем оформления
-- Управление списком доступных тем
-- Локализация названий тем
+- Применение `ThemeDefinition`, полученного из provider
+- Загрузка XAML-словаря и сохранение только успешно применённой темы
+- Публикация `ThemeChanged`
+- Миграция старых значений `Light` и `Dark`
 
 **Основные методы:**
-- `ApplyTheme(string themeKey)` — применяет тему
-- `GetAvailableThemes()` — получает список тем
+- `ApplyTheme(string localizationKey)` — разрешает определение темы и применяет его
 
 **Особенности:**
 - Загружает ResourceDictionary из XAML файлов
 - Очищает предыдущие темы перед применением новой
-- Поддерживает Light и Dark темы
+- Сохраняет `LocalizationKey` темы только после успешной загрузки
+- При неизвестной или повреждённой теме использует Light-fallback
 
 **Доступные темы:**
 - Light — светлая тема
 - Dark — тёмная тема
 
-#### 4.2. Файлы тем
+#### 4.3. Файлы тем
 
 **LightTheme.xaml** (`KID.WPF.IDE/Themes/LightTheme.xaml`)
 - Светлая цветовая схема
 - Определяет кисти, цвета, стили для светлой темы
+- Предоставляет `EditorPaletteKind.Light` для RoslynPad
 
 **DarkTheme.xaml** (`KID.WPF.IDE/Themes/DarkTheme.xaml`)
+- Предоставляет `EditorPaletteKind.Dark` для RoslynPad
 - Тёмная цветовая схема
 - Определяет кисти, цвета, стили для тёмной темы
 
@@ -431,6 +444,7 @@
 
 **Файлы:**
 - `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
+- `KID.WPF.IDE/Services/CodeEditor/DarkClassificationHighlightColors.cs` — палитра синтаксической подсветки для тёмной темы (фон #1E1E1E, в духе VS Dark)
 - `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — создание и кэширование RoslynHost; набор ссылок и импортов берёт из IRoslynReferenceProvider
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynReferenceProvider.cs` — интерфейс провайдера сборок и типов для импортов
@@ -441,12 +455,13 @@
 - **IRoslynReferenceProvider / KidIdeRoslynReferenceProvider:** формирует список сборок и типов для глобальных usings через рефлексию над загруженным доменом — тот же источник, что и при компиляции кода (CSharpCompiler).
 - **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost; получает сборки и типы от провайдера, передаёт в RoslynHostReferences, создаёт хост с additionalAssemblies для RoslynPad (MEF).
 - **ICodeEditorFactory / RoslynCodeEditorFactory:** создание экземпляров RoslynCodeEditor с вызовом Initialize(roslynHost, colors, workingDirectory, content). ShowLineNumbers, WordWrap; шрифт и тема через стили в CodeEditorsView.xaml.
+- **Тёмная тема редактора:** фон редактора в DarkTheme.xaml — #1E1E1E; палитра подсветки — DarkClassificationHighlightColors. CodeEditorsViewModel.ClassificationHighlightColors возвращает ClassificationHighlightColors (светлая) или DarkClassificationHighlightColors (тёмная) в зависимости от Settings.ColorTheme; привязка к RoslynCodeEditor через стиль в CodeEditorsView.xaml. При смене темы подписка на ColorThemeSettingsChanged обновляет свойство.
 
 **Связи:**
 - RoslynHostService зависит от IRoslynReferenceProvider
 - RoslynCodeEditorFactory зависит от IRoslynHostService и IWindowConfigurationService
 - Используется в CodeEditorsViewModel при создании вкладок (AddFile)
-- Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize)
+- Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize, ClassificationHighlightColors)
 
 #### 6.3. WindowInitializationService
 **Файл:** `KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs`
