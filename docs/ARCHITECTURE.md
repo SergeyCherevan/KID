@@ -203,7 +203,7 @@
 - Применяет выбранный `ThemeDefinition`, загружая его `ResourceDictionary`
 - Хранит только успешно применённую тему в `CurrentTheme`
 - После успешного применения сохраняет `LocalizationKey` через `SetColorTheme(...)` и публикует `ThemeChanged`
-- Разрешает legacy-значения `Light`/`Dark` и использует безопасную Light-тему как fallback
+- Использует безопасную Light-тему как fallback
 
 **ThemeProviderService** (`ThemeProviderService.cs`)
 - Читает упорядоченный каталог тем из `Resources/AvailableThemes.resx`
