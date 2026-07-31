@@ -94,7 +94,7 @@
         <Grid SnapsToDevicePixels="True">
             <Border x:Name="ItemBorder"
                     MinWidth="180"
-                    MinHeight="28"
+                    MinHeight="26"
                     Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}">
@@ -183,7 +183,7 @@
     <ControlTemplate x:Key="SubmenuItemTemplate" TargetType="{x:Type MenuItem}">
         <Border x:Name="ItemBorder"
                 MinWidth="180"
-                MinHeight="28"
+                MinHeight="26"
                 Background="{TemplateBinding Background}"
                 BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}"
@@ -244,7 +244,7 @@
         <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
         <Setter Property="FontFamily" Value="Segoe UI" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontSize" Value="12" />
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />
     </Style>
 
@@ -253,17 +253,19 @@
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
         <Setter Property="BorderBrush" Value="Transparent" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="10,5" />
+        <Setter Property="Padding" Value="10,3" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Template" Value="{StaticResource SubmenuItemTemplate}" />
         <Style.Triggers>
             <Trigger Property="Role" Value="TopLevelHeader">
                 <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
+                <Setter Property="Padding" Value="10,2" />
                 <Setter Property="Template" Value="{StaticResource TopLevelMenuHeaderTemplate}" />
             </Trigger>
             <Trigger Property="Role" Value="TopLevelItem">
                 <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
+                <Setter Property="Padding" Value="10,2" />
                 <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}" />
             </Trigger>
             <Trigger Property="Role" Value="SubmenuHeader">
