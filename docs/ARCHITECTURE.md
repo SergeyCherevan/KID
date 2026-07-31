@@ -203,7 +203,7 @@
 - Применяет выбранный `ThemeDefinition`, загружая его `ResourceDictionary`
 - Хранит только успешно применённую тему в `CurrentTheme`
 - После успешного применения сохраняет `LocalizationKey` через `SetColorTheme(...)` и публикует `ThemeChanged`
-- Разрешает legacy-значения `Light`/`Dark` и использует безопасную Light-тему как fallback
+- Использует безопасную Light-тему как fallback
 
 **ThemeProviderService** (`ThemeProviderService.cs`)
 - Читает упорядоченный каталог тем из `Resources/AvailableThemes.resx`
@@ -223,7 +223,7 @@
 - Метод `Create(content, programmingLanguage)` — создаёт редактор, инициализирует через IRoslynHostService (workingDirectory, content)
 - **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; набор сборок и импортов получает от **IRoslynReferenceProvider** (KidIdeRoslynReferenceProvider: рефлексия над AppDomain, тот же источник, что и при выполнении кода)
 - **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — `ClassificationHighlightColors` из RoslynPad
-- `ClassificationHighlightColorsProvider` читает `EditorPaletteKind` из ресурсов активной XAML-темы и не зависит от строкового ключа темы
+- `ClassificationHighlightColorsProvider` получает готовый `IClassificationHighlightColors` из ресурсов активной XAML-темы по ключу `CodeEditorClassificationColors` и не зависит от строкового ключа темы
 
 #### 3.6. Initialize (Инициализация)
 
