@@ -66,6 +66,17 @@ public sealed class ThemeService : IThemeService
             if (app.Resources == null)
                 throw new InvalidOperationException("Application resources are not available.");
 
+            /*
+             * ВАЖНО: Clear() удаляет не только словарь предыдущей темы, но вообще все
+             * словари из Application.Resources.MergedDictionaries. Сейчас это допустимо,
+             * пока коллекция содержит только словарь темы. Если в будущем сюда будут
+             * добавлены общие стили, иконки, локализация или ресурсы сторонних библиотек,
+             * они также будут удалены при переключении темы.
+             *
+             * Возможные решения на будущее: хранить ссылку на активный словарь темы и
+             * заменять только его; выделить для темы отдельный словарь-контейнер; либо
+             * находить тематический словарь по Source/маркеру и сохранять остальные.
+             */
             app.Resources.MergedDictionaries.Clear();
             app.Resources.MergedDictionaries.Add(themeDictionary);
 
