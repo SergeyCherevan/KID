@@ -3,6 +3,10 @@
                     xmlns:codeEditor="clr-namespace:KID.Services.CodeEditor"
                     xmlns:roslyn="clr-namespace:RoslynPad.Editor;assembly=RoslynPad.Editor.Windows">
 
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="MenuStyles.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
     <roslyn:ClassificationHighlightColors
         x:Key="{x:Static codeEditor:ClassificationHighlightColorsProvider.CodeEditorClassificationColors}" />
     
@@ -18,6 +22,17 @@
     <Color x:Key="ConsoleForeground">White</Color>
     <Color x:Key="CanvasBackground">#D3D3D3</Color>
     <Color x:Key="WindowBorder">#2B2B2B</Color>
+
+    <!-- Семантические цвета меню и кнопок окна -->
+    <Color x:Key="MenuPopupBackground">#F5F7FC</Color>
+    <Color x:Key="MenuItemHoverBackground">#AEBCE5</Color>
+    <Color x:Key="MenuItemPressedBackground">#92A4D8</Color>
+    <Color x:Key="MenuItemDisabledText">#626978</Color>
+    <Color x:Key="MenuBorder">#5D6B99</Color>
+    <Color x:Key="MenuSeparator">#8E9CC3</Color>
+    <Color x:Key="MenuIndicator">#243866</Color>
+    <Color x:Key="WindowButtonHoverBackground">#BEE6FD</Color>
+    <Color x:Key="WindowButtonPressedForeground">#2B3F6C</Color>
 
     <!-- Цвета вкладок редактора -->
     <Color x:Key="TabActiveBackground">#F5CC84</Color>
@@ -40,6 +55,15 @@
     <SolidColorBrush x:Key="ConsoleTextBrush" Color="{StaticResource ConsoleForeground}" />
     <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource CanvasBackground}" />
     <SolidColorBrush x:Key="WindowBorderBrush" Color="{StaticResource WindowBorder}" />
+    <SolidColorBrush x:Key="MenuPopupBrush" Color="{StaticResource MenuPopupBackground}" />
+    <SolidColorBrush x:Key="MenuItemHoverBrush" Color="{StaticResource MenuItemHoverBackground}" />
+    <SolidColorBrush x:Key="MenuItemPressedBrush" Color="{StaticResource MenuItemPressedBackground}" />
+    <SolidColorBrush x:Key="MenuItemDisabledTextBrush" Color="{StaticResource MenuItemDisabledText}" />
+    <SolidColorBrush x:Key="MenuBorderBrush" Color="{StaticResource MenuBorder}" />
+    <SolidColorBrush x:Key="MenuSeparatorBrush" Color="{StaticResource MenuSeparator}" />
+    <SolidColorBrush x:Key="MenuIndicatorBrush" Color="{StaticResource MenuIndicator}" />
+    <SolidColorBrush x:Key="WindowButtonHoverBrush" Color="{StaticResource WindowButtonHoverBackground}" />
+    <SolidColorBrush x:Key="WindowButtonPressedForegroundBrush" Color="{StaticResource WindowButtonPressedForeground}" />
     <SolidColorBrush x:Key="TabActiveBrush" Color="{StaticResource TabActiveBackground}" />
     <SolidColorBrush x:Key="TabInactiveBrush" Color="{StaticResource TabInactiveBackground}" />
     <SolidColorBrush x:Key="TabBarBackgroundBrush" Color="{StaticResource TabBarBackground}" />
@@ -49,13 +73,6 @@
     <!-- Стили элементов -->
     <Style TargetType="Window">
         <Setter Property="Background" Value="{StaticResource WindowBrush}"/>
-    </Style>
-
-    <Style TargetType="Menu">
-        <Setter Property="Background" Value="{StaticResource MenuBrush}" />
-        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-        <Setter Property="FontFamily" Value="Segoe UI"/>
-        <Setter Property="FontSize" Value="13"/>
     </Style>
 
     <Style TargetType="TextBox">
@@ -88,10 +105,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#bee6fd"/>
+                            <Setter Property="Background" Value="{DynamicResource WindowButtonHoverBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Foreground" Value="#2b3f6c"/>
+                            <Setter Property="Foreground" Value="{DynamicResource WindowButtonPressedForegroundBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
