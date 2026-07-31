@@ -12,11 +12,9 @@
         <converters:InverseBooleanConverter x:Key="InverseBooleanConverter" />
         <converters:EqualityToBoolConverter x:Key="EqualityToBoolConverter" />
         <converters:LocalizationKeyToTextConverter x:Key="LocalizationKeyToTextConverter" />
-        <Style x:Key="ThemedSubmenuItemStyle" TargetType="{x:Type MenuItem}">
-            <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-        </Style>
+        <Style x:Key="SelectableMenuItemStyle"
+               TargetType="{x:Type MenuItem}"
+               BasedOn="{StaticResource {x:Type MenuItem}}" />
     </UserControl.Resources>
 
     <UserControl.DataContext>
@@ -41,7 +39,7 @@
                 <MenuItem Header="{localization:Localization Menu_Theme}" 
                          ItemsSource="{Binding AvailableThemes}">
                     <MenuItem.ItemContainerStyle>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource ThemedSubmenuItemStyle}">
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource SelectableMenuItemStyle}">
                             <Setter Property="Header">
                                 <Setter.Value>
                                     <MultiBinding Converter="{StaticResource LocalizationKeyToTextConverter}" Mode="OneWay">
@@ -67,7 +65,7 @@
                 <MenuItem Header="{localization:Localization Menu_ChangeLanguage}" 
                          ItemsSource="{Binding AvailableLanguages}">
                     <MenuItem.ItemContainerStyle>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource ThemedSubmenuItemStyle}">
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource SelectableMenuItemStyle}">
                             <Setter Property="Header">
                                 <Setter.Value>
                                     <MultiBinding Converter="{StaticResource LocalizationKeyToTextConverter}" Mode="OneWay">
@@ -93,7 +91,7 @@
                 <MenuItem Header="{localization:Localization Menu_Font}" 
                          ItemsSource="{Binding AvailableFonts}">
                     <MenuItem.ItemContainerStyle>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource ThemedSubmenuItemStyle}">
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource SelectableMenuItemStyle}">
                             <Setter Property="Header" Value="{Binding}" />
                             <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeFontCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
@@ -112,7 +110,7 @@
                 <MenuItem Header="{localization:Localization Menu_FontSize}" 
                          ItemsSource="{Binding AvailableFontSizes}">
                     <MenuItem.ItemContainerStyle>
-                        <Style TargetType="MenuItem" BasedOn="{StaticResource ThemedSubmenuItemStyle}">
+                        <Style TargetType="MenuItem" BasedOn="{StaticResource SelectableMenuItemStyle}">
                             <Setter Property="Header" Value="{Binding}" />
                             <Setter Property="IsCheckable" Value="True" />
                             <Setter Property="Command" Value="{Binding DataContext.ChangeFontSizeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
