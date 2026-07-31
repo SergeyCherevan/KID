@@ -5,5 +5,5 @@ namespace KID.Services.Themes;
 /// </summary>
 public static class ThemeResourceKeys
 {
-    public const string CodeEditorPaletteKind = nameof(CodeEditorPaletteKind);
+    public const string CodeEditorClassificationColors = nameof(CodeEditorClassificationColors);
 }

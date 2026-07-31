@@ -384,10 +384,10 @@
 **LightTheme.xaml** (`KID.WPF.IDE/Themes/LightTheme.xaml`)
 - Светлая цветовая схема
 - Определяет кисти, цвета, стили для светлой темы
-- Предоставляет `EditorPaletteKind.Light` для RoslynPad
+- Предоставляет готовый `ClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
 
 **DarkTheme.xaml** (`KID.WPF.IDE/Themes/DarkTheme.xaml`)
-- Предоставляет `EditorPaletteKind.Dark` для RoslynPad
+- Предоставляет готовый `DarkClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
 - Тёмная цветовая схема
 - Определяет кисти, цвета, стили для тёмной темы
 

@@ -223,7 +223,7 @@
 - Метод `Create(content, programmingLanguage)` — создаёт редактор, инициализирует через IRoslynHostService (workingDirectory, content)
 - **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; набор сборок и импортов получает от **IRoslynReferenceProvider** (KidIdeRoslynReferenceProvider: рефлексия над AppDomain, тот же источник, что и при выполнении кода)
 - **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — `ClassificationHighlightColors` из RoslynPad
-- `ClassificationHighlightColorsProvider` читает `EditorPaletteKind` из ресурсов активной XAML-темы и не зависит от строкового ключа темы
+- `ClassificationHighlightColorsProvider` получает готовый `IClassificationHighlightColors` из ресурсов активной XAML-темы по ключу `CodeEditorClassificationColors` и не зависит от строкового ключа темы
 
 #### 3.6. Initialize (Инициализация)
 
