@@ -35,8 +35,7 @@ public sealed class ThemeService : IThemeService
 
     public void ApplyTheme(string? localizationKey)
     {
-        var migratedKey = LegacyThemeKeyMigrator.Migrate(localizationKey);
-        var requestedTheme = themeProviderService.TryGetTheme(migratedKey, out var resolvedTheme)
+        var requestedTheme = themeProviderService.TryGetTheme(localizationKey, out var resolvedTheme)
             ? resolvedTheme
             : themeProviderService.GetDefaultTheme();
 
