@@ -89,8 +89,7 @@ public class DarkClassificationHighlightColors : IClassificationHighlightColors
     /// <summary>Стиль для статических символов (жирный).</summary>
     public HighlightingColor StaticSymbolBrush { get; protected set; } = new HighlightingColor
     {
-        FontWeight = FontWeights.Bold,
-        Foreground = new SimpleHighlightingBrush(DefaultForeground)
+        FontWeight = FontWeights.Bold
     };
 
     private readonly Lazy<ImmutableDictionary<string, HighlightingColor>> _map;
