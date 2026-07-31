@@ -377,7 +377,7 @@ namespace KID.ViewModels
         {
             OnPropertyChanged(nameof(ClassificationHighlightColors));
             var colors = ClassificationHighlightColors;
-            foreach (var tab in OpenedFiles)
+            foreach (var tab in OpenedFileTabs)
             {
                 if (tab.CodeEditor is RoslynCodeEditor roslynEditor)
                     roslynEditor.ClassificationHighlightColors = colors;

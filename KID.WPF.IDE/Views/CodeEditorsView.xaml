@@ -177,7 +177,7 @@
                         </Style.Triggers>
                     </Style>
                 </ScrollViewer.Resources>
-                <ItemsControl ItemsSource="{Binding OpenedFiles}">
+                <ItemsControl ItemsSource="{Binding OpenedFileTabs}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Orientation="Horizontal"/>
