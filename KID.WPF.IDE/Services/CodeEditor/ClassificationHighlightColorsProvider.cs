@@ -1,7 +1,6 @@
 using System;
 using KID.Services.CodeEditor.Interfaces;
 using RoslynPad.Editor;
-using KID.Services.Themes;
 
 namespace KID.Services.CodeEditor;
 
@@ -10,6 +9,8 @@ namespace KID.Services.CodeEditor;
 /// </summary>
 public sealed class ClassificationHighlightColorsProvider : IClassificationHighlightColorsProvider
 {
+    public const string CodeEditorClassificationColors = nameof(CodeEditorClassificationColors);
+
     private static readonly ClassificationHighlightColors LightColors = new();
 
     private readonly App app;
@@ -21,7 +22,7 @@ public sealed class ClassificationHighlightColorsProvider : IClassificationHighl
 
     /// <inheritdoc />
     public IClassificationHighlightColors GetColors() =>
-        app.TryFindResource(ThemeResourceKeys.CodeEditorClassificationColors)
+        app.TryFindResource(CodeEditorClassificationColors)
             is IClassificationHighlightColors colors
                 ? colors
                 : LightColors;
