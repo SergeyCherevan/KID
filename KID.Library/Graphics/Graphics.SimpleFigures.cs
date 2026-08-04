@@ -7,6 +7,29 @@ namespace KID
 {
     public static partial class Graphics
     {
+        public static Rectangle Plot(double x, double y)
+        {
+            return DispatcherManager.InvokeOnUI(() =>
+            {
+                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                var point = new Rectangle
+                {
+                    Width = 1,
+                    Height = 1,
+                    Fill = fillBrush,
+                    SnapsToDevicePixels = true
+                };
+                Canvas.SetLeft(point, x);
+                Canvas.SetTop(point, y);
+                Canvas.Children.Add(point);
+                return point;
+            });
+        }
+        public static Rectangle Plot(Point point)
+        {
+            return Plot(point.X, point.Y);
+        }
+
         public static Ellipse Circle(double x, double y, double radius)
         {
             return DispatcherManager.InvokeOnUI(() =>
