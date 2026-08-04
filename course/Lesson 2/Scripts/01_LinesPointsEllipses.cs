@@ -7,11 +7,11 @@ Console.WriteLine("Линии, точки и эллипсы");
 Graphics.Color = "DarkBlue";
 Graphics.Line(50, 50, 250, 50);
 
-// Несколько «точек» — маленьких кругов
+// Несколько точек
 Graphics.Color = "Red";
-Graphics.Circle(80, 120, 2);
-Graphics.Circle(150, 120, 2);
-Graphics.Circle(220, 120, 2);
+Graphics.Plot(80, 120);
+Graphics.Plot(150, 120);
+Graphics.Plot(220, 120);
 
 // Эллипс (овал)
 Graphics.Color = "ForestGreen";
