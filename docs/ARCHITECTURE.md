@@ -39,9 +39,9 @@
 **Расположение:** `KID.WPF.IDE/Views/`
 
 Компоненты:
-- **MainWindow.xaml** — главное окно приложения
+- **MainWindow.xaml** — главное окно приложения; code-behind перехватывает `Closing` и асинхронно проверяет вкладки до фактического закрытия
 - **MenuView.xaml** — меню приложения
-- **CodeEditorsView.xaml** — панель с вкладками открытых файлов (ItemsControl для вкладок, ContentControl для редактора активной вкладки на базе AvalonEdit)
+- **CodeEditorsView.xaml** — панель с вкладками открытых файлов (ItemsControl для вкладок, ContentControl для редактора активной вкладки на базе AvalonEdit); изменённые вкладки отображаются со звёздочкой
 - **ConsoleOutputView.xaml** — панель консольного вывода
 - **GraphicsOutputView.xaml** — панель графического вывода
 
@@ -75,12 +75,14 @@
 
 **CodeEditorsViewModel** (`CodeEditorsViewModel.cs`)
 - Управление панелью редакторов с вкладками
-- Свойства: OpenedFiles, CurrentFileTab, FontFamily, FontSize, ClassificationHighlightColors (палитра подсветки в зависимости от темы), CanUndo, CanRedo
+- Свойства: `OpenedFileTabs`, `CurrentFileTab`, `FontFamily`, `FontSize`, `ClassificationHighlightColors`, `CanUndo`, `CanRedo`
 - Команды: Undo, Redo, CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
-- Методы: AddFile, CloseFile, SelectFile, SetSyntaxHighlighting
+- Методы: `CreateAndAddFileTabAsync`, `CloseFileTabAsync`, `SelectFileTab`, `RestoreSessionAsync`, `PrepareForApplicationCloseAsync`
 - Интеграция с AvalonEdit TextEditor (создаётся на каждую вкладку)
 - Создание RoslynCodeEditor через ICodeEditorFactory (RoslynCodeEditorFactory; шрифт из стилей и IWindowConfigurationService.Settings)
 - Подписка на `FontSettingsChanged` для обновления шрифта и на `IThemeService.ThemeChanged` для обновления палитры во всех открытых редакторах
+- Отслеживание `CurrentContent`/`SavedContent`, диалог при закрытии изменённой вкладки и последовательная проверка всех вкладок при выходе
+- Координация recovery-снимка сессии: debounce 750 мс после последнего изменения и обязательная запись не реже одного раза в 5 секунд при непрерывных изменениях
 - Обработка ошибок async-операций через IAsyncOperationErrorHandler
 
 **ConsoleOutputViewModel** (`ConsoleOutputViewModel.cs`)
@@ -150,12 +152,26 @@
 
 **CodeFileService** (`CodeFileService.cs`)
 - `OpenCodeFileWithPathAsync(string filter)` — открывает файл через диалог, возвращает `OpenFileResult?` (содержимое и путь)
+- `ReadFromPathAsync(string filePath)` — читает файл без диалога при восстановлении чистой вкладки
 - `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
 - `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
 - `IsNewFilePath(string path)` — возвращает true для нового несохранённого файла
 - `CodeFileFilter` — единый локализуемый фильтр для диалогов файлов кода
+- Разрешает сохранение пустого или состоящего только из пробелов содержимого; проверяется путь, а не текст
 - Использует FileDialogService для диалогов
 - Использует FileService для чтения/записи
+
+**EditorSessionService** (`EditorSessionService.cs`)
+- Реализует `IEditorSessionService` с операциями `LoadAsync()` и `SaveAsync(EditorSessionData)`
+- Хранит recovery-снимок в `%APPDATA%/KID/editor-session.json`
+- Сериализует полный снимок во временный файл и только после завершения записи заменяет основной JSON
+- Использует `SemaphoreSlim` для последовательных чтений и записей внутри одного процесса
+- Проверяет `EditorSessionData.Version`; неизвестная версия считается ошибкой восстановления
+
+**UnsavedChangesDialogService** (`UnsavedChangesDialogService.cs`)
+- Показывает локализованный WPF-диалог `Save / Discard / Cancel`
+- Возвращает независимый от `MessageBoxResult` enum `UnsavedChangesDecision`
+- Используется одной и той же логикой закрытия отдельной вкладки и всего приложения
 
 #### 3.2.1. Errors (Обработка ошибок async-операций)
 
@@ -220,7 +236,7 @@
 
 **ICodeEditorFactory** / **RoslynCodeEditorFactory** (`RoslynCodeEditorFactory.cs`)
 - Создание экземпляров RoslynCodeEditor (RoslynPad, наследник AvalonEdit TextEditor) с IntelliSense и подсветкой через Roslyn
-- Метод `Create(content, programmingLanguage)` — создаёт редактор, инициализирует через IRoslynHostService (workingDirectory, content)
+- Метод `CreateAsync(content, programmingLanguage)` — получает `RoslynHost` и активную палитру через `IRoslynHostService`/`IClassificationHighlightColorsProvider`, затем ожидает `RoslynCodeEditor.InitializeAsync(...)`
 - **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; набор сборок и импортов получает от **IRoslynReferenceProvider** (KidIdeRoslynReferenceProvider: рефлексия над AppDomain, тот же источник, что и при выполнении кода)
 - **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — `ClassificationHighlightColors` из RoslynPad
 - `ClassificationHighlightColorsProvider` получает готовый `IClassificationHighlightColors` из ресурсов активной XAML-темы по ключу `CodeEditorClassificationColors` и не зависит от строкового ключа темы
@@ -242,7 +258,8 @@
 **WindowInitializationService** (`WindowInitializationService.cs`)
 - Инициализация всех компонентов при запуске
 - Применение настроек из конфигурации
-- Инициализация редактора, консоли, графики
+- Восстановление последней сессии редактора; если снимка нет или ни одна вкладка не восстановлена — создание вкладки из шаблона
+- Инициализация консоли и обновление главного окна
 
 #### 3.7. Dependency Injection (DI)
 
@@ -253,6 +270,7 @@
 - Метод `AddKIDServices()` регистрирует:
   - Сервисы выполнения кода
   - Сервисы работы с файлами
+  - `IEditorSessionService` и `IUnsavedChangesDialogService`
   - Сервисы локализации и тем
   - Все ViewModels
   - Конфигурационные сервисы
@@ -281,8 +299,13 @@
 
 **OpenedFileTab** (`OpenedFileTab.cs`)
 - Модель вкладки открытого файла
-- Свойства: FilePath, Content, SavedContent, IsModified, CodeEditor, FileName
-- Методы: NotifyContentChanged, UpdateSavedContent
+- Свойства: `FilePath`, `CurrentContent`, `SavedContent`, вычисляемый `IsModified`, `CodeEditor`, `FileName`, `DisplayName`
+- Методы: `NotifyContentChanged`, `UpdateSavedContent`, `RestoreSavedContent`
+- `DisplayName` добавляет `*` к имени изменённой вкладки
+
+**EditorSessionData / EditorSessionTabData** (`EditorSessionData.cs`)
+- DTO recovery-снимка с версией схемы, индексом активной вкладки и упорядоченным списком вкладок
+- Для каждой вкладки хранит `FilePath`, `Content` и `SavedContent`; пара текстов восстанавливает вычисляемое dirty-состояние
 
 **AvailableLanguage** (`AvailableLanguage.cs`)
 - Модель доступного языка
@@ -453,12 +476,52 @@ ServiceCollection.AddKIDServices()
          ↓
 MainWindow загружается
          ↓
-WindowInitializationService.Initialize()
+WindowInitializationService.InitializeAsync()
          ↓
 Загрузка настроек → Применение темы → Применение языка
          ↓
-Инициализация редактора, консоли, графики
+EditorSessionService.LoadAsync()
+         ↓
+Восстановление вкладок и активного индекса
+         ↓
+Fallback: новая вкладка из шаблона, если сессия отсутствует
+         ↓
+Инициализация консоли
 ```
+
+### Autosave и recovery сессии
+
+```
+Изменение текста / вкладок / активного индекса / состояния Save
+         ↓
+CodeEditorsViewModel.ScheduleSessionSave()
+         ↓
+750 мс после паузы ИЛИ максимум 5 секунд непрерывных изменений
+         ↓
+EditorSessionData (FilePath + Content + SavedContent)
+         ↓
+EditorSessionService.SaveAsync()
+         ↓
+временный JSON → %APPDATA%/KID/editor-session.json
+```
+
+Recovery-файл не заменяет явный `Save`: autosave не перезаписывает пользовательские `.cs`-файлы. При восстановлении чистая дисковая вкладка перечитывается из исходного файла, а вкладка с `Content != SavedContent` восстанавливает несохранённый текст из снимка.
+
+### Безопасное закрытие
+
+```
+MainWindow.OnClosing()
+         ↓ e.Cancel = true
+CodeEditorsViewModel.PrepareForApplicationCloseAsync()
+         ↓
+Save / Discard / Cancel для каждой изменённой вкладки
+         ↓
+принудительный финальный снимок сессии
+         ↓
+повторный Close() с флагом подтверждения
+```
+
+Отмена `Save As` эквивалентна отмене закрытия. При `Discard` во время выхода текст сначала возвращается к `SavedContent`, чтобы отвергнутые изменения не появились после следующего запуска.
 
 ## Dependency Injection
 
@@ -481,6 +544,8 @@ WindowInitializationService.Initialize()
 - Mouse API собирает события в UI потоке и доставляет обработчики в фоновом потоке
 - Keyboard API собирает события в UI потоке и доставляет обработчики в фоновом потоке
 - TextBoxConsole использует `DispatcherManager.InvokeOnUI()` для работы с TextBox
+- `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
+- `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса
 - Выполнение кода происходит в отдельном потоке (Task.Run)
 - CancellationToken используется для безопасной отмены выполнения
 
