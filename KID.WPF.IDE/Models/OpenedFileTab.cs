@@ -92,6 +92,6 @@ namespace KID.Models
         /// <summary>
         /// Имя вкладки со звёздочкой при наличии несохранённых изменений.
         /// </summary>
-        public string DisplayName => IsModified ? $"{FileName} *" : FileName;
+        public string DisplayName => IsModified ? $"{FileName}*" : FileName;
     }
 }
