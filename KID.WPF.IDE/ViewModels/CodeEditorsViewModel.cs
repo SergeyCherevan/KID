@@ -24,6 +24,9 @@ namespace KID.ViewModels
     /// </summary>
     public class CodeEditorsViewModel : ViewModelBase, ICodeEditorsViewModel
     {
+        private static readonly TimeSpan SessionSaveDebounceInterval = TimeSpan.FromMilliseconds(750);
+        private static readonly TimeSpan SessionSaveMaximumInterval = TimeSpan.FromSeconds(5);
+
         private readonly IWindowConfigurationService windowConfigurationService;
         private readonly ICodeFileService codeFileService;
         private readonly ICodeEditorFactory codeEditorFactory;
@@ -32,8 +35,10 @@ namespace KID.ViewModels
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
         private readonly IUnsavedChangesDialogService unsavedChangesDialogService;
         private readonly IEditorSessionService editorSessionService;
-        private readonly DispatcherTimer sessionSaveTimer;
+        private readonly DispatcherTimer sessionSaveDebounceTimer;
+        private readonly DispatcherTimer sessionSaveMaximumIntervalTimer;
         private bool isRestoringSession;
+        private bool hasPendingSessionChanges;
 
         /// <summary>
         /// Коллекция открытых вкладок.
@@ -111,11 +116,17 @@ namespace KID.ViewModels
             this.unsavedChangesDialogService = unsavedChangesDialogService ?? throw new ArgumentNullException(nameof(unsavedChangesDialogService));
             this.editorSessionService = editorSessionService ?? throw new ArgumentNullException(nameof(editorSessionService));
 
-            sessionSaveTimer = new DispatcherTimer
+            sessionSaveDebounceTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromMilliseconds(750)
+                Interval = SessionSaveDebounceInterval
             };
-            sessionSaveTimer.Tick += OnSessionSaveTimerTick;
+            sessionSaveDebounceTimer.Tick += OnSessionSaveTimerTick;
+
+            sessionSaveMaximumIntervalTimer = new DispatcherTimer
+            {
+                Interval = SessionSaveMaximumInterval
+            };
+            sessionSaveMaximumIntervalTimer.Tick += OnSessionSaveTimerTick;
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
             themeService.ThemeChanged += OnThemeChanged;
@@ -369,6 +380,8 @@ namespace KID.ViewModels
             windowConfigurationService.Settings.TemplateCode = content;
             windowConfigurationService.Settings.TemplateName = tab.FilePath;
             windowConfigurationService.SaveSettings();
+            RaiseTabCommandsCanExecute();
+            ScheduleSessionSave();
         }
 
         private async Task<bool> ExecuteSaveFileAsync(OpenedFileTab tab)
@@ -415,7 +428,7 @@ namespace KID.ViewModels
         /// <inheritdoc />
         public async Task<bool> PrepareForApplicationCloseAsync()
         {
-            sessionSaveTimer.Stop();
+            StopSessionSaveTimers();
 
             foreach (var tab in OpenedFileTabs.ToList())
             {
@@ -426,8 +439,9 @@ namespace KID.ViewModels
                 }
             }
 
-            sessionSaveTimer.Stop();
+            StopSessionSaveTimers();
             await editorSessionService.SaveAsync(CreateSessionSnapshot());
+            hasPendingSessionChanges = false;
             return true;
         }
 
@@ -534,17 +548,31 @@ namespace KID.ViewModels
             if (isRestoringSession)
                 return;
 
-            sessionSaveTimer.Stop();
-            sessionSaveTimer.Start();
+            hasPendingSessionChanges = true;
+            sessionSaveDebounceTimer.Stop();
+            sessionSaveDebounceTimer.Start();
+
+            if (!sessionSaveMaximumIntervalTimer.IsEnabled)
+                sessionSaveMaximumIntervalTimer.Start();
         }
 
         private void OnSessionSaveTimerTick(object? sender, EventArgs e)
         {
-            sessionSaveTimer.Stop();
+            StopSessionSaveTimers();
+            if (!hasPendingSessionChanges)
+                return;
+
+            hasPendingSessionChanges = false;
             var snapshot = CreateSessionSnapshot();
             _ = asyncOperationErrorHandler.ExecuteAsync(
                 () => editorSessionService.SaveAsync(snapshot),
                 "Error_SessionSaveFailed");
+        }
+
+        private void StopSessionSaveTimers()
+        {
+            sessionSaveDebounceTimer.Stop();
+            sessionSaveMaximumIntervalTimer.Stop();
         }
 
         private void OnFontSettingsChanged(object? sender, EventArgs e)
