@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Interop;
 using KID.ViewModels.Infrastructure;
 using KID.ViewModels.Interfaces;
+using KID.Services.Errors.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.WindowInterop.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,7 @@ namespace KID
     public partial class MainWindow : Window, IClosable
     {
         private readonly IWindowInitializationService _windowInitializationService;
+        private readonly IAsyncOperationErrorHandler _asyncOperationErrorHandler;
         private readonly IMainWindowWinAPIInteropService _windowInteropService;
 
         public MainWindow()
@@ -25,6 +27,7 @@ namespace KID
                 throw new InvalidOperationException("ServiceProvider is not initialized");
 
             _windowInitializationService = App.ServiceProvider.GetRequiredService<IWindowInitializationService>();
+            _asyncOperationErrorHandler = App.ServiceProvider.GetRequiredService<IAsyncOperationErrorHandler>();
             _windowInteropService = App.ServiceProvider.GetRequiredService<IMainWindowWinAPIInteropService>();
 
             SourceInitialized += OnSourceInitialized;
@@ -33,11 +36,25 @@ namespace KID
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            _windowInitializationService?.Initialize();
+            _ = InitializeAfterLoadedAsync();
+        }
 
-            if (DataContext is IMainViewModel mainViewModel)
+        private async Task InitializeAfterLoadedAsync()
+        {
+            try
             {
-                mainViewModel.RequestDragMove += DragMove;
+                await _windowInitializationService.InitializeAsync();
+
+                if (DataContext is IMainViewModel mainViewModel)
+                {
+                    mainViewModel.RequestDragMove += DragMove;
+                }
+            }
+            catch (Exception ex)
+            {
+                await _asyncOperationErrorHandler.ExecuteAsync(
+                    () => Task.FromException(ex),
+                    "Error_InitializationFailed");
             }
         }
 

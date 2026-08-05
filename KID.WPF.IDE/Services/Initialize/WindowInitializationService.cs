@@ -47,7 +47,7 @@ namespace KID.Services.Initialize
             this.mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
         }
 
-        public void Initialize()
+        public async Task InitializeAsync()
         {
             windowConfigurationService.SetConfigurationFromFile();
             windowConfigurationService.SetDefaultCode();
@@ -58,7 +58,7 @@ namespace KID.Services.Initialize
             // Применяем язык интерфейса из настроек
             InitializeLanguage();
             
-            InitializeCodeEditor();
+            await InitializeCodeEditorAsync();
             InitializeConsole();
 
             mainWindow.UpdateLayout();
@@ -78,13 +78,13 @@ namespace KID.Services.Initialize
             }
         }
 
-        private void InitializeCodeEditor()
+        private async Task InitializeCodeEditorAsync()
         {
             if (codeEditorsViewModel == null || windowConfigurationService?.Settings == null)
                 return;
 
             var templateCode = windowConfigurationService.Settings.TemplateCode ?? string.Empty;
-            codeEditorsViewModel.CreateAndAddFileTab(codeFileService.NewFilePath, templateCode);
+            await codeEditorsViewModel.CreateAndAddFileTabAsync(codeFileService.NewFilePath, templateCode);
         }
 
         private void InitializeConsole()

@@ -8,7 +8,7 @@ namespace KID.Services.Initialize.Interfaces
 {
     public interface IWindowInitializationService
     {
-        public void Initialize();
+        Task InitializeAsync();
 
     }
 }

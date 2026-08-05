@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
 using KID.Models;
@@ -43,12 +44,12 @@ namespace KID.ViewModels.Interfaces
         /// <summary>
         /// Добавляет файл в новую вкладку или переключается на уже открытый.
         /// </summary>
-        void CreateAndAddFileTab(string path, string content);
+        Task CreateAndAddFileTabAsync(string path, string content);
 
         /// <summary>
         /// Закрывает вкладку.
         /// </summary>
-        void CloseFileTab(OpenedFileTab tab);
+        Task CloseFileTabAsync(OpenedFileTab tab);
 
         /// <summary>
         /// Делает вкладку текущей.

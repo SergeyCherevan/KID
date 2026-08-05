@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
+using System.Threading.Tasks;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
 using KID.Services.CodeEditor.Interfaces;
@@ -25,7 +26,7 @@ namespace KID.Services.CodeEditor
         }
 
         /// <inheritdoc />
-        public TextEditor Create(string content, string programmingLanguage)
+        public Task<TextEditor> CreateAsync(string content, string programmingLanguage)
         {
             var settings = windowConfigurationService.Settings;
             var syntaxHighlighting = HighlightingManager.Instance.GetDefinition(programmingLanguage);
@@ -38,7 +39,7 @@ namespace KID.Services.CodeEditor
                 SyntaxHighlighting = syntaxHighlighting,
             };
 
-            return codeEditor;
+            return Task.FromResult(codeEditor);
         }
     }
 }

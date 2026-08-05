@@ -126,7 +126,12 @@ namespace KID.ViewModels
                 CurrentFileTab.CodeEditor.Redo();
         }
 
-        private void ExecuteCloseFile(OpenedFileTab tab) => CloseFileTab(tab);
+        private void ExecuteCloseFile(OpenedFileTab tab)
+        {
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                () => CloseFileTabAsync(tab),
+                "Error_EditorInitializationFailed");
+        }
 
         private void ExecuteSelectFile(OpenedFileTab tab) => SelectFileTab(tab);
 
@@ -233,11 +238,13 @@ namespace KID.ViewModels
         }
 
 
-        public void CreateAndAddFileTab(string path, string content)
+        public async Task CreateAndAddFileTabAsync(string path, string content)
         {
             var normalizedPath = path ?? codeFileService.NewFilePath;
 
-            var codeEditor = codeEditorFactory.Create(content, windowConfigurationService.Settings.ProgrammingLanguage);
+            var codeEditor = await codeEditorFactory.CreateAsync(
+                content,
+                windowConfigurationService.Settings.ProgrammingLanguage);
             var tab = new OpenedFileTab
             {
                 FilePath = normalizedPath,
@@ -265,7 +272,7 @@ namespace KID.ViewModels
         }
 
         /// <inheritdoc />
-        public void CloseFileTab(OpenedFileTab tab)
+        public async Task CloseFileTabAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFileTabs.Contains(tab))
                 return;
@@ -276,7 +283,7 @@ namespace KID.ViewModels
             if (OpenedFileTabs.Count == 0)
             {
                 var templateCode = windowConfigurationService?.Settings?.TemplateCode ?? string.Empty;
-                CreateAndAddFileTab(codeFileService.NewFilePath, templateCode);
+                await CreateAndAddFileTabAsync(codeFileService.NewFilePath, templateCode);
             }
             else
             {

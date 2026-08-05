@@ -151,6 +151,12 @@
   <data name="Error_RunFailed" xml:space="preserve">
     <value>Помилка при виконанні: {0}</value>
   </data>
+  <data name="Error_EditorInitializationFailed" xml:space="preserve">
+    <value>Не вдалося ініціалізувати редактор коду: {0}</value>
+  </data>
+  <data name="Error_InitializationFailed" xml:space="preserve">
+    <value>Не вдалося ініціалізувати застосунок: {0}</value>
+  </data>
   <data name="Menu_ChangeLanguage" xml:space="preserve">
     <value>Змінити мову</value>
   </data>

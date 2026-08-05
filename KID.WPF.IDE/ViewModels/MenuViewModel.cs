@@ -195,6 +195,13 @@ namespace KID.ViewModels
 
         private void ExecuteNewFile()
         {
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                ExecuteNewFileAsync,
+                "Error_EditorInitializationFailed");
+        }
+
+        private async Task ExecuteNewFileAsync()
+        {
             if (windowConfigurationService?.Settings == null ||
                 codeEditorsViewModel == null ||
                 consoleOutputViewModel == null ||
@@ -203,7 +210,7 @@ namespace KID.ViewModels
                 return;
 
             var code = windowConfigurationService.Settings.TemplateCode;
-            codeEditorsViewModel.CreateAndAddFileTab(codeFileService.NewFilePath, code ?? string.Empty);
+            await codeEditorsViewModel.CreateAndAddFileTabAsync(codeFileService.NewFilePath, code ?? string.Empty);
             if (!CanStop)
             {
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
@@ -232,7 +239,7 @@ namespace KID.ViewModels
                     && codeFileService.IsNewFilePath(onlyTab.FilePath)
                     && !onlyTab.IsModified;
 
-                codeEditorsViewModel.CreateAndAddFileTab(result.FilePath, result.Code);
+                await codeEditorsViewModel.CreateAndAddFileTabAsync(result.FilePath, result.Code);
                 if (!CanStop)
                 {
                     consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
@@ -240,7 +247,7 @@ namespace KID.ViewModels
                 }
 
                 if (shouldReplaceNewFile)
-                    codeEditorsViewModel.CloseFileTab(onlyTab!);
+                    await codeEditorsViewModel.CloseFileTabAsync(onlyTab!);
             }
         }
 

@@ -1,4 +1,5 @@
 using ICSharpCode.AvalonEdit;
+using System.Threading.Tasks;
 
 namespace KID.Services.CodeEditor.Interfaces
 {
@@ -14,6 +15,6 @@ namespace KID.Services.CodeEditor.Interfaces
         /// <param name="content">Начальное содержимое редактора.</param>
         /// <param name="programmingLanguage">Язык программирования для подсветки синтаксиса (например, "C#").</param>
         /// <returns>Сконфигурированный экземпляр TextEditor.</returns>
-        TextEditor Create(string content, string programmingLanguage);
+        Task<TextEditor> CreateAsync(string content, string programmingLanguage);
     }
 }

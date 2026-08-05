@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using ICSharpCode.AvalonEdit;
 using KID.Services.CodeEditor.Interfaces;
@@ -30,22 +31,18 @@ namespace KID.Services.CodeEditor
         }
 
         /// <inheritdoc />
-        public TextEditor Create(string content, string programmingLanguage)
+        public async Task<TextEditor> CreateAsync(string content, string programmingLanguage)
         {
             var workingDirectory = Directory.GetCurrentDirectory();
             var roslynHost = _roslynHostService.GetHost();
             var highlightColors = _highlightColorsProvider.GetColors();
             var editor = new RoslynCodeEditor();
-#pragma warning disable VSTHRD002 // Синхронное ожидание: ICodeEditorFactory.Create синхронный; при необходимости вынести инициализацию в асинхронный сценарий.
-            _ = editor.InitializeAsync(
-                    roslynHost,
-                    highlightColors,
-                    workingDirectory,
-                    content ?? string.Empty,
-                    SourceCodeKind.Regular)
-                .GetAwaiter()
-                .GetResult();
-#pragma warning restore VSTHRD002
+            await editor.InitializeAsync(
+                roslynHost,
+                highlightColors,
+                workingDirectory,
+                content ?? string.Empty,
+                SourceCodeKind.Regular);
 
             editor.ClassificationHighlightColors = highlightColors;
             editor.ShowLineNumbers = true;
