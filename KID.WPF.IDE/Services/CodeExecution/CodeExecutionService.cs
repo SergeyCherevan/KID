@@ -32,38 +32,32 @@ namespace KID.Services.CodeExecution
 
             try
             {
-                context.Init();
-
-                var result = await compiler.CompileAsync(code, context.CancellationToken);
-                
-                if (result == null)
-                    throw new InvalidOperationException("Compilation result is null");
-
-                if (!result.Success)
-                {
-                    if (result.Errors != null)
-                    {
-                        foreach (var error in result.Errors)
-                        {
-                            if (error != null)
-                                Console.WriteLine(error);
-                        }
-                    }
-                    return;
-                }
-
-                if (result.Assembly == null)
-                    throw new InvalidOperationException("Compiled assembly is null");
-
                 try
                 {
+                    context.Init();
+
+                    var result = await compiler.CompileAsync(code, context.CancellationToken);
+
+                    if (result == null)
+                        throw new InvalidOperationException("Compilation result is null");
+
+                    if (!result.Success)
+                    {
+                        if (result.Errors != null)
+                        {
+                            foreach (var error in result.Errors)
+                            {
+                                if (error != null)
+                                    Console.WriteLine(error);
+                            }
+                        }
+                        return;
+                    }
+
+                    if (result.Assembly == null)
+                        throw new InvalidOperationException("Compiled assembly is null");
+
                     await runner.RunAsync(result.Assembly, context.CancellationToken);
-                }
-                catch
-                {
-                    // Ошибки выполнения обрабатываются в DefaultCodeRunner через Console
-                    // Здесь просто пробрасываем исключение дальше
-                    throw;
                 }
                 finally
                 {
