@@ -17,7 +17,7 @@ namespace KID.ViewModels.Infrastructure
     public class RelayCommand : IRaisableCommand
     {
         private readonly Action execute;
-        private readonly Func<bool> canExecute;
+        private readonly Func<bool>? canExecute;
         private event EventHandler? canExecuteChanged;
 
         public RelayCommand(Action execute, Func<bool>? canExecute = null)
@@ -26,7 +26,7 @@ namespace KID.ViewModels.Infrastructure
             this.canExecute = canExecute;
         }
 
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged
         {
             add => canExecuteChanged += value;
             remove => canExecuteChanged -= value;
@@ -38,12 +38,12 @@ namespace KID.ViewModels.Infrastructure
             canExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
             return canExecute == null || canExecute();
         }
 
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
             execute();
         }
@@ -61,7 +61,7 @@ namespace KID.ViewModels.Infrastructure
             this.canExecute = canExecute;
         }
 
-        public event EventHandler CanExecuteChanged
+        public event EventHandler? CanExecuteChanged
         {
             add => canExecuteChanged += value;
             remove => canExecuteChanged -= value;
@@ -73,30 +73,40 @@ namespace KID.ViewModels.Infrastructure
             canExecuteChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        public bool CanExecute(object parameter)
+        public bool CanExecute(object? parameter)
         {
-            if (canExecute == null)
-                return true;
-            
-            if (parameter == null && default(T) != null)
+            if (!TryGetParameter(parameter, out var typedParameter))
                 return false;
-            
-            try
-            {
-                return canExecute((T)parameter);
-            }
-            catch
-            {
-                return false;
-            }
+
+            return canExecute == null || canExecute(typedParameter);
         }
 
-        public void Execute(object parameter)
+        public void Execute(object? parameter)
         {
-            if (parameter == null && default(T) != null)
-                throw new ArgumentNullException(nameof(parameter));
-            
-            execute((T)parameter);
+            if (!TryGetParameter(parameter, out var typedParameter))
+                throw new ArgumentException(
+                    $"Command parameter must be of type {typeof(T).FullName}.",
+                    nameof(parameter));
+
+            execute(typedParameter);
+        }
+
+        private static bool TryGetParameter(object? parameter, out T typedParameter)
+        {
+            if (parameter is T value)
+            {
+                typedParameter = value;
+                return true;
+            }
+
+            if (parameter == null && default(T) == null)
+            {
+                typedParameter = default!;
+                return true;
+            }
+
+            typedParameter = default!;
+            return false;
         }
     }
 }

@@ -12,7 +12,12 @@ namespace KID.ViewModels
 {
     public class GraphicsOutputViewModel : ViewModelBase, IGraphicsOutputViewModel
     {
-        public Canvas GraphicsCanvasControl { get; private set; } = null!;
+        /// <summary>
+        /// Холст, на котором библиотека KID отображает графику пользовательской программы.
+        /// Контрол создаётся из XAML и передаётся методом <see cref="Initialize(Canvas)"/>,
+        /// поэтому до инициализации соответствующего View значение равно <see langword="null"/>.
+        /// </summary>
+        public Canvas? GraphicsCanvasControl { get; private set; }
 
         public double DefaultOutputViewMinWidth { get; private set; }
 

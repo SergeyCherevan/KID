@@ -19,6 +19,22 @@ namespace KID.Services.Errors
         }
 
         /// <inheritdoc />
+        public void Execute(Action action, string errorMessageKey)
+        {
+            if (action == null)
+                return;
+
+            try
+            {
+                action();
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex, errorMessageKey);
+            }
+        }
+
+        /// <inheritdoc />
         public async Task ExecuteAsync(Func<Task> asyncAction, string errorMessageKey)
         {
             if (asyncAction == null)
@@ -30,12 +46,17 @@ namespace KID.Services.Errors
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() => MessageBox.Show(
-                    string.Format(localizationService.GetString(errorMessageKey) ?? errorMessageKey, ex.Message),
-                    localizationService.GetString("Error_Title") ?? "Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error));
+                ShowError(ex, errorMessageKey);
             }
+        }
+
+        private void ShowError(Exception exception, string errorMessageKey)
+        {
+            Application.Current.Dispatcher.Invoke(() => MessageBox.Show(
+                string.Format(localizationService.GetString(errorMessageKey) ?? errorMessageKey, exception.Message),
+                localizationService.GetString("Error_Title") ?? "Error",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error));
         }
     }
 }

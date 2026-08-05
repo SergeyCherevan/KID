@@ -15,7 +15,12 @@ namespace KID.ViewModels
     {
         private readonly IWindowConfigurationService windowConfigurationService;
 
-        public TextBox ConsoleOutputControl { get; private set; }
+        /// <summary>
+        /// Текстовое поле, в которое выводятся сообщения пользовательской программы.
+        /// Контрол создаётся из XAML и передаётся методом <see cref="Initialize(TextBox)"/>,
+        /// поэтому до инициализации соответствующего View значение равно <see langword="null"/>.
+        /// </summary>
+        public TextBox? ConsoleOutputControl { get; private set; }
 
         public ConsoleOutputViewModel(IWindowConfigurationService windowConfigurationService)
         {

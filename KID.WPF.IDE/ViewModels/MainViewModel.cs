@@ -37,7 +37,7 @@ namespace KID.ViewModels
         public ICommand CloseCommand { get; }
         public ICommand DragMoveCommand { get; }
 
-        public event Action RequestDragMove;
+        public event Action? RequestDragMove;
 
         public MainViewModel()
         {

@@ -9,6 +9,13 @@ namespace KID.Services.Errors.Interfaces
     public interface IAsyncOperationErrorHandler
     {
         /// <summary>
+        /// Выполняет синхронное действие и показывает локализованную ошибку при исключении.
+        /// </summary>
+        /// <param name="action">Синхронное действие.</param>
+        /// <param name="errorMessageKey">Ключ локализации текста ошибки.</param>
+        void Execute(Action action, string errorMessageKey);
+
+        /// <summary>
         /// Выполняет асинхронное действие и показывает локализованную ошибку при исключении.
         /// </summary>
         /// <param name="asyncAction">Асинхронное действие.</param>

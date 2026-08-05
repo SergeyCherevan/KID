@@ -135,23 +135,23 @@ namespace KID.ViewModels
         private static bool CanSaveAndSetAsTemplate(OpenedFileTab? tab) =>
             tab != null && !string.IsNullOrEmpty(tab.CurrentContent);
 
-        private async void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
+        private void ExecuteSaveAndSetAsTemplate(OpenedFileTab tab)
         {
-            await asyncOperationErrorHandler.ExecuteAsync(
+            _ = asyncOperationErrorHandler.ExecuteAsync(
                 () => ExecuteSaveAndSetAsTemplateAsync(tab),
                 "Error_FileSaveFailed");
         }
 
-        private async void ExecuteSaveFile(OpenedFileTab tab)
+        private void ExecuteSaveFile(OpenedFileTab tab)
         {
-            await asyncOperationErrorHandler.ExecuteAsync(
+            _ = asyncOperationErrorHandler.ExecuteAsync(
                 () => ExecuteSaveFileAsync(tab),
                 "Error_FileSaveFailed");
         }
 
-        private async void ExecuteSaveAsFile(OpenedFileTab tab)
+        private void ExecuteSaveAsFile(OpenedFileTab tab)
         {
-            await asyncOperationErrorHandler.ExecuteAsync(
+            _ = asyncOperationErrorHandler.ExecuteAsync(
                 () => ExecuteSaveAsFileAsync(tab),
                 "Error_FileSaveFailed");
         }

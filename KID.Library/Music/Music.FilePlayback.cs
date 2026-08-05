@@ -44,9 +44,11 @@ namespace KID
                 // Если это URL, загружаем файл во временную папку
                 if (isUrl)
                 {
-                    actualPath = DownloadFileFromUrlAsync(filePath).GetAwaiter().GetResult();
-                    if (string.IsNullOrEmpty(actualPath))
+                    var downloadedPath = DownloadFileFromUrlAsync(filePath).GetAwaiter().GetResult();
+                    if (string.IsNullOrEmpty(downloadedPath))
                         return;
+
+                    actualPath = downloadedPath;
                 }
 
                 // Проверяем существование файла
@@ -80,7 +82,7 @@ namespace KID
         /// <summary>
         /// Загружает файл по URL во временную папку.
         /// </summary>
-        private static async Task<string> DownloadFileFromUrlAsync(string url)
+        private static async Task<string?> DownloadFileFromUrlAsync(string url)
         {
             try
             {

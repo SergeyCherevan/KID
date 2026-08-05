@@ -11,6 +11,6 @@ namespace KID.ViewModels.Interfaces
         ICommand MaximizeCommand { get; }
         ICommand CloseCommand { get; }
         ICommand DragMoveCommand { get; }
-        event Action RequestDragMove;
+        event Action? RequestDragMove;
     }
 }

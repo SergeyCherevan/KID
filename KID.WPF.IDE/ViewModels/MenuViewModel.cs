@@ -211,8 +211,9 @@ namespace KID.ViewModels
             }
         }
 
-        private async void ExecuteOpenFile() {
-            await asyncOperationErrorHandler.ExecuteAsync(ExecuteOpenFileAsync, "Error_FileOpenFailed");
+        private void ExecuteOpenFile()
+        {
+            _ = asyncOperationErrorHandler.ExecuteAsync(ExecuteOpenFileAsync, "Error_FileOpenFailed");
         }
 
         private async Task ExecuteOpenFileAsync()
@@ -278,7 +279,12 @@ namespace KID.ViewModels
             }
         }
 
-        private async void ExecuteRun()
+        private void ExecuteRun()
+        {
+            _ = asyncOperationErrorHandler.ExecuteAsync(ExecuteRunAsync, "Error_RunFailed");
+        }
+
+        private async Task ExecuteRunAsync()
         {
             if (codeEditorsViewModel == null || consoleOutputViewModel == null ||
                 graphicsOutputViewModel == null || canvasTextBoxContextFabric == null ||
@@ -294,13 +300,14 @@ namespace KID.ViewModels
                 consoleOutputViewModel.Clear();
                 graphicsOutputViewModel.Clear();
 
-                if (graphicsOutputViewModel.GraphicsCanvasControl == null ||
-                    consoleOutputViewModel.ConsoleOutputControl == null)
+                var graphicsCanvasControl = graphicsOutputViewModel.GraphicsCanvasControl;
+                var consoleOutputControl = consoleOutputViewModel.ConsoleOutputControl;
+                if (graphicsCanvasControl == null || consoleOutputControl == null)
                     return;
 
                 var context = canvasTextBoxContextFabric.Create(
-                    graphicsOutputViewModel.GraphicsCanvasControl,
-                    consoleOutputViewModel.ConsoleOutputControl,
+                    graphicsCanvasControl,
+                    consoleOutputControl,
                     cancellationSource.Token);
 
                 var currentFileTab = codeEditorsViewModel.CurrentFileTab;

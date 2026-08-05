@@ -9,7 +9,10 @@ namespace KID.ViewModels.Interfaces
 {
     public interface IGraphicsOutputViewModel
     {
-        Canvas GraphicsCanvasControl { get; }
+        /// <summary>
+        /// Холст для графики пользовательской программы; отсутствует до передачи контрола из View.
+        /// </summary>
+        Canvas? GraphicsCanvasControl { get; }
 
         /// <summary>
         /// Значение MinWidth правой панели вывода, считанное из XAML при инициализации.
@@ -21,6 +24,10 @@ namespace KID.ViewModels.Interfaces
         /// </summary>
         double DefaultOutputViewMinHeight { get; }
 
+        /// <summary>
+        /// Связывает ViewModel с холстом, созданным из XAML.
+        /// </summary>
+        /// <param name="graphicsCanvasControl">Холст для отображения графики программы.</param>
         void Initialize(Canvas graphicsCanvasControl);
 
         void Clear();

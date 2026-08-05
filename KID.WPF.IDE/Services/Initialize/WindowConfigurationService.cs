@@ -152,14 +152,7 @@ namespace KID.Services.Initialize
 
         private void ExecuteWithErrorHandling(Action action, string errorMessageKey)
         {
-            _asyncOperationErrorHandler
-                .ExecuteAsync(() =>
-                {
-                    action();
-                    return Task.CompletedTask;
-                }, errorMessageKey)
-                .GetAwaiter()
-                .GetResult();
+            _asyncOperationErrorHandler.Execute(action, errorMessageKey);
         }
     }
 }
