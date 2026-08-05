@@ -1,12 +1,15 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using KID.Models;
 using KID.Services.CodeEditor.Interfaces;
 using KID.Services.Errors.Interfaces;
+using KID.Services.Files;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Themes.Interfaces;
@@ -27,6 +30,10 @@ namespace KID.ViewModels
         private readonly IClassificationHighlightColorsProvider classificationHighlightColorsProvider;
         private readonly IThemeService themeService;
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
+        private readonly IUnsavedChangesDialogService unsavedChangesDialogService;
+        private readonly IEditorSessionService editorSessionService;
+        private readonly DispatcherTimer sessionSaveTimer;
+        private bool isRestoringSession;
 
         /// <summary>
         /// Коллекция открытых вкладок.
@@ -52,6 +59,7 @@ namespace KID.ViewModels
                     OnPropertyChanged(nameof(CanUndo));
                     OnPropertyChanged(nameof(CanRedo));
                     RaiseTabCommandsCanExecute();
+                    ScheduleSessionSave();
                 }
             }
         }
@@ -89,7 +97,9 @@ namespace KID.ViewModels
             ICodeEditorFactory codeEditorFactory,
             IClassificationHighlightColorsProvider classificationHighlightColorsProvider,
             IThemeService themeService,
-            IAsyncOperationErrorHandler asyncOperationErrorHandler
+            IAsyncOperationErrorHandler asyncOperationErrorHandler,
+            IUnsavedChangesDialogService unsavedChangesDialogService,
+            IEditorSessionService editorSessionService
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
@@ -98,6 +108,14 @@ namespace KID.ViewModels
             this.classificationHighlightColorsProvider = classificationHighlightColorsProvider ?? throw new ArgumentNullException(nameof(classificationHighlightColorsProvider));
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
+            this.unsavedChangesDialogService = unsavedChangesDialogService ?? throw new ArgumentNullException(nameof(unsavedChangesDialogService));
+            this.editorSessionService = editorSessionService ?? throw new ArgumentNullException(nameof(editorSessionService));
+
+            sessionSaveTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(750)
+            };
+            sessionSaveTimer.Tick += OnSessionSaveTimerTick;
 
             windowConfigurationService.FontSettingsChanged += OnFontSettingsChanged;
             themeService.ThemeChanged += OnThemeChanged;
@@ -130,12 +148,13 @@ namespace KID.ViewModels
         {
             _ = asyncOperationErrorHandler.ExecuteAsync(
                 () => CloseFileTabAsync(tab),
-                "Error_EditorInitializationFailed");
+                "Error_FileSaveFailed");
         }
 
         private void ExecuteSelectFile(OpenedFileTab tab) => SelectFileTab(tab);
 
-        private static bool CanSaveTab(OpenedFileTab? tab) => tab?.IsModified == true;
+        private bool CanSaveTab(OpenedFileTab? tab) =>
+            tab != null && (tab.IsModified || codeFileService.IsNewFilePath(tab.FilePath));
 
         private static bool CanSaveAndSetAsTemplate(OpenedFileTab? tab) =>
             tab != null && !string.IsNullOrEmpty(tab.CurrentContent);
@@ -179,6 +198,7 @@ namespace KID.ViewModels
             OpenedFileTabs.Move(index, index - 1);
             UpdateCurrentFileTabIndexAfterMove(index, index - 1);
             RaiseMoveTabCommandsCanExecute();
+            ScheduleSessionSave();
         }
 
         private void ExecuteMoveTabRight(OpenedFileTab tab)
@@ -193,6 +213,7 @@ namespace KID.ViewModels
             OpenedFileTabs.Move(index, index + 1);
             UpdateCurrentFileTabIndexAfterMove(index, index + 1);
             RaiseMoveTabCommandsCanExecute();
+            ScheduleSessionSave();
         }
 
         /*
@@ -238,9 +259,12 @@ namespace KID.ViewModels
         }
 
 
-        public async Task CreateAndAddFileTabAsync(string path, string content)
+        public async Task CreateAndAddFileTabAsync(string path, string content, string? savedContent = null)
         {
-            var normalizedPath = path ?? codeFileService.NewFilePath;
+            var normalizedPath = string.IsNullOrWhiteSpace(path)
+                ? codeFileService.NewFilePath
+                : path;
+            content ??= string.Empty;
 
             var codeEditor = await codeEditorFactory.CreateAsync(
                 content,
@@ -250,7 +274,7 @@ namespace KID.ViewModels
                 FilePath = normalizedPath,
                 CodeEditor = codeEditor
             };
-            tab.UpdateSavedContent(content);
+            tab.UpdateSavedContent(savedContent ?? content);
 
             codeEditor.TextChanged += (s, e) =>
             {
@@ -262,6 +286,8 @@ namespace KID.ViewModels
                     OnPropertyChanged(nameof(CanRedo));
                     RaiseTabCommandsCanExecute();
                 }
+
+                ScheduleSessionSave();
             };
 
             OpenedFileTabs.Add(tab);
@@ -269,13 +295,19 @@ namespace KID.ViewModels
             OnPropertyChanged(nameof(CurrentFileTab));
             OnPropertyChanged(nameof(CanUndo));
             OnPropertyChanged(nameof(CanRedo));
+            RaiseTabCommandsCanExecute();
+            RaiseMoveTabCommandsCanExecute();
+            ScheduleSessionSave();
         }
 
         /// <inheritdoc />
-        public async Task CloseFileTabAsync(OpenedFileTab tab)
+        public async Task<bool> CloseFileTabAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFileTabs.Contains(tab))
-                return;
+                return false;
+
+            if (!await ConfirmTabCloseAsync(tab, restoreSavedContentOnDiscard: false))
+                return false;
 
             var index = OpenedFileTabs.IndexOf(tab);
             OpenedFileTabs.Remove(tab);
@@ -295,6 +327,11 @@ namespace KID.ViewModels
                 OnPropertyChanged(nameof(CanUndo));
                 OnPropertyChanged(nameof(CanRedo));
             }
+
+            RaiseTabCommandsCanExecute();
+            RaiseMoveTabCommandsCanExecute();
+            ScheduleSessionSave();
+            return true;
         }
 
         /// <inheritdoc />
@@ -334,34 +371,30 @@ namespace KID.ViewModels
             windowConfigurationService.SaveSettings();
         }
 
-        private async Task ExecuteSaveFileAsync(OpenedFileTab tab)
+        private async Task<bool> ExecuteSaveFileAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFileTabs.Contains(tab) || codeFileService == null)
-                return;
+                return false;
 
             var content = tab.CurrentContent;
-            if (string.IsNullOrEmpty(content))
-                return;
-
             if (codeFileService.IsNewFilePath(tab.FilePath))
             {
-                await ExecuteSaveAsFileAsync(tab);
-                return;
+                return await ExecuteSaveAsFileAsync(tab);
             }
 
             await codeFileService.SaveToPathAsync(tab.FilePath, content);
             tab.UpdateSavedContent(content);
+            RaiseTabCommandsCanExecute();
+            ScheduleSessionSave();
+            return true;
         }
 
-        private async Task ExecuteSaveAsFileAsync(OpenedFileTab tab)
+        private async Task<bool> ExecuteSaveAsFileAsync(OpenedFileTab tab)
         {
             if (tab == null || !OpenedFileTabs.Contains(tab) || codeFileService == null)
-                return;
+                return false;
 
             var content = tab.CurrentContent;
-            if (string.IsNullOrEmpty(content))
-                return;
-
             var defaultFileName = codeFileService.IsNewFilePath(tab.FilePath)
                 ? "NewFile.cs"
                 : Path.GetFileName(tab.FilePath);
@@ -371,7 +404,147 @@ namespace KID.ViewModels
             {
                 tab.FilePath = savedPath;
                 tab.UpdateSavedContent(content);
+                RaiseTabCommandsCanExecute();
+                ScheduleSessionSave();
+                return true;
             }
+
+            return false;
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> PrepareForApplicationCloseAsync()
+        {
+            sessionSaveTimer.Stop();
+
+            foreach (var tab in OpenedFileTabs.ToList())
+            {
+                if (!await ConfirmTabCloseAsync(tab, restoreSavedContentOnDiscard: true))
+                {
+                    ScheduleSessionSave();
+                    return false;
+                }
+            }
+
+            sessionSaveTimer.Stop();
+            await editorSessionService.SaveAsync(CreateSessionSnapshot());
+            return true;
+        }
+
+        /// <inheritdoc />
+        public async Task<bool> RestoreSessionAsync()
+        {
+            var session = await editorSessionService.LoadAsync();
+            if (session?.Tabs == null || session.Tabs.Count == 0)
+                return false;
+
+            isRestoringSession = true;
+            var restoredSuccessfully = false;
+            try
+            {
+                foreach (var savedTab in session.Tabs)
+                {
+                    if (savedTab == null)
+                        continue;
+
+                    var path = string.IsNullOrWhiteSpace(savedTab.FilePath)
+                        ? codeFileService.NewFilePath
+                        : savedTab.FilePath;
+                    var content = savedTab.Content ?? string.Empty;
+                    var savedContent = savedTab.SavedContent ?? string.Empty;
+
+                    if (!codeFileService.IsNewFilePath(path) && content == savedContent)
+                    {
+                        var diskContent = await codeFileService.ReadFromPathAsync(path);
+                        if (diskContent != null)
+                        {
+                            content = diskContent;
+                            savedContent = diskContent;
+                        }
+                    }
+
+                    await CreateAndAddFileTabAsync(path, content, savedContent);
+                }
+
+                if (OpenedFileTabs.Count == 0)
+                    return false;
+
+                indexOfCurrentFileTab = Math.Clamp(
+                    session.ActiveTabIndex,
+                    0,
+                    OpenedFileTabs.Count - 1);
+                OnPropertyChanged(nameof(CurrentFileTab));
+                OnPropertyChanged(nameof(CanUndo));
+                OnPropertyChanged(nameof(CanRedo));
+                RaiseTabCommandsCanExecute();
+                RaiseMoveTabCommandsCanExecute();
+                restoredSuccessfully = true;
+                return true;
+            }
+            finally
+            {
+                isRestoringSession = false;
+                if (restoredSuccessfully)
+                    ScheduleSessionSave();
+            }
+        }
+
+        private async Task<bool> ConfirmTabCloseAsync(
+            OpenedFileTab tab,
+            bool restoreSavedContentOnDiscard)
+        {
+            if (!tab.IsModified)
+                return true;
+
+            CurrentFileTab = tab;
+            var decision = unsavedChangesDialogService.AskForSave(tab.FileName);
+            switch (decision)
+            {
+                case UnsavedChangesDecision.Save:
+                    return await ExecuteSaveFileAsync(tab);
+
+                case UnsavedChangesDecision.Discard:
+                    if (restoreSavedContentOnDiscard)
+                        tab.RestoreSavedContent();
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private EditorSessionData CreateSessionSnapshot()
+        {
+            return new EditorSessionData
+            {
+                ActiveTabIndex = OpenedFileTabs.Count == 0
+                    ? 0
+                    : Math.Clamp(indexOfCurrentFileTab, 0, OpenedFileTabs.Count - 1),
+                Tabs = OpenedFileTabs.Select(tab => new EditorSessionTabData
+                {
+                    FilePath = tab.FilePath,
+                    Content = tab.CurrentContent,
+                    SavedContent = tab.SavedContent
+                }).ToList()
+            };
+        }
+
+        private void ScheduleSessionSave()
+        {
+            if (isRestoringSession)
+                return;
+
+            sessionSaveTimer.Stop();
+            sessionSaveTimer.Start();
+        }
+
+        private void OnSessionSaveTimerTick(object? sender, EventArgs e)
+        {
+            sessionSaveTimer.Stop();
+            var snapshot = CreateSessionSnapshot();
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                () => editorSessionService.SaveAsync(snapshot),
+                "Error_SessionSaveFailed");
         }
 
         private void OnFontSettingsChanged(object? sender, EventArgs e)

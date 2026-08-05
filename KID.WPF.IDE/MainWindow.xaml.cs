@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Interop;
 using KID.ViewModels.Infrastructure;
@@ -17,6 +18,9 @@ namespace KID
         private readonly IWindowInitializationService _windowInitializationService;
         private readonly IAsyncOperationErrorHandler _asyncOperationErrorHandler;
         private readonly IMainWindowWinAPIInteropService _windowInteropService;
+        private readonly ICodeEditorsViewModel _codeEditorsViewModel;
+        private bool _isCloseApproved;
+        private bool _isCloseCheckInProgress;
 
         public MainWindow()
         {
@@ -29,6 +33,7 @@ namespace KID
             _windowInitializationService = App.ServiceProvider.GetRequiredService<IWindowInitializationService>();
             _asyncOperationErrorHandler = App.ServiceProvider.GetRequiredService<IAsyncOperationErrorHandler>();
             _windowInteropService = App.ServiceProvider.GetRequiredService<IMainWindowWinAPIInteropService>();
+            _codeEditorsViewModel = App.ServiceProvider.GetRequiredService<ICodeEditorsViewModel>();
 
             SourceInitialized += OnSourceInitialized;
             Loaded += MainWindow_Loaded;
@@ -61,6 +66,43 @@ namespace KID
         void IClosable.Close()
         {
             base.Close();
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (!_isCloseApproved)
+            {
+                e.Cancel = true;
+                if (!_isCloseCheckInProgress)
+                {
+                    _isCloseCheckInProgress = true;
+                    _ = CompleteCloseAsync();
+                }
+            }
+
+            base.OnClosing(e);
+        }
+
+        private async Task CompleteCloseAsync()
+        {
+            try
+            {
+                if (await _codeEditorsViewModel.PrepareForApplicationCloseAsync())
+                {
+                    _isCloseApproved = true;
+                    _ = Dispatcher.BeginInvoke(new Action(Close));
+                }
+            }
+            catch (Exception ex)
+            {
+                await _asyncOperationErrorHandler.ExecuteAsync(
+                    () => Task.FromException(ex),
+                    "Error_ClosePreparationFailed");
+            }
+            finally
+            {
+                _isCloseCheckInProgress = false;
+            }
         }
 
         private void OnSourceInitialized(object? sender, EventArgs e)

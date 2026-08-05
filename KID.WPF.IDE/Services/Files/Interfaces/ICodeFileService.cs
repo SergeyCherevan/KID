@@ -29,6 +29,11 @@ namespace KID.Services.Files.Interfaces
         Task SaveToPathAsync(string filePath, string code);
 
         /// <summary>
+        /// Читает код из указанного файла без показа диалога.
+        /// </summary>
+        Task<string?> ReadFromPathAsync(string filePath);
+
+        /// <summary>
         /// Сохраняет код через диалог выбора пути (Сохранить как).
         /// Возвращает путь сохранённого файла или null, если пользователь отменил.
         /// </summary>

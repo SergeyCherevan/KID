@@ -18,7 +18,14 @@ namespace KID.Models
         public string FilePath
         {
             get => filePath;
-            set => SetProperty(ref filePath, value ?? string.Empty);
+            set
+            {
+                if (SetProperty(ref filePath, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(FileName));
+                    OnPropertyChanged(nameof(DisplayName));
+                }
+            }
         }
 
         /// <summary>
@@ -46,6 +53,7 @@ namespace KID.Models
         public void NotifyContentChanged()
         {
             OnPropertyChanged(nameof(IsModified));
+            OnPropertyChanged(nameof(DisplayName));
         }
 
         /// <summary>
@@ -55,6 +63,16 @@ namespace KID.Models
         {
             SavedContent = content ?? string.Empty;
             OnPropertyChanged(nameof(IsModified));
+            OnPropertyChanged(nameof(DisplayName));
+        }
+
+        /// <summary>
+        /// Отменяет несохранённые изменения, возвращая редактор к последней сохранённой версии.
+        /// </summary>
+        public void RestoreSavedContent()
+        {
+            if (CodeEditor != null)
+                CodeEditor.Text = SavedContent;
         }
 
         /// <summary>
@@ -70,5 +88,10 @@ namespace KID.Models
         /// Имя файла для отображения во вкладке (без пути).
         /// </summary>
         public string FileName => System.IO.Path.GetFileName(FilePath);
+
+        /// <summary>
+        /// Имя вкладки со звёздочкой при наличии несохранённых изменений.
+        /// </summary>
+        public string DisplayName => IsModified ? $"{FileName} *" : FileName;
     }
 }

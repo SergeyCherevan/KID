@@ -1,4 +1,5 @@
 using KID.Services.Files.Interfaces;
+using KID.Services.Errors.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using KID.Services.Themes.Interfaces;
@@ -23,6 +24,7 @@ namespace KID.Services.Initialize
         private readonly ICodeEditorsViewModel codeEditorsViewModel;
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
         private readonly ICodeFileService codeFileService;
+        private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
 
         private readonly MainWindow mainWindow;
 
@@ -33,6 +35,7 @@ namespace KID.Services.Initialize
             ICodeEditorsViewModel codeEditorsViewModel,
             IConsoleOutputViewModel consoleOutputViewModel,
             ICodeFileService codeFileService,
+            IAsyncOperationErrorHandler asyncOperationErrorHandler,
             MainWindow mainWindow
         )
         {
@@ -43,6 +46,7 @@ namespace KID.Services.Initialize
             this.codeEditorsViewModel = codeEditorsViewModel ?? throw new ArgumentNullException(nameof(codeEditorsViewModel));
             this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
+            this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
 
             this.mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
         }
@@ -83,8 +87,16 @@ namespace KID.Services.Initialize
             if (codeEditorsViewModel == null || windowConfigurationService?.Settings == null)
                 return;
 
-            var templateCode = windowConfigurationService.Settings.TemplateCode ?? string.Empty;
-            await codeEditorsViewModel.CreateAndAddFileTabAsync(codeFileService.NewFilePath, templateCode);
+            var restored = false;
+            await asyncOperationErrorHandler.ExecuteAsync(
+                async () => restored = await codeEditorsViewModel.RestoreSessionAsync(),
+                "Error_SessionRestoreFailed");
+
+            if (!restored && codeEditorsViewModel.OpenedFileTabs.Count == 0)
+            {
+                var templateCode = windowConfigurationService.Settings.TemplateCode ?? string.Empty;
+                await codeEditorsViewModel.CreateAndAddFileTabAsync(codeFileService.NewFilePath, templateCode);
+            }
         }
 
         private void InitializeConsole()

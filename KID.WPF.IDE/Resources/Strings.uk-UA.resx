@@ -193,5 +193,20 @@
   <data name="TabContext_SaveAndSetAsTemplate" xml:space="preserve">
     <value>Призначити шаблоном&#10;за замовчуванням (і зберегти)</value>
   </data>
+  <data name="UnsavedChanges_Title" xml:space="preserve">
+    <value>Незбережені зміни</value>
+  </data>
+  <data name="UnsavedChanges_Message" xml:space="preserve">
+    <value>Зберегти зміни у файлі «{0}»?</value>
+  </data>
+  <data name="Error_SessionSaveFailed" xml:space="preserve">
+    <value>Не вдалося автоматично зберегти стан редактора: {0}</value>
+  </data>
+  <data name="Error_SessionRestoreFailed" xml:space="preserve">
+    <value>Не вдалося відновити попередню сесію редактора: {0}</value>
+  </data>
+  <data name="Error_ClosePreparationFailed" xml:space="preserve">
+    <value>Не вдалося безпечно закрити застосунок: {0}</value>
+  </data>
 </root>
 

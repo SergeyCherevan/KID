@@ -38,6 +38,8 @@ namespace KID.Services.DI
             services.AddSingleton<IFileDialogService, FileDialogService>();
             services.AddSingleton<IFileService, FileService>();
             services.AddSingleton<ICodeFileService, CodeFileService>();
+            services.AddSingleton<IUnsavedChangesDialogService, UnsavedChangesDialogService>();
+            services.AddSingleton<IEditorSessionService, EditorSessionService>();
 
             // Window Configuration Services
             services.AddSingleton<IWindowConfigurationService, WindowConfigurationService>();

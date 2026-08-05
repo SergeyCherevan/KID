@@ -47,11 +47,14 @@ namespace KID.Services.Files
         }
 
         /// <inheritdoc />
+        public Task<string?> ReadFromPathAsync(string filePath)
+        {
+            return fileService.ReadFileAsync(filePath);
+        }
+
+        /// <inheritdoc />
         public async Task<string?> SaveCodeFileAsync(string code, string fileFilter, string defaultFileName)
         {
-            if (string.IsNullOrWhiteSpace(code))
-                return null;
-
             var filePath = fileDialogService.ShowSaveDialog(fileFilter, defaultFileName);
             if (filePath == null)
                 return null;

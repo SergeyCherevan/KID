@@ -44,12 +44,23 @@ namespace KID.ViewModels.Interfaces
         /// <summary>
         /// Добавляет файл в новую вкладку или переключается на уже открытый.
         /// </summary>
-        Task CreateAndAddFileTabAsync(string path, string content);
+        Task CreateAndAddFileTabAsync(string path, string content, string? savedContent = null);
 
         /// <summary>
-        /// Закрывает вкладку.
+        /// Закрывает вкладку после обработки несохранённых изменений.
+        /// Возвращает false, если пользователь отменил закрытие.
         /// </summary>
-        Task CloseFileTabAsync(OpenedFileTab tab);
+        Task<bool> CloseFileTabAsync(OpenedFileTab tab);
+
+        /// <summary>
+        /// Проверяет все вкладки перед закрытием приложения и сохраняет снимок сессии.
+        /// </summary>
+        Task<bool> PrepareForApplicationCloseAsync();
+
+        /// <summary>
+        /// Восстанавливает вкладки из последнего autosave-снимка.
+        /// </summary>
+        Task<bool> RestoreSessionAsync();
 
         /// <summary>
         /// Делает вкладку текущей.

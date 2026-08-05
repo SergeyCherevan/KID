@@ -234,7 +234,7 @@
                                     </Style>
                                 </Border.Style>
                                 <DockPanel>
-                                    <TextBlock Text="{Binding FileName}"
+                                    <TextBlock Text="{Binding DisplayName}"
                                                Style="{StaticResource TabTextStyle}"
                                                DockPanel.Dock="Left"
                                                Margin="0,0,8,0"/>
