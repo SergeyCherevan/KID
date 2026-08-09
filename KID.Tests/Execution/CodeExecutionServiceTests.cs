@@ -4,8 +4,22 @@ using KID.Tests.TestDoubles;
 
 namespace KID.Tests.Execution;
 
+[Collection(ExecutionLifecycleCollection.Name)]
 public sealed class CodeExecutionServiceTests
 {
+    [Fact]
+    public void NewService_IsIdleAndCannotBeStopped()
+    {
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(new CompilationResult()),
+            new FakeCodeRunner());
+
+        Assert.Equal(ExecutionState.Idle, service.State);
+        Assert.Null(service.CurrentExecutionId);
+        Assert.False(service.IsExecutionActive);
+        Assert.False(service.RequestStop());
+    }
+
     [Fact]
     public async Task ExecuteAsync_CompilationFailure_DisposesContextAndSkipsRunner()
     {
@@ -14,11 +28,54 @@ public sealed class CodeExecutionServiceTests
         var context = new TrackingCodeExecutionContext();
         var service = new CodeExecutionService(compiler, runner);
 
-        await service.ExecuteAsync("invalid code", context);
+        await service.ExecuteAsync("invalid code", _ => context);
 
         Assert.Equal(1, context.InitCount);
         Assert.Equal(1, context.DisposeCount);
         Assert.Equal(0, runner.CallCount);
+        Assert.Equal(ExecutionState.Idle, service.State);
+        Assert.False(service.IsExecutionActive);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Success_PublishesLifecycleAndResetsStopToken()
+    {
+        var compilationResult = new CompilationResult
+        {
+            Success = true,
+            Assembly = typeof(CodeExecutionServiceTests).Assembly
+        };
+        var observedChanges = new List<ExecutionStateChangedEventArgs>();
+        CancellationToken runnerToken = default;
+        var runner = new FakeCodeRunner((_, cancellationToken) =>
+        {
+            runnerToken = cancellationToken;
+            Assert.Equal(cancellationToken, StopManager.CurrentToken);
+            return Task.CompletedTask;
+        });
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(compilationResult),
+            runner);
+        service.StateChanged += (_, eventArgs) =>
+            observedChanges.Add(eventArgs);
+
+        await service.ExecuteAsync("valid code", _ => new TrackingCodeExecutionContext());
+
+        Assert.True(runnerToken.CanBeCanceled);
+        Assert.Equal(
+            new[]
+            {
+                ExecutionState.Compiling,
+                ExecutionState.Running,
+                ExecutionState.CleaningUp,
+                ExecutionState.Idle
+            },
+            observedChanges.Select(change => change.CurrentState));
+        var executionId = Assert.Single(
+            observedChanges.Select(change => change.ExecutionId).Distinct());
+        Assert.True(executionId > 0);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+        Assert.Null(service.CurrentExecutionId);
     }
 
     [Fact]
@@ -36,55 +93,107 @@ public sealed class CodeExecutionServiceTests
         var service = new CodeExecutionService(compiler, runner);
 
         var exception = await Record.ExceptionAsync(
-            () => service.ExecuteAsync("valid code", context));
+            () => service.ExecuteAsync("valid code", _ => context));
 
         Assert.IsType<InvalidOperationException>(exception);
         Assert.Equal(1, context.DisposeCount);
         Assert.Equal(1, runner.CallCount);
+        Assert.Equal(ExecutionState.Idle, service.State);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
     }
 
     [Fact]
-    public async Task ExecuteAsync_WhileRunning_DoesNotStartSecondCompilation()
+    public async Task RequestStop_DuringCompilation_IsIdempotentAndWaitsForCleanup()
     {
-        var compilationStarted = new TaskCompletionSource<bool>(
+        var compilationStarted = new TaskCompletionSource<object?>(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var releaseCompilation = new TaskCompletionSource<bool>(
+        var compiler = new FakeCodeCompiler(async (_, cancellationToken) =>
+        {
+            compilationStarted.TrySetResult(null);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new CompilationResult { Success = false };
+        });
+        var context = new TrackingCodeExecutionContext();
+        var observedStates = new List<ExecutionState>();
+        var service = new CodeExecutionService(compiler, new FakeCodeRunner());
+        service.StateChanged += (_, eventArgs) =>
+            observedStates.Add(eventArgs.CurrentState);
+
+        var execution = service.ExecuteAsync("code", _ => context);
+        await compilationStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(service.RequestStop());
+        Assert.Equal(ExecutionState.StopRequested, service.State);
+        Assert.False(service.RequestStop());
+
+        await execution.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, context.DisposeCount);
+        Assert.Equal(
+            new[]
+            {
+                ExecutionState.Compiling,
+                ExecutionState.StopRequested,
+                ExecutionState.CleaningUp,
+                ExecutionState.Idle
+            },
+            observedStates);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhileRunning_DoesNotCreateSecondContextOrCompilation()
+    {
+        var compilationStarted = new TaskCompletionSource<object?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCompilation = new TaskCompletionSource<object?>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
         var compiler = new FakeCodeCompiler(async (_, cancellationToken) =>
         {
-            compilationStarted.TrySetResult(true);
+            compilationStarted.TrySetResult(null);
             await releaseCompilation.Task.WaitAsync(cancellationToken);
             return new CompilationResult { Success = false };
         });
         var service = new CodeExecutionService(compiler, new FakeCodeRunner());
         var firstContext = new TrackingCodeExecutionContext();
-        var secondContext = new TrackingCodeExecutionContext();
+        var secondFactoryCallCount = 0;
 
-        var firstExecution = service.ExecuteAsync("first", firstContext);
+        var firstExecution = service.ExecuteAsync("first", _ => firstContext);
         await compilationStarted.Task.WaitAsync(
             TimeSpan.FromSeconds(5),
             TestContext.Current.CancellationToken);
 
         try
         {
-            await service.ExecuteAsync("second", secondContext)
+            await service.ExecuteAsync(
+                    "second",
+                    _ =>
+                    {
+                        secondFactoryCallCount++;
+                        return new TrackingCodeExecutionContext();
+                    })
                 .WaitAsync(
                     TimeSpan.FromSeconds(5),
                     TestContext.Current.CancellationToken);
 
             Assert.Equal(1, compiler.CallCount);
-            Assert.Equal(0, secondContext.InitCount);
-            Assert.Equal(0, secondContext.DisposeCount);
+            Assert.Equal(0, secondFactoryCallCount);
+            Assert.True(service.IsExecutionActive);
         }
         finally
         {
-            releaseCompilation.TrySetResult(true);
+            releaseCompilation.TrySetResult(null);
             await firstExecution.WaitAsync(
                 TimeSpan.FromSeconds(5),
                 TestContext.Current.CancellationToken);
         }
 
         Assert.Equal(1, firstContext.DisposeCount);
+        Assert.Equal(ExecutionState.Idle, service.State);
     }
 }

@@ -19,8 +19,6 @@ namespace KID.Services.CodeExecution
         {
             if (assembly == null)
                 throw new ArgumentNullException(nameof(assembly));
-            
-            StopManager.CurrentToken = cancellationToken;
 
             await Task.Run(() =>
             {

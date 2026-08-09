@@ -1,5 +1,6 @@
 using KID.Services.CodeExecution.Contexts;
 using KID.Services.CodeExecution.Interfaces;
+using KID.Services.CodeExecution;
 using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Fonts.Interfaces;
@@ -31,7 +32,6 @@ namespace KID.ViewModels
         private readonly IThemeService themeService;
         private readonly IThemeProviderService themeProviderService;
         private readonly IFontProviderService fontProviderService;
-        private CancellationTokenSource? cancellationSource;
 
 
 
@@ -144,14 +144,16 @@ namespace KID.ViewModels
                     return currentFileTab != null
                         && codeEditorsViewModel.SaveAndSetAsTemplateCommand.CanExecute(currentFileTab);
                 });
-            RunCommand = new RelayCommand(ExecuteRun, () => !CanStop);
-            StopCommand = new RelayCommand(ExecuteStop);
+            RunCommand = new RelayCommand(ExecuteRun, () => CanRun);
+            StopCommand = new RelayCommand(ExecuteStop, () => CanRequestStop);
             UndoCommand = new RelayCommand(ExecuteUndo, () => CanUndo);
             RedoCommand = new RelayCommand(ExecuteRedo, () => CanRedo);
             ChangeLanguageCommand = new RelayCommand<string>(key => ChangeLanguage(key));
             ChangeThemeCommand = new RelayCommand<ThemeDefinition>(ChangeTheme);
             ChangeFontCommand = new RelayCommand<string>(font => ChangeFont(font));
             ChangeFontSizeCommand = new RelayCommand<double>(fontSize => ChangeFontSize(fontSize));
+
+            codeExecutionService.StateChanged += CodeExecutionService_StateChanged;
 
             localizationService.CultureChanged += (s, e) => OnPropertyChanged(nameof(SelectedLanguageKey));
 
@@ -175,19 +177,11 @@ namespace KID.ViewModels
 
 
 
-        private bool canStop;
-        public bool CanStop
-        {
-            get => canStop;
-            set
-            {
-                if (SetProperty(ref canStop, value))
-                {
-                    RunCommand.RaiseCanExecuteChanged();
-                    StopCommand.RaiseCanExecuteChanged();
-                }
-            }
-        }
+        public ExecutionState ExecutionState => codeExecutionService.State;
+        public bool IsExecutionActive => codeExecutionService.IsExecutionActive;
+        public bool CanRun => ExecutionState == ExecutionState.Idle;
+        public bool CanRequestStop =>
+            ExecutionState is ExecutionState.Compiling or ExecutionState.Running;
         public bool CanUndo => codeEditorsViewModel.CanUndo;
         public bool CanRedo => codeEditorsViewModel.CanRedo;
 
@@ -211,7 +205,7 @@ namespace KID.ViewModels
 
             var code = windowConfigurationService.Settings.TemplateCode;
             await codeEditorsViewModel.CreateAndAddFileTabAsync(codeFileService.NewFilePath, code ?? string.Empty);
-            if (!CanStop)
+            if (!IsExecutionActive)
             {
                 consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                 graphicsOutputViewModel.Clear();
@@ -240,7 +234,7 @@ namespace KID.ViewModels
                     && !onlyTab.IsModified;
 
                 await codeEditorsViewModel.CreateAndAddFileTabAsync(result.FilePath, result.Code);
-                if (!CanStop)
+                if (!IsExecutionActive)
                 {
                     consoleOutputViewModel.Text = localizationService.GetString("Console_Output");
                     graphicsOutputViewModel.Clear();
@@ -298,40 +292,32 @@ namespace KID.ViewModels
                 codeExecutionService == null)
                 return;
 
-            CanStop = true;
-            cancellationSource = new CancellationTokenSource();
-            try
+            graphicsOutputViewModel.ResetOutputViewMinSizeToDefault();
+
+            consoleOutputViewModel.Clear();
+            graphicsOutputViewModel.Clear();
+
+            var graphicsCanvasControl = graphicsOutputViewModel.GraphicsCanvasControl;
+            var consoleOutputControl = consoleOutputViewModel.ConsoleOutputControl;
+            if (graphicsCanvasControl == null || consoleOutputControl == null)
+                return;
+
+            var currentFileTab = codeEditorsViewModel.CurrentFileTab;
+            var code = currentFileTab?.CurrentContent ?? string.Empty;
+            if (!string.IsNullOrEmpty(code))
             {
-                graphicsOutputViewModel.ResetOutputViewMinSizeToDefault();
-
-                consoleOutputViewModel.Clear();
-                graphicsOutputViewModel.Clear();
-
-                var graphicsCanvasControl = graphicsOutputViewModel.GraphicsCanvasControl;
-                var consoleOutputControl = consoleOutputViewModel.ConsoleOutputControl;
-                if (graphicsCanvasControl == null || consoleOutputControl == null)
-                    return;
-
-                var context = canvasTextBoxContextFabric.Create(
-                    graphicsCanvasControl,
-                    consoleOutputControl,
-                    cancellationSource.Token);
-
-                var currentFileTab = codeEditorsViewModel.CurrentFileTab;
-                var code = currentFileTab?.CurrentContent ?? string.Empty;
-                if (!string.IsNullOrEmpty(code))
-                    await codeExecutionService.ExecuteAsync(code, context);
-            }
-            finally
-            {
-                CanStop = false;
+                await codeExecutionService.ExecuteAsync(
+                    code,
+                    cancellationToken => canvasTextBoxContextFabric.Create(
+                        graphicsCanvasControl,
+                        consoleOutputControl,
+                        cancellationToken));
             }
         }
 
         private void ExecuteStop()
         {
-            cancellationSource?.Cancel();
-            CanStop = false;
+            codeExecutionService.RequestStop();
         }
 
         private void ExecuteUndo()
@@ -415,6 +401,18 @@ namespace KID.ViewModels
                     saveAsCommand.RaiseCanExecuteChanged();
                 SaveAndSetAsTemplateCommand.RaiseCanExecuteChanged();
             }
+        }
+
+        private void CodeExecutionService_StateChanged(
+            object? sender,
+            ExecutionStateChangedEventArgs e)
+        {
+            OnPropertyChanged(nameof(ExecutionState));
+            OnPropertyChanged(nameof(IsExecutionActive));
+            OnPropertyChanged(nameof(CanRun));
+            OnPropertyChanged(nameof(CanRequestStop));
+            RunCommand.RaiseCanExecuteChanged();
+            StopCommand.RaiseCanExecuteChanged();
         }
 
     }

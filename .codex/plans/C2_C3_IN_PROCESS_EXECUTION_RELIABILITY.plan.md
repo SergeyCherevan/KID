@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этап 0 выполнен; этапы 1–10 не начаты
+- **Статус:** in progress — этапы 0–1 выполнены; основной scope этапов 2–10 не начат
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -116,18 +116,20 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 Затрагиваемые области: `KID.Library/StopManager.cs`, новый session/lifecycle-код в `KID.WPF.IDE/Services/CodeExecution/`, DI и `MenuViewModel`.
 
-- [ ] Ввести неизменяемый `ExecutionId` и enum состояния: `Idle`, `Compiling`, `Running`, `StopRequested`, `CleaningUp`.
-- [ ] Создать объект `ExecutionSession`, который единолично владеет `CancellationTokenSource`, активной задачей, execution id и переходами состояния.
-- [ ] Сделать запрос Stop идемпотентным: повторный клик не создаёт новую отмену и не меняет завершённое состояние.
-- [ ] Запретить запуск второй сессии до `DisposeAsync` первой.
-- [ ] Освобождать `CancellationTokenSource` только после завершения всех зависимых ожиданий и token registrations.
-- [ ] Оставить `StopManager.CurrentToken` доступным для чтения пользовательскому коду, чтобы токен можно было передавать в cancellation-aware API.
-- [ ] Закрыть изменение токена от пользовательского кода: setter/lifecycle API доступны только trusted host-сборке, например через `internal` + `InternalsVisibleTo`.
-- [ ] Добавить стабильный `StopManager.StopIfButtonPressed()`/`ThrowIfCancellationRequested()` как основную цель генерируемого кода.
-- [ ] Привязать токен к execution id и очищать только совпадающую сессию, чтобы поздний Dispose старого запуска не сбросил новый.
-- [ ] Не заменять активный токен новым, пока предыдущая сессия не завершилась.
+- [x] Ввести неизменяемый `ExecutionId` и enum состояния: `Idle`, `Compiling`, `Running`, `StopRequested`, `CleaningUp`.
+- [x] Создать объект `ExecutionSession`, который единолично владеет `CancellationTokenSource`, активной задачей, execution id и переходами состояния.
+- [x] Сделать запрос Stop идемпотентным: повторный клик не создаёт новую отмену и не меняет завершённое состояние.
+- [x] Запретить запуск второй сессии до завершения cleanup и Dispose первой; после async-перехода этапа 8 это же ограничение охватит `DisposeAsync`.
+- [x] Освобождать `CancellationTokenSource` только после завершения всех зависимых ожиданий и token registrations.
+- [x] Оставить `StopManager.CurrentToken` доступным для чтения пользовательскому коду, чтобы токен можно было передавать в cancellation-aware API.
+- [x] Закрыть изменение токена от пользовательского кода: setter/lifecycle API доступны только trusted host-сборке через `internal` + `InternalsVisibleTo`.
+- [x] Сохранить стабильный `StopManager.StopIfButtonPressed()` как основную цель генерируемого кода.
+- [x] Привязать токен к execution id и очищать только совпадающую сессию, чтобы поздний Dispose старого запуска не сбросил новый.
+- [x] Не заменять активный токен новым, пока предыдущая сессия не завершилась.
 
 **Критерий этапа:** один owner управляет всем lifecycle; `CurrentToken` имеет значение только во время активной сессии; после cleanup он сброшен; гонка двойного Run покрыта тестом.
+
+**Проверка этапа 2026-08-09:** Release-сборка production-проектов прошла с 0 warnings/0 errors; `KID.Tests` — 16 passed, 6 skipped, 0 failed. Skipped specifications относятся к следующим этапам.
 
 ## 🧬 Этап 2. Roslyn-инструментирование пользовательского кода
 
@@ -261,7 +263,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
   7. [ ] удалить пользовательские delegates/references;
   8. [ ] выгрузить ALC и освободить session CTS;
   9. [ ] только после этого перейти в `Idle` и разрешить Run.
-- [ ] Заменить использование одного `CanStop` для двух смыслов отдельными вычисляемыми свойствами `CanRun`, `CanRequestStop`, `IsExecutionActive`.
+- [x] Заменить использование одного `CanStop` для двух смыслов отдельными вычисляемыми свойствами `CanRun`, `CanRequestStop`, `IsExecutionActive` — выполнено заранее в этапе 1 как часть единого state-контракта.
 - [ ] После клика Stop показывать состояние «Остановка…», не «Готово».
 - [ ] Не разрешать повторный Run при `StopRequested` или `CleaningUp`.
 - [ ] Сохранять централизованную передачу неожиданных ошибок в `IAsyncOperationErrorHandler`, но не показывать нормальный cancellation как ошибку.

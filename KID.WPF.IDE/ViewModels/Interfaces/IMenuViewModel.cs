@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using KID.Models;
+using KID.Services.CodeExecution;
 using KID.ViewModels.Infrastructure;
 using System.Windows.Input;
 
@@ -7,7 +8,10 @@ namespace KID.ViewModels.Interfaces
 {
     public interface IMenuViewModel
     {
-        bool CanStop { get; set; }
+        ExecutionState ExecutionState { get; }
+        bool IsExecutionActive { get; }
+        bool CanRun { get; }
+        bool CanRequestStop { get; }
         bool CanUndo { get; }
         bool CanRedo { get; }
         ObservableCollection<ThemeDefinition> AvailableThemes { get; }
