@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** proposed — реализация не начата
+- **Статус:** in progress — этап 0 выполнен; этапы 1–10 не начаты
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -93,24 +93,24 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 ## 🗂️ Этап 0. Тестовый каркас и исходные regression-сценарии
 
-- [ ] Добавить `KID.Tests` в `KID.sln` с `net8.0-windows`, WPF/STA test helper и ссылками на оба production-проекта.
-- [ ] Разделить тесты по папкам `Compiler`, `Execution`, `Console`, `Library`, `Lifecycle`.
-- [ ] Зафиксировать текущие дефекты красными тестами либо узкими characterization-тестами без подавления предупреждений.
-- [ ] Создать test doubles для Canvas/TextBox/Dispatcher, аудио-плеера и execution state observer там, где реальное устройство не требуется.
-- [ ] Не привязывать обычный test run к реальной звуковой карте, сети или визуальному desktop acceptance.
+- [x] Добавить `KID.Tests` в `KID.sln` с `net8.0-windows`, WPF/STA test helper и ссылками на оба production-проекта.
+- [x] Разделить тесты по папкам `Compiler`, `Execution`, `Console`, `Library`, `Lifecycle`.
+- [x] Зафиксировать текущие дефекты проходящими characterization-тестами и явно skipped executable specifications без подавления предупреждений.
+- [x] Создать test doubles для Canvas/TextBox/Dispatcher, аудио-ресурса и execution state observer там, где реальное устройство не требуется.
+- [x] Не привязывать обычный test run к реальной звуковой карте, сети или визуальному desktop acceptance.
 
 Исходные сценарии:
 
-- [ ] `while (true) { }` получает автоматическую точку Stop.
-- [ ] `for`, `foreach`, `do/while` и цикл без `{}` преобразуются без изменения пользовательской семантики.
-- [ ] Stop во время `Console.Read()` и `ReadLine()` завершает ожидание без следующего нажатия клавиши.
-- [ ] `async Task Main` и `async Task<int> Main` действительно ожидаются.
-- [ ] повторный Run запрещён до полной очистки первого;
-- [ ] обработчики Keyboard/Mouse из первого запуска не вызываются во втором;
-- [ ] звук и отложенные Dispatcher-команды первого запуска не продолжаются во втором;
-- [ ] после серии запусков пользовательские ALC становятся collectible.
+- [ ] `while (true) { }` получает автоматическую точку Stop — executable specification добавлена, реализация относится к этапу 2.
+- [ ] `for`, `foreach`, `do/while` и цикл без `{}` преобразуются без изменения пользовательской семантики — executable specification добавлена, реализация относится к этапу 2.
+- [ ] Stop во время `Console.Read()` и `ReadLine()` завершает ожидание без следующего нажатия клавиши — executable specification добавлена, реализация относится к этапу 4.
+- [ ] `async Task Main` и `async Task<int> Main` действительно ожидаются — executable specification добавлена, реализация относится к этапу 3.
+- [x] Повторный Run не начинает вторую компиляцию, пока активен первый `CodeExecutionService.ExecuteAsync`; полная state/cleanup гарантия остаётся задачей этапов 1 и 8.
+- [ ] Обработчики Keyboard/Mouse из первого запуска не вызываются во втором — executable specification добавлена, реализация относится к этапу 6.
+- [ ] Звук и отложенные Dispatcher-команды первого запуска не продолжаются во втором — executable specification добавлена, реализация относится к этапам 5 и 7.
+- [ ] После серии запусков пользовательские ALC становятся collectible — executable specification добавлена, реализация относится к этапу 3.
 
-**Критерий этапа:** тестовый проект запускается отдельно и в составе решения; новые тесты различают запрос отмены, фактическое завершение и cleanup.
+**Критерий этапа выполнен:** `KID.Tests` запускается отдельно и в составе решения; test doubles и lifecycle-тест различают запрос Stop, завершение execution и cleanup; ещё не реализованные гарантии видны как skipped specifications с целевыми этапами.
 
 ## 🧭 Этап 1. Контракт StopManager и одна execution-сессия
 

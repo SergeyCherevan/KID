@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KID.WPF.IDE", "KID.WPF.IDE\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KID.Library", "KID.Library\KID.Library.csproj", "{E08E8365-590A-408E-9EC7-C49FBE0AC8E1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KID.Tests", "KID.Tests\KID.Tests.csproj", "{A4F41273-98B6-4A37-B937-7E4CF4C196B8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,6 +26,10 @@ Global
 		{E08E8365-590A-408E-9EC7-C49FBE0AC8E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E08E8365-590A-408E-9EC7-C49FBE0AC8E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E08E8365-590A-408E-9EC7-C49FBE0AC8E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4F41273-98B6-4A37-B937-7E4CF4C196B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4F41273-98B6-4A37-B937-7E4CF4C196B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4F41273-98B6-4A37-B937-7E4CF4C196B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4F41273-98B6-4A37-B937-7E4CF4C196B8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
