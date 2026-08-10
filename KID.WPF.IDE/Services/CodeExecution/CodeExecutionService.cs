@@ -340,9 +340,10 @@ namespace KID.Services.CodeExecution
         /// </para>
         /// <para>
         /// Pipeline имеет порядок:
-        /// StopManager lease → context creation → context initialization → compilation →
-        /// optional runner → CleaningUp → context disposal → lease disposal → session disposal
-        /// → Idle → completion task.
+        /// Регистрация токена StopManager → создание контекста → инициализация контекста →
+        /// компиляция → при успешной компиляции запуск пользовательской программы → CleaningUp →
+        /// освобождение контекста → снятие регистрации токена → освобождение сессии →
+        /// Idle → завершение внешней задачи.
         /// </para>
         /// <para>
         /// Нормальная отмена текущим session token не считается ошибкой. Любое другое

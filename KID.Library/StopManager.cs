@@ -162,6 +162,76 @@ namespace KID
         }
 
         /// <summary>
+        /// Выполняет блокирующее ожидание, совместимое с семантикой
+        /// <see cref="Thread.Sleep(int)"/>, но немедленно пробуждаемое кнопкой Stop.
+        /// </summary>
+        /// <param name="millisecondsTimeout">
+        /// Время ожидания в миллисекундах либо <see cref="Timeout.Infinite"/>.
+        /// </param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Значение меньше <see cref="Timeout.Infinite"/>.
+        /// </exception>
+        /// <exception cref="OperationCanceledException">
+        /// Для активной execution-сессии запрошен Stop.
+        /// </exception>
+        public static void Sleep(int millisecondsTimeout)
+        {
+            if (millisecondsTimeout < Timeout.Infinite)
+                throw new ArgumentOutOfRangeException(nameof(millisecondsTimeout));
+
+            var token = CurrentToken;
+            if (!token.CanBeCanceled)
+            {
+                Thread.Sleep(millisecondsTimeout);
+                return;
+            }
+
+            if (token.WaitHandle.WaitOne(millisecondsTimeout))
+                token.ThrowIfCancellationRequested();
+
+            // Thread.Sleep(0) уступает остаток текущего кванта времени другим потокам.
+            // Сохраняем это наблюдаемое поведение, если токен не был отменён.
+            if (millisecondsTimeout == 0)
+                Thread.Sleep(0);
+        }
+
+        /// <summary>
+        /// Выполняет блокирующее ожидание, совместимое с семантикой
+        /// <see cref="Thread.Sleep(TimeSpan)"/>, но немедленно пробуждаемое кнопкой Stop.
+        /// </summary>
+        /// <param name="timeout">
+        /// Время ожидания в диапазоне, поддерживаемом <see cref="Thread.Sleep(TimeSpan)"/>.
+        /// </param>
+        /// <exception cref="ArgumentOutOfRangeException">
+        /// Значение находится вне диапазона, поддерживаемого Thread.Sleep.
+        /// </exception>
+        /// <exception cref="OperationCanceledException">
+        /// Для активной execution-сессии запрошен Stop.
+        /// </exception>
+        public static void Sleep(TimeSpan timeout)
+        {
+            // При отсутствии активного запуска проверку значения выполняет Thread.Sleep.
+            // Во время запуска WaitOne использует тот же диапазон миллисекунд: -1..Int32.MaxValue.
+            var totalMilliseconds = (long)timeout.TotalMilliseconds;
+            if (totalMilliseconds < Timeout.Infinite || totalMilliseconds > int.MaxValue)
+                throw new ArgumentOutOfRangeException(nameof(timeout));
+
+            var millisecondsTimeout = (int)totalMilliseconds;
+            var token = CurrentToken;
+            if (!token.CanBeCanceled)
+            {
+                Thread.Sleep(timeout);
+                return;
+            }
+
+            if (token.WaitHandle.WaitOne(millisecondsTimeout))
+                token.ThrowIfCancellationRequested();
+
+            if (millisecondsTimeout == 0)
+                Thread.Sleep(0);
+        }
+
+        /// <summary>
         /// Снимает ambient token только тогда, когда запрашивающий execution id
         /// всё ещё является текущим owner.
         /// </summary>

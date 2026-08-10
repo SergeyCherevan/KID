@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–1 выполнены; основной scope этапов 2–10 не начат
+- **Статус:** in progress — этапы 0–2 выполнены; основной scope этапов 3–10 не начат
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -101,8 +101,8 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 Исходные сценарии:
 
-- [ ] `while (true) { }` получает автоматическую точку Stop — executable specification добавлена, реализация относится к этапу 2.
-- [ ] `for`, `foreach`, `do/while` и цикл без `{}` преобразуются без изменения пользовательской семантики — executable specification добавлена, реализация относится к этапу 2.
+- [x] `while (true) { }` получает автоматическую точку Stop — реализовано и подтверждено runtime-тестом этапа 2.
+- [x] `for`, `foreach`, `await foreach`, `do/while` и цикл без `{}` преобразуются без изменения пользовательской семантики — реализовано и покрыто structural regression-тестами этапа 2.
 - [ ] Stop во время `Console.Read()` и `ReadLine()` завершает ожидание без следующего нажатия клавиши — executable specification добавлена, реализация относится к этапу 4.
 - [ ] `async Task Main` и `async Task<int> Main` действительно ожидаются — executable specification добавлена, реализация относится к этапу 3.
 - [x] Повторный Run не начинает вторую компиляцию, пока активен первый `CodeExecutionService.ExecuteAsync`; полная state/cleanup гарантия остаётся задачей этапов 1 и 8.
@@ -135,30 +135,32 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 Затрагиваемые области: `CSharpCompiler.cs`, новые rewriter-классы и compiler tests.
 
-- [ ] Вынести `ConsoleClearRewriter` из внутреннего класса в отдельный компонент, чтобы pipeline можно было тестировать независимо.
-- [ ] Добавить отдельный `CancellationInstrumentationRewriter`.
-- [ ] Вставлять `global::KID.StopManager.StopIfButtonPressed();` первым statement каждой итерации:
-  - [ ] `while`;
-  - [ ] `do/while`;
-  - [ ] `for`;
-  - [ ] `foreach` и `await foreach`;
-  - [ ] циклы с одиночным statement, пустым statement и вложенными циклами.
-- [ ] Добавить проверки на входе в поддерживаемые block-bodied методы, локальные функции, конструкторы, операторы, accessors, anonymous methods и лямбды.
-- [ ] Для expression-bodied members выполнить семантически корректное преобразование только там, где можно сохранить `void`/return/async-поведение; неподдержанные формы оставить без опасного rewrite и покрыть явным тестом/документацией.
-- [ ] Добавлять проверку перед безопасно определяемыми statement-level `await`/`yield` continuation points, не переписывая произвольный awaitable в другой тип.
-- [ ] Не вставлять отмену в host cleanup и не прерывать синтетической проверкой пользовательский `finally`, пока не определена и не протестирована семантика очистки.
-- [ ] Не дублировать проверку при повторном прохождении rewriter.
-- [ ] Сохранить trivia, директивы препроцессора и номера строк пользовательских диагностик; при необходимости добавить source mapping/`#line` стратегию.
-- [ ] Передавать cancellation token в parse, semantic analysis и `Emit`, чтобы Stop работал и во время компиляции.
+- [x] Вынести `ConsoleClearRewriter` из внутреннего класса в отдельный компонент, чтобы pipeline можно было тестировать независимо.
+- [x] Добавить отдельный `CancellationInstrumentationRewriter`.
+- [x] Вставлять `global::KID.StopManager.StopIfButtonPressed();` первым statement каждой итерации:
+  - [x] `while`;
+  - [x] `do/while`;
+  - [x] `for`;
+  - [x] `foreach` и `await foreach`;
+  - [x] циклы с одиночным statement, пустым statement и вложенными циклами.
+- [x] Добавить проверки на входе в поддерживаемые block-bodied методы, локальные функции, конструкторы, операторы, accessors, anonymous methods и лямбды.
+- [x] Для expression-bodied members выполнить семантически корректное преобразование только там, где можно сохранить `void`/return/async-поведение; неподдержанные формы оставить без опасного rewrite и покрыть явным тестом/документацией.
+- [x] Добавлять проверку перед безопасно определяемыми statement-level `await`/`yield` continuation points, не переписывая произвольный awaitable в другой тип.
+- [x] Не вставлять отмену в host cleanup и не прерывать синтетической проверкой пользовательский `finally`, пока не определена и не протестирована семантика очистки.
+- [x] Не дублировать проверку при повторном прохождении rewriter.
+- [x] Сохранить trivia, директивы препроцессора и номера строк пользовательских диагностик; дополнительный `#line` mapping не потребовался, потому что rewrite не добавляет новые строки.
+- [x] Передавать cancellation token в parse, semantic analysis и `Emit`, чтобы Stop работал и во время компиляции.
 
 Опциональный строго семантический allowlist известных блокировок:
 
-- [ ] Переписывать только подтверждённые символы `System.Threading.Thread.Sleep(...)` в cancellation-aware helper.
-- [ ] Добавлять `StopManager.CurrentToken` только в подтверждённые overload-формы `Task.Delay(...)`, где это не меняет тип выражения.
-- [ ] Не переписывать по одному имени пользовательские методы `Sleep`, `Delay`, `Wait` или кастомные awaitables.
-- [ ] Оставить `Monitor.Enter`, произвольные `WaitHandle`, native/COM и сторонние API в списке известных остаточных ограничений.
+- [x] Переписывать только подтверждённые по runtime assembly identity символы `System.Threading.Thread.Sleep(int/TimeSpan)` в cancellation-aware helper.
+- [x] Добавлять `StopManager.CurrentToken` только в подтверждённые одноаргументные overload-формы `Task.Delay(int/TimeSpan)`, где это не меняет тип выражения.
+- [x] Не переписывать по одному имени пользовательские методы `Sleep`, `Delay`, `Wait`, source-типы с BCL metadata name или кастомные awaitables.
+- [x] Оставить `Monitor.Enter`, произвольные `WaitHandle`, native/COM и сторонние API в списке известных остаточных ограничений.
 
 **Критерий этапа:** инструментированный код компилируется с теми же пользовательскими номерами строк; обычные бесконечные циклы останавливаются; rewrite не меняет результат программ без Stop.
+
+**Проверка этапа 2026-08-10:** Release-сборка прошла с 0 warnings/0 errors; `KID.Tests` — 35 passed, 5 skipped, 0 failed. Runtime-тест подтверждает завершение инструментированного tight loop после Stop; structural/semantic tests покрывают все формы циклов, top-level entry, callable entry, statement-level `await`/`yield`, идемпотентность, директивы, номера строк и BCL-only rewrite. `finally`, finalizer, expression-bodied property/indexer, expression-bodied lambda и custom task-like entry намеренно остаются без опасного преобразования; `Monitor.Enter`, произвольные `WaitHandle`, native/COM и сторонние блокировки остаются остаточными ограничениями in-process модели.
 
 ## 📦 Этап 3. Компиляционный артефакт, async entry point и выгрузка сборки
 

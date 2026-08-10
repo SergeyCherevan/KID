@@ -2,9 +2,6 @@ namespace KID.Tests.Infrastructure;
 
 internal static class KnownIssueReasons
 {
-    public const string CancellationInstrumentation =
-        "Stage 2: cancellation instrumentation has not been implemented yet.";
-
     public const string ConsoleCancellation =
         "Stage 4: TextBoxConsole input is not cancellation-aware or disposable yet.";
 

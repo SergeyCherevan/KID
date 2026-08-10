@@ -1,16 +1,11 @@
+using KID.Services.CodeExecution.Interfaces;
+using KID.Services.CodeExecution.Rewriters;
+using KID.Services.Localization.Interfaces;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using KID.Services.CodeExecution.Interfaces;
-using KID.Services.Localization.Interfaces;
 using NAudio.Wave;
+using System.IO;
+using System.Reflection;
 
 namespace KID.Services.CodeExecution
 {
@@ -23,143 +18,156 @@ namespace KID.Services.CodeExecution
             _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
         }
 
-        public async Task<CompilationResult> CompileAsync(string code, CancellationToken cancellationToken = default)
+        public async Task<CompilationResult> CompileAsync(
+            string code,
+            CancellationToken cancellationToken = default)
         {
-            if (code == null)
-                throw new ArgumentNullException(nameof(code));
-            
-            return await Task.Run(() =>
-            {
-                var syntaxTree = CSharpSyntaxTree.ParseText(code);
-                
-                // Применяем реврайтер для замены Console.Clear()
-                var rewriter = new ConsoleClearRewriter();
-                var root = syntaxTree.GetRoot();
-                var rewrittenRoot = rewriter.Visit(root);
-                var rewrittenTree = syntaxTree.WithRootAndOptions(rewrittenRoot, syntaxTree.Options);
+            ArgumentNullException.ThrowIfNull(code);
 
-                var references = AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(a => !a.IsDynamic && !string.IsNullOrEmpty(a.Location))
-                    .Select(a => MetadataReference.CreateFromFile(a.Location))
-                    .ToList();
-
-                // Явно добавляем ссылку на NAudio, чтобы пользовательские скрипты могли компилировать
-                // выражения/сигнатуры, использующие NAudio.Wave.PlaybackState (например SoundState() / SoundPlayer.State).
-                try
-                {
-                    var naudioPath = typeof(PlaybackState).Assembly.Location;
-                    if (!string.IsNullOrEmpty(naudioPath))
-                    {
-                        var alreadyAdded = references
-                            .OfType<PortableExecutableReference>()
-                            .Any(r => string.Equals(r.FilePath, naudioPath, StringComparison.OrdinalIgnoreCase));
-
-                        if (!alreadyAdded)
-                        {
-                            references.Add(MetadataReference.CreateFromFile(naudioPath));
-                        }
-                    }
-                }
-                catch { }
-
-                var compilation = CSharpCompilation.Create(
-                    "UserProgram",
-                    new[] { rewrittenTree },
-                    references,
-                    new CSharpCompilationOptions(OutputKind.ConsoleApplication));
-
-                using var ms = new MemoryStream();
-                var result = compilation.Emit(ms);
-
-                if (!result.Success)
-                {
-                    var errors = result.Diagnostics
-                        .Where(d => d.Severity == DiagnosticSeverity.Error)
-                        .Select(diagnostic =>
-                        {
-                            var lineSpan = diagnostic.Location.GetLineSpan();
-                            int line = lineSpan.StartLinePosition.Line + 1;
-                            string msg = diagnostic.GetMessage();
-                            return _localizationService.GetString("Error_Compilation", line, msg);
-                        }).ToList();
-
-                    return new CompilationResult { Success = false, Errors = errors };
-                }
-
-                ms.Seek(0, SeekOrigin.Begin);
-                var assembly = Assembly.Load(ms.ToArray());
-
-                return new CompilationResult { Success = true, Assembly = assembly };
-            }, cancellationToken);
+            return await Task.Run(
+                () => Compile(code, cancellationToken),
+                cancellationToken).ConfigureAwait(false);
         }
 
-        // Внутренний класс для замены Console.Clear() на TextBoxConsole.StaticConsole.Clear()
-        private class ConsoleClearRewriter : CSharpSyntaxRewriter
+        private CompilationResult Compile(string code, CancellationToken cancellationToken)
         {
-            public override SyntaxNode? VisitInvocationExpression(InvocationExpressionSyntax node)
-            {
-                // Проверяем, является ли это вызовом Console.Clear() или System.Console.Clear()
-                if (node.Expression is MemberAccessExpressionSyntax memberAccess &&
-                    memberAccess.Name.Identifier.ValueText == "Clear" &&
-                    node.ArgumentList.Arguments.Count == 0)
-                {
-                    bool isConsoleClear = false;
-                    
-                    // Случай 1: Console.Clear() - когда есть using System;
-                    if (memberAccess.Expression is IdentifierNameSyntax identifier &&
-                        identifier.Identifier.ValueText == "Console")
-                    {
-                        isConsoleClear = true;
-                    }
-                    // Случай 2: System.Console.Clear()
-                    else if (memberAccess.Expression is MemberAccessExpressionSyntax systemConsole &&
-                             systemConsole.Expression is IdentifierNameSyntax systemIdentifier &&
-                             systemIdentifier.Identifier.ValueText == "System" &&
-                             systemConsole.Name.Identifier.ValueText == "Console")
-                    {
-                        isConsoleClear = true;
-                    }
-                    
-                    if (isConsoleClear)
-                    {
-                        // Заменяем на KID.Services.CodeExecution.TextBoxConsole.StaticConsole.Clear()
-                        // Строим цепочку пошагово: KID -> KID.Services -> KID.Services.CodeExecution -> ...
-                        var kid = SyntaxFactory.IdentifierName("KID");
-                        var kidServices = SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            kid,
-                            SyntaxFactory.IdentifierName("Services")
-                        );
-                        var kidServicesCodeExecution = SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            kidServices,
-                            SyntaxFactory.IdentifierName("CodeExecution")
-                        );
-                        var kidServicesCodeExecutionTextBoxConsole = SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            kidServicesCodeExecution,
-                            SyntaxFactory.IdentifierName("TextBoxConsole")
-                        );
-                        var kidServicesCodeExecutionTextBoxConsoleStaticConsole = SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            kidServicesCodeExecutionTextBoxConsole,
-                            SyntaxFactory.IdentifierName("StaticConsole")
-                        );
-                        var newExpression = SyntaxFactory.MemberAccessExpression(
-                            SyntaxKind.SimpleMemberAccessExpression,
-                            kidServicesCodeExecutionTextBoxConsoleStaticConsole,
-                            SyntaxFactory.IdentifierName("Clear")
-                        );
-                        
-                        return SyntaxFactory.InvocationExpression(
-                            newExpression,
-                            SyntaxFactory.ArgumentList()
-                        );
-                    }
-                }
+            cancellationToken.ThrowIfCancellationRequested();
 
-                return base.VisitInvocationExpression(node);
+            var syntaxTree = CSharpSyntaxTree.ParseText(
+                code,
+                cancellationToken: cancellationToken);
+            var references = CreateMetadataReferences(cancellationToken);
+
+            var compilation = CSharpCompilation.Create(
+                "UserProgram",
+                [syntaxTree],
+                references,
+                new CSharpCompilationOptions(OutputKind.ConsoleApplication));
+
+            // Инструментирование отмены использует семантическую модель исходного дерева,
+            // чтобы одноимённые пользовательские методы не переписывались как вызовы BCL.
+            var semanticModel = compilation.GetSemanticModel(
+                syntaxTree,
+                ignoreAccessibility: true);
+            var originalRoot = syntaxTree.GetRoot(cancellationToken);
+            var cancellationRoot = new CancellationInstrumentationRewriter(
+                semanticModel,
+                cancellationToken).Visit(originalRoot) ?? originalRoot;
+            var cancellationTree = syntaxTree.WithRootAndOptions(
+                cancellationRoot,
+                syntaxTree.Options);
+
+            compilation = compilation.ReplaceSyntaxTree(syntaxTree, cancellationTree);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Console.Clear обрабатывается отдельным семантическим преобразованием.
+            // Новая семантическая модель после инструментации отмены гарантирует,
+            // что каждый запрашиваемый узел принадлежит своему синтаксическому дереву.
+            var consoleSemanticModel = compilation.GetSemanticModel(
+                cancellationTree,
+                ignoreAccessibility: true);
+            var consoleRoot = cancellationTree.GetRoot(cancellationToken);
+            var rewrittenRoot = new ConsoleClearRewriter(
+                consoleSemanticModel,
+                cancellationToken).Visit(consoleRoot) ?? consoleRoot;
+            var rewrittenTree = cancellationTree.WithRootAndOptions(
+                rewrittenRoot,
+                cancellationTree.Options);
+
+            compilation = compilation.ReplaceSyntaxTree(cancellationTree, rewrittenTree);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            using var assemblyStream = new MemoryStream();
+            var emitResult = compilation.Emit(
+                assemblyStream,
+                cancellationToken: cancellationToken);
+
+            if (!emitResult.Success)
+            {
+                var errors = emitResult.Diagnostics
+                    .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error)
+                    .Select(diagnostic =>
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var lineSpan = diagnostic.Location.GetLineSpan();
+                        var line = lineSpan.StartLinePosition.Line + 1;
+                        var message = diagnostic.GetMessage();
+                        return _localizationService.GetString(
+                            "Error_Compilation",
+                            line,
+                            message);
+                    })
+                    .ToList();
+
+                return new CompilationResult
+                {
+                    Success = false,
+                    Errors = errors
+                };
             }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            assemblyStream.Seek(0, SeekOrigin.Begin);
+            var assembly = Assembly.Load(assemblyStream.ToArray());
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return new CompilationResult
+            {
+                Success = true,
+                Assembly = assembly
+            };
+        }
+
+        private static List<MetadataReference> CreateMetadataReferences(
+            CancellationToken cancellationToken)
+        {
+            var references = new List<MetadataReference>();
+
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (!assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))
+                    references.Add(MetadataReference.CreateFromFile(assembly.Location));
+            }
+
+            // Инструментированные программы всегда ссылаются на StopManager, даже если
+            // исходный код не использовал KID.Library и CLR ещё не загрузила эту сборку.
+            AddReferenceIfMissing(
+                references,
+                typeof(global::KID.StopManager).Assembly.Location);
+
+            // Инструментирование Console.Clear обращается к публичному мосту WPF-консоли
+            // в этой сборке, поэтому зависимость также фиксируется явно независимо от порядка загрузки.
+            AddReferenceIfMissing(
+                references,
+                typeof(CSharpCompiler).Assembly.Location);
+
+            // Текущий запуск мог ещё не обращаться к NAudio, но публичные музыкальные API
+            // KID используют PlaybackState и поэтому требуют явной ссылки на эту сборку.
+            var naudioPath = typeof(PlaybackState).Assembly.Location;
+            if (!string.IsNullOrEmpty(naudioPath))
+                AddReferenceIfMissing(references, naudioPath);
+
+            return references;
+        }
+
+        private static void AddReferenceIfMissing(
+            ICollection<MetadataReference> references,
+            string assemblyPath)
+        {
+            if (string.IsNullOrEmpty(assemblyPath))
+                return;
+
+            var alreadyAdded = references
+                .OfType<PortableExecutableReference>()
+                .Any(reference => string.Equals(
+                    reference.FilePath,
+                    assemblyPath,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (!alreadyAdded)
+                references.Add(MetadataReference.CreateFromFile(assemblyPath));
         }
     }
 }

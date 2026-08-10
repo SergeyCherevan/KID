@@ -24,6 +24,23 @@ public sealed class StopManagerTests
     }
 
     [Fact]
+    public async Task Sleep_WithActiveExecution_IsInterruptedByStop()
+    {
+        using var cancellationSource = new CancellationTokenSource();
+        using var lease = StopManager.BeginExecution(1002, cancellationSource.Token);
+        var sleep = Task.Run(() => Record.Exception(
+            () => StopManager.Sleep(Timeout.Infinite)));
+
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        await cancellationSource.CancelAsync();
+
+        var exception = await sleep.WaitAsync(
+            TimeSpan.FromSeconds(2),
+            TestContext.Current.CancellationToken);
+        Assert.IsAssignableFrom<OperationCanceledException>(exception);
+    }
+
+    [Fact]
     public void ExecutionLease_PublishesCancellationAndResetsTokenOnDispose()
     {
         using var cancellationSource = new CancellationTokenSource();
