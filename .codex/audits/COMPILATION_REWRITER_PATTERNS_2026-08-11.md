@@ -1,23 +1,29 @@
-Здесь реализован не один паттерн, а композиция нескольких. Главные — **Strategy + Visitor + Transformation Pipeline + Cooperative Cancellation**.
+Здесь реализован не один паттерн, а композиция нескольких. Главные — **Strategy (Стратегия) +
+Visitor (Посетитель) + Transformation Pipeline (Конвейер преобразований) + Cooperative
+Cancellation (Кооперативная отмена)**.
+
+> **Неочевидные сокращения:** BCL — библиотека базовых классов .NET; DI — внедрение зависимостей;
+> AOP — аспектно-ориентированное программирование; GoF — «Банда четырёх», авторы каталога
+> классических паттернов проектирования.
 
 ## 🧩 Паттерны компилятора и Rewriters
 
 | Паттерн | Где | Как реализован |
 |---|---|---|
-| **Strategy** | `CSharpCompiler : ICodeCompiler` | Coordinator работает с интерфейсом и не знает деталей Roslyn |
-| **Visitor / Rewriter** | Оба `CSharpSyntaxRewriter` | Обходят immutable syntax tree и переопределяют нужные `Visit*` |
-| **Transformation Pipeline** | `CSharpCompiler.Compile()` | Исходник последовательно проходит parsing, два rewrite, Emit и Load |
-| **Result Object** | `CompilationResult` | Ожидаемые ошибки возвращаются объектом, а не исключениями |
-| **Cooperative Cancellation** | Compiler, Rewriters, `StopManager` | Один token проверяется компилятором и инструментированным кодом |
-| **Idempotent Transformation** | `IsStopCheck()` | Повторный rewrite не добавляет второй одинаковый checkpoint |
-| **Resolver** | `RuntimeTypeSymbolResolver` | CLR-тип преобразуется в точный Roslyn symbol с проверкой сборки |
-| **Dependency Injection** | Конструкторы и DI registration | Compiler получает локализацию, service получает compiler через интерфейс |
-| **Guard Clauses / Fail Fast** | Конструкторы и публичные методы | Некорректные обязательные аргументы отклоняются сразу |
-| **Fail Closed** | Rewriters | При недоказанной безопасности преобразование не выполняется |
+| **Strategy (Стратегия)** | `CSharpCompiler : ICodeCompiler` | Координатор работает с интерфейсом и не знает деталей Roslyn |
+| **Visitor / Rewriter (Посетитель / Преобразователь)** | Оба `CSharpSyntaxRewriter` | Обходят неизменяемое синтаксическое дерево и переопределяют нужные `Visit*` |
+| **Transformation Pipeline (Конвейер преобразований)** | `CSharpCompiler.Compile()` | Исходник последовательно проходит синтаксический разбор, два преобразования, Emit и Load |
+| **Result Object (Объект результата)** | `CompilationResult` | Ожидаемые ошибки возвращаются объектом, а не исключениями |
+| **Cooperative Cancellation (Кооперативная отмена)** | Compiler, Rewriters, `StopManager` | Один токен проверяется компилятором и инструментированным кодом |
+| **Idempotent Transformation (Идемпотентное преобразование)** | `IsStopCheck()` | Повторное преобразование не добавляет вторую одинаковую контрольную точку |
+| **Resolver (Разрешитель)** | `RuntimeTypeSymbolResolver` | CLR-тип преобразуется в точный символ Roslyn с проверкой сборки |
+| **Dependency Injection (Внедрение зависимостей)** | Конструкторы и регистрация DI | Компилятор получает локализацию, сервис получает компилятор через интерфейс |
+| **Guard Clauses / Fail Fast (Защитные проверки / Немедленный отказ)** | Конструкторы и публичные методы | Некорректные обязательные аргументы отклоняются сразу |
+| **Fail Closed (Безопасный отказ)** | Rewriters | При недоказанной безопасности преобразование не выполняется |
 
-### 1. Strategy
+### 1. Strategy (Стратегия)
 
-[CSharpCompiler.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs:45>) реализует общий контракт:
+[CSharpCompiler.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs:47>) реализует общий контракт:
 
 ```csharp
 public class CSharpCompiler : ICodeCompiler
@@ -29,11 +35,12 @@ public class CSharpCompiler : ICodeCompiler
 private readonly ICodeCompiler compiler;
 ```
 
-Таким образом coordinator можно тестировать с fake compiler или заменить другой реализацией, не меняя lifecycle.
+Таким образом координатор можно тестировать с поддельным компилятором или заменить другой
+реализацией, не меняя жизненный цикл.
 
-## 🌳 2. Visitor / Rewriter
+## 🌳 2. Visitor / Rewriter (Посетитель / Преобразователь)
 
-Оба преобразователя наследуются от Roslyn Visitor:
+Оба преобразователя наследуются от посетителя Roslyn:
 
 ```csharp
 internal sealed class CancellationInstrumentationRewriter
@@ -53,11 +60,14 @@ public override SyntaxNode? VisitMethodDeclaration(...)
 public override SyntaxNode? VisitInvocationExpression(...)
 ```
 
-Базовый Visitor отвечает за рекурсивный обход, а конкретный rewriter — за локальное преобразование узла.
+Базовый посетитель отвечает за рекурсивный обход, а конкретный преобразователь —
+за локальное преобразование узла.
 
-В механизме Roslyn также присутствует элемент **Template Method**: базовый класс задаёт алгоритм обхода, а наследник расширяет отдельные шаги. Но основное название здесь всё-таки Visitor/Rewriter.
+В механизме Roslyn также присутствует элемент **Template Method (Шаблонный метод)**: базовый класс
+задаёт алгоритм обхода, а наследник расширяет отдельные шаги. Но основное название здесь всё-таки
+Visitor/Rewriter.
 
-## 🔄 3. Transformation Pipeline
+## 🔄 3. Transformation Pipeline (Конвейер преобразований)
 
 Компилятор строит фиксированную последовательность:
 
@@ -74,17 +84,17 @@ Source
   → CompilationResult
 ```
 
-Это именно **Pipeline**, но пока не полноценный Pipes and Filters:
+Это именно **Pipeline (Конвейер)**, но пока не полноценный **Pipes and Filters (Каналы и фильтры)**:
 
 - стадии жёстко записаны внутри `Compile()`;
-- у rewriter’ов нет общего собственного интерфейса pipeline stage;
+- у преобразователей нет общего интерфейса стадии конвейера;
 - список стадий нельзя собирать через DI.
 
-То есть архитектурный принцип Pipeline уже есть, а универсальная инфраструктура фильтров пока не нужна.
+То есть архитектурный принцип конвейера уже есть, а универсальная инфраструктура фильтров пока не нужна.
 
-## 📦 4. Result Object
+## 📦 4. Result Object (Объект результата)
 
-Обычная ошибка пользовательской программы не становится host-исключением:
+Обычная ошибка пользовательской программы не становится исключением самой KID:
 
 ```csharp
 return new CompilationResult
@@ -106,13 +116,13 @@ return new CompilationResult
 
 Это отделяет:
 
-- ожидаемые compilation diagnostics;
+- ожидаемые ошибки компиляции;
 - отмену через `OperationCanceledException`;
-- неожиданные ошибки самого host pipeline.
+- неожиданные ошибки самого конвейера KID.
 
-## 🛑 5. Cooperative Cancellation
+## 🛑 5. Cooperative Cancellation (Кооперативная отмена)
 
-Один session token проходит через весь pipeline:
+Один токен сессии проходит через весь конвейер:
 
 ```csharp
 cancellationToken.ThrowIfCancellationRequested();
@@ -122,22 +132,23 @@ cancellationToken.ThrowIfCancellationRequested();
 
 - `Task.Run`;
 - `ParseText`;
-- обходе references;
-- Visitor traversal;
-- semantic lookup;
+- обходе ссылок на метаданные;
+- обходе синтаксического дерева;
+- разрешении символов;
 - `Emit`.
 
-Rewriter дополнительно внедряет cancellation points в пользовательскую программу:
+Преобразователь дополнительно внедряет точки отмены в программу:
 
 ```csharp
 global::KID.StopManager.StopIfButtonPressed();
 ```
 
-Stop не уничтожает поток насильно. Код завершается, когда compiler или выполняемая программа достигает точки проверки token.
+Stop не уничтожает поток насильно. Код завершается, когда компилятор или выполняемая программа
+достигает точки проверки токена.
 
-## 🔁 6. Idempotent Transformation
+## 🔁 6. Idempotent Transformation (Идемпотентное преобразование)
 
-Перед добавлением checkpoint выполняется structural comparison:
+Перед добавлением контрольной точки выполняется структурное сравнение:
 
 ```csharp
 if (IsStopCheck(firstStatement))
@@ -150,23 +161,23 @@ if (IsStopCheck(firstStatement))
 Rewrite(source) == Rewrite(Rewrite(source))
 ```
 
-Это важно для compiler transformations: повторный проход не должен накапливать сгенерированный код.
+Это важно для преобразований компилятора: повторный проход не должен накапливать сгенерированный код.
 
-Та же идея используется при добавлении references:
+Та же идея используется при добавлении ссылок на метаданные:
 
 ```csharp
 if (!alreadyAdded)
     references.Add(...);
 ```
 
-## 🧬 7. Resolver
+## 🧬 7. Resolver (Разрешитель)
 
-[RuntimeTypeSymbolResolver.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/RuntimeTypeSymbolResolver.cs:26>) реализует специализированный **Resolver**:
+[RuntimeTypeSymbolResolver.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/RuntimeTypeSymbolResolver.cs:27>) реализует специализированный **Resolver (Разрешитель)**:
 
 ```text
-CLR Type
-  → runtime assembly name
-  → metadata name
+Type из среды выполнения .NET
+  → имя сборки
+  → имя в метаданных
   → IAssemblySymbol
   → INamedTypeSymbol
 ```
@@ -186,11 +197,11 @@ class Thread
 }
 ```
 
-Здесь identity определяется не строкой, а конкретной runtime-сборкой.
+Здесь тип определяется не только строковым именем, но и конкретной сборкой.
 
-## 🛡️ 8. Fail Closed
+## 🛡️ 8. Fail Closed (Безопасный отказ)
 
-Если безопасность преобразования не доказана, rewriter сохраняет исходный код:
+Если безопасность преобразования не доказана, преобразователь сохраняет исходный код:
 
 ```csharp
 if (!IsThreadSleep(method))
@@ -200,15 +211,15 @@ if (!IsThreadSleep(method))
 Так работают ограничения для:
 
 - пользовательских одноимённых типов;
-- неизвестных task-like типов;
-- expression bodies с directives;
-- сложной trivia внутри invocation target;
-- неподдержанных overload;
-- expression-bodied lambda.
+- неизвестных Task-подобных типов;
+- тел-выражений с директивами;
+- комментариев, директив и переносов строк внутри цели вызова;
+- неподдержанных перегрузок;
+- лямбд с телом-выражением.
 
-Это противоположность агрессивному rewrite: сомнительная форма остаётся неизменной.
+Вместо рискованного изменения сомнительная форма остаётся неизменной.
 
-## 🧵 9. Immutable Snapshot / Functional Transformation
+## 🧵 9. Immutable Snapshot / Functional Transformation (Неизменяемый снимок / Функциональное преобразование)
 
 Это не GoF-паттерн, но важный архитектурный принцип Roslyn:
 
@@ -223,50 +234,53 @@ compilation =
 - прежняя `Compilation`;
 - прежняя `SemanticModel`.
 
-Вместо этого создаётся новый согласованный snapshot. Поэтому после первого rewriter компилятор правильно запрашивает новую semantic model.
+Вместо этого создаётся новый согласованный снимок. Поэтому после первого преобразователя
+компилятор запрашивает новую семантическую модель.
 
-## 🪡 10. AOP-like Source Instrumentation
+## 🪡 10. AOP-like Source Instrumentation (AOP-подобное инструментирование исходного кода)
 
-Добавление Stop-checkpoints похоже на Aspect-Oriented Programming:
+Добавление проверок Stop похоже на аспектно-ориентированное программирование:
 
 ```text
 Пользовательская логика
     +
-сквозная логика cancellation
+сквозная логика отмены
     =
 инструментированная программа
 ```
 
-Но это не полноценный AOP framework. Точнее называть механизм:
+Но это не полноценная AOP-инфраструктура. Точнее называть механизм:
 
-> compile-time source instrumentation / source weaving.
+> инструментирование исходного кода во время компиляции, или встраивание сквозной логики.
 
-Cross-cutting concern `Stop` внедряется в методы, циклы и continuation points до Emit.
+Сквозная логика `Stop` внедряется в методы, циклы и точки продолжения до Emit.
 
 ## 🏗️ Как это соединяется с общей архитектурой
 
 ```text
-CodeExecutionService       → Coordinator / Application Service
-ExecutionSession           → Session Object
-ExecutionState             → enum-based Finite State Machine
-contextFactory             → Factory
-TaskCompletionSource       → Promise / Future
-StopManager lease          → Lease / Scope Guard
-StateChanged               → Observer
-ICodeCompiler              → Strategy
-CSharpSyntaxRewriter       → Visitor
-Compile stages             → Transformation Pipeline
-CompilationResult          → Result Object
+CodeExecutionService       → Coordinator / Application Service (Координатор / Прикладной сервис)
+ExecutionSession           → Session Object (Объект сессии)
+ExecutionState             → enum-based Finite State Machine (Конечный автомат на основе enum)
+contextFactory             → Factory (Фабрика)
+TaskCompletionSource       → Promise / Future (Обещание / Будущий результат)
+StopManager lease          → Lease / Scope Guard (Аренда / Охранный объект области)
+StateChanged               → Observer (Наблюдатель)
+ICodeCompiler              → Strategy (Стратегия)
+CSharpSyntaxRewriter       → Visitor (Посетитель)
+Compile stages             → Transformation Pipeline (Конвейер преобразований)
+CompilationResult          → Result Object (Объект результата)
 ```
 
-Важно: это не классический GoF State Pattern — состояния представлены enum и таблицей переходов. Также rewriter’ы не являются Decorator, а фиксированный pipeline не является Chain of Responsibility.
+Важно: это не классический GoF-паттерн «Состояние»: состояния представлены enum и таблицей
+переходов. Преобразователи также не являются «Декоратором», а фиксированный конвейер —
+«Цепочкой обязанностей».
 
-🔜 Возможные follow-up’ы:
+🔜 Возможные продолжения:
 
-1. 🗺️ Нарисовать одну общую схему всех паттернов execution subsystem.
+1. 🗺️ Нарисовать одну общую схему всех паттернов подсистемы выполнения.
 2. 🔬 Подробно разобрать Visitor на примере `while`.
-3. 🧱 Показать, как превратить текущий pipeline в отдельные `ICompilationStage`.
-4. 📦 Определить паттерны будущего `CompilationArtifact` и collectible ALC.
+3. 🧱 Показать, как превратить текущий конвейер в отдельные `ICompilationStage`.
+4. 📦 Определить паттерны будущего `CompilationArtifact` и выгружаемого ALC.
 
 <oai-mem-citation>
 <citation_entries>

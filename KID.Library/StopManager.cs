@@ -176,7 +176,7 @@ namespace KID
         /// </exception>
         public static void Sleep(int millisecondsTimeout)
         {
-            if (millisecondsTimeout < Timeout.Infinite)
+            if (millisecondsTimeout < 0 && millisecondsTimeout != Timeout.Infinite)
                 throw new ArgumentOutOfRangeException(nameof(millisecondsTimeout));
 
             var token = CurrentToken;
@@ -213,7 +213,7 @@ namespace KID
             // При отсутствии активного запуска проверку значения выполняет Thread.Sleep.
             // Во время запуска WaitOne использует тот же диапазон миллисекунд: -1..Int32.MaxValue.
             var totalMilliseconds = (long)timeout.TotalMilliseconds;
-            if (totalMilliseconds < Timeout.Infinite || totalMilliseconds > int.MaxValue)
+            if ((totalMilliseconds < 0 && totalMilliseconds != Timeout.Infinite) || totalMilliseconds > int.MaxValue)
                 throw new ArgumentOutOfRangeException(nameof(timeout));
 
             var millisecondsTimeout = (int)totalMilliseconds;

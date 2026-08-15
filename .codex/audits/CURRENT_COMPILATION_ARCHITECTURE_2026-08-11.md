@@ -1,6 +1,9 @@
-На текущем `37aba92` компиляция KID — это **двухпроходный семантический Roslyn-pipeline**, встроенный в lifecycle одной `ExecutionSession`.
+На текущем `37aba92` компиляция KID — это **двухпроходный семантический конвейер Roslyn**,
+встроенный в жизненный цикл одной `ExecutionSession`.
 
-Главное изменение: теперь компилятор не просто делает `Parse → Emit → Assembly.Load`, а сначала автоматически внедряет в пользовательский код точки Stop и заменяет блокирующие вызовы на cancellation-aware варианты.
+Главное изменение: теперь компилятор не просто делает `Parse → Emit → Assembly.Load`, а сначала
+автоматически внедряет в пользовательский код точки Stop и заменяет поддержанные блокирующие
+вызовы на варианты с отменой через `CancellationToken`.
 
 ## 🧭 Общая схема Run
 
@@ -8,12 +11,12 @@
 flowchart TD
     UI["RunCommand<br/>MenuViewModel"] --> SVC["CodeExecutionService.ExecuteAsync"]
     SVC --> SESSION["Создать ExecutionSession<br/>State = Compiling"]
-    SESSION --> TOKEN["StopManager.BeginExecution<br/>опубликовать session token"]
-    TOKEN --> CTX["CodeExecutionContext.Init<br/>Console + Graphics + WPF bridges"]
+    SESSION --> TOKEN["StopManager.BeginExecution<br/>опубликовать токен сессии"]
+    TOKEN --> CTX["CodeExecutionContext.Init<br/>мосты Console + Graphics + WPF"]
     CTX --> COMP["CSharpCompiler.CompileAsync"]
     COMP --> RESULT{"CompilationResult"}
 
-    RESULT -->|Errors| PRINT["Напечатать diagnostics<br/>в WPF-консоль"]
+    RESULT -->|Errors| PRINT["Напечатать ошибки компиляции<br/>в WPF-консоль"]
     RESULT -->|Assembly| RUNNING["State = Running"]
     RUNNING --> RUNNER["DefaultCodeRunner.RunAsync"]
     RUNNER --> INVOKE["Assembly.EntryPoint.Invoke"]
@@ -22,7 +25,7 @@ flowchart TD
     INVOKE --> CLEAN
     CLEAN --> DISPOSE["Context.Dispose<br/>StopManager lease.Dispose<br/>Session.Dispose"]
     DISPOSE --> IDLE["State = Idle"]
-    IDLE --> DONE["Завершить lifecycle Task"]
+    IDLE --> DONE["Завершить задачу сессии"]
 ```
 
 Начальная точка — [MenuViewModel.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/ViewModels/MenuViewModel.cs:283>), координатор — [CodeExecutionService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CodeExecutionService.cs:368>).
@@ -30,20 +33,21 @@ flowchart TD
 Важный порядок:
 
 1. Сначала создаётся сессия и единый токен.
-2. Затем инициализируются Console/Graphics bridges.
+2. Затем инициализируются мосты Console и Graphics.
 3. Только после этого запускается компиляция.
-4. Новый Run разрешается не после выхода программы, а только после cleanup и возврата в `Idle`.
+4. Новый Run разрешается не после выхода программы, а только после очистки ресурсов
+   и возврата в `Idle`.
 
 ## 🧱 Основные компоненты
 
 | Компонент | Ответственность |
 |---|---|
 | `CodeExecutionService` | Координирует всю последовательность и состояния |
-| `ExecutionSession` | Владеет `ExecutionId`, CTS, состоянием и lifecycle-задачей |
-| `CSharpCompiler` | Parse, semantic rewrite, Emit и загрузка сборки |
-| `CancellationInstrumentationRewriter` | Вставляет Stop-checkpoints и переписывает ожидания |
+| `ExecutionSession` | Владеет `ExecutionId`, CTS, состоянием и задачей жизненного цикла |
+| `CSharpCompiler` | Синтаксический разбор, семантическое преобразование, Emit и загрузка сборки |
+| `CancellationInstrumentationRewriter` | Вставляет контрольные точки Stop и переписывает ожидания |
 | `ConsoleClearRewriter` | Перенаправляет BCL `Console.Clear()` в WPF-консоль |
-| `RuntimeTypeSymbolResolver` | Проверяет настоящую identity BCL-типа |
+| `RuntimeTypeSymbolResolver` | Проверяет, какой сборке принадлежит BCL-тип |
 | `StopManager` | Публикует токен выполнения пользовательскому коду |
 | `DefaultCodeRunner` | Находит и вызывает `Assembly.EntryPoint` |
 
@@ -61,12 +65,12 @@ Task RunAsync(
 
 `CompilationResult` сейчас содержит либо `Assembly`, либо список ошибок: [CompilationResult.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Models/CompilationResult.cs:6>).
 
-## ⚙️ Внутренний pipeline компилятора
+## ⚙️ Внутренний конвейер компилятора
 
 ```mermaid
 flowchart LR
     SRC["Исходный C#"] --> PARSE["ParseText<br/>SyntaxTree 0"]
-    PARSE --> REFS["Metadata references"]
+    PARSE --> REFS["Ссылки на метаданные"]
     REFS --> C0["CSharpCompilation 0"]
     C0 --> SM0["SemanticModel 0"]
 
@@ -81,12 +85,12 @@ flowchart LR
 
     C2 --> EMIT["Emit в MemoryStream"]
     EMIT --> OK{"Emit успешен?"}
-    OK -->|Нет| ERR["Локализованные diagnostics"]
+    OK -->|Нет| ERR["Локализованные ошибки"]
     OK -->|Да| LOAD["Assembly.Load(byte[])"]
     LOAD --> ASM["Assembly"]
 ```
 
-Реализация находится в [CSharpCompiler.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs:32>).
+Реализация находится в [CSharpCompiler.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs:47>).
 
 Коротко ядро выглядит так:
 
@@ -118,7 +122,7 @@ compilation = compilation.ReplaceSyntaxTree(
     cancellationTree);
 ```
 
-После замены дерева обязательно создаётся новая semantic model:
+После замены дерева обязательно создаётся новая семантическая модель:
 
 ```csharp
 var consoleSemanticModel =
@@ -135,7 +139,7 @@ var rewrittenRoot =
 
 ## 📚 Откуда берутся ссылки
 
-Каждый запуск собирает metadata references из загруженных сборок:
+Каждый запуск собирает ссылки на метаданные из загруженных сборок:
 
 ```csharp
 foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
@@ -219,15 +223,16 @@ static void Draw()
 
 Проверки добавляются в поддержанные:
 
-- методы и local functions;
+- методы и локальные функции;
 - конструкторы;
 - операторы;
-- accessors;
-- anonymous methods;
-- block-bodied lambda;
-- top-level programs.
+- методы доступа;
+- анонимные методы;
+- лямбды с телом-блоком;
+- программы верхнего уровня.
 
-Expression-bodied методы преобразуются в блок только тогда, когда Roslyn позволяет сохранить `void`, return и async-семантику.
+Методы с телом-выражением преобразуются в блок только тогда, когда Roslyn
+позволяет сохранить семантику `void`, return и async.
 
 ### `Thread.Sleep`
 
@@ -259,7 +264,7 @@ await Task.Delay(
     cancellationToken: global::KID.StopManager.CurrentToken);
 ```
 
-Изменяется только настоящий одноаргументный overload BCL с `int` или `TimeSpan`.
+Изменяется только настоящая одноаргументная перегрузка BCL с `int` или `TimeSpan`.
 
 ### `Console.Clear`
 
@@ -276,7 +281,7 @@ global::KID.Services.CodeExecution
 
 Таким образом очищается WPF `TextBox`, а не системная терминальная консоль.
 
-Основные преобразования находятся в [CancellationInstrumentationRewriter.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/CancellationInstrumentationRewriter.cs:12>) и [ConsoleClearRewriter.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/ConsoleClearRewriter.cs:10>).
+Основные преобразования находятся в [CancellationInstrumentationRewriter.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/CancellationInstrumentationRewriter.cs:39>) и [ConsoleClearRewriter.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/ConsoleClearRewriter.cs:30>).
 
 ## 🧠 Почему используется SemanticModel
 
@@ -295,8 +300,8 @@ class Thread
 
 `RuntimeTypeSymbolResolver` проверяет:
 
-- имя сборки runtime-типа;
-- metadata name;
+- имя сборки типа среды выполнения;
+- имя в метаданных;
 - конкретный `IAssemblySymbol`;
 - равенство через `SymbolEqualityComparer`.
 
@@ -308,11 +313,11 @@ System.Threading.Tasks.Task.Delay(...)
 System.Console.Clear()
 ```
 
-а пользовательские одноимённые типы и методы остаются без изменений: [RuntimeTypeSymbolResolver.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/RuntimeTypeSymbolResolver.cs:8>).
+а пользовательские одноимённые типы и методы остаются без изменений: [RuntimeTypeSymbolResolver.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Rewriters/RuntimeTypeSymbolResolver.cs:27>).
 
 ## 🧹 Что намеренно не инструментируется
 
-Rewriter не входит внутрь:
+Преобразователь не входит внутрь:
 
 ```csharp
 finally
@@ -325,7 +330,8 @@ finally
 
 Причина: отмена внутри `finally` могла бы прервать освобождение пользовательских ресурсов.
 
-Также произвольные native/COM-вызовы, `Monitor`, `WaitHandle` и сторонние блокирующие API автоматически не переписываются.
+Также произвольные нативные вызовы, COM, `Monitor`, `WaitHandle` и сторонние блокирующие API
+автоматически не переписываются.
 
 ## 🛑 Как Stop проходит через систему
 
@@ -343,18 +349,18 @@ sequenceDiagram
     Service->>Session: CancellationTokenSource.Cancel()
 
     alt Идёт компиляция
-        Compiler->>Session: Наблюдает session token
+        Compiler->>Session: Наблюдает токен сессии
         Compiler-->>Service: OperationCanceledException
     else Выполняется программа
         Code->>Bridge: StopIfButtonPressed()
-        Bridge->>Session: Проверяет опубликованный token
+        Bridge->>Session: Проверяет опубликованный токен
         Bridge-->>Code: OperationCanceledException
-        Code-->>Service: Выход из entry point
+        Code-->>Service: Выход из точки входа
     end
 
     Service->>Service: State → CleaningUp
-    Service->>Bridge: Dispose token lease
-    Service->>Session: Dispose CTS
+    Service->>Bridge: Освободить аренду токена
+    Service->>Session: Освободить CTS
     Service->>Service: State → Idle
 ```
 
@@ -362,9 +368,9 @@ sequenceDiagram
 
 - перед началом `Task.Run`;
 - в `ParseText`;
-- при обходе metadata references;
+- при обходе ссылок на метаданные;
 - на каждом посещаемом Roslyn-узле;
-- между двумя rewrite-проходами;
+- между двумя проходами преобразования;
 - внутри `Emit`;
 - до и после `Assembly.Load`.
 
@@ -388,8 +394,9 @@ var assembly = Assembly.Load(
 Отсюда четыре главных ограничения:
 
 1. `CSharpCompiler` одновременно компилирует и загружает сборку.
-2. `CompilationResult` возвращает `Assembly`, а не PE/PDB-артефакт.
-3. `Assembly.Load(byte[])` загружает программу в default context — выгрузить её нельзя.
+2. `CompilationResult` возвращает `Assembly`, а не артефакт PE/PDB.
+3. `Assembly.Load(byte[])` загружает программу в контекст по умолчанию —
+   выгрузить её нельзя.
 4. [DefaultCodeRunner.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/DefaultCodeRunner.cs:18>) вызывает `EntryPoint.Invoke()`, но пока не ожидает возвращённый `Task`/`Task<int>`.
 
 Именно это меняет следующий этап:
@@ -397,20 +404,21 @@ var assembly = Assembly.Load(
 ```text
 CSharpCompiler
     → CompilationArtifact { PE, PDB }
-    → per-run collectible AssemblyLoadContext
+    → отдельный выгружаемый AssemblyLoadContext для каждого запуска
     → LoadedProgram
-    → await void/int/Task/Task<int> entry point
+    → ожидать точку входа void/int/Task/Task<int>
     → очистить ссылки
     → AssemblyLoadContext.Unload()
 ```
 
-То есть новая Stop-инструментация уже работает, но **новая архитектура загрузки и async entry point ещё не реализована**.
+То есть новая Stop-инструментация уже работает, но **новая архитектура загрузки и асинхронной
+точки входа ещё не реализована**.
 
-🔜 Возможные follow-up’ы:
+🔜 Возможные продолжения:
 
 1. 📦 Подробно спроектировать `CompilationArtifact` и новые интерфейсы этапа 3.
 2. 🧬 Разобрать `CancellationInstrumentationRewriter` по методам и типам Roslyn-узлов.
-3. 🗑️ Нарисовать lifecycle collectible `AssemblyLoadContext` и условия успешной выгрузки.
+3. 🗑️ Нарисовать жизненный цикл выгружаемого `AssemblyLoadContext` и условия успешной выгрузки.
 4. 🧪 Составить матрицу тестов для `void`, `int`, `Task` и `Task<int> Main`.
 
 <oai-mem-citation>
