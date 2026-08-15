@@ -16,16 +16,22 @@ namespace KID.Services.CodeExecution
     /// </remarks>
     internal sealed class CollectibleCodeExecutionHandle : ICodeExecutionHandle
     {
-        private const int ReadyState = 0;
-        private const int RunningState = 1;
-        private const int CompletedState = 2;
-        private const int DisposedState = 3;
+        /// <summary>
+        /// Состояния одноразового execution handle.
+        /// </summary>
+        private enum LifecycleState
+        {
+            Ready = 0,
+            Running = 1,
+            Completed = 2,
+            Disposed = 3
+        }
 
         private readonly ILocalizationService localizationService;
         private CompilationArtifact? artifact;
         private UserProgramLoadContext? loadContext;
         private WeakReference? loadContextReference;
-        private int lifecycleState;
+        private int lifecycleStateValue = (int)LifecycleState.Ready;
 
         /// <summary>
         /// Создаёт handle, который пока владеет только неизменяемым PE/PDB-артефактом.
@@ -59,14 +65,13 @@ namespace KID.Services.CodeExecution
             /* Единый атомарный переход Ready → Running одновременно запрещает повторный запуск
              * и закрывает гонку между RunAsync и Dispose.
              */
-            var previousState = Interlocked.CompareExchange(
-                ref lifecycleState,
-                RunningState,
-                ReadyState);
+            var previousState = CompareExchangeLifecycleState(
+                LifecycleState.Running,
+                LifecycleState.Ready);
 
-            if (previousState == DisposedState)
+            if (previousState == LifecycleState.Disposed)
                 throw new ObjectDisposedException(nameof(CollectibleCodeExecutionHandle));
-            if (previousState != ReadyState)
+            if (previousState != LifecycleState.Ready)
                 throw new InvalidOperationException("Execution handle can only be run once.");
 
             try
@@ -86,7 +91,7 @@ namespace KID.Services.CodeExecution
                 /* Completed означает, что worker stack уже покинул пользовательскую Assembly,
                  * поэтому coordinator теперь может безопасно инициировать Unload.
                  */
-                Volatile.Write(ref lifecycleState, CompletedState);
+                WriteLifecycleState(LifecycleState.Completed);
             }
         }
 
@@ -100,18 +105,17 @@ namespace KID.Services.CodeExecution
         {
             while (true)
             {
-                var currentState = Volatile.Read(ref lifecycleState);
-                if (currentState == DisposedState)
+                var currentState = ReadLifecycleState();
+                if (currentState == LifecycleState.Disposed)
                     return;
-                if (currentState == RunningState)
+                if (currentState == LifecycleState.Running)
                 {
                     throw new InvalidOperationException(
                         "Execution handle cannot be disposed while it is running.");
                 }
 
-                if (Interlocked.CompareExchange(
-                    ref lifecycleState,
-                    DisposedState,
+                if (CompareExchangeLifecycleState(
+                    LifecycleState.Disposed,
                     currentState) == currentState)
                 {
                     break;
@@ -125,6 +129,32 @@ namespace KID.Services.CodeExecution
             var contextToUnload = Interlocked.Exchange(ref loadContext, null);
             contextToUnload?.Unload();
         }
+
+        /// <summary>
+        /// Атомарно читает текущее типизированное состояние из целочисленного backing field.
+        /// </summary>
+        private LifecycleState ReadLifecycleState() =>
+            (LifecycleState)Volatile.Read(ref lifecycleStateValue);
+
+        /// <summary>
+        /// Атомарно заменяет ожидаемое состояние и возвращает фактическое предыдущее значение.
+        /// </summary>
+        /// <param name="newState">Состояние, которое требуется записать.</param>
+        /// <param name="expectedState">Состояние, при котором разрешена замена.</param>
+        private LifecycleState CompareExchangeLifecycleState(
+            LifecycleState newState,
+            LifecycleState expectedState) =>
+            (LifecycleState)Interlocked.CompareExchange(
+                ref lifecycleStateValue,
+                (int)newState,
+                (int)expectedState);
+
+        /// <summary>
+        /// Атомарно публикует новое состояние после завершения принадлежащей handle операции.
+        /// </summary>
+        /// <param name="newState">Состояние, которое требуется опубликовать.</param>
+        private void WriteLifecycleState(LifecycleState newState) =>
+            Volatile.Write(ref lifecycleStateValue, (int)newState);
 
         /// <summary>
         /// Создаёт collectible context, загружает PE/PDB и синхронно вызывает entry point.
