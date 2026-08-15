@@ -1,19 +1,14 @@
-﻿using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.CodeExecution
 {
     /// <summary>
-    /// Загружает скомпилированный артефакт и выполняет точку входа пользовательской программы.
+    /// Создаёт execution-scoped handle для скомпилированного артефакта.
     /// </summary>
     /// <remarks>
-    /// На текущем первом подэтапе загрузка перенесена из compiler в runner, но ещё использует
-    /// <see cref="Assembly.Load(byte[], byte[]?)"/> и потому создаёт non-collectible runtime context.
-    /// Создание execution-scoped collectible AssemblyLoadContext и ожидание async entry point
-    /// относятся к следующим частям этапа 3.
+    /// Runner остаётся stateless factory. Сильные ссылки на артефакт и collectible
+    /// AssemblyLoadContext принадлежат возвращённому handle, а не singleton-сервису.
     /// </remarks>
     public class DefaultCodeRunner : ICodeRunner
     {
@@ -25,67 +20,17 @@ namespace KID.Services.CodeExecution
         }
 
         /// <summary>
-        /// Загружает PE вместе с portable PDB вне UI-потока и выполняет найденный entry point.
+        /// Создаёт новое независимое выполнение PE/PDB-артефакта.
         /// </summary>
         /// <param name="artifact">PE/PDB-артефакт успешной компиляции.</param>
-        /// <param name="cancellationToken">Токен активной execution-сессии.</param>
+        /// <returns>Handle, которым до Dispose владеет execution coordinator.</returns>
         /// <exception cref="ArgumentNullException">
         /// <paramref name="artifact"/> имеет значение <see langword="null"/>.
         /// </exception>
-        public async Task RunAsync(
-            CompilationArtifact artifact,
-            CancellationToken cancellationToken = default)
+        public ICodeExecutionHandle CreateExecution(CompilationArtifact artifact)
         {
             ArgumentNullException.ThrowIfNull(artifact);
-
-            await Task.Run(async () =>
-            {
-                /* Runtime-загрузка начинается только после успешной компиляции и подтверждённого
-                 * coordinator перехода в Running. Portable PDB передаётся вместе с PE, чтобы
-                 * пользовательские stack trace могли сохранять исходные номера строк.
-                 */
-                var peImage = artifact.PeImage.ToArray();
-                var pdbImage = artifact.PdbImage;
-                var assembly = pdbImage.IsEmpty
-                    ? Assembly.Load(peImage)
-                    : Assembly.Load(peImage, pdbImage.ToArray());
-
-                var entry = assembly.EntryPoint;
-                if (entry != null)
-                {
-                    var parameters = entry.GetParameters().Length == 0 ? null : new object[] { new string[0] };
-                    try
-                    {
-                        entry.Invoke(null, parameters);
-
-                        Console.WriteLine(_localizationService.GetString("Notification_ProgramFinished"));
-                    }
-                    catch (TargetInvocationException ex)
-                    {
-                        // Извлекаем внутреннее исключение
-                        if (ex.InnerException is OperationCanceledException)
-                        {
-                            Console.WriteLine(_localizationService.GetString("Notification_ProgramStopped"));
-                        }
-                        else
-                        {
-                            var innerEx = ex.InnerException;
-                            var errorMessage = innerEx?.Message ?? ex.Message;
-                            var stackTrace = innerEx?.StackTrace ?? ex.StackTrace;
-                            await Console.Error.WriteLineAsync(_localizationService.GetString("Error_Execution", errorMessage));
-                            if (!string.IsNullOrEmpty(stackTrace))
-                            {
-                                await Console.Error.WriteLineAsync(_localizationService.GetString("Error_StackTrace", stackTrace));
-                            }
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        Console.WriteLine(_localizationService.GetString("Notification_ProgramStopped"));
-                    }
-                }
-            },
-            cancellationToken);
+            return new CollectibleCodeExecutionHandle(artifact, _localizationService);
         }
     }
 }

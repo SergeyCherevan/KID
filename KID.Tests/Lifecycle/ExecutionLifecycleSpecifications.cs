@@ -1,7 +1,13 @@
+using System.Runtime.CompilerServices;
+using KID.Services;
+using KID.Services.CodeExecution;
+using KID.Tests.Execution;
 using KID.Tests.Infrastructure;
+using KID.Tests.TestDoubles;
 
 namespace KID.Tests.Lifecycle;
 
+[Collection(ExecutionLifecycleCollection.Name)]
 public sealed class ExecutionLifecycleSpecifications
 {
     [Theory(Skip = KnownIssueReasons.AsyncEntryPoint)]
@@ -21,9 +27,64 @@ public sealed class ExecutionLifecycleSpecifications
         Assert.Fail($"Deterministic cleanup is not implemented for {resource}.");
     }
 
-    [Fact(Skip = KnownIssueReasons.CollectibleAssembly)]
-    public void RepeatedRuns_ReleaseCollectibleAssemblyLoadContexts()
+    [Fact]
+    public async Task RepeatedRuns_ReleaseCollectibleAssemblyLoadContexts()
     {
-        Assert.Fail("CSharpCompiler currently loads user assemblies into the default context.");
+        const string code = """
+            public static class Program
+            {
+                public static void Main()
+                {
+                }
+            }
+            """;
+        var localizationService = new StubLocalizationService();
+        var compiler = new CSharpCompiler(localizationService);
+        var compilationResult = await compiler.CompileAsync(
+            code,
+            TestContext.Current.CancellationToken);
+        var artifact = Assert.IsType<CompilationArtifact>(compilationResult.Artifact);
+        var runner = new DefaultCodeRunner(localizationService);
+        var contextReferences = new List<WeakReference>();
+
+        for (var executionIndex = 0; executionIndex < 8; executionIndex++)
+        {
+            contextReferences.Add(await ExecuteAndDisposeAsync(runner, artifact));
+        }
+
+        /* Unload является кооперативным: bounded GC loop доказывает не только вызов Dispose,
+         * но и отсутствие сильных host-ссылок, мешающих собрать все восемь ALC.
+         */
+        for (var attempt = 0;
+             attempt < 10 && contextReferences.Any(reference => reference.IsAlive);
+             attempt++)
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+
+        Assert.All(contextReferences, reference => Assert.False(reference.IsAlive));
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<WeakReference> ExecuteAndDisposeAsync(
+        DefaultCodeRunner runner,
+        CompilationArtifact artifact)
+    {
+        /* Отдельный non-inlined frame следует рекомендуемому .NET шаблону unload-теста:
+         * после возврата здесь на стеке не остаются handle, Assembly или MethodInfo.
+         */
+        var execution = Assert.IsType<CollectibleCodeExecutionHandle>(
+            runner.CreateExecution(artifact));
+        try
+        {
+            await execution.RunAsync();
+            return Assert.IsType<WeakReference>(execution.LoadContextReference);
+        }
+        finally
+        {
+            execution.Dispose();
+        }
     }
 }

@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–2 выполнены; этап 3 начат: PE/PDB-артефакт готов, collectible ALC и async entry point ещё не реализованы
+- **Статус:** in progress — этапы 0–2 выполнены; на этапе 3 готовы PE/PDB-артефакт и execution-scoped collectible ALC, async entry point ещё не реализован
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -54,7 +54,7 @@ KID остаётся полноценной учебной средой, а не
 | `Read`/`ReadLine` не просыпаются по Stop | `TextBoxConsole.cs`: `WaitOne()` перед проверкой | ожидание ввода и token wait handle одновременно; Dispose также пробуждает ожидание |
 | Stop сразу выглядит завершённым | `MenuViewModel.ExecuteStop()` сразу ставит `CanStop = false` | отдельные состояния `StopRequested`/`CleaningUp`; Run разрешается только после `Idle` |
 | Async entry point не ожидается | `DefaultCodeRunner` игнорирует результат `Invoke()` | ожидание `Task`/`Task<int>`, корректная классификация cancellation/fault/result |
-| Сборки не выгружаются между запусками | `CSharpCompiler` уже возвращает PE/PDB, но `DefaultCodeRunner` временно использует non-collectible `Assembly.Load(byte[], byte[]?)` | запуск в execution-scoped collectible `AssemblyLoadContext` |
+| Сборки не выгружаются между запусками | `DefaultCodeRunner` уже создаёт одноразовый handle с собственным collectible ALC и shared host dependencies; ожидание async entry point ещё не завершено | сохранить execution-scoped ownership и дополнить его корректным ожиданием `Task`/`Task<int>` |
 | Графический Dispose пуст | `CanvasGraphicsContext.Dispose()` | детерминированный teardown всех KID runtime-модулей и WPF-команд запуска |
 | Console UI-события текут между запусками | `TextBoxConsole` подписывается, но не отписывается | идемпотентный Dispose, отписка, восстановление Console streams и очистка static bridge |
 | Keyboard/Mouse worker не ожидается | task отменяется, ссылка сразу теряется | linked token, stop + await, очистка очередей, событий и WPF-подписок |
@@ -71,8 +71,9 @@ MenuViewModel
        │    ├─ ConsoleClearRewriter
        │    ├─ CancellationInstrumentationRewriter
        │    └─ PE/PDB emit без Assembly.Load
-       ├─ collectible AssemblyLoadContext
-       ├─ DefaultCodeRunner: void/int/Task/Task<int>
+       ├─ DefaultCodeRunner → execution handle
+       │    └─ collectible AssemblyLoadContext
+       ├─ entry point: void/int/Task/Task<int>
        └─ CodeExecutionContext
             ├─ TextBoxConsoleContext
             ├─ CanvasGraphicsContext
@@ -178,7 +179,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 **Критерий этапа:** инструментированный код компилируется с теми же пользовательскими номерами строк; обычные бесконечные циклы останавливаются; преобразование не меняет результат программ без Stop.
 
 **Проверка этапа 2026-08-10:** сборка конфигурации Release прошла без предупреждений и ошибок;
-`KID.Tests` — 35 пройдено, 5 пропущено, 0 провалено.
+`KID.Tests` — 41 пройден, 4 пропущены, 0 провалено.
 Тест выполнения подтверждает, что Stop завершает инструментированный бесконечный цикл;
 структурные и семантические тесты покрывают все формы циклов, вход в программу и вызываемые
 конструкции, `await`/`yield` на уровне оператора, идемпотентность, директивы, номера строк и
@@ -189,22 +190,22 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 ## 📦 Этап 3. Компиляционный артефакт, async entry point и выгрузка сборки
 
-Затрагиваемые области: `CompilationResult`, `ICodeCompiler`, `ICodeRunner`, `CSharpCompiler`, `DefaultCodeRunner`, `CodeExecutionService`.
+Затрагиваемые области: `CompilationResult`, `ICodeCompiler`, `ICodeRunner`, `ICodeExecutionHandle`, `CSharpCompiler`, `DefaultCodeRunner`, `UserProgramLoadContext`, `CollectibleCodeExecutionHandle`, `CodeExecutionService`.
 
 - [x] Перестать вызывать `Assembly.Load(ms.ToArray())` в компиляторе.
 - [x] Возвращать из компилятора PE image и portable PDB image для корректных stack trace.
-- [ ] Создавать на каждый запуск отдельный collectible `AssemblyLoadContext` внутри IDE-процесса.
-- [ ] Явно разделять shared host assemblies (`KID.Library`, необходимые WPF/BCL и текущий console bridge), чтобы сохранить identity типов; это механизм загрузки, а не sandbox или фильтрация прав.
-- [ ] Не оставлять `Assembly`, `MethodInfo`, exception/stack objects или пользовательские delegates в singleton-полях после выполнения.
+- [x] Создавать на каждый запуск отдельный collectible `AssemblyLoadContext` внутри IDE-процесса.
+- [x] Явно разделять shared host assemblies (`KID.Library`, необходимые WPF/BCL и текущий console bridge), чтобы сохранить identity типов; это механизм загрузки, а не sandbox или фильтрация прав.
+- [x] Не оставлять `Assembly`, `MethodInfo`, exception/stack objects или пользовательские delegates в singleton-полях после выполнения.
 - [ ] Поддержать entry point без параметров и с `string[]`.
 - [ ] Корректно обработать возвращаемые формы `void`, `int`, `Task`, `Task<int>`.
 - [ ] Ожидать асинхронный entry point до фактического завершения и только затем публиковать `ProgramFinished`.
 - [ ] Разворачивать `TargetInvocationException`, но отличать ожидаемый Stop от пользовательской ошибки.
-- [ ] Вызывать `Unload()` только после прекращения пользовательского выполнения и очистки ссылок из KID runtime/Console/WPF contexts.
-- [ ] В тесте держать только `WeakReference` на ALC, выполнять контролируемые GC-циклы и подтверждать сборку после серии запусков.
+- [x] Вызывать `Unload()` только после завершения поддерживаемого entry point и вызова `CodeExecutionContext.Dispose()`; полнота очистки ссылок внутри KID runtime/Console/WPF относится к этапам 4–8.
+- [x] В тесте держать только `WeakReference` на ALC, выполнять контролируемые GC-циклы и подтверждать сборку после серии запусков.
 - [ ] Не объявлять unload гарантированным для программы, оставившей живой пользовательский поток; это остаточное ограничение фиксируется диагностикой и документацией.
 
-**Критерий этапа:** async Main не завершается преждевременно; штатные программы после cleanup не удерживают non-collectible пользовательские сборки; unload regression-тест стабилен.
+**Критерий этапа:** async Main не завершается преждевременно; штатные программы после cleanup освобождают пользовательские collectible contexts; unload regression-тест стабилен.
 
 ## ⌨️ Этап 4. Cancellation-aware Console и полный Dispose
 
@@ -355,7 +356,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [ ] IDE не сообщает об остановке до фактического завершения и cleanup.
 - [ ] Ни один ресурс первого запуска не влияет на следующий запуск.
 - [ ] Async entry point полностью ожидается.
-- [ ] Пользовательская сборка штатного запуска выгружается из collectible ALC.
+- [x] Пользовательская сборка штатного запуска выгружается из collectible ALC.
 - [ ] Все новые tests проходят, Release build имеет 0 warnings/0 errors.
 - [ ] Публичная WPF-модель `KID.Library` сохранена без IPC/proxy-слоя.
 - [ ] Права пользовательского кода не урезаны.

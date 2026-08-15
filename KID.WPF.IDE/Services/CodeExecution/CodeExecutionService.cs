@@ -151,8 +151,8 @@ namespace KID.Services.CodeExecution
         /// </para>
         /// <para>
         /// Возвращённая задача завершается только после перехода сессии в
-        /// <see cref="ExecutionState.Idle"/> и освобождения контекста, lease объекта
-        /// <see cref="StopManager"/> и принадлежащего сессии
+        /// <see cref="ExecutionState.Idle"/> и освобождения контекста, execution handle,
+        /// lease объекта <see cref="StopManager"/> и принадлежащего сессии
         /// <see cref="CancellationTokenSource"/>. Ожидаемый Stop завершает задачу успешно,
         /// а неожиданная ошибка переводит её в состояние Faulted после обязательного cleanup.
         /// </para>
@@ -341,9 +341,9 @@ namespace KID.Services.CodeExecution
         /// <para>
         /// Pipeline имеет порядок:
         /// Регистрация токена StopManager → создание контекста → инициализация контекста →
-        /// компиляция → при успешной компиляции запуск пользовательской программы → CleaningUp →
-        /// освобождение контекста → снятие регистрации токена → освобождение сессии →
-        /// Idle → завершение внешней задачи.
+        /// компиляция → при успешной компиляции создание execution handle и запуск программы →
+        /// CleaningUp → освобождение контекста → Dispose/Unload execution handle → снятие
+        /// регистрации токена → освобождение сессии → Idle → завершение внешней задачи.
         /// </para>
         /// <para>
         /// Нормальная отмена текущим session token не считается ошибкой. Любое другое
@@ -375,6 +375,7 @@ namespace KID.Services.CodeExecution
              * следующий шаг завершится ошибкой, finally освободит только уже созданные части.
              */
             ICodeExecutionContext? context = null;
+            ICodeExecutionHandle? executionHandle = null;
             IDisposable? stopManagerLease = null;
 
             /* Ошибка откладывается до окончания cleanup. Это не позволяет fault компилятора,
@@ -461,10 +462,13 @@ namespace KID.Services.CodeExecution
                         throw new InvalidOperationException("Execution cannot enter the Running state.");
                     }
 
-                    /* Runner получает артефакт и тот же session token. Await удерживает
-                     * сессию активной до фактического завершения поддерживаемого entry point.
+                    /* Runner создаёт execution-scoped handle только после подтверждённого Running.
+                     * Await удерживает сессию активной до фактического завершения поддерживаемого
+                     * entry point, а handle остаётся доступен обязательному finally-cleanup.
                      */
-                    await runner.RunAsync(result.Artifact, session.CancellationToken);
+                    executionHandle = runner.CreateExecution(result.Artifact) ??
+                        throw new InvalidOperationException("Execution handle is null.");
+                    await executionHandle.RunAsync(session.CancellationToken);
                 }
             }
             catch (OperationCanceledException) when (session.CancellationToken.IsCancellationRequested)
@@ -508,28 +512,40 @@ namespace KID.Services.CodeExecution
                 {
                     try
                     {
-                        /* Lease снимается даже при ошибке context.Dispose(). Он очистит
-                         * StopManager.CurrentToken только при совпадении execution id,
-                         * поэтому запоздалый Dispose старой сессии не повредит новую.
+                        /* UserProgram ALC выгружается после Context.Dispose: сначала отписываем
+                         * WPF/Console/Graphics host bridges от пользовательских callbacks, затем
+                         * разрываем сильные ссылки handle и вызываем Unload.
                          */
-                        stopManagerLease?.Dispose();
+                        executionHandle?.Dispose();
                     }
                     catch (Exception exception)
                     {
-                        /* Сохраняем ошибку lease cleanup только при отсутствии более ранней. */
+                        /* Ошибка выгрузки не маскирует более раннюю ошибку pipeline или context. */
                         executionException ??= exception;
                     }
+                    finally
+                    {
+                        try
+                        {
+                            /* Lease снимается даже при ошибке context или handle Dispose. Он
+                             * очистит CurrentToken только при совпадении execution id.
+                             */
+                            stopManagerLease?.Dispose();
+                        }
+                        catch (Exception exception)
+                        {
+                            /* Сохраняем ошибку lease cleanup только при отсутствии более ранней. */
+                            executionException ??= exception;
+                        }
 
-                    /* CTS освобождается после завершения compiler/runner, Context.Dispose()
-                     * и token lease: зависимые ожидания и регистрации больше не должны
-                     * обращаться к принадлежащему сессии CancellationTokenSource.
-                     */
-                    session.Dispose();
+                        /* CTS освобождается после compiler/runner, Context, execution handle
+                         * и token lease: зависимые ожидания больше не используют session token.
+                         */
+                        session.Dispose();
 
-                    /* Атомарно выполняем CleaningUp → Idle и очищаем currentSession.
-                     * Только после этого backend снова принимает новый ExecuteAsync.
-                     */
-                    CompleteSession(session);
+                        /* Только после полного cleanup backend снова принимает новый Run. */
+                        CompleteSession(session);
+                    }
                 }
             }
 
@@ -631,8 +647,8 @@ namespace KID.Services.CodeExecution
         /// и атомарно очищает <c>currentSession</c>.
         /// </summary>
         /// <remarks>
-        /// Вызывается после Dispose контекста, StopManager lease и session CTS. До завершения
-        /// этого метода новый Run остаётся запрещённым.
+        /// Вызывается после Dispose контекста, execution handle, StopManager lease и session CTS.
+        /// До завершения этого метода новый Run остаётся запрещённым.
         /// </remarks>
         /// <param name="session">Полностью очищенная сессия, которую необходимо снять.</param>
         private void CompleteSession(ExecutionSession session)

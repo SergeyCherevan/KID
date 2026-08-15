@@ -8,15 +8,31 @@ namespace KID.Tests.Execution;
 public sealed class DefaultCodeRunnerTests
 {
     [Fact]
-    public async Task RunAsync_CompiledArtifact_LoadsAndInvokesEntryPoint()
+    public async Task RunAsync_CompiledArtifact_UsesCollectibleContextAndSharedKidDependency()
     {
-        var signalKey = $"KID.Tests.DefaultCodeRunner.{Guid.NewGuid():N}";
+        var collectibleSignalKey = $"KID.Tests.DefaultCodeRunner.Collectible.{Guid.NewGuid():N}";
+        var sharedDependencySignalKey = $"KID.Tests.DefaultCodeRunner.Shared.{Guid.NewGuid():N}";
         var code = $$"""
             public static class Program
             {
                 public static void Main()
                 {
-                    System.AppContext.SetData("{{signalKey}}", true);
+                    var ownContext = System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(
+                        typeof(Program).Assembly);
+                    var kidContext = System.Runtime.Loader.AssemblyLoadContext.GetLoadContext(
+                        typeof(KID.StopManager).Assembly);
+
+                    System.AppContext.SetData(
+                        "{{collectibleSignalKey}}",
+                        ownContext is { IsCollectible: true } &&
+                        !object.ReferenceEquals(
+                            ownContext,
+                            System.Runtime.Loader.AssemblyLoadContext.Default));
+                    System.AppContext.SetData(
+                        "{{sharedDependencySignalKey}}",
+                        object.ReferenceEquals(
+                            kidContext,
+                            System.Runtime.Loader.AssemblyLoadContext.Default));
                 }
             }
             """;
@@ -26,18 +42,26 @@ public sealed class DefaultCodeRunnerTests
             TestContext.Current.CancellationToken);
         var artifact = Assert.IsType<CompilationArtifact>(compilationResult.Artifact);
         var runner = new DefaultCodeRunner(new StubLocalizationService());
+        var execution = Assert.IsType<CollectibleCodeExecutionHandle>(
+            runner.CreateExecution(artifact));
 
         try
         {
-            await runner.RunAsync(
-                artifact,
-                TestContext.Current.CancellationToken);
+            await execution.RunAsync(TestContext.Current.CancellationToken);
 
-            Assert.Equal(true, AppContext.GetData(signalKey));
+            Assert.Equal(true, AppContext.GetData(collectibleSignalKey));
+            Assert.Equal(true, AppContext.GetData(sharedDependencySignalKey));
+            Assert.NotNull(execution.LoadContextReference);
+            Assert.True(execution.LoadContextReference.IsAlive);
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => execution.RunAsync(TestContext.Current.CancellationToken));
         }
         finally
         {
-            AppContext.SetData(signalKey, null);
+            execution.Dispose();
+            execution.Dispose();
+            AppContext.SetData(collectibleSignalKey, null);
+            AppContext.SetData(sharedDependencySignalKey, null);
         }
     }
 }

@@ -34,7 +34,9 @@ public sealed class CodeExecutionServiceTests
 
         Assert.Equal(1, context.InitCount);
         Assert.Equal(1, context.DisposeCount);
+        Assert.Equal(0, runner.CreateCount);
         Assert.Equal(0, runner.CallCount);
+        Assert.Equal(0, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
         Assert.False(service.IsExecutionActive);
     }
@@ -64,6 +66,9 @@ public sealed class CodeExecutionServiceTests
 
         Assert.True(runnerToken.CanBeCanceled);
         Assert.Same(artifact, runnerArtifact);
+        Assert.Equal(1, runner.CreateCount);
+        Assert.Equal(1, runner.CallCount);
+        Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(
             new[]
             {
@@ -95,7 +100,38 @@ public sealed class CodeExecutionServiceTests
 
         Assert.IsType<InvalidOperationException>(exception);
         Assert.Equal(1, context.DisposeCount);
+        Assert.Equal(1, runner.CreateCount);
         Assert.Equal(1, runner.CallCount);
+        Assert.Equal(1, runner.DisposeCount);
+        Assert.Equal(ExecutionState.Idle, service.State);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ContextDisposeFails_StillDisposesExecutionHandleAfterContext()
+    {
+        var cleanupOrder = new List<string>();
+        var contextException = new InvalidOperationException("context dispose failed");
+        var runner = new FakeCodeRunner(
+            disposeAction: () => cleanupOrder.Add("execution handle"));
+        var context = new TrackingCodeExecutionContext(() =>
+        {
+            cleanupOrder.Add("execution context");
+            throw contextException;
+        });
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(
+                CompilationResult.FromArtifact(CreateArtifact())),
+            runner);
+
+        var exception = await Record.ExceptionAsync(
+            () => service.ExecuteAsync("valid code", _ => context));
+
+        Assert.Same(contextException, exception);
+        Assert.Equal(
+            new[] { "execution context", "execution handle" },
+            cleanupOrder);
+        Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
         Assert.False(StopManager.CurrentToken.CanBeCanceled);
     }

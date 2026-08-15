@@ -31,8 +31,16 @@ public sealed class CSharpCompilerTests
             new MemoryStream(artifact.PdbImage.ToArray()));
         Assert.NotEmpty(pdbProvider.GetMetadataReader().Documents);
 
-        var assembly = LoadAssembly(artifact);
-        Assert.NotNull(assembly.EntryPoint);
+        var loadContext = new UserProgramLoadContext();
+        try
+        {
+            var assembly = LoadAssembly(loadContext, artifact);
+            Assert.NotNull(assembly.EntryPoint);
+        }
+        finally
+        {
+            loadContext.Unload();
+        }
     }
 
     [Fact]
@@ -116,32 +124,45 @@ public sealed class CSharpCompilerTests
 
         Assert.True(result.Success);
         var artifact = Assert.IsType<CompilationArtifact>(result.Artifact);
-        var assembly = LoadAssembly(artifact);
-        Assert.NotNull(assembly.EntryPoint);
+        var loadContext = new UserProgramLoadContext();
+        try
+        {
+            var assembly = LoadAssembly(loadContext, artifact);
+            Assert.NotNull(assembly.EntryPoint);
 
-        using var cancellationSource = new CancellationTokenSource();
-        using var lease = StopManager.BeginExecution(1001, cancellationSource.Token);
-        var execution = Task.Run(
-            () => assembly.EntryPoint.Invoke(null, null));
+            using var cancellationSource = new CancellationTokenSource();
+            using var lease = StopManager.BeginExecution(1001, cancellationSource.Token);
+            var execution = Task.Run(
+                () => assembly.EntryPoint.Invoke(null, null));
 
-        await Task.Delay(50, TestContext.Current.CancellationToken);
-        await cancellationSource.CancelAsync();
+            await Task.Delay(50, TestContext.Current.CancellationToken);
+            await cancellationSource.CancelAsync();
 
-        var completed = await Task.WhenAny(
-            execution,
-            Task.Delay(TimeSpan.FromSeconds(6), TestContext.Current.CancellationToken));
-        Assert.Same(execution, completed);
+            var completed = await Task.WhenAny(
+                execution,
+                Task.Delay(TimeSpan.FromSeconds(6), TestContext.Current.CancellationToken));
+            Assert.Same(execution, completed);
 
-        var exception = Assert.Throws<TargetInvocationException>(
-            () => execution.GetAwaiter().GetResult());
-        Assert.IsAssignableFrom<OperationCanceledException>(exception.InnerException);
+            var exception = Assert.Throws<TargetInvocationException>(
+                () => execution.GetAwaiter().GetResult());
+            Assert.IsAssignableFrom<OperationCanceledException>(exception.InnerException);
+        }
+        finally
+        {
+            loadContext.Unload();
+        }
     }
 
-    private static Assembly LoadAssembly(CompilationArtifact artifact)
+    private static Assembly LoadAssembly(
+        UserProgramLoadContext loadContext,
+        CompilationArtifact artifact)
     {
-        var peImage = artifact.PeImage.ToArray();
-        return artifact.PdbImage.IsEmpty
-            ? Assembly.Load(peImage)
-            : Assembly.Load(peImage, artifact.PdbImage.ToArray());
+        using var peStream = new MemoryStream(artifact.PeImage.ToArray(), writable: false);
+        using var pdbStream = artifact.PdbImage.IsEmpty
+            ? null
+            : new MemoryStream(artifact.PdbImage.ToArray(), writable: false);
+        return pdbStream == null
+            ? loadContext.LoadFromStream(peStream)
+            : loadContext.LoadFromStream(peStream, pdbStream);
     }
 }

@@ -1,17 +1,18 @@
 namespace KID.Services.CodeExecution.Interfaces
 {
     /// <summary>
-    /// Загружает и выполняет скомпилированный PE/PDB-артефакт пользовательской программы.
+    /// Создаёт отдельное выполнение скомпилированного PE/PDB-артефакта.
     /// </summary>
     public interface ICodeRunner
     {
         /// <summary>
-        /// Асинхронно загружает артефакт и выполняет его entry point.
+        /// Создаёт execution-scoped handle, который владеет runtime-загрузкой одной программы.
         /// </summary>
         /// <param name="artifact">Успешный результат стадии компиляции.</param>
-        /// <param name="cancellationToken">Токен активной execution-сессии.</param>
-        Task RunAsync(
-            CompilationArtifact artifact,
-            CancellationToken cancellationToken = default);
+        /// <returns>
+        /// Новый handle. Coordinator обязан освободить его после завершения выполнения и
+        /// очистки execution-контекста.
+        /// </returns>
+        ICodeExecutionHandle CreateExecution(CompilationArtifact artifact);
     }
 }
