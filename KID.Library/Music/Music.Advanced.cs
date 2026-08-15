@@ -200,7 +200,7 @@ namespace KID
 
             while (true)
             {
-                CheckStopRequested();
+                StopManager.StopIfButtonPressed();
 
                 PlaybackState state;
                 lock (_lockObject)
@@ -373,7 +373,7 @@ namespace KID
 
                 for (int i = 0; i <= steps; i++)
                 {
-                    CheckStopRequested();
+                    StopManager.StopIfButtonPressed();
 
                     var currentVolume = fromVolume + (volumeStep * i);
                     currentVolume = Math.Max(0.0, Math.Min(1.0, currentVolume));
@@ -434,7 +434,7 @@ namespace KID
 
                     while (waveOut.PlaybackState == PlaybackState.Playing || waveOut.PlaybackState == PlaybackState.Paused)
                     {
-                        CheckStopRequested();
+                        StopManager.StopIfButtonPressed();
                         await Task.Delay(10);
                     }
 
@@ -537,7 +537,7 @@ namespace KID
 
                         while (waveOut.PlaybackState == PlaybackState.Playing || waveOut.PlaybackState == PlaybackState.Paused)
                         {
-                            CheckStopRequested();
+                            StopManager.StopIfButtonPressed();
 
                             lock (_lockObject)
                             {

@@ -78,7 +78,7 @@ namespace KID
 
             foreach (var note in notes)
             {
-                CheckStopRequested();
+                StopManager.StopIfButtonPressed();
 
                 if (note.DurationMs <= 0)
                     continue;

@@ -31,7 +31,7 @@ namespace KID
             if (string.IsNullOrWhiteSpace(filePath))
                 return;
 
-            CheckStopRequested();
+            StopManager.StopIfButtonPressed();
 
             try
             {
@@ -124,7 +124,7 @@ namespace KID
                         // Блокируем выполнение до окончания воспроизведения
                         while (waveOut.PlaybackState == PlaybackState.Playing)
                         {
-                            CheckStopRequested();
+                            StopManager.StopIfButtonPressed();
                             System.Threading.Thread.Sleep(10);
                         }
                     }

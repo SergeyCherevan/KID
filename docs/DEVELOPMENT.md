@@ -105,12 +105,12 @@ public static Shape? MyNewMethod(double x, double y)
 ### Добавление нового метода Music API
 
 1. Определите, в какой файл добавить метод (Sound.cs, Advanced.cs, и т.д.)
-2. Добавьте метод с использованием `CheckStopRequested()` для поддержки отмены:
+2. Добавьте метод с использованием `StopManager.StopIfButtonPressed()` для поддержки отмены:
 
 ```csharp
 public static void MyNewMethod(SoundNote note)
 {
-    CheckStopRequested();
+    StopManager.StopIfButtonPressed();
     // Ваш код
     PlayTone(note.Frequency, note.DurationMs, note.GetEffectiveVolume());
 }

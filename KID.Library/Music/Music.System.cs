@@ -18,14 +18,6 @@ namespace KID
         public static void Init()
         {
         }
-
-        /// <summary>
-        /// Проверяет, была ли нажата кнопка остановки, и выбрасывает исключение если да.
-        /// </summary>
-        internal static void CheckStopRequested()
-        {
-            StopManager.StopIfButtonPressed();
-        }
     }
 }
 

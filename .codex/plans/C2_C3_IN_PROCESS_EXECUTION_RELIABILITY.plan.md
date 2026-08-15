@@ -260,7 +260,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 Затрагиваемые области: `Music/*.cs`, `SoundPlayer.cs`.
 
-- [ ] Реально использовать существующий `CheckStopRequested()` во всех продолжительных синхронных циклах генерации, полифонии и ожидания playback state.
+- [ ] Вызывать `StopManager.StopIfButtonPressed()` во всех продолжительных синхронных циклах генерации, полифонии и ожидания playback state.
 - [ ] Передавать session token во внутренние `Task.Run`, `Task.Delay`, HTTP/download и другие async-операции, где API поддерживает cancellation.
 - [ ] Связать каждый активный `SoundPlayer` с execution id, чтобы старый task не удалил/не изменил player новой сессии с переиспользованным id.
 - [ ] Сделать единый `ShutdownAsync`:

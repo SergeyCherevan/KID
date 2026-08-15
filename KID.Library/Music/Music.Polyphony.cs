@@ -56,7 +56,7 @@ namespace KID
 
                 foreach (var note in track)
                 {
-                    CheckStopRequested();
+                    StopManager.StopIfButtonPressed();
 
                     if (note.DurationMs <= 0)
                         continue;
@@ -126,7 +126,7 @@ namespace KID
 
                         while (waveOut.PlaybackState == PlaybackState.Playing)
                         {
-                            CheckStopRequested();
+                            StopManager.StopIfButtonPressed();
                             System.Threading.Thread.Sleep(10);
                         }
                     }

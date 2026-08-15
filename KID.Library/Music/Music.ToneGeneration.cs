@@ -23,7 +23,7 @@ namespace KID
             // Ограничиваем частоту разумными пределами
             frequency = Math.Max(20, Math.Min(20000, frequency));
 
-            CheckStopRequested();
+            StopManager.StopIfButtonPressed();
 
             try
             {
@@ -52,7 +52,7 @@ namespace KID
                     // Блокируем выполнение до окончания воспроизведения
                     while (waveOut.PlaybackState == PlaybackState.Playing)
                     {
-                        CheckStopRequested();
+                        StopManager.StopIfButtonPressed();
                         System.Threading.Thread.Sleep(10);
                     }
                 }
@@ -72,7 +72,7 @@ namespace KID
             if (durationMs <= 0)
                 return;
 
-            CheckStopRequested();
+            StopManager.StopIfButtonPressed();
             System.Threading.Thread.Sleep((int)durationMs);
         }
     }
