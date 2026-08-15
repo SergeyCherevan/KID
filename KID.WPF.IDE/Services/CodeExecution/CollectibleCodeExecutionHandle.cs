@@ -272,10 +272,10 @@ namespace KID.Services.CodeExecution
         /// </summary>
         private enum ExecutionOutcomeKind
         {
-            None,
-            Finished,
-            Stopped,
-            Error
+            None = 0,
+            Finished = 1,
+            Stopped = 2,
+            Error = 3
         }
     }
 }
