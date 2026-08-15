@@ -434,7 +434,7 @@ namespace KID.Services.CodeExecution
                         foreach (var error in result.Errors)
                         {
                             if (error != null)
-                                Console.WriteLine(error);
+                                await Console.Error.WriteLineAsync(error);
                         }
                     }
                 }

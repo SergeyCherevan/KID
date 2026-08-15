@@ -20,7 +20,7 @@ namespace KID.Services.CodeExecution
             if (assembly == null)
                 throw new ArgumentNullException(nameof(assembly));
 
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 var entry = assembly.EntryPoint;
                 if (entry != null)
@@ -44,10 +44,10 @@ namespace KID.Services.CodeExecution
                             var innerEx = ex.InnerException;
                             var errorMessage = innerEx?.Message ?? ex.Message;
                             var stackTrace = innerEx?.StackTrace ?? ex.StackTrace;
-                            Console.WriteLine(_localizationService.GetString("Error_Execution", errorMessage));
+                            await Console.Error.WriteLineAsync(_localizationService.GetString("Error_Execution", errorMessage));
                             if (!string.IsNullOrEmpty(stackTrace))
                             {
-                                Console.WriteLine(_localizationService.GetString("Error_StackTrace", stackTrace));
+                                await Console.Error.WriteLineAsync(_localizationService.GetString("Error_StackTrace", stackTrace));
                             }
                         }
                     }
