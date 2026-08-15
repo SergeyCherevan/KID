@@ -12,5 +12,5 @@ internal static class KnownIssueReasons
         "Stages 5-8: deterministic runtime cleanup has not been implemented yet.";
 
     public const string CollectibleAssembly =
-        "Stage 3: user assemblies are still loaded into the default AssemblyLoadContext.";
+        "Stage 3: the runner still uses a non-collectible Assembly.Load context.";
 }

@@ -11,7 +11,8 @@ public sealed class CodeExecutionServiceTests
     public void NewService_IsIdleAndCannotBeStopped()
     {
         var service = new CodeExecutionService(
-            FakeCodeCompiler.Returning(new CompilationResult()),
+            FakeCodeCompiler.Returning(
+                CompilationResult.FromErrors(Array.Empty<string>())),
             new FakeCodeRunner());
 
         Assert.Equal(ExecutionState.Idle, service.State);
@@ -23,7 +24,8 @@ public sealed class CodeExecutionServiceTests
     [Fact]
     public async Task ExecuteAsync_CompilationFailure_DisposesContextAndSkipsRunner()
     {
-        var compiler = FakeCodeCompiler.Returning(new CompilationResult { Success = false });
+        var compiler = FakeCodeCompiler.Returning(
+            CompilationResult.FromErrors(Array.Empty<string>()));
         var runner = new FakeCodeRunner();
         var context = new TrackingCodeExecutionContext();
         var service = new CodeExecutionService(compiler, runner);
@@ -40,15 +42,14 @@ public sealed class CodeExecutionServiceTests
     [Fact]
     public async Task ExecuteAsync_Success_PublishesLifecycleAndResetsStopToken()
     {
-        var compilationResult = new CompilationResult
-        {
-            Success = true,
-            Assembly = typeof(CodeExecutionServiceTests).Assembly
-        };
+        var artifact = CreateArtifact();
+        var compilationResult = CompilationResult.FromArtifact(artifact);
         var observedChanges = new List<ExecutionStateChangedEventArgs>();
         CancellationToken runnerToken = default;
-        var runner = new FakeCodeRunner((_, cancellationToken) =>
+        CompilationArtifact? runnerArtifact = null;
+        var runner = new FakeCodeRunner((receivedArtifact, cancellationToken) =>
         {
+            runnerArtifact = receivedArtifact;
             runnerToken = cancellationToken;
             Assert.Equal(cancellationToken, StopManager.CurrentToken);
             return Task.CompletedTask;
@@ -62,6 +63,7 @@ public sealed class CodeExecutionServiceTests
         await service.ExecuteAsync("valid code", _ => new TrackingCodeExecutionContext());
 
         Assert.True(runnerToken.CanBeCanceled);
+        Assert.Same(artifact, runnerArtifact);
         Assert.Equal(
             new[]
             {
@@ -81,11 +83,7 @@ public sealed class CodeExecutionServiceTests
     [Fact]
     public async Task ExecuteAsync_RunnerFailure_StillDisposesContext()
     {
-        var compilationResult = new CompilationResult
-        {
-            Success = true,
-            Assembly = typeof(CodeExecutionServiceTests).Assembly
-        };
+        var compilationResult = CompilationResult.FromArtifact(CreateArtifact());
         var compiler = FakeCodeCompiler.Returning(compilationResult);
         var runner = new FakeCodeRunner((_, _) =>
             Task.FromException(new InvalidOperationException("runner failed")));
@@ -111,7 +109,7 @@ public sealed class CodeExecutionServiceTests
         {
             compilationStarted.TrySetResult(null);
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-            return new CompilationResult { Success = false };
+            return CompilationResult.FromErrors(Array.Empty<string>());
         });
         var context = new TrackingCodeExecutionContext();
         var observedStates = new List<ExecutionState>();
@@ -157,7 +155,7 @@ public sealed class CodeExecutionServiceTests
         {
             compilationStarted.TrySetResult(null);
             await releaseCompilation.Task.WaitAsync(cancellationToken);
-            return new CompilationResult { Success = false };
+            return CompilationResult.FromErrors(Array.Empty<string>());
         });
         var service = new CodeExecutionService(compiler, new FakeCodeRunner());
         var firstContext = new TrackingCodeExecutionContext();
@@ -196,4 +194,6 @@ public sealed class CodeExecutionServiceTests
         Assert.Equal(1, firstContext.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
     }
+
+    private static CompilationArtifact CreateArtifact() => new(new byte[] { 1 });
 }

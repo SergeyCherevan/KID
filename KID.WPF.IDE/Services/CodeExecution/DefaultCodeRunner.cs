@@ -6,6 +6,15 @@ using KID.Services.Localization.Interfaces;
 
 namespace KID.Services.CodeExecution
 {
+    /// <summary>
+    /// Загружает скомпилированный артефакт и выполняет точку входа пользовательской программы.
+    /// </summary>
+    /// <remarks>
+    /// На текущем первом подэтапе загрузка перенесена из compiler в runner, но ещё использует
+    /// <see cref="Assembly.Load(byte[], byte[]?)"/> и потому создаёт non-collectible runtime context.
+    /// Создание execution-scoped collectible AssemblyLoadContext и ожидание async entry point
+    /// относятся к следующим частям этапа 3.
+    /// </remarks>
     public class DefaultCodeRunner : ICodeRunner
     {
         private readonly ILocalizationService _localizationService;
@@ -15,13 +24,32 @@ namespace KID.Services.CodeExecution
             _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
         }
 
-        public async Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Загружает PE вместе с portable PDB вне UI-потока и выполняет найденный entry point.
+        /// </summary>
+        /// <param name="artifact">PE/PDB-артефакт успешной компиляции.</param>
+        /// <param name="cancellationToken">Токен активной execution-сессии.</param>
+        /// <exception cref="ArgumentNullException">
+        /// <paramref name="artifact"/> имеет значение <see langword="null"/>.
+        /// </exception>
+        public async Task RunAsync(
+            CompilationArtifact artifact,
+            CancellationToken cancellationToken = default)
         {
-            if (assembly == null)
-                throw new ArgumentNullException(nameof(assembly));
+            ArgumentNullException.ThrowIfNull(artifact);
 
             await Task.Run(async () =>
             {
+                /* Runtime-загрузка начинается только после успешной компиляции и подтверждённого
+                 * coordinator перехода в Running. Portable PDB передаётся вместе с PE, чтобы
+                 * пользовательские stack trace могли сохранять исходные номера строк.
+                 */
+                var peImage = artifact.PeImage.ToArray();
+                var pdbImage = artifact.PdbImage;
+                var assembly = pdbImage.IsEmpty
+                    ? Assembly.Load(peImage)
+                    : Assembly.Load(peImage, pdbImage.ToArray());
+
                 var entry = assembly.EntryPoint;
                 if (entry != null)
                 {

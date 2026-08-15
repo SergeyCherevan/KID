@@ -3,9 +3,10 @@ using KID.Services.CodeExecution.Rewriters;
 using KID.Services.Localization.Interfaces;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 using NAudio.Wave;
 using System.IO;
-using System.Reflection;
+using System.Text;
 
 namespace KID.Services.CodeExecution
 {
@@ -19,7 +20,7 @@ namespace KID.Services.CodeExecution
     /// Класс реализует паттерн <b>Strategy (Стратегия)</b> для контракта
     /// <see cref="ICodeCompiler"/>. Координатор определяет момент компиляции, а этот компонент
     /// отвечает за создание объекта компиляции Roslyn, последовательное преобразование кода,
-    /// сбор диагностических сообщений и загрузку готовой сборки.
+    /// сбор диагностических сообщений и генерацию PE/PDB-артефакта.
     /// </para>
     /// <para>
     /// Конвейер состоит из двух последовательных семантических проходов.
@@ -37,11 +38,11 @@ namespace KID.Services.CodeExecution
     /// наблюдает токен, но не пытается насильственно завершать поток CLR.
     /// </para>
     /// <para>
-    /// Текущий успешный результат содержит уже загруженный <see cref="Assembly"/>. Поэтому класс
-    /// пока объединяет собственно компиляцию и загрузку через <see cref="Assembly.Load(byte[])"/>;
-    /// выделение PE/PDB-файлов и выгружаемого
-    /// <see cref="System.Runtime.Loader.AssemblyLoadContext"/> относится к следующему
-    /// этапу архитектуры выполнения.
+    /// Успешный результат содержит <see cref="CompilationArtifact"/> с PE-образом и portable PDB,
+    /// но не загруженную Assembly. Благодаря этой границе compiler не выбирает контекст загрузки
+    /// и не создаёт runtime-ресурс до того, как coordinator подтвердит переход сессии в Running.
+    /// Выгружаемый <see cref="System.Runtime.Loader.AssemblyLoadContext"/> относится к следующему
+    /// подэтапу архитектуры выполнения и будет принадлежать execution scope.
     /// </para>
     /// </remarks>
     public class CSharpCompiler : ICodeCompiler
@@ -72,7 +73,7 @@ namespace KID.Services.CodeExecution
 
         /// <summary>
         /// Асинхронно компилирует пользовательский C#-код вне вызывающего потока и возвращает
-        /// либо загруженную сборку, либо локализованные ошибки компиляции.
+        /// либо PE/PDB-артефакт, либо локализованные ошибки компиляции.
         /// </summary>
         /// <remarks>
         /// <para>
@@ -83,7 +84,7 @@ namespace KID.Services.CodeExecution
         /// <para>
         /// Переданный токен одновременно управляет постановкой делегата в пул потоков
         /// и всеми явно поддерживающими отмену стадиями внутреннего конвейера. Если отмена уже запрошена,
-        /// пользовательская программа не парсится и не загружается.
+        /// пользовательская программа не парсится и для неё не создаётся артефакт.
         /// </para>
         /// <para>
         /// <see cref="Task.ConfigureAwait(bool)"/> с аргументом <see langword="false"/> не требует
@@ -101,7 +102,7 @@ namespace KID.Services.CodeExecution
         /// </param>
         /// <returns>
         /// Задача с <see cref="CompilationResult"/>. При успехе результат содержит
-        /// <see cref="CompilationResult.Assembly"/>; при пользовательских ошибках —
+        /// <see cref="CompilationResult.Artifact"/>; при пользовательских ошибках —
         /// <see cref="CompilationResult.Errors"/> и <c>Success = false</c>.
         /// </returns>
         /// <exception cref="ArgumentNullException">
@@ -141,7 +142,7 @@ namespace KID.Services.CodeExecution
         /// <param name="code">Проверенный на <see langword="null"/> текст программы.</param>
         /// <param name="cancellationToken">Токен сессии, запустившей компиляцию.</param>
         /// <returns>
-        /// Результат успешной загрузки сборки либо набор локализованных ошибок Roslyn.
+        /// Результат успешной генерации PE/PDB либо набор локализованных ошибок Roslyn.
         /// </returns>
         /// <exception cref="OperationCanceledException">
         /// Текущая сессия запросила Stop на поддерживаемой стадии компиляции.
@@ -154,11 +155,13 @@ namespace KID.Services.CodeExecution
             cancellationToken.ThrowIfCancellationRequested();
 
             /* ParseText строит исходное неизменяемое дерево SyntaxTree и сам принимает токен
-             * сессии. Дереву не назначается искусственный путь к файлу: диагностические сообщения
-             * используют строки переданного пользователем текста как единственный источник координат.
+             * сессии. UTF-8 encoding и стабильное логическое имя документа нужны portable PDB:
+             * stack trace сможет связать инструкции с исходными строками пользовательского текста.
              */
             var syntaxTree = CSharpSyntaxTree.ParseText(
                 code,
+                path: "UserProgram.cs",
+                encoding: Encoding.UTF8,
                 cancellationToken: cancellationToken);
 
             /* Ссылки на метаданные формируют среду разрешения типов пользовательской программы
@@ -242,13 +245,18 @@ namespace KID.Services.CodeExecution
             compilation = compilation.ReplaceSyntaxTree(cancellationTree, rewrittenTree);
             cancellationToken.ThrowIfCancellationRequested();
 
-            /* Emit записывает PE-образ только в память: исполняемый файл пользователя не создаётся
-             * на диске. MemoryStream принадлежит этому вызову и освобождается при любом результате
-             * благодаря using.
+            /* Emit записывает PE и portable PDB только в память: файлы пользовательской программы
+             * на диске не создаются. Оба MemoryStream принадлежат этому вызову и освобождаются
+             * при любом результате благодаря using.
              */
-            using var assemblyStream = new MemoryStream();
+            using var peStream = new MemoryStream();
+            using var pdbStream = new MemoryStream();
             var emitResult = compilation.Emit(
-                assemblyStream,
+                peStream,
+                pdbStream,
+                options: new EmitOptions(
+                    debugInformationFormat: DebugInformationFormat.PortablePdb,
+                    pdbFilePath: "UserProgram.pdb"),
                 cancellationToken: cancellationToken);
 
             if (!emitResult.Success)
@@ -284,42 +292,24 @@ namespace KID.Services.CodeExecution
                     .ToList();
 
                 /* Неуспешный CompilationResult отделяет ошибку пользовательской программы
-                 * от исключения самой среды. Assembly остаётся null по умолчанию, а координатор
-                 * печатает Errors и переходит к штатной очистке без запуска программы.
+                 * от исключения самой среды. Artifact отсутствует, а coordinator печатает
+                 * Errors и переходит к штатной очистке без запуска программы.
                  */
-                return new CompilationResult
-                {
-                    Success = false,
-                    Errors = errors
-                };
+                return CompilationResult.FromErrors(errors);
             }
 
-            /* Закрываем границу генерации и загрузки (Emit → Load): отменённая сессия не должна
-             * загружать уже готовый образ PE только потому, что Stop пришёл сразу после успешного Emit.
+            /* Закрываем границу Emit → результат: при Stop не материализуем и не передаём дальше
+             * даже уже успешно сформированные буферы отменённой execution-сессии.
              */
             cancellationToken.ThrowIfCancellationRequested();
 
-            /* Emit оставляет Position в конце потока. Seek явно обозначает переход от записи
-             * PE к чтению, хотя последующий ToArray возвращает полное содержимое независимо
-             * от Position.
+            /* Защитные копии внутри CompilationArtifact отделяют время жизни потоков Emit от
+             * результата компиляции. На этой стадии CLR ещё не загружает пользовательскую сборку.
              */
-            assemblyStream.Seek(0, SeekOrigin.Begin);
-
-            /* Текущая архитектура загружает байты через Assembly.Load в контекст загрузки сборок
-             * по умолчанию. Операция не принимает токен и делает сборку невыгружаемой; проверки
-             * до и после неё лишь не позволяют продолжить отменённую сессию дальше поддержанных границ.
-             */
-            var assembly = Assembly.Load(assemblyStream.ToArray());
-            cancellationToken.ThrowIfCancellationRequested();
-
-            /* Успешный CompilationResult передаёт исполнителю готовую Assembly. Errors остаётся
-             * пустым значением по умолчанию и не смешивается с ошибками точки входа во время выполнения.
-             */
-            return new CompilationResult
-            {
-                Success = true,
-                Assembly = assembly
-            };
+            var artifact = new CompilationArtifact(
+                peStream.ToArray(),
+                pdbStream.ToArray());
+            return CompilationResult.FromArtifact(artifact);
         }
 
         /// <summary>

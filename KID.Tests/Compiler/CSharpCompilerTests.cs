@@ -1,7 +1,10 @@
+using KID.Services;
 using KID.Services.CodeExecution;
 using KID.Tests.Execution;
 using KID.Tests.TestDoubles;
+using System.IO;
 using System.Reflection;
+using System.Reflection.Metadata;
 
 namespace KID.Tests.Compiler;
 
@@ -9,7 +12,7 @@ namespace KID.Tests.Compiler;
 public sealed class CSharpCompilerTests
 {
     [Fact]
-    public async Task CompileAsync_ValidProgram_ReturnsAssemblyWithEntryPoint()
+    public async Task CompileAsync_ValidProgram_ReturnsPeAndPortablePdbArtifact()
     {
         const string code = "public static class Program { public static void Main() { } }";
         var compiler = new CSharpCompiler(new StubLocalizationService());
@@ -20,8 +23,16 @@ public sealed class CSharpCompilerTests
 
         Assert.True(result.Success);
         Assert.Empty(result.Errors);
-        Assert.NotNull(result.Assembly);
-        Assert.NotNull(result.Assembly.EntryPoint);
+        var artifact = Assert.IsType<CompilationArtifact>(result.Artifact);
+        Assert.False(artifact.PeImage.IsEmpty);
+        Assert.False(artifact.PdbImage.IsEmpty);
+
+        using var pdbProvider = MetadataReaderProvider.FromPortablePdbStream(
+            new MemoryStream(artifact.PdbImage.ToArray()));
+        Assert.NotEmpty(pdbProvider.GetMetadataReader().Documents);
+
+        var assembly = LoadAssembly(artifact);
+        Assert.NotNull(assembly.EntryPoint);
     }
 
     [Fact]
@@ -37,7 +48,7 @@ public sealed class CSharpCompilerTests
         Assert.False(result.Success);
         var error = Assert.Single(result.Errors);
         Assert.StartsWith("Error_Compilation:", error, StringComparison.Ordinal);
-        Assert.Null(result.Assembly);
+        Assert.Null(result.Artifact);
     }
 
     [Fact]
@@ -104,12 +115,14 @@ public sealed class CSharpCompilerTests
             TestContext.Current.CancellationToken);
 
         Assert.True(result.Success);
-        Assert.NotNull(result.Assembly?.EntryPoint);
+        var artifact = Assert.IsType<CompilationArtifact>(result.Artifact);
+        var assembly = LoadAssembly(artifact);
+        Assert.NotNull(assembly.EntryPoint);
 
         using var cancellationSource = new CancellationTokenSource();
         using var lease = StopManager.BeginExecution(1001, cancellationSource.Token);
         var execution = Task.Run(
-            () => result.Assembly.EntryPoint.Invoke(null, null));
+            () => assembly.EntryPoint.Invoke(null, null));
 
         await Task.Delay(50, TestContext.Current.CancellationToken);
         await cancellationSource.CancelAsync();
@@ -122,5 +135,13 @@ public sealed class CSharpCompilerTests
         var exception = Assert.Throws<TargetInvocationException>(
             () => execution.GetAwaiter().GetResult());
         Assert.IsAssignableFrom<OperationCanceledException>(exception.InnerException);
+    }
+
+    private static Assembly LoadAssembly(CompilationArtifact artifact)
+    {
+        var peImage = artifact.PeImage.ToArray();
+        return artifact.PdbImage.IsEmpty
+            ? Assembly.Load(peImage)
+            : Assembly.Load(peImage, artifact.PdbImage.ToArray());
     }
 }

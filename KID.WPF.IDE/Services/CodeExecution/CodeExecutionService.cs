@@ -440,9 +440,9 @@ namespace KID.Services.CodeExecution
                 }
                 else
                 {
-                    /* Успешная компиляция обязана предоставить сборку для runner. */
-                    if (result.Assembly == null)
-                        throw new InvalidOperationException("Compiled assembly is null.");
+                    /* Успешная компиляция обязана предоставить PE/PDB-артефакт для runner. */
+                    if (result.Artifact == null)
+                        throw new InvalidOperationException("Compilation artifact is null.");
 
                     /* Переход разрешён только из Compiling той же currentSession.
                      * Параллельный RequestStop мог уже перевести её в StopRequested, поэтому
@@ -461,10 +461,10 @@ namespace KID.Services.CodeExecution
                         throw new InvalidOperationException("Execution cannot enter the Running state.");
                     }
 
-                    /* Runner получает ту же сборку и тот же session token. Await удерживает
+                    /* Runner получает артефакт и тот же session token. Await удерживает
                      * сессию активной до фактического завершения поддерживаемого entry point.
                      */
-                    await runner.RunAsync(result.Assembly, session.CancellationToken);
+                    await runner.RunAsync(result.Artifact, session.CancellationToken);
                 }
             }
             catch (OperationCanceledException) when (session.CancellationToken.IsCancellationRequested)

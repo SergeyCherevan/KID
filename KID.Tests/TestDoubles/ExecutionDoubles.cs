@@ -1,7 +1,6 @@
 using KID.Services;
 using KID.Services.CodeExecution.Contexts.Interfaces;
 using KID.Services.CodeExecution.Interfaces;
-using System.Reflection;
 using System.Windows.Threading;
 
 namespace KID.Tests.TestDoubles;
@@ -34,20 +33,23 @@ internal sealed class FakeCodeCompiler : ICodeCompiler
 
 internal sealed class FakeCodeRunner : ICodeRunner
 {
-    private readonly Func<Assembly, CancellationToken, Task> implementation;
+    private readonly Func<CompilationArtifact, CancellationToken, Task> implementation;
     private int callCount;
 
-    public FakeCodeRunner(Func<Assembly, CancellationToken, Task>? implementation = null)
+    public FakeCodeRunner(
+        Func<CompilationArtifact, CancellationToken, Task>? implementation = null)
     {
         this.implementation = implementation ?? ((_, _) => Task.CompletedTask);
     }
 
     public int CallCount => Volatile.Read(ref callCount);
 
-    public Task RunAsync(Assembly assembly, CancellationToken cancellationToken = default)
+    public Task RunAsync(
+        CompilationArtifact artifact,
+        CancellationToken cancellationToken = default)
     {
         Interlocked.Increment(ref callCount);
-        return implementation(assembly, cancellationToken);
+        return implementation(artifact, cancellationToken);
     }
 }
 
