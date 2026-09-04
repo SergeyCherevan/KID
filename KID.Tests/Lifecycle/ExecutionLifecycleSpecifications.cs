@@ -10,12 +10,69 @@ namespace KID.Tests.Lifecycle;
 [Collection(ExecutionLifecycleCollection.Name)]
 public sealed class ExecutionLifecycleSpecifications
 {
-    [Theory(Skip = KnownIssueReasons.AsyncEntryPoint)]
+    [Theory]
     [InlineData("Task")]
     [InlineData("Task<int>")]
-    public void Runner_AwaitsAsyncEntryPointBeforeCleanup(string returnType)
+    public async Task Runner_AwaitsAsyncEntryPointBeforeCleanup(string returnType)
     {
-        Assert.Fail($"Async entry point is not awaited for return type {returnType}.");
+        var signalKey = $"KID.Tests.Lifecycle.AsyncMain.{Guid.NewGuid():N}";
+        var startedKey = $"{signalKey}.Started";
+        var releaseKey = $"{signalKey}.Release";
+        var started = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var localizationService = new StubLocalizationService();
+        var compiler = new CSharpCompiler(localizationService);
+        var runner = new DefaultCodeRunner(
+            localizationService,
+            TestThreading.JoinableTaskFactory);
+        var service = new CodeExecutionService(compiler, runner);
+        var context = new TrackingCodeExecutionContext();
+        var code = CreateAsyncMainSource(
+            returnType,
+            signalKey,
+            startedKey,
+            releaseKey);
+
+        AppContext.SetData(startedKey, started);
+        AppContext.SetData(releaseKey, release);
+        var execution = service.ExecuteAsync(code, _ => context);
+
+        try
+        {
+            await started.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(ExecutionState.Running, service.State);
+            Assert.False(execution.IsCompleted);
+            Assert.Equal(0, context.DisposeCount);
+            Assert.Null(AppContext.GetData(signalKey));
+
+            release.TrySetResult(true);
+            await execution.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(true, AppContext.GetData(signalKey));
+            Assert.Equal(1, context.DisposeCount);
+            Assert.Equal(ExecutionState.Idle, service.State);
+        }
+        finally
+        {
+            release.TrySetResult(true);
+            if (!execution.IsCompleted)
+            {
+                await execution.WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken);
+            }
+
+            AppContext.SetData(signalKey, null);
+            AppContext.SetData(startedKey, null);
+            AppContext.SetData(releaseKey, null);
+        }
     }
 
     [Theory(Skip = KnownIssueReasons.RuntimeCleanup)]
@@ -27,17 +84,33 @@ public sealed class ExecutionLifecycleSpecifications
         Assert.Fail($"Deterministic cleanup is not implemented for {resource}.");
     }
 
-    [Fact]
-    public async Task RepeatedRuns_ReleaseCollectibleAssemblyLoadContexts()
+    [Theory]
+    [InlineData("void")]
+    [InlineData("Task<int>")]
+    public async Task RepeatedRuns_ReleaseCollectibleAssemblyLoadContexts(string returnType)
     {
-        const string code = """
-            public static class Program
-            {
-                public static void Main()
+        var code = returnType switch
+        {
+            "void" => """
+                public static class Program
                 {
+                    public static void Main()
+                    {
+                    }
                 }
-            }
-            """;
+                """,
+            "Task<int>" => """
+                public static class Program
+                {
+                    public static async System.Threading.Tasks.Task<int> Main()
+                    {
+                        await System.Threading.Tasks.Task.Yield();
+                        return 0;
+                    }
+                }
+                """,
+            _ => throw new ArgumentOutOfRangeException(nameof(returnType))
+        };
         var localizationService = new StubLocalizationService();
         var compiler = new CSharpCompiler(localizationService);
         var compilationResult = await compiler.CompileAsync(
@@ -67,6 +140,38 @@ public sealed class ExecutionLifecycleSpecifications
         }
 
         Assert.All(contextReferences, reference => Assert.False(reference.IsAlive));
+    }
+
+    private static string CreateAsyncMainSource(
+        string returnType,
+        string signalKey,
+        string startedKey,
+        string releaseKey)
+    {
+        var returnDeclaration = returnType switch
+        {
+            "Task" => "System.Threading.Tasks.Task",
+            "Task<int>" => "System.Threading.Tasks.Task<int>",
+            _ => throw new ArgumentOutOfRangeException(nameof(returnType))
+        };
+        var returnStatement = returnType == "Task<int>" ? "return 23;" : string.Empty;
+
+        return $$"""
+            public static class Program
+            {
+                public static async {{returnDeclaration}} Main()
+                {
+                    var started = (System.Threading.Tasks.TaskCompletionSource<bool>)
+                        System.AppContext.GetData("{{startedKey}}")!;
+                    started.TrySetResult(true);
+                    var release = (System.Threading.Tasks.TaskCompletionSource<bool>)
+                        System.AppContext.GetData("{{releaseKey}}")!;
+                    await release.Task;
+                    System.AppContext.SetData("{{signalKey}}", true);
+                    {{returnStatement}}
+                }
+            }
+            """;
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–2 выполнены; на этапе 3 готовы PE/PDB-артефакт и execution-scoped collectible ALC, async entry point ещё не реализован
+- **Статус:** in progress — этапы 0–2 выполнены; на этапе 3 готовы PE/PDB-артефакт, started-running-instance контракт, все восемь сигнатур `Main`, ожидание async entry point и execution-scoped collectible ALC; остаются классификация ошибок и документирование остаточных ограничений
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -105,11 +105,11 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [x] `while (true) { }` получает автоматическую точку Stop — реализовано и подтверждено runtime-тестом этапа 2.
 - [x] `for`, `foreach`, `await foreach`, `do/while` и цикл без `{}` преобразуются без изменения пользовательской семантики — реализовано и покрыто structural regression-тестами этапа 2.
 - [ ] Stop во время `Console.Read()` и `ReadLine()` завершает ожидание без следующего нажатия клавиши — executable specification добавлена, реализация относится к этапу 4.
-- [ ] `async Task Main` и `async Task<int> Main` действительно ожидаются — executable specification добавлена, реализация относится к этапу 3.
+- [x] `async Task Main` и `async Task<int> Main` действительно ожидаются; lifecycle specification подтверждает отсутствие преждевременного завершения и cleanup.
 - [x] Повторный Run не начинает вторую компиляцию, пока активен первый `CodeExecutionService.ExecuteAsync`; полная state/cleanup гарантия остаётся задачей этапов 1 и 8.
 - [ ] Обработчики Keyboard/Mouse из первого запуска не вызываются во втором — executable specification добавлена, реализация относится к этапу 6.
 - [ ] Звук и отложенные Dispatcher-команды первого запуска не продолжаются во втором — executable specification добавлена, реализация относится к этапам 5 и 7.
-- [ ] После серии запусков пользовательские ALC становятся collectible — executable specification добавлена, реализация относится к этапу 3.
+- [x] После серии синхронных и асинхронных запусков пользовательские ALC становятся collectible.
 
 **Критерий этапа выполнен:** `KID.Tests` запускается отдельно и в составе решения; test doubles и lifecycle-тест различают запрос Stop, завершение execution и cleanup; ещё не реализованные гарантии видны как skipped specifications с целевыми этапами.
 
@@ -178,8 +178,8 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 **Критерий этапа:** инструментированный код компилируется с теми же пользовательскими номерами строк; обычные бесконечные циклы останавливаются; преобразование не меняет результат программ без Stop.
 
-**Проверка этапа 2026-08-10:** сборка конфигурации Release прошла без предупреждений и ошибок;
-`KID.Tests` — 41 пройден, 4 пропущены, 0 провалено.
+**Проверка этапа 2026-09-04:** сборка конфигурации Release прошла без предупреждений и ошибок;
+`KID.Tests` — 56 пройдено, 3 пропущено, 0 провалено.
 Тест выполнения подтверждает, что Stop завершает инструментированный бесконечный цикл;
 структурные и семантические тесты покрывают все формы циклов, вход в программу и вызываемые
 конструкции, `await`/`yield` на уровне оператора, идемпотентность, директивы, номера строк и
@@ -198,9 +198,9 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [x] Разделить запуск и ожидание: `ICodeRunner.Start(artifact, token)` возвращает уже запущенный `ICodeRunningInstance`; сервис сохраняет его до `await runningInstance.Completion` и освобождает после очистки контекста. Ошибки выполнения и отмена доступны через `Completion`, не лишая сервис экземпляра для cleanup.
 - [x] Явно разделять shared host assemblies (`KID.Library`, необходимые WPF/BCL и текущий console bridge), чтобы сохранить identity типов; это механизм загрузки, а не sandbox или фильтрация прав.
 - [x] Не оставлять `Assembly`, `MethodInfo`, exception/stack objects или пользовательские delegates в singleton-полях после выполнения.
-- [ ] Поддержать entry point без параметров и с `string[]`.
-- [ ] Корректно обработать возвращаемые формы `void`, `int`, `Task`, `Task<int>`.
-- [ ] Ожидать асинхронный entry point до фактического завершения и только затем публиковать `ProgramFinished`.
+- [x] Поддержать entry point без параметров и с `string[]`.
+- [x] Корректно обработать возвращаемые формы `void`, `int`, `Task`, `Task<int>`.
+- [x] Ожидать асинхронный entry point до фактического завершения и только затем публиковать `ProgramFinished`.
 - [ ] Разворачивать `TargetInvocationException`, но отличать ожидаемый Stop от пользовательской ошибки.
 - [x] Вызывать `Unload()` только после завершения поддерживаемого entry point и вызова `CodeExecutionContext.Dispose()`; полнота очистки ссылок внутри KID runtime/Console/WPF относится к этапам 4–8.
 - [x] В тесте держать только `WeakReference` на ALC, выполнять контролируемые GC-циклы и подтверждать сборку после серии запусков.
@@ -321,7 +321,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [ ] Stop в tight loop без вызовов KID API.
 - [ ] Stop в Graphics/Sprite/Music loop.
 - [ ] Stop во время `Console.Read`, `ReadLine`, `Task.Delay` и поддержанного `Thread.Sleep`.
-- [ ] `void Main`, `int Main`, `Task Main`, `Task<int> Main`.
+- [x] `void Main`, `int Main`, `Task Main`, `Task<int> Main`; каждый вариант проверен без параметров и с `string[]`.
 - [ ] пользовательское исключение, cancellation и compilation error имеют разные результаты.
 - [ ] двойной Stop и попытка Run во время cleanup безопасны.
 
@@ -331,7 +331,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [ ] Static events и shortcuts очищаются между запусками.
 - [ ] Stale Dispatcher callbacks не меняют новый Canvas/TextBox.
 - [ ] Console streams восстанавливаются при success, compilation error, runtime fault и cancellation.
-- [ ] Collectible ALC освобождается в штатных сценариях.
+- [x] Collectible ALC освобождается в штатных синхронных и асинхронных сценариях.
 - [ ] Release build остаётся с 0 warnings/0 errors.
 
 ### Ошибки финализации

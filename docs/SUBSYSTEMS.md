@@ -62,7 +62,8 @@
 **Особенности:**
 - `runningInstance.Completion` — одна `JoinableTask` уже начатого выполнения, которую сервис ожидает после сохранения экземпляра; общую фабрику runner получает через DI
 - Ошибки выполнения и отмена, не обработанные внутри экземпляра, передаются через `Completion`; экземпляр остаётся доступен для cleanup
-- `CollectibleCodeRunningInstance` выполняет загрузку и вызов `Assembly.EntryPoint` через `Task.Run`, сохраняет обработку `TargetInvocationException`, `OperationCanceledException` и локализованных сообщений
+- `CollectibleCodeRunningInstance` выполняет загрузку и вызов `Assembly.EntryPoint` через `Task.Run`, поддерживает `void`/`int`/`Task`/`Task<int>` с пустым списком параметров либо `string[]` и не завершает `Completion` раньше async Main
+- Обработка `TargetInvocationException`, `OperationCanceledException` и локализованных сообщений выполняется до публикации завершения
 - После ожидания `Completion` сервис очищает Console/Graphics, затем вызывает `Dispose()` экземпляра для инициирования выгрузки сборки
 
 #### 1.4. Контексты выполнения

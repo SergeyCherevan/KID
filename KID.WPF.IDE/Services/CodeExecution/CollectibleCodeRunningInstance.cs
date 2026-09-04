@@ -108,12 +108,14 @@ namespace KID.Services.CodeExecution
             try
             {
                 /* ConfigureAwait(false) не возвращает обработку результата на UI-поток.
-                 * Сам load/invoke выполняется внутри отдельного worker delegate.
+                 * Сам load/invoke выполняется внутри отдельного worker delegate, после чего
+                 * возможный Task-результат entry point ожидается до публикации исхода.
                  */
-                var outcome = await Task.Run(
-                        ExecuteArtifact,
+                var invocation = await Task.Run(
+                        LoadAndInvokeEntryPoint,
                         cancellationToken)
                     .ConfigureAwait(false);
+                var outcome = await AwaitEntryPointAsync(invocation).ConfigureAwait(false);
 
                 await ReportOutcomeAsync(outcome).ConfigureAwait(false);
             }
@@ -188,11 +190,13 @@ namespace KID.Services.CodeExecution
             Volatile.Write(ref lifecycleStateValue, (int)newState);
 
         /// <summary>
-        /// Создаёт collectible context, загружает PE/PDB и синхронно вызывает entry point.
+        /// Создаёт collectible context, загружает PE/PDB и вызывает entry point.
         /// </summary>
-        /// <returns>Результат без ссылок на типы и объекты пользовательской сборки.</returns>
+        /// <returns>
+        /// Немедленный host-only результат либо Task, который необходимо дождаться перед cleanup.
+        /// </returns>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private ExecutionOutcome ExecuteArtifact()
+        private EntryPointInvocation LoadAndInvokeEntryPoint()
         {
             /* Артефакт забирается только одним разрешённым запуском. После загрузки экземпляр больше
              * не удерживает его буферы, а runtime-объекты остаются локальными этому методу.
@@ -214,7 +218,7 @@ namespace KID.Services.CodeExecution
                 : executionLoadContext.LoadFromStream(peStream, pdbStream);
             var entryPoint = assembly.EntryPoint;
             if (entryPoint == null)
-                return ExecutionOutcome.None;
+                return EntryPointInvocation.FromOutcome(ExecutionOutcome.None);
 
             var parameters = entryPoint.GetParameters().Length == 0
                 ? null
@@ -222,25 +226,73 @@ namespace KID.Services.CodeExecution
 
             try
             {
-                /* Возвращаемое значение намеренно пока не ожидается: поддержка Task и Task<int>
-                 * является следующим отдельным подэтапом и не смешивается с ownership ALC.
+                /* Для async Main Roslyn создаёт синхронный runtime-wrapper, который сам дожидается
+                 * исходного Task и возвращает void/int. Защитная проверка Task ниже также корректно
+                 * обрабатывает reflection entry point, вернувший Task.
                  */
-                _ = entryPoint.Invoke(null, parameters);
-                return ExecutionOutcome.Finished;
+                var invocationResult = entryPoint.Invoke(null, parameters);
+                return invocationResult switch
+                {
+                    null => EntryPointInvocation.FromOutcome(ExecutionOutcome.Finished),
+                    int => EntryPointInvocation.FromOutcome(ExecutionOutcome.Finished),
+                    Task task => EntryPointInvocation.FromTask(task),
+                    _ => throw new InvalidOperationException(
+                        $"Unsupported entry point result type: {invocationResult.GetType().FullName}.")
+                };
             }
             catch (TargetInvocationException exception)
             {
                 if (exception.InnerException is OperationCanceledException)
-                    return ExecutionOutcome.Stopped;
+                    return EntryPointInvocation.FromOutcome(ExecutionOutcome.Stopped);
 
                 var innerException = exception.InnerException;
-                return ExecutionOutcome.FromError(
-                    innerException?.Message ?? exception.Message,
-                    innerException?.StackTrace ?? exception.StackTrace);
+                return EntryPointInvocation.FromOutcome(
+                    ExecutionOutcome.FromError(
+                        innerException?.Message ?? exception.Message,
+                        innerException?.StackTrace ?? exception.StackTrace));
+            }
+            catch (OperationCanceledException)
+            {
+                return EntryPointInvocation.FromOutcome(ExecutionOutcome.Stopped);
+            }
+        }
+
+        /// <summary>
+        /// Дожидается прямого Task/Task&lt;int&gt;-результата entry point и преобразует его исход.
+        /// </summary>
+        /// <param name="invocation">
+        /// Результат загрузки и вызова, не содержащий Assembly, Type или MethodInfo.
+        /// </param>
+        private static async Task<ExecutionOutcome> AwaitEntryPointAsync(
+            EntryPointInvocation invocation)
+        {
+            var asyncCompletion = invocation.AsyncCompletion;
+            if (asyncCompletion == null)
+                return invocation.ImmediateOutcome;
+
+            try
+            {
+                /* Task<int> наследуется от Task: обычный await ожидает завершение, а exit code
+                 * пока не публикуется наружу, как и результат синхронного int Main.
+                 */
+                await asyncCompletion.ConfigureAwait(false);
+                return ExecutionOutcome.Finished;
             }
             catch (OperationCanceledException)
             {
                 return ExecutionOutcome.Stopped;
+            }
+            catch (Exception exception)
+            {
+                return ExecutionOutcome.FromError(exception.Message, exception.StackTrace);
+            }
+            finally
+            {
+                /* Параметр и локальная переменная являются полями async state machine. Явное
+                 * обнуление не оставляет завершённый user Task корнем collectible ALC.
+                 */
+                asyncCompletion = null;
+                invocation = default;
             }
         }
 
@@ -274,6 +326,22 @@ namespace KID.Services.CodeExecution
                 default:
                     throw new InvalidOperationException("Unknown execution outcome.");
             }
+        }
+
+        /// <summary>
+        /// Host-owned описание вызова, временно удерживающее только ожидаемый Task пользователя.
+        /// </summary>
+        private readonly record struct EntryPointInvocation(
+            ExecutionOutcome ImmediateOutcome,
+            Task? AsyncCompletion)
+        {
+            /// <summary>Создаёт уже завершённый результат вызова.</summary>
+            public static EntryPointInvocation FromOutcome(ExecutionOutcome outcome) =>
+                new(outcome, null);
+
+            /// <summary>Создаёт результат, завершение которого ещё требуется дождаться.</summary>
+            public static EntryPointInvocation FromTask(Task completion) =>
+                new(default, completion);
         }
 
         /// <summary>
