@@ -8,27 +8,27 @@ namespace KID.Services.CodeExecution
         /// <summary>
         /// Активной execution-сессии нет; разрешён запуск новой программы.
         /// </summary>
-        Idle,
+        Idle = 0,
 
         /// <summary>
         /// Execution-сессия создана, контекст инициализирован и выполняется компиляция программы.
         /// </summary>
-        Compiling,
+        Compiling = 1,
 
         /// <summary>
         /// Компиляция завершена успешно и выполняется entry point пользовательской программы.
         /// </summary>
-        Running,
+        Running = 2,
 
         /// <summary>
         /// Отмена уже запрошена; система ожидает, пока выполняющийся код заметит токен и завершится.
         /// </summary>
-        StopRequested,
+        StopRequested = 3,
 
         /// <summary>
         /// Выполнение завершено и освобождаются контекст, подписки и остальные ресурсы сессии;
         /// новый запуск ещё запрещён.
         /// </summary>
-        CleaningUp
+        CleaningUp = 4
     }
 }
