@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Localization.Interfaces;
+using Microsoft.VisualStudio.Threading;
 
 namespace KID.Services.CodeExecution
 {
@@ -14,10 +15,10 @@ namespace KID.Services.CodeExecution
     /// <see cref="Dispose"/>. Assembly, Type и MethodInfo существуют лишь внутри отдельного
     /// non-inlined метода выполнения и не сохраняются в singleton-сервисах.
     /// </remarks>
-    internal sealed class CollectibleCodeExecutionHandle : ICodeExecutionHandle
+    internal sealed class CollectibleCodeRunningInstance : ICodeRunningInstance
     {
         /// <summary>
-        /// Состояния одноразового execution handle.
+        /// Состояния одного экземпляра выполнения.
         /// </summary>
         private enum LifecycleState
         {
@@ -31,14 +32,15 @@ namespace KID.Services.CodeExecution
         private CompilationArtifact? artifact;
         private UserProgramLoadContext? loadContext;
         private WeakReference? loadContextReference;
+        private JoinableTask? completion;
         private int lifecycleStateValue = (int)LifecycleState.Ready;
 
         /// <summary>
-        /// Создаёт handle, который пока владеет только неизменяемым PE/PDB-артефактом.
+        /// Создаёт экземпляр, который пока владеет только неизменяемым PE/PDB-артефактом.
         /// </summary>
         /// <param name="artifact">Артефакт успешной компиляции.</param>
         /// <param name="localizationService">Источник сообщений о результате выполнения.</param>
-        public CollectibleCodeExecutionHandle(
+        public CollectibleCodeRunningInstance(
             CompilationArtifact artifact,
             ILocalizationService localizationService)
         {
@@ -53,27 +55,56 @@ namespace KID.Services.CodeExecution
         internal WeakReference? LoadContextReference => loadContextReference;
 
         /// <summary>
-        /// Выполняет артефакт ровно один раз вне UI-потока.
+        /// Возвращает одну и ту же задачу уже запущенного выполнения без повторного запуска.
         /// </summary>
+        /// <remarks>
+        /// Runner публикует экземпляр только после Start. Завершение этой задачи позволяет
+        /// coordinator начать очистку контекста; сам Dispose и Unload в неё не входят.
+        /// </remarks>
+        public JoinableTask Completion => completion ??
+            throw new InvalidOperationException("Running instance has not been started.");
+
+        /// <summary>
+        /// Начинает выполнение ровно один раз и сохраняет его задачу перед возвратом из runner.
+        /// </summary>
+        /// <param name="joinableTaskFactory">
+        /// Фабрика, связывающая заранее запущенную операцию с ожидающим её UI-контекстом.
+        /// </param>
         /// <param name="cancellationToken">Токен активной execution-сессии.</param>
         /// <exception cref="InvalidOperationException">
-        /// Handle уже запускался либо выполняется сейчас.
+        /// Экземпляр уже запускался либо выполняется сейчас.
         /// </exception>
-        /// <exception cref="ObjectDisposedException">Handle уже освобождён.</exception>
-        public async Task RunAsync(CancellationToken cancellationToken = default)
+        /// <exception cref="ObjectDisposedException">Экземпляр уже освобождён.</exception>
+        internal void Start(
+            JoinableTaskFactory joinableTaskFactory,
+            CancellationToken cancellationToken = default)
         {
+            ArgumentNullException.ThrowIfNull(joinableTaskFactory);
+
             /* Единый атомарный переход Ready → Running одновременно запрещает повторный запуск
-             * и закрывает гонку между RunAsync и Dispose.
+             * и закрывает гонку между Start и Dispose.
              */
             var previousState = CompareExchangeLifecycleState(
                 LifecycleState.Running,
                 LifecycleState.Ready);
 
             if (previousState == LifecycleState.Disposed)
-                throw new ObjectDisposedException(nameof(CollectibleCodeExecutionHandle));
+                throw new ObjectDisposedException(nameof(CollectibleCodeRunningInstance));
             if (previousState != LifecycleState.Ready)
-                throw new InvalidOperationException("Execution handle can only be run once.");
+                throw new InvalidOperationException("Running instance can only be started once.");
 
+            /* ExecuteAsync сохраняет ошибки и отмену в Task, даже если они возникли до первого
+             * незавершённого await. Runner сможет вернуть экземпляр владельцу для cleanup.
+             */
+            completion = joinableTaskFactory.RunAsync(() => ExecuteAsync(cancellationToken));
+        }
+
+        /// <summary>
+        /// Загружает и выполняет артефакт вне UI-потока, затем публикует результат выполнения.
+        /// </summary>
+        /// <param name="cancellationToken">Токен активной execution-сессии.</param>
+        private async Task ExecuteAsync(CancellationToken cancellationToken)
+        {
             try
             {
                 /* ConfigureAwait(false) не возвращает обработку результата на UI-поток.
@@ -111,7 +142,7 @@ namespace KID.Services.CodeExecution
                 if (currentState == LifecycleState.Running)
                 {
                     throw new InvalidOperationException(
-                        "Execution handle cannot be disposed while it is running.");
+                        "Running instance cannot be disposed while it is running.");
                 }
 
                 if (CompareExchangeLifecycleState(
@@ -150,7 +181,7 @@ namespace KID.Services.CodeExecution
                 (int)expectedState);
 
         /// <summary>
-        /// Атомарно публикует новое состояние после завершения принадлежащей handle операции.
+        /// Атомарно публикует новое состояние после завершения операции этого экземпляра.
         /// </summary>
         /// <param name="newState">Состояние, которое требуется опубликовать.</param>
         private void WriteLifecycleState(LifecycleState newState) =>
@@ -163,7 +194,7 @@ namespace KID.Services.CodeExecution
         [MethodImpl(MethodImplOptions.NoInlining)]
         private ExecutionOutcome ExecuteArtifact()
         {
-            /* Артефакт забирается только одним разрешённым запуском. После загрузки handle больше
+            /* Артефакт забирается только одним разрешённым запуском. После загрузки экземпляр больше
              * не удерживает его буферы, а runtime-объекты остаются локальными этому методу.
              */
             var executionArtifact = Interlocked.Exchange(ref artifact, null) ??

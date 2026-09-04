@@ -34,7 +34,7 @@ public sealed class CodeExecutionServiceTests
 
         Assert.Equal(1, context.InitCount);
         Assert.Equal(1, context.DisposeCount);
-        Assert.Equal(0, runner.CreateCount);
+        Assert.Equal(0, runner.StartCount);
         Assert.Equal(0, runner.CallCount);
         Assert.Equal(0, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
@@ -66,7 +66,7 @@ public sealed class CodeExecutionServiceTests
 
         Assert.True(runnerToken.CanBeCanceled);
         Assert.Same(artifact, runnerArtifact);
-        Assert.Equal(1, runner.CreateCount);
+        Assert.Equal(1, runner.StartCount);
         Assert.Equal(1, runner.CallCount);
         Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(
@@ -86,21 +86,24 @@ public sealed class CodeExecutionServiceTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_RunnerFailure_StillDisposesContext()
+    public async Task ExecuteAsync_CompletionFailure_DisposesContextThenRunningInstance()
     {
+        var cleanupOrder = new List<string>();
         var compilationResult = CompilationResult.FromArtifact(CreateArtifact());
         var compiler = FakeCodeCompiler.Returning(compilationResult);
-        var runner = new FakeCodeRunner((_, _) =>
-            Task.FromException(new InvalidOperationException("runner failed")));
-        var context = new TrackingCodeExecutionContext();
+        var runner = new FakeCodeRunner(
+            (_, _) => Task.FromException(new InvalidOperationException("runner failed")),
+            disposeAction: () => cleanupOrder.Add("running instance"));
+        var context = new TrackingCodeExecutionContext(() => cleanupOrder.Add("execution context"));
         var service = new CodeExecutionService(compiler, runner);
 
         var exception = await Record.ExceptionAsync(
             () => service.ExecuteAsync("valid code", _ => context));
 
         Assert.IsType<InvalidOperationException>(exception);
+        Assert.Equal(new[] { "execution context", "running instance" }, cleanupOrder);
         Assert.Equal(1, context.DisposeCount);
-        Assert.Equal(1, runner.CreateCount);
+        Assert.Equal(1, runner.StartCount);
         Assert.Equal(1, runner.CallCount);
         Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
@@ -108,12 +111,12 @@ public sealed class CodeExecutionServiceTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_ContextDisposeFails_StillDisposesExecutionHandleAfterContext()
+    public async Task ExecuteAsync_ContextDisposeFails_StillDisposesRunningInstanceAfterContext()
     {
         var cleanupOrder = new List<string>();
         var contextException = new InvalidOperationException("context dispose failed");
         var runner = new FakeCodeRunner(
-            disposeAction: () => cleanupOrder.Add("execution handle"));
+            disposeAction: () => cleanupOrder.Add("running instance"));
         var context = new TrackingCodeExecutionContext(() =>
         {
             cleanupOrder.Add("execution context");
@@ -129,7 +132,7 @@ public sealed class CodeExecutionServiceTests
 
         Assert.Same(contextException, exception);
         Assert.Equal(
-            new[] { "execution context", "execution handle" },
+            new[] { "execution context", "running instance" },
             cleanupOrder);
         Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
@@ -228,6 +231,47 @@ public sealed class CodeExecutionServiceTests
         }
 
         Assert.Equal(1, firstContext.DisposeCount);
+        Assert.Equal(ExecutionState.Idle, service.State);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PendingCompletion_DelaysCleanupAndRejectsSecondRun()
+    {
+        var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var runner = new FakeCodeRunner(
+            async (_, cancellationToken) =>
+                await completion.Task.WaitAsync(cancellationToken));
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(CompilationResult.FromArtifact(CreateArtifact())),
+            runner);
+        var context = new TrackingCodeExecutionContext();
+        var execution = service.ExecuteAsync("first", _ => context);
+
+        try
+        {
+            Assert.Equal(ExecutionState.Running, service.State);
+            Assert.False(execution.IsCompleted);
+            Assert.Equal(0, context.DisposeCount);
+            Assert.Equal(0, runner.DisposeCount);
+            var secondContextCount = 0;
+
+            await service.ExecuteAsync("second", _ =>
+            {
+                secondContextCount++;
+                return new TrackingCodeExecutionContext();
+            }).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+            Assert.Equal(0, secondContextCount);
+            Assert.Equal(1, runner.CallCount);
+        }
+        finally
+        {
+            completion.TrySetResult(null);
+            await execution.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(1, context.DisposeCount);
+        Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
     }
 

@@ -110,7 +110,7 @@
 **CodeExecutionService** (`CodeExecutionService.cs`)
 - Координирует процесс выполнения кода
 - Использует ICodeCompiler для компиляции
-- Использует ICodeRunner для выполнения
+- Вызывает `ICodeRunner.Start(artifact, token)` и ожидает `runningInstance.Completion`
 - Управляет жизненным циклом контекста выполнения
 
 **CSharpCompiler** (`CSharpCompiler.cs`)
@@ -120,10 +120,15 @@
 - Обрабатывает ошибки компиляции и возвращает их в локализованном виде
 
 **DefaultCodeRunner** (`DefaultCodeRunner.cs`)
-- Выполняет скомпилированную сборку
-- Обрабатывает исключения выполнения
-- Поддерживает отмену выполнения через CancellationToken
-- Выводит сообщения об ошибках в консоль
+- Создаёт и запускает `CollectibleCodeRunningInstance`, возвращая его как `ICodeRunningInstance`
+- `Start()` возвращается без ожидания завершения программы; runner не хранит состояние запусков
+
+**CollectibleCodeRunningInstance** (`CollectibleCodeRunningInstance.cs`)
+- Владеет ресурсами одного запуска и загружает PE/PDB в collectible `AssemblyLoadContext`
+- `Completion` возвращает одну задачу выполнения; повторный `await` не запускает программу заново
+- `Completion` представлен `JoinableTask`, потому что операция стартует до ожидания и может обращаться к WPF UI-потоку
+- Сохраняет текущую обработку пользовательских ошибок и сообщений; необработанные ошибки и отмена доступны через `Completion`
+- `Dispose()` инициирует выгрузку после завершения `Completion` и очистки контекста сервисом; освобождение работающего экземпляра запрещено
 
 **Контексты выполнения:**
 - **CodeExecutionContext** — контекст выполнения, объединяющий графический и консольный контексты
@@ -457,15 +462,20 @@ CodeExecutionService.ExecuteAsync()
          ↓
 CSharpCompiler.CompileAsync()
          ↓
-DefaultCodeRunner.RunAsync()
+DefaultCodeRunner.Start(artifact, token)
          ↓
-Выполнение пользовательского кода
+CollectibleCodeRunningInstance → выполнение пользовательского кода
          ↓
 Graphics API → Canvas (UI поток)
 Mouse API → Canvas (UI поток)
 Keyboard API → Window (UI поток)
 Console API → TextBox (UI поток)
 ```
+
+`CodeExecutionService` сохраняет экземпляр до `await runningInstance.Completion`. После завершения
+выполнения сервис очищает контекст Console/Graphics, вызывает `runningInstance.Dispose()`, снимает
+регистрацию StopManager и освобождает сессию. `Completion` не включает этот внешний cleanup.
+Общая `JoinableTaskFactory` создаётся из singleton `JoinableTaskContext` и передаётся runner через DI.
 
 ### Инициализация приложения
 

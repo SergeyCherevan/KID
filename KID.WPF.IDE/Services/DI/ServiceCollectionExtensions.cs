@@ -21,6 +21,7 @@ using KID.Services.Errors;
 using KID.Services.Errors.Interfaces;
 using KID.Services.WindowInterop;
 using KID.Services.WindowInterop.Interfaces;
+using Microsoft.VisualStudio.Threading;
 
 namespace KID.Services.DI
 {
@@ -29,6 +30,12 @@ namespace KID.Services.DI
         public static IServiceCollection AddKIDServices(this IServiceCollection services)
         {
             // Services
+            /* Одна фабрика связывает заранее запущенные Completion-операции с WPF UI-контекстом.
+             * JoinableTaskContext создаётся DI-контейнером и освобождается вместе с ним.
+             */
+            services.AddSingleton<JoinableTaskContext>();
+            services.AddSingleton(
+                serviceProvider => serviceProvider.GetRequiredService<JoinableTaskContext>().Factory);
             services.AddSingleton<ICodeCompiler, CSharpCompiler>();
             services.AddSingleton<ICodeRunner, DefaultCodeRunner>();
             services.AddSingleton<ICodeExecutionService, CodeExecutionService>();

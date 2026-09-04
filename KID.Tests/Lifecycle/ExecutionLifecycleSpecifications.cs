@@ -44,7 +44,9 @@ public sealed class ExecutionLifecycleSpecifications
             code,
             TestContext.Current.CancellationToken);
         var artifact = Assert.IsType<CompilationArtifact>(compilationResult.Artifact);
-        var runner = new DefaultCodeRunner(localizationService);
+        var runner = new DefaultCodeRunner(
+            localizationService,
+            TestThreading.JoinableTaskFactory);
         var contextReferences = new List<WeakReference>();
 
         for (var executionIndex = 0; executionIndex < 8; executionIndex++)
@@ -73,13 +75,13 @@ public sealed class ExecutionLifecycleSpecifications
         CompilationArtifact artifact)
     {
         /* Отдельный non-inlined frame следует рекомендуемому .NET шаблону unload-теста:
-         * после возврата здесь на стеке не остаются handle, Assembly или MethodInfo.
+         * после возврата здесь на стеке не остаются экземпляр выполнения, Assembly или MethodInfo.
          */
-        var execution = Assert.IsType<CollectibleCodeExecutionHandle>(
-            runner.CreateExecution(artifact));
+        var execution = Assert.IsType<CollectibleCodeRunningInstance>(
+            runner.Start(artifact, TestContext.Current.CancellationToken));
         try
         {
-            await execution.RunAsync();
+            await execution.Completion;
             return Assert.IsType<WeakReference>(execution.LoadContextReference);
         }
         finally

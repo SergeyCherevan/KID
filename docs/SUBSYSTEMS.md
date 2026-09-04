@@ -53,18 +53,17 @@
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/DefaultCodeRunner.cs`
 
 **Ответственность:**
-- Выполнение скомпилированной сборки
-- Обработка исключений выполнения
-- Вывод сообщений об ошибках
+- Создание и запуск отдельного `CollectibleCodeRunningInstance` для PE/PDB-артефакта
+- Передача владения запущенным экземпляром вызывающему сервису через `ICodeRunningInstance`
 
 **Основные методы:**
-- `RunAsync(Assembly assembly, CancellationToken)` — выполняет сборку
+- `Start(CompilationArtifact artifact, CancellationToken)` — запускает выполнение и возвращает экземпляр без ожидания его завершения
 
 **Особенности:**
-- Выполняется в отдельном потоке (Task.Run)
-- Использует `Assembly.EntryPoint` для получения точки входа
-- Обрабатывает `TargetInvocationException` и `OperationCanceledException`
-- Выводит локализованные сообщения об ошибках
+- `runningInstance.Completion` — одна `JoinableTask` уже начатого выполнения, которую сервис ожидает после сохранения экземпляра; общую фабрику runner получает через DI
+- Ошибки выполнения и отмена, не обработанные внутри экземпляра, передаются через `Completion`; экземпляр остаётся доступен для cleanup
+- `CollectibleCodeRunningInstance` выполняет загрузку и вызов `Assembly.EntryPoint` через `Task.Run`, сохраняет обработку `TargetInvocationException`, `OperationCanceledException` и локализованных сообщений
+- После ожидания `Completion` сервис очищает Console/Graphics, затем вызывает `Dispose()` экземпляра для инициирования выгрузки сборки
 
 #### 1.4. Контексты выполнения
 

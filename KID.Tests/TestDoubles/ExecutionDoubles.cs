@@ -1,9 +1,17 @@
 using KID.Services;
 using KID.Services.CodeExecution.Contexts.Interfaces;
 using KID.Services.CodeExecution.Interfaces;
+using Microsoft.VisualStudio.Threading;
 using System.Windows.Threading;
 
 namespace KID.Tests.TestDoubles;
+
+internal static class TestThreading
+{
+    private static readonly JoinableTaskContext JoinableTaskContext = new();
+
+    public static JoinableTaskFactory JoinableTaskFactory => JoinableTaskContext.Factory;
+}
 
 internal sealed class FakeCodeCompiler : ICodeCompiler
 {
@@ -35,7 +43,7 @@ internal sealed class FakeCodeRunner : ICodeRunner
 {
     private readonly Func<CompilationArtifact, CancellationToken, Task> implementation;
     private readonly Action? disposeAction;
-    private int createCount;
+    private int startCount;
     private int callCount;
     private int disposeCount;
 
@@ -47,37 +55,44 @@ internal sealed class FakeCodeRunner : ICodeRunner
         this.disposeAction = disposeAction;
     }
 
-    public int CreateCount => Volatile.Read(ref createCount);
+    public int StartCount => Volatile.Read(ref startCount);
 
     public int CallCount => Volatile.Read(ref callCount);
 
     public int DisposeCount => Volatile.Read(ref disposeCount);
 
-    public ICodeExecutionHandle CreateExecution(CompilationArtifact artifact)
+    public ICodeRunningInstance Start(
+        CompilationArtifact artifact,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(artifact);
-        Interlocked.Increment(ref createCount);
-        return new FakeCodeExecutionHandle(this, artifact);
+        Interlocked.Increment(ref startCount);
+        return new FakeCodeRunningInstance(this, artifact, cancellationToken);
     }
 
-    private sealed class FakeCodeExecutionHandle : ICodeExecutionHandle
+    private sealed class FakeCodeRunningInstance : ICodeRunningInstance
     {
         private readonly FakeCodeRunner owner;
         private readonly CompilationArtifact artifact;
         private int isDisposed;
 
-        public FakeCodeExecutionHandle(
+        public FakeCodeRunningInstance(
             FakeCodeRunner owner,
-            CompilationArtifact artifact)
+            CompilationArtifact artifact,
+            CancellationToken cancellationToken)
         {
             this.owner = owner;
             this.artifact = artifact;
+            Completion = TestThreading.JoinableTaskFactory.RunAsync(
+                () => ExecuteAsync(cancellationToken));
         }
 
-        public Task RunAsync(CancellationToken cancellationToken = default)
+        public JoinableTask Completion { get; }
+
+        private async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref owner.callCount);
-            return owner.implementation(artifact, cancellationToken);
+            await owner.implementation(artifact, cancellationToken);
         }
 
         public void Dispose()

@@ -53,8 +53,8 @@ KID остаётся полноценной учебной средой, а не
 | Токен глобален и имеет публичный setter | `KID.Library/StopManager.cs` | публичный getter, host-only lifecycle, стабильный метод проверки и сброс по завершении сессии |
 | `Read`/`ReadLine` не просыпаются по Stop | `TextBoxConsole.cs`: `WaitOne()` перед проверкой | ожидание ввода и token wait handle одновременно; Dispose также пробуждает ожидание |
 | Stop сразу выглядит завершённым | `MenuViewModel.ExecuteStop()` сразу ставит `CanStop = false` | отдельные состояния `StopRequested`/`CleaningUp`; Run разрешается только после `Idle` |
-| Async entry point не ожидается | `DefaultCodeRunner` игнорирует результат `Invoke()` | ожидание `Task`/`Task<int>`, корректная классификация cancellation/fault/result |
-| Сборки не выгружаются между запусками | `DefaultCodeRunner` уже создаёт одноразовый handle с собственным collectible ALC и shared host dependencies; ожидание async entry point ещё не завершено | сохранить execution-scoped ownership и дополнить его корректным ожиданием `Task`/`Task<int>` |
+| Async entry point не ожидается | `CollectibleCodeRunningInstance` игнорирует результат `Invoke()` | ожидание `Task`/`Task<int>`, корректная классификация cancellation/fault/result |
+| Сборки не выгружаются между запусками | `DefaultCodeRunner.Start` уже создаёт и запускает одноразовый экземпляр выполнения с собственным collectible ALC и shared host dependencies; ожидание async entry point ещё не завершено | сохранить execution-scoped ownership и дополнить его корректным ожиданием `Task`/`Task<int>` |
 | Графический Dispose пуст | `CanvasGraphicsContext.Dispose()` | детерминированный teardown всех KID runtime-модулей и WPF-команд запуска |
 | Console UI-события текут между запусками | `TextBoxConsole` подписывается, но не отписывается | идемпотентный Dispose, отписка, восстановление Console streams и очистка static bridge |
 | Keyboard/Mouse worker не ожидается | task отменяется, ссылка сразу теряется | linked token, stop + await, очистка очередей, событий и WPF-подписок |
@@ -71,7 +71,7 @@ MenuViewModel
        │    ├─ ConsoleClearRewriter
        │    ├─ CancellationInstrumentationRewriter
        │    └─ PE/PDB emit без Assembly.Load
-       ├─ DefaultCodeRunner → execution handle
+       ├─ DefaultCodeRunner → экземпляр выполнения
        │    └─ collectible AssemblyLoadContext
        ├─ entry point: void/int/Task/Task<int>
        └─ CodeExecutionContext
@@ -190,11 +190,12 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 ## 📦 Этап 3. Компиляционный артефакт, async entry point и выгрузка сборки
 
-Затрагиваемые области: `CompilationResult`, `ICodeCompiler`, `ICodeRunner`, `ICodeExecutionHandle`, `CSharpCompiler`, `DefaultCodeRunner`, `UserProgramLoadContext`, `CollectibleCodeExecutionHandle`, `CodeExecutionService`.
+Затрагиваемые области: `CompilationResult`, `ICodeCompiler`, `ICodeRunner`, `ICodeRunningInstance`, `CSharpCompiler`, `DefaultCodeRunner`, `UserProgramLoadContext`, `CollectibleCodeRunningInstance`, `CodeExecutionService`.
 
 - [x] Перестать вызывать `Assembly.Load(ms.ToArray())` в компиляторе.
 - [x] Возвращать из компилятора PE image и portable PDB image для корректных stack trace.
 - [x] Создавать на каждый запуск отдельный collectible `AssemblyLoadContext` внутри IDE-процесса.
+- [x] Разделить запуск и ожидание: `ICodeRunner.Start(artifact, token)` возвращает уже запущенный `ICodeRunningInstance`; сервис сохраняет его до `await runningInstance.Completion` и освобождает после очистки контекста. Ошибки выполнения и отмена доступны через `Completion`, не лишая сервис экземпляра для cleanup.
 - [x] Явно разделять shared host assemblies (`KID.Library`, необходимые WPF/BCL и текущий console bridge), чтобы сохранить identity типов; это механизм загрузки, а не sandbox или фильтрация прав.
 - [x] Не оставлять `Assembly`, `MethodInfo`, exception/stack objects или пользовательские delegates в singleton-полях после выполнения.
 - [ ] Поддержать entry point без параметров и с `string[]`.
@@ -335,7 +336,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 ### Ошибки финализации
 
-- [ ] Поочерёдно имитировать исключение при освобождении context, execution handle, StopManager lease и session CTS; проверить попытки выполнить оставшиеся независимые шаги очистки и передачу ошибки вызывающей стороне.
+- [ ] Поочерёдно имитировать исключение при освобождении context, экземпляра выполнения, StopManager lease и session CTS; проверить попытки выполнить оставшиеся независимые шаги очистки и передачу ошибки вызывающей стороне.
 - [ ] Имитировать исключение из подписчика `StateChanged` при переходах в `CleaningUp` и `Idle`; проверить продолжение финализации, согласованность состояния с `currentSession` и завершение внешней задачи.
 - [ ] Имитировать сбой `CompleteSession()` до и после изменения состояния; проверить, что внешняя задача завершается с ошибкой, а доступность нового Run соответствует фактическому состоянию ресурсов.
 - [ ] Проверить сочетания «ошибка выполнения + ошибка cleanup», «несколько ошибок cleanup» и «ожидаемый Stop + ошибка cleanup»: первичная неожиданная ошибка сохраняется, вторичные доступны в диагностике, ошибка очистки не маскируется успешной остановкой.
