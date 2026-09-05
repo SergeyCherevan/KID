@@ -1,333 +1,406 @@
-using System;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using KID;
+using System.Windows.Threading;
 using KID.Services.Interfaces;
+using AsyncManualResetEvent = Microsoft.VisualStudio.Threading.AsyncManualResetEvent;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution;
+
+/// <summary>
+/// Консоль одного запуска. Ввод ожидает символ, Stop или Dispose; UI-команды
+/// проверяют владельца перед выполнением на Dispatcher своего контрола.
+/// </summary>
+public sealed class TextBoxConsole : IConsole, IDisposable, IAsyncDisposable
 {
-    /// <summary>
-    /// Реализация IConsole для WPF TextBox
-    /// </summary>
-    public class TextBoxConsole : IConsole
+    private readonly TextBox textBox;
+    private readonly CancellationToken cancellationToken;
+    private readonly object stateLock = new();
+    private readonly object readLock = new();
+    private readonly Queue<char> input = new();
+    private readonly Queue<Action> output = new();
+    private readonly ExecutionFailureCollector uiFailures = new();
+    private readonly AutoResetEvent inputAvailable;
+    private readonly ManualResetEvent stopRequested;
+    private readonly ManualResetEvent disposeRequested;
+    private readonly WaitHandle[] readSignals;
+    private readonly CancellationTokenRegistration stopRegistration;
+    private readonly AsyncManualResetEvent readersExited = new();
+    private readonly TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private TextWriter textWriter;
+    private TextReader textReader;
+    private bool isDisposed;
+    private int readerCount;
+    private ReadRequest? activeRead;
+    private ReadRequest? uiRead;
+    private bool outputScheduled;
+
+    /// <summary>Неизменяемый id execution-сессии, переданный host.</summary>
+    public long ExecutionId { get; }
+
+    /// <summary>Текст, уже опубликованный на UI-потоке.</summary>
+    public event EventHandler<string>? OutputReceived;
+
+    /// <summary>Создаёт адаптер на UI-потоке с token и id текущей сессии.</summary>
+    public TextBoxConsole(TextBox textBox, long executionId, CancellationToken cancellationToken)
     {
-        private readonly TextBox textBox;
-        private TextWriter textWriter;
-        private TextReader textReader;
-        
-        // === Поля для ввода ===
-        private volatile bool isReading = false;
-        private readonly AutoResetEvent keyDownReadEvent = new AutoResetEvent(false);
-        public event EventHandler<string>? OutputReceived;
-        private volatile int lastReadChar = -1;
-        private readonly object readLock = new object();
+        ArgumentNullException.ThrowIfNull(textBox);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(executionId);
+        textBox.Dispatcher.VerifyAccess();
+        inputAvailable = new AutoResetEvent(false);
+        stopRequested = new ManualResetEvent(false);
+        disposeRequested = new ManualResetEvent(false);
+        this.textBox = textBox;
+        ExecutionId = executionId;
+        this.cancellationToken = cancellationToken;
+        textWriter = new TextBoxTextWriter(this);
+        textReader = new TextBoxTextReader(this);
+        readSignals = [stopRequested, disposeRequested, inputAvailable];
 
-        public TextBoxConsole(TextBox textBox)
+        /* Callback не обращается к WPF и не ожидает reader. Собственный сигнал позволяет
+         * освободить регистрацию до wait handles, не закрывая WaitHandle чужого CTS.
+         */
+        stopRegistration = cancellationToken.Register(() => stopRequested.Set());
+        textBox.PreviewKeyDown += OnPreviewKeyDown;
+        textBox.PreviewTextInput += OnPreviewTextInput;
+        StaticConsole.Init(this);
+    }
+
+    public TextWriter Out { get => textWriter; set => textWriter = value ?? throw new ArgumentNullException(nameof(value)); }
+    public TextReader In { get => textReader; set => textReader = value ?? throw new ArgumentNullException(nameof(value)); }
+    public TextWriter Error { get => textWriter; set => textWriter = value ?? throw new ArgumentNullException(nameof(value)); }
+
+    public void Write(char value) => Write(value.ToString());
+
+    public void Write(string? value)
+    {
+        if (value == null) return;
+        EnqueueOutput(() =>
         {
-            this.textBox = textBox ?? throw new ArgumentNullException(nameof(textBox));
-            
-            // Инициализация потоков
-            textWriter = new TextBoxTextWriter(this);
-            textReader = new TextBoxTextReader(this);
-            
-            // Настройка TextBox для ввода
-            textBox.PreviewKeyDown += TextBox_PreviewKeyDown;
-            textBox.PreviewTextInput += TextBox_PreviewTextInput;
-
-            StaticConsole.Init(this);
-        }
-
-        // === Потоки ===
-        public TextWriter Out
-        {
-            get => textWriter;
-            set => textWriter = value ?? throw new ArgumentNullException(nameof(value));
-        }
-
-        public TextReader In
-        {
-            get => textReader;
-            set => textReader = value ?? throw new ArgumentNullException(nameof(value));
-        }
-
-        public TextWriter Error
-        {
-            get => textWriter; // Используем тот же поток для ошибок
-            set => textWriter = value ?? throw new ArgumentNullException(nameof(value));
-        }
-
-        // === Вывод ===
-        public void Write(char value)
-        {
-            DispatcherManager.InvokeOnUI(() =>
-            {
-                textBox.AppendText(value.ToString());
-                textBox.ScrollToEnd();
-                OutputReceived?.Invoke(this, value.ToString());
-            });
-        }
-        public void Write(string? value)
-        {
-            if (value == null) return;
-            
-            DispatcherManager.InvokeOnUI(() =>
-            {
-                textBox.AppendText(value);
-                textBox.ScrollToEnd();
-                OutputReceived?.Invoke(this, value);
-            });
-        }
-
-        // === Ввод ===
-        public int Read()
-        {
-            lock (readLock)
-            {
-                isReading = true;
-                
-                // Устанавливаем фокус и курсор для визуальной обратной связи
-                DispatcherManager.InvokeOnUI(() =>
-                {
-                    textBox.IsReadOnly = false; // Разрешаем ввод
-                    FocusTextBox(); // Устанавливаем фокус с использованием нескольких методов
-                });
-                
-                // Ждем события (блокируем поток)
-                keyDownReadEvent.WaitOne();
-
-                StopManager.StopIfButtonPressed();
-                
-                isReading = false;
-                
-                char result = (char)lastReadChar;
-
-                DispatcherManager.InvokeOnUI(() =>
-                {
-                    textBox.AppendText(result.ToString());
-                    textBox.ScrollToEnd();
-                    textBox.CaretIndex = textBox.Text.Length;
-                    textBox.IsReadOnly = true; // Блокируем ввод после чтения
-                });
-
-                lastReadChar = -1; // Очищаем
-                
-                return (int)result;
-            }
-        }
-
-        public string ReadLine()
-        {
-            lock (readLock)
-            {
-                StringBuilder result = new StringBuilder();
-                isReading = true;
-                
-                // Устанавливаем фокус и курсор для визуальной обратной связи
-                DispatcherManager.InvokeOnUI(() =>
-                {
-                    textBox.IsReadOnly = false; // Разрешаем ввод
-                    FocusTextBox(); // Устанавливаем фокус с использованием нескольких методов
-                });
-                
-                char symbol;
-                do
-                {
-                    keyDownReadEvent.WaitOne();
-
-                    StopManager.StopIfButtonPressed();
-                    
-                    // Ждем события (блокируем поток)
-                    symbol = (char)lastReadChar;
-                    lastReadChar = -1; // Очищаем сразу после чтения
-
-                    if (symbol == '\b')
-                    {
-                        // Обработка Backspace
-                        if (result.Length > 0)
-                        {
-                            DispatcherManager.InvokeOnUI(() =>
-                            {
-                                if (textBox.Text.Length > 0)
-                                {
-                                    textBox.Text = textBox.Text.Substring(0, textBox.Text.Length - 1);
-                                    textBox.CaretIndex = textBox.Text.Length;
-                                    textBox.ScrollToEnd();
-                                }
-                            });
-                            result.Remove(result.Length - 1, 1);
-                        }
-                        // Если result.Length == 0, просто игнорируем Backspace
-                    }
-                    else
-                    {
-                        // Обычный символ (не Enter и не Backspace)
-                        DispatcherManager.InvokeOnUI(() =>
-                        {
-                            textBox.AppendText(symbol.ToString());
-                            textBox.ScrollToEnd();
-                            textBox.CaretIndex = textBox.Text.Length; // Обновляем позицию курсора
-                        });
-
-                        if (symbol != '\n')
-                        {
-                            result.Append(symbol);
-                        }
-                    }
-                }
-                while (symbol != '\n');
-
-                isReading = false;
-
-                // Блокируем ввод после завершения чтения
-                DispatcherManager.InvokeOnUI(() =>
-                {
-                    textBox.IsReadOnly = true;
-                });
-
-                return result.ToString();
-            }
-        }
-
-        // Очистка вывода
-        public void Clear()
-        {
-            DispatcherManager.InvokeOnUI(() =>
-            {
-                textBox.Clear();
-            });
-        }
-
-        // === Вспомогательные методы ===
-        /// <summary>
-        /// Устанавливает фокус на TextBox с использованием нескольких методов для надежности
-        /// </summary>
-        private void FocusTextBox()
-        {
-            // Метод 1: Стандартный Focus()
-            textBox.Focus();
-            
-            // Метод 2: Keyboard.Focus() - более надежный для элементов ввода
-            global::System.Windows.Input.Keyboard.Focus(textBox);
-            
-            // Метод 3: FocusManager - устанавливает фокус на уровне окна
-            if (textBox.IsLoaded)
-            {
-                FocusManager.SetFocusedElement(FocusManager.GetFocusScope(textBox), textBox);
-            }
-            
-            // Устанавливаем курсор в конец текста
-            textBox.CaretIndex = textBox.Text.Length;
-            
-            // Делаем TextBox видимым и прокручиваем к концу
+            textBox.AppendText(value);
             textBox.ScrollToEnd();
-            textBox.BringIntoView();
-        }
+            OutputReceived?.Invoke(this, value);
+        });
+    }
 
-        private void TextBox_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    public void Clear() => EnqueueOutput(textBox.Clear);
+
+    /// <summary>Читает UTF-16 символ; Stop выбрасывает отмену с исходным session token.</summary>
+    public int Read() => ReadCore(readLine: false)[0];
+
+    /// <summary>Читает строку до Enter, поддерживая Backspace и многосимвольный ввод.</summary>
+    public string ReadLine() => ReadCore(readLine: true);
+
+    private string ReadCore(bool readLine)
+    {
+        if (textBox.Dispatcher.CheckAccess())
+            throw new InvalidOperationException("Console input must run outside the UI thread.");
+
+        lock (stateLock)
         {
-            if (!isReading) return; // Игнорируем, если не ждем ввода
-            
-            // Обрабатываем только специальные клавиши (Enter, Backspace)
-            // Текстовые символы обрабатываются через TextInput
-            if (e.Key == System.Windows.Input.Key.Enter)
-            {
-                lastReadChar = '\n';
-                keyDownReadEvent.Set();
-                e.Handled = true;
-            }
-            if (e.Key == System.Windows.Input.Key.Space)
-            {
-                lastReadChar = ' ';
-                keyDownReadEvent.Set();
-                e.Handled = true;
-            }
-            else if (e.Key == System.Windows.Input.Key.Back)
-            {
-                lastReadChar = '\b';
-                keyDownReadEvent.Set();
-                e.Handled = true;
-            }
+            ThrowIfStopped();
+            readerCount++;
         }
-        
-        private void TextBox_PreviewTextInput(object sender, System.Windows.Input.TextCompositionEventArgs e)
+
+        try
         {
-            if (!isReading) return; // Игнорируем, если не ждем ввода
-            
-            // Получаем текстовый символ (работает с кириллицей и любыми Unicode символами)
-            if (e.Text.Length > 0)
+            /* Reader, ожидающий readLock, тоже учтён в readerCount: Dispose не закрывает
+             * сигналы до выхода как активного чтения, так и его конкурентов.
+             */
+            lock (readLock)
             {
-                char symbol = e.Text[0];
-                lastReadChar = symbol;
-                keyDownReadEvent.Set(); // "Будим" Read()
-                e.Handled = true; // Предотвращаем стандартную обработку
+                var request = new ReadRequest();
+                try
+                {
+                    lock (stateLock)
+                    {
+                        ThrowIfStopped();
+                        activeRead = request;
+                    }
+                    PostUi(() => BeginReadUi(request));
+                    var result = new StringBuilder();
+                    do
+                    {
+                        var symbol = ReadCharacter();
+                        if (readLine && symbol == '\b')
+                        {
+                            if (result.Length > 0)
+                            {
+                                result.Length--;
+                                EnqueueOutput(() =>
+                                {
+                                    if (textBox.Text.Length > 0)
+                                        textBox.Text = textBox.Text[..^1];
+                                    textBox.CaretIndex = textBox.Text.Length;
+                                });
+                            }
+                            continue;
+                        }
+                        Write(symbol);
+                        if (readLine && symbol == '\n') break;
+                        result.Append(symbol);
+                    }
+                    while (readLine);
+                    return result.ToString();
+                }
+                finally
+                {
+                    lock (stateLock)
+                    {
+                        activeRead = null;
+                        // Непрочитанные символы обычного ввода нужны следующему Read.
+                        // При отмене/Dispose они уже не принадлежат будущему запросу.
+                        if (isDisposed || cancellationToken.IsCancellationRequested) input.Clear();
+                    }
+                    /* Cleanup не использует отменённый token. Запоздалый callback
+                     * проверит владельца и конкретный запрос чтения.
+                     */
+                    PostUi(() => RestoreReadUi(request));
+                }
             }
         }
-
-        // === Внутренние классы для потоков ===
-        private class TextBoxTextWriter : TextWriter
+        finally
         {
-            private readonly TextBoxConsole console;
-
-            public TextBoxTextWriter(TextBoxConsole console)
+            lock (stateLock)
             {
-                this.console = console;
-            }
-
-            public override Encoding Encoding => Encoding.UTF8;
-
-            public override void Write(char symbol)
-            {
-                console.Write(symbol);
-            }
-
-            public override void Write(string? value)
-            {
-                console.Write(value);
-            }
-
-            public virtual void Clear()
-            {
-                console.Clear();
+                if (--readerCount == 0 && isDisposed)
+                    readersExited.Set();
             }
         }
+    }
 
-        private class TextBoxTextReader : TextReader
+    private char ReadCharacter()
+    {
+        while (true)
         {
-            private readonly TextBoxConsole console;
-
-            public TextBoxTextReader(TextBoxConsole console)
+            lock (stateLock)
             {
-                this.console = console;
+                ThrowIfStopped();
+                if (input.TryDequeue(out var symbol)) return symbol;
             }
-
-            public override int Read()
-            {
-                return console.Read();
-            }
-
-            public override string? ReadLine()
-            {
-                return console.ReadLine();
-            }
+            WaitHandle.WaitAny(readSignals);
         }
+    }
 
-        public static class StaticConsole
+    // Под stateLock; в гонке Stop и Dispose приоритет имеет session cancellation.
+    private void ThrowIfStopped()
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ObjectDisposedException.ThrowIf(isDisposed || !StaticConsole.IsCurrent(this), this);
+    }
+
+    private bool ReceiveInput(string text)
+    {
+        lock (stateLock)
         {
-            private static TextBoxConsole? textBoxConsole;
-            public static void Init(TextBoxConsole textBoxConsole)
-            {
-                StaticConsole.textBoxConsole = textBoxConsole;
-            }
+            if (isDisposed || cancellationToken.IsCancellationRequested ||
+                activeRead == null || !StaticConsole.IsCurrent(this) || text.Length == 0)
+                return false;
+            foreach (var symbol in text) input.Enqueue(symbol);
+            inputAvailable.Set();
+            return true;
+        }
+    }
 
-            public static void Clear()
+    private void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        if (ReceiveInput(e.Text)) e.Handled = true;
+    }
+
+    private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        var text = e.Key switch { Key.Enter => "\n", Key.Back => "\b", Key.Space => " ", _ => "" };
+        if (ReceiveInput(text)) e.Handled = true;
+    }
+
+    private void BeginReadUi(ReadRequest request)
+    {
+        lock (stateLock)
+        {
+            if (isDisposed || cancellationToken.IsCancellationRequested ||
+                activeRead != request || !StaticConsole.IsCurrent(this)) return;
+            request.WasReadOnly = textBox.IsReadOnly;
+            request.KeyboardFocus = global::System.Windows.Input.Keyboard.FocusedElement;
+            request.FocusScope = FocusManager.GetFocusScope(textBox);
+            request.LogicalFocus = FocusManager.GetFocusedElement(request.FocusScope);
+            uiRead = request;
+            textBox.IsReadOnly = false;
+            textBox.Focus();
+            global::System.Windows.Input.Keyboard.Focus(textBox);
+            FocusManager.SetFocusedElement(request.FocusScope, textBox);
+            textBox.CaretIndex = textBox.Text.Length;
+            textBox.ScrollToEnd();
+        }
+    }
+
+    private void RestoreReadUi(ReadRequest request)
+    {
+        if (uiRead != request) return;
+        uiRead = null;
+        if (!StaticConsole.IsCurrent(this)) return;
+        textBox.IsReadOnly = request.WasReadOnly;
+        if (request.FocusScope != null && FocusManager.GetFocusedElement(request.FocusScope) == textBox)
+            FocusManager.SetFocusedElement(request.FocusScope, request.LogicalFocus);
+        if (global::System.Windows.Input.Keyboard.FocusedElement == textBox)
+            global::System.Windows.Input.Keyboard.Focus(request.KeyboardFocus);
+    }
+
+    private void PostUi(Action action)
+    {
+        void InvokeSafely()
+        {
+            if (!uiFailures.Capture(action))
             {
-                textBoxConsole?.Clear();
+                // Ошибка WPF/callback должна разбудить reader и дойти до coordinator,
+                // а не остаться необработанным исключением Dispatcher.
+                Dispose();
             }
         }
+        if (textBox.Dispatcher.CheckAccess()) InvokeSafely();
+        else _ = textBox.Dispatcher.InvokeAsync(InvokeSafely, DispatcherPriority.Normal);
+    }
+
+    private void EnqueueOutput(Action action)
+    {
+        lock (stateLock)
+        {
+            if (isDisposed || !StaticConsole.IsCurrent(this)) return;
+            output.Enqueue(action);
+            if (outputScheduled) return;
+            outputScheduled = true;
+        }
+        PostUi(() => DrainOutput(duringCleanup: false));
+    }
+
+    private void DrainOutput(bool duringCleanup)
+    {
+        while (true)
+        {
+            Action action;
+            lock (stateLock)
+            {
+                if (!StaticConsole.IsCurrent(this) || (isDisposed && !duringCleanup))
+                {
+                    // DisposeAsync допечатает принятый вывод до передачи UI новой сессии.
+                    if (!StaticConsole.IsCurrent(this)) output.Clear();
+                    outputScheduled = false;
+                    return;
+                }
+                if (!output.TryDequeue(out action!))
+                {
+                    outputScheduled = false;
+                    return;
+                }
+            }
+            action();
+        }
+    }
+
+    /// <summary>
+    /// Запрещает новые операции и пробуждает reader. Host ожидает полную очистку через
+    /// DisposeAsync; синхронный вызов не блокирует UI, нужный для завершения чтения.
+    /// </summary>
+    public void Dispose()
+    {
+        lock (stateLock)
+        {
+            if (isDisposed) return;
+            isDisposed = true;
+            disposeRequested.Set();
+            if (readerCount == 0) readersExited.Set();
+        }
+        _ = CompleteDisposeAsync();
+    }
+
+    /// <summary>Ожидает одну общую очистку, в том числе при конкурентных вызовах.</summary>
+    public ValueTask DisposeAsync()
+    {
+        Dispose();
+        return new ValueTask(disposed.Task);
+    }
+
+    private async Task CompleteDisposeAsync()
+    {
+        var failures = new ExecutionFailureCollector();
+        uiFailures.DrainTo(failures);
+        try
+        {
+            void CleanupUi()
+            {
+                textBox.PreviewKeyDown -= OnPreviewKeyDown;
+                textBox.PreviewTextInput -= OnPreviewTextInput;
+                failures.Capture(() => DrainOutput(duringCleanup: true));
+                if (uiRead != null) failures.Capture(() => RestoreReadUi(uiRead));
+                OutputReceived = null;
+                StaticConsole.Release(this);
+                lock (stateLock) output.Clear();
+            }
+            if (textBox.Dispatcher.CheckAccess()) CleanupUi();
+            else await textBox.Dispatcher.InvokeAsync(CleanupUi).Task.ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+            OutputReceived = null;
+            StaticConsole.Release(this);
+            lock (stateLock) output.Clear();
+        }
+
+        try
+        {
+            await readersExited.WaitAsync().ConfigureAwait(false);
+            // После отписки UI и выхода readers остаётся лишь возможный callback отмены.
+            await stopRegistration.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+        failures.Capture(inputAvailable.Dispose);
+        failures.Capture(stopRequested.Dispose);
+        failures.Capture(disposeRequested.Dispose);
+        uiFailures.DrainTo(failures);
+        var exceptionToReport = failures.CreateException("Console cleanup failed.");
+        if (exceptionToReport == null) disposed.TrySetResult();
+        else disposed.TrySetException(exceptionToReport);
+    }
+
+    private sealed class ReadRequest
+    {
+        public bool WasReadOnly { get; set; }
+        public IInputElement? KeyboardFocus { get; set; }
+        public DependencyObject? FocusScope { get; set; }
+        public IInputElement? LogicalFocus { get; set; }
+    }
+
+    private sealed class TextBoxTextWriter(TextBoxConsole console) : TextWriter
+    {
+        public override Encoding Encoding => Encoding.UTF8;
+        public override void Write(char value) => console.Write(value);
+        public override void Write(string? value) => console.Write(value);
+    }
+
+    private sealed class TextBoxTextReader(TextBoxConsole console) : TextReader
+    {
+        public override int Read() => console.Read();
+        public override string ReadLine() => console.ReadLine();
+    }
+
+    /// <summary>Мост для Console.Clear; сменой владельца управляет host.</summary>
+    public static class StaticConsole
+    {
+        private static TextBoxConsole? current;
+        internal static void Init(TextBoxConsole console) => Volatile.Write(ref current, console);
+        internal static bool IsCurrent(TextBoxConsole console) => ReferenceEquals(Volatile.Read(ref current), console);
+        internal static void Release(TextBoxConsole console)
+        {
+            var owner = Volatile.Read(ref current);
+            if (owner?.ExecutionId == console.ExecutionId)
+                Interlocked.CompareExchange(ref current, null, console);
+        }
+        public static void Clear() => Volatile.Read(ref current)?.Clear();
     }
 }
 

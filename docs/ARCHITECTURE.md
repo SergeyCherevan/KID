@@ -112,6 +112,7 @@
 - Использует ICodeCompiler для компиляции
 - Вызывает `ICodeRunner.Start(artifact, token)` и ожидает `runningInstance.Completion`
 - Управляет жизненным циклом контекста выполнения
+- Назначает контексту ExecutionId/token и ожидает его DisposeAsync до выгрузки ALC и освобождения session CTS
 - Пытается выполнить каждый независимый cleanup-шаг даже после ошибки предыдущего; primary exception сохраняется, secondary exceptions доступны через `AggregateException`
 - Использует общий `ExecutionFailureCollector` для выполнения защищённых lifecycle-шагов и агрегации ошибок; observer failures накапливаются отдельно в сессии и переносятся последними
 - Публикует `StateChanged` каждому observer независимо; ошибка подписчика доставляется через lifecycle task, но не отменяет уже подтверждённый переход FSM
@@ -154,7 +155,8 @@
 - Поддерживает Console.ReadLine для ввода данных
 - Обрабатывает ввод с клавиатуры (включая кириллицу)
 - Статический класс StaticConsole для замены Console.Clear()
-- Использует `DispatcherManager.InvokeOnUI()` для работы с UI потоком
+- Использует Dispatcher своего TextBox с проверкой владельца каждой UI-команды; Stop и Dispose пробуждают Read/ReadLine без клавиатурного ввода
+- DisposeAsync ожидает readers, отписывает UI-события, закрывает регистрацию отмены и wait handles, освобождает StaticConsole только своей сессии
 
 #### 3.2. Files (Работа с файлами)
 
@@ -345,7 +347,7 @@
 - `Init(Dispatcher dispatcher)` — инициализация с Dispatcher из контекста выполнения
 - `InvokeOnUI(Action action)` — выполнение действия в UI потоке
 - `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
-- Используется всеми API (Graphics, Music, TextBoxConsole) для потокобезопасной работы с UI
+- Используется библиотечными API (Graphics, Music) для работы с UI; TextBoxConsole использует собственный Dispatcher с проверкой execution-owner
 
 #### StopManager
 
@@ -563,7 +565,7 @@ Save / Discard / Cancel для каждой изменённой вкладки
 - Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
 - Mouse API собирает события в UI потоке и доставляет обработчики в фоновом потоке
 - Keyboard API собирает события в UI потоке и доставляет обработчики в фоновом потоке
-- TextBoxConsole использует `DispatcherManager.InvokeOnUI()` для работы с TextBox
+- TextBoxConsole использует Dispatcher своего TextBox и отбрасывает команды устаревшей консоли; context DisposeAsync завершается до следующего Run
 - `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
 - `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса
 - Выполнение кода происходит в отдельном потоке (Task.Run)

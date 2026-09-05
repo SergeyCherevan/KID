@@ -108,6 +108,8 @@ internal sealed class FakeCodeRunner : ICodeRunner
 
 internal sealed class TrackingCodeExecutionContext : ICodeExecutionContext
 {
+    public long ExecutionId { get; set; }
+
     private readonly Action? disposeAction;
 
     public TrackingCodeExecutionContext(Action? disposeAction = null)
@@ -131,16 +133,16 @@ internal sealed class TrackingCodeExecutionContext : ICodeExecutionContext
     {
         InitCount++;
         GraphicsContext.Init();
-        ConsoleContext.Init();
+        ConsoleContext.Init(ExecutionId, CancellationToken);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         DisposeCount++;
         try
         {
             GraphicsContext.Dispose();
-            ConsoleContext.Dispose();
+            await ConsoleContext.DisposeAsync();
         }
         finally
         {
@@ -170,7 +172,11 @@ internal sealed class TrackingConsoleContext : IConsoleContext
 
     public int DisposeCount { get; private set; }
 
-    public void Init() => InitCount++;
+    public void Init(long executionId, CancellationToken cancellationToken) => InitCount++;
 
-    public void Dispose() => DisposeCount++;
+    public ValueTask DisposeAsync()
+    {
+        DisposeCount++;
+        return ValueTask.CompletedTask;
+    }
 }

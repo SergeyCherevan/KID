@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–3 выполнены; готовы PE/PDB-артефакт, started-running-instance контракт, все восемь сигнатур `Main`, ожидание async entry point, классификация runtime-исходов и execution-scoped collectible ALC с документированной границей cooperative unload. На этапе 8 усилена синхронная финализация `ExecuteSessionAsync`
+- **Статус:** in progress — этапы 0–4 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC и cancellation-aware Console с полной очисткой. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync консольного/execution-контекста; общий runtime cleanup ещё не завершён.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -45,9 +45,11 @@ KID остаётся полноценной учебной средой, а не
 
 Если поток не дошёл ни до одной точки кооперативной отмены, состояние остаётся `StopRequested`, Run остаётся запрещённым, а IDE не должна ложно сообщать об успешной остановке.
 
-## 🔎 Текущее состояние и целевые исправления
+## 🔎 Исходные проблемы и целевые исправления
 
-| Проблема | Текущая точка | Целевое состояние |
+Таблица сохраняет исходную карту дефектов; актуальный статус реализации и проверок указан в разделах этапов ниже.
+
+| Проблема | Исходная точка | Целевое состояние |
 |---|---|---|
 | Циклы пользователя не видят Stop | `CSharpCompiler.cs` переписывает только `Console.Clear()` | отдельный cancellation rewriter вставляет проверки во все поддерживаемые контрольные точки |
 | Токен глобален и имеет публичный setter | `KID.Library/StopManager.cs` | публичный getter, host-only lifecycle, стабильный метод проверки и сброс по завершении сессии |
@@ -104,7 +106,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 - [x] `while (true) { }` получает автоматическую точку Stop — реализовано и подтверждено runtime-тестом этапа 2.
 - [x] `for`, `foreach`, `await foreach`, `do/while` и цикл без `{}` преобразуются без изменения пользовательской семантики — реализовано и покрыто structural regression-тестами этапа 2.
-- [ ] Stop во время `Console.Read()` и `ReadLine()` завершает ожидание без следующего нажатия клавиши — executable specification добавлена, реализация относится к этапу 4.
+- [x] Stop во время `Console.Read()` и `ReadLine()` завершает ожидание без следующей клавиши — подтверждено STA-тестами и скомпилированными программами этапа 4.
 - [x] `async Task Main` и `async Task<int> Main` действительно ожидаются; lifecycle specification подтверждает отсутствие преждевременного завершения и cleanup.
 - [x] Повторный Run не начинает вторую компиляцию, пока активен первый `CodeExecutionService.ExecuteAsync`; полная state/cleanup гарантия остаётся задачей этапов 1 и 8.
 - [ ] Обработчики Keyboard/Mouse из первого запуска не вызываются во втором — executable specification добавлена, реализация относится к этапу 6.
@@ -202,7 +204,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [x] Корректно обработать возвращаемые формы `void`, `int`, `Task`, `Task<int>`.
 - [x] Ожидать асинхронный entry point до фактического завершения и только затем публиковать `ProgramFinished`.
 - [x] Разворачивать `TargetInvocationException`, но отличать ожидаемый Stop от пользовательской ошибки.
-- [x] Вызывать `Unload()` только после завершения поддерживаемого entry point и вызова `CodeExecutionContext.Dispose()`; полнота очистки ссылок внутри KID runtime/Console/WPF относится к этапам 4–8.
+- [x] Вызывать `Unload()` только после завершения поддерживаемого entry point и ожидания `CodeExecutionContext.DisposeAsync()`; Console очищается на этапе 4, полнота KID runtime/WPF cleanup относится к этапам 5–8.
 - [x] В тесте держать только `WeakReference` на ALC, выполнять контролируемые GC-циклы и подтверждать сборку после серии запусков.
 - [x] Не объявлять unload гарантированным для программы, оставившей живой пользовательский поток; остаточное ограничение зафиксировано XML/архитектурной документацией и регрессионной диагностикой, подтверждающей жизнь ALC до выхода background thread и сборку после него.
 
@@ -217,20 +219,24 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 Затрагиваемые области: `TextBoxConsole`, `TextBoxConsoleContext`, `IConsoleContext`.
 
-- [ ] Передавать в `TextBoxConsole` token и execution id текущей сессии явно, а не только читать глобальное состояние постфактум.
-- [ ] Заменить бесконечный `WaitOne()` на ожидание пользовательского ввода, отмены и Dispose-сигнала.
-- [ ] При Stop немедленно выходить из `Read()`/`ReadLine()` через согласованный cancellation exception.
-- [ ] Всегда восстанавливать `isReading`, `lastReadChar`, `IsReadOnly` и состояние фокуса в `finally`.
-- [ ] Реализовать идемпотентный Dispose у `TextBoxConsole`:
-  - [ ] разбудить ожидающий read;
-  - [ ] отписать `PreviewKeyDown` и `PreviewTextInput`;
-  - [ ] закрыть token registration и wait handles после выхода reader;
-  - [ ] прекратить публикацию output старой сессии.
-- [ ] В `TextBoxConsoleContext.DisposeAsync` восстановить исходные `Console.Out/In/Error` даже после частичного Init.
-- [ ] Очистить `StaticConsole` bridge только если он всё ещё принадлежит данной execution id.
-- [ ] Не позволять queued output старой сессии дописываться в очищенную консоль нового запуска.
+- [x] Передавать в `TextBoxConsole` token и execution id текущей сессии явно, а не только читать глобальное состояние постфактум.
+- [x] Заменить бесконечный `WaitOne()` на ожидание пользовательского ввода, отмены и Dispose-сигнала.
+- [x] При Stop немедленно выходить из `Read()`/`ReadLine()` через согласованный cancellation exception.
+- [x] Всегда восстанавливать состояние чтения, `IsReadOnly` и фокус в `finally`: вместо `isReading`/`lastReadChar` используются request текущего чтения и очередь символов; при Stop/Dispose очередь очищается, обычный непрочитанный ввод сохраняется для следующего Read.
+- [x] Реализовать идемпотентный Dispose у `TextBoxConsole`:
+  - [x] разбудить ожидающий read;
+  - [x] отписать `PreviewKeyDown` и `PreviewTextInput`;
+  - [x] закрыть token registration и wait handles после выхода reader;
+  - [x] прекратить публикацию output старой сессии.
+- [x] В `TextBoxConsoleContext.DisposeAsync` восстановить исходные `Console.Out/In/Error` даже после частичного Init.
+- [x] Очистить `StaticConsole` bridge только если он всё ещё принадлежит данной execution id.
+- [x] Не позволять queued output старой сессии дописываться в очищенную консоль нового запуска.
 
 **Критерий этапа:** Stop из любого состояния консольного чтения завершается без клавиатурного ввода; повторные запуски не накапливают UI handlers и не смешивают output.
+
+**Реализация и проверка этапа 2026-09-05:** `ICodeExecutionContext` и `IConsoleContext` переведены на `IAsyncDisposable`; coordinator назначает id до Init и ожидает context cleanup до выгрузки ALC, освобождения session CTS и Idle. Синхронный `TextBoxConsole.Dispose()` немедленно запрещает новые операции и пробуждает readers; `DisposeAsync()` подтверждает завершение единственной очистки. Принятый вывод допечатывается до освобождения текущего bridge, а чужие/запоздалые команды игнорируются. WPF cleanup не использует отменённый token.
+
+Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Release --no-restore`: 100 пройдено, 1 пропущен, 0 провалено. Все 29 Console-сценариев активны: Stop до/во время Read и ReadLine, частичный ввод, повторный/конкурентный Dispose, Unicode/Backspace/Enter, занятый UI, stale output/bridge, частичный Init, ошибки cleanup, четыре lifecycle-исхода, ожидание async cleanup и две настоящие скомпилированные программы. 50 освобождённых консолей собираются при живом TextBox/token. Оставшийся skipped scenario относится к этапам 5–8. WPF/STA-проверки выполнялись без видимых окон; ручная visual acceptance не выполнялась. Конкурентные Stop/Dispose дополнительно прошли 3 серии по 20 повторений.
 
 ## 🖥️ Этап 5. Execution-aware Dispatcher, Graphics и Sprite
 
@@ -286,6 +292,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 Затрагиваемые области: execution contexts/interfaces, `CodeExecutionService`, `MenuViewModel`, `MenuView.xaml`, локализации.
 
 - [ ] Перевести контексты, которым нужно ожидать worker-задачи, на `IAsyncDisposable`/`DisposeAsync`.
+  - Console и объединяющий execution-контекст переведены в этапе 4; ожидание Graphics/Keyboard/Mouse/Music workers остаётся работой этапов 5–8.
 - [ ] Сделать Init/Dispose частично-инициализированного контекста безопасными и идемпотентными.
 - [ ] Зафиксировать порядок cleanup:
   1. [ ] перевести state в `CleaningUp` и инвалидировать execution id для новых callback;
@@ -338,7 +345,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [ ] 50–100 последовательных Run/Stop не увеличивают количество WPF handlers, event workers и активных sound players.
 - [ ] Static events и shortcuts очищаются между запусками.
 - [ ] Stale Dispatcher callbacks не меняют новый Canvas/TextBox.
-- [ ] Console streams восстанавливаются при success, compilation error, runtime fault и cancellation.
+- [x] Console streams восстанавливаются при success, compilation error, runtime fault и cancellation. Проверено на этапе 4.
 - [x] Collectible ALC освобождается в штатных синхронных и асинхронных сценариях.
 - [x] Release build остаётся с 0 warnings/0 errors.
 

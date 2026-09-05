@@ -357,6 +357,22 @@ public async Task DoSomethingAsync()
 
 ## Тестирование
 
+### Автоматизированные проверки консоли (Этап 4 C2/C3)
+
+`dotnet test KID.Tests/KID.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~TextBoxConsoleSpecifications`
+проверяет отмену Read/ReadLine без клавиатуры, Stop при занятом UI, Dispose с живыми readers,
+Unicode/Backspace/Enter, восстановление потоков после частичного Init и всех execution-исходов,
+stale output/StaticConsole и блокировку нового Run до окончания async cleanup.
+Два сценария компилируют настоящие программы; тест с 50 адаптерами проверяет их сборку GC
+при живом TextBox и CTS. STA helper использует настоящий WPF Dispatcher без видимых окон.
+Это автоматизированная runtime-проверка, ручная visual acceptance остаётся отдельным шагом.
+
+Для host-кода: IConsoleContext.Init принимает execution id и token явно. IConsoleContext и
+ICodeExecutionContext реализуют IAsyncDisposable; coordinator обязан ожидать DisposeAsync.
+TextBoxConsole.Dispose лишь начинает безопасную очистку без блокировки UI; DisposeAsync
+подтверждает отписки, выход readers и закрытие handles. Ошибка графического Dispose не должна
+пропускать восстановление консольных потоков.
+
 ### Ручное тестирование
 
 1. Запустите приложение

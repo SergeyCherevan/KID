@@ -1,9 +1,9 @@
 ﻿namespace KID.Services.CodeExecution.Contexts.Interfaces
 {
-    public interface IConsoleContext : IDisposable
+    public interface IConsoleContext : IAsyncDisposable
     {
         object ConsoleTarget { get; set; }
 
-        void Init();
+        void Init(long executionId, CancellationToken cancellationToken);
     }
 }

@@ -15,6 +15,13 @@ namespace KID.Services.CodeExecution.Contexts
     /// </summary>
     public class CodeExecutionContext : ICodeExecutionContext
     {
+        private readonly TaskCompletionSource disposeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int disposeStarted;
+        private bool initialized;
+
+        /// <summary>Идентификатор сессии, передаваемый её консольному контексту.</summary>
+        public long ExecutionId { get; set; }
+
         /// <summary>
         /// Подготавливает Canvas и связанные графические, мышиные, клавиатурные и музыкальные API.
         /// Обязателен при создании контекста и инициализируется методом <see cref="Init"/>.
@@ -40,15 +47,41 @@ namespace KID.Services.CodeExecution.Contexts
 
         public void Init()
         {
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposeStarted) != 0, this);
+            if (initialized) throw new InvalidOperationException("Execution context is already initialized.");
+            initialized = true;
             DispatcherManager.Init(Dispatcher);
             GraphicsContext?.Init();
-            ConsoleContext?.Init();
+            ConsoleContext?.Init(ExecutionId, CancellationToken);
         }
 
-        public void Dispose()
+        /// <summary>
+        /// Ожидает консольную очистку, даже если освобождение графики завершилось ошибкой.
+        /// Coordinator вызывает метод после Completion и до выгрузки ALC и session CTS.
+        /// </summary>
+        public ValueTask DisposeAsync()
         {
-            GraphicsContext?.Dispose();
-            ConsoleContext?.Dispose();
+            if (Interlocked.Exchange(ref disposeStarted, 1) == 0)
+                _ = DisposeCoreAsync();
+            return new ValueTask(disposeCompletion.Task);
+        }
+
+        private async Task DisposeCoreAsync()
+        {
+            var failures = new ExecutionFailureCollector();
+            failures.Capture(() => GraphicsContext?.Dispose());
+            try
+            {
+                if (ConsoleContext != null)
+                    await ConsoleContext.DisposeAsync();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
+            var failure = failures.CreateException("Execution context cleanup failed.");
+            if (failure == null) disposeCompletion.TrySetResult();
+            else disposeCompletion.TrySetException(failure);
         }
     }
 }

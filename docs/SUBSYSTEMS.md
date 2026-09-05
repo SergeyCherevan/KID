@@ -82,6 +82,8 @@
 - Объединяет графический и консольный контексты
 - Управляет инициализацией и освобождением ресурсов
 - Содержит CancellationToken для отмены
+- Получает ExecutionId от coordinator и передаёт id/token в ConsoleContext.Init
+- DisposeAsync ожидает консоль и восстанавливает потоки даже после ошибки графического Dispose
 - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
 - Инициализирует `DispatcherManager` в методе `Init()` перед инициализацией контекстов
 
@@ -112,12 +114,12 @@
 **Вывод:**
 - `Write(char)`, `Write(string)` — вывод текста
 - `Clear()` — очистка консоли
-- Все операции выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
+- UI-команды используют Dispatcher своего TextBox с проверкой execution-owner
 
 **Ввод:**
 - `Read()` — чтение одного символа
 - `ReadLine()` — чтение строки
-- Использует `AutoResetEvent` для синхронизации
+- WaitAny ожидает ввод, Stop или Dispose; очередь сохраняет многосимвольный ввод
 - Обрабатывает Backspace и Enter
 - Поддерживает кириллицу и Unicode
 
@@ -151,13 +153,13 @@
 **Вывод:**
 - `Write(char)`, `Write(string)` — вывод текста в TextBox
 - `Clear()` — очистка содержимого TextBox
-- Все операции выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
+- UI-команды используют Dispatcher своего TextBox с проверкой execution-owner
 - `TextBoxTextWriter` — реализация TextWriter для вывода
 
 **Ввод:**
 - `Read()` — чтение одного символа
 - `ReadLine()` — чтение строки до нажатия Enter
-- Использует `AutoResetEvent` для синхронизации между потоками
+- WaitAny ожидает ввод, Stop или Dispose; отмена выбрасывает OperationCanceledException с session token
 - Обрабатывает Backspace для удаления символов
 - Поддерживает кириллицу и Unicode символы
 - `TextBoxTextReader` — реализация TextReader для ввода
@@ -168,10 +170,12 @@
 - Используется компилятором для замены вызовов `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()`
 
 **Особенности:**
-- Потокобезопасная работа с UI через `DispatcherManager`
+- Dispatcher своего TextBox и проверка владельца защищают от запоздалых команд старой консоли
 - Обработка событий клавиатуры (PreviewKeyDown, PreviewTextInput)
 - Событие `OutputReceived` для отслеживания вывода
-- Блокирующий ввод с ожиданием пользовательского ввода
+- Блокирующий ввод вне UI-потока; Stop/Dispose освобождают его без клавиатуры
+- Dispose начинает очистку; DisposeAsync ожидает readers, отписки, закрытие token registration и wait handles
+- Cleanup восстанавливает IsReadOnly/фокус, очищает OutputReceived и снимает только собственный StaticConsole
 
 #### 2.2. TextBoxConsoleContext
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
@@ -185,6 +189,8 @@
 - Получает TextBox из ConsoleOutputViewModel
 - Создаёт и инициализирует TextBoxConsole
 - Устанавливает TextBoxConsole в качестве стандартного вывода/ввода
+- Init получает execution id/token явно; DisposeAsync восстанавливает каждый поток даже после частичной инициализации и ошибки адаптера
+- IConsoleContext и ICodeExecutionContext реализуют IAsyncDisposable; coordinator ожидает консольную очистку до выгрузки ALC и нового Run
 
 ## 3. Подсистема работы с файлами (Files)
 
@@ -878,7 +884,7 @@
 
 2. **Консольный ввод/вывод:**
    - Пользовательский код → Console.WriteLine/ReadLine → TextBoxConsole → TextBox
-   - TextBoxConsole использует DispatcherManager для потокобезопасной работы с UI
+   - TextBoxConsole использует Dispatcher своего TextBox и проверяет владельца отложенных команд
 
 3. **Работа с файлами:**
    - MenuViewModel → CodeEditorsViewModel → CodeFileService → FileDialogService → FileService

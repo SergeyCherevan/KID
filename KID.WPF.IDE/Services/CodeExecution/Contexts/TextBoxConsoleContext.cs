@@ -1,72 +1,103 @@
-﻿using KID.Services.CodeExecution.Contexts.Interfaces;
-using KID.Services.Interfaces;
-using System;
+using KID.Services.CodeExecution.Contexts.Interfaces;
 using System.IO;
 using System.Windows.Controls;
 
-namespace KID.Services.CodeExecution.Contexts
+namespace KID.Services.CodeExecution.Contexts;
+
+/// <summary>
+/// Владеет перенаправлением System.Console одной сессии. Cleanup ожидает readers,
+/// отписки и публикацию принятого вывода, затем восстанавливает исходные потоки.
+/// </summary>
+public sealed class TextBoxConsoleContext : IConsoleContext
 {
-    public class TextBoxConsoleContext : IConsoleContext
+    private readonly object lifecycleLock = new();
+    private readonly Action<TextBoxConsole> redirectStreams;
+    private TextWriter? originalConsoleOut;
+    private TextReader? originalConsoleIn;
+    private TextWriter? originalConsoleError;
+    private TextBoxConsole? textBoxConsole;
+    private bool initialized;
+    private readonly TaskCompletionSource disposeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private bool disposeStarted;
+
+    public object ConsoleTarget { get; set; }
+
+    public TextBoxConsoleContext(TextBox textBox) : this(textBox, console =>
     {
-        /*
-         * Исходные глобальные потоки System.Console. Метод Init сохраняет их перед перенаправлением,
-         * а Dispose использует для восстановления. До Init поля остаются null, поэтому Dispose
-         * проверяет каждый поток отдельно и безопасен даже при неполной инициализации контекста.
-         */
-        private TextWriter? originalConsoleOut;
-        private TextReader? originalConsoleIn;
-        private TextWriter? originalConsoleError;
+        Console.SetOut(console.Out);
+        Console.SetIn(console.In);
+        Console.SetError(console.Error);
+    })
+    {
+    }
 
-        /*
-         * Адаптер между глобальными потоками System.Console и WPF TextBox. Создаётся в Init
-         * для перенаправления ввода и вывода; ссылка очищается в Dispose после восстановления потоков.
-         */
-        private TextBoxConsole? textBoxConsole;
+    // Тестовая точка ошибки посередине перенаправления без замены глобального Console API.
+    internal TextBoxConsoleContext(TextBox textBox, Action<TextBoxConsole> redirectStreams)
+    {
+        ArgumentNullException.ThrowIfNull(textBox);
+        ArgumentNullException.ThrowIfNull(redirectStreams);
+        ConsoleTarget = textBox;
+        this.redirectStreams = redirectStreams;
+    }
 
-        /// <summary>
-        /// Целевой WPF-контрол, в который перенаправляются стандартные потоки консоли.
-        /// Задаётся конструктором и используется методом <see cref="Init"/>.
-        /// </summary>
-        public object ConsoleTarget { get; set; }
-
-        public TextBoxConsoleContext(TextBox textBox)
+    /// <summary>Однократный Init; исходные потоки доступны cleanup даже при частичной ошибке.</summary>
+    public void Init(long executionId, CancellationToken cancellationToken)
+    {
+        lock (lifecycleLock)
         {
-            ConsoleTarget = textBox ?? throw new ArgumentNullException(nameof(textBox));
-        }
-
-        public void Init()
-        {
+            ObjectDisposedException.ThrowIf(disposeStarted, this);
+            if (initialized) throw new InvalidOperationException("Console context is already initialized.");
             if (ConsoleTarget is not TextBox textBox)
-                throw new InvalidOperationException("ConsoleTarget must be a TextBox");
-
-            // Сохраняем оригинальные потоки
+                throw new InvalidOperationException("ConsoleTarget must be a TextBox.");
+            textBox.Dispatcher.VerifyAccess();
+            initialized = true;
             originalConsoleOut = Console.Out;
             originalConsoleIn = Console.In;
             originalConsoleError = Console.Error;
-
-            // Создаем экземпляр TextBoxConsole
-            textBoxConsole = new TextBoxConsole(textBox);
-
-            // Перенаправляем потоки Console
-            if (textBoxConsole != null)
-            {
-                Console.SetOut(textBoxConsole.Out);
-                Console.SetIn(textBoxConsole.In);
-                Console.SetError(textBoxConsole.Error);
-            }
+            textBoxConsole = new TextBoxConsole(textBox, executionId, cancellationToken);
+            redirectStreams(textBoxConsole);
         }
+    }
 
-        public void Dispose()
+    /// <summary>
+    /// Ожидает одну общую очистку. Отменённый session token не отменяет восстановление
+    /// потоков, а ошибка адаптера не пропускает попытку восстановить каждый из них.
+    /// </summary>
+    public ValueTask DisposeAsync()
+    {
+        lock (lifecycleLock)
         {
-            // Восстанавливаем оригинальные потоки
-            if (originalConsoleOut != null)
-                Console.SetOut(originalConsoleOut);
-            if (originalConsoleIn != null)
-                Console.SetIn(originalConsoleIn);
-            if (originalConsoleError != null)
-                Console.SetError(originalConsoleError);
-
-            textBoxConsole = null;
+            if (disposeStarted) return new ValueTask(disposeCompletion.Task);
+            disposeStarted = true;
         }
+        // Completion опубликована до вызова callback: повторный Dispose видит ту же task.
+        _ = DisposeCoreAsync();
+        return new ValueTask(disposeCompletion.Task);
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        var failures = new ExecutionFailureCollector();
+        try
+        {
+            if (textBoxConsole != null) await textBoxConsole.DisposeAsync();
+        }
+        catch (Exception exception)
+        {
+            failures.Add(exception);
+        }
+        finally
+        {
+            if (originalConsoleOut != null) failures.Capture(() => Console.SetOut(originalConsoleOut));
+            if (originalConsoleIn != null) failures.Capture(() => Console.SetIn(originalConsoleIn));
+            if (originalConsoleError != null) failures.Capture(() => Console.SetError(originalConsoleError));
+            textBoxConsole = null;
+            originalConsoleOut = null;
+            originalConsoleIn = null;
+            originalConsoleError = null;
+        }
+        var failure = failures.CreateException("Console streams cleanup failed.");
+        if (failure == null) disposeCompletion.TrySetResult();
+        else disposeCompletion.TrySetException(failure);
     }
 }

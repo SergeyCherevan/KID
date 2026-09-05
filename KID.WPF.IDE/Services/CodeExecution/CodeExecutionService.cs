@@ -429,9 +429,10 @@ namespace KID.Services.CodeExecution
                  * Context, compiler, runner и StopManager обязаны использовать один session token.
                  */
                 context.CancellationToken = session.CancellationToken;
+                context.ExecutionId = session.ExecutionId;
 
                 /* Инициализируем Console/Graphics/WPF bridges. Вызов находится внутри try,
-                 * поэтому частично инициализированный context всё равно попадёт в Dispose.
+                 * поэтому частично инициализированный context всё равно попадёт в DisposeAsync.
                  */
                 context.Init();
 
@@ -521,10 +522,19 @@ namespace KID.Services.CodeExecution
                  */
                 cleanupSucceeded &= failures.Capture(() => MoveToCleaningUp(session));
 
-                /* Context освобождается первым: его Console/Graphics-компоненты ещё могут читать
-                 * session token во время симметричной очистки и отписок.
+                /* Context освобождается первым: ожидаем выход консольных readers и WPF-очистку.
+                 * Session token остаётся живым до завершения зависимых ожиданий и отписок.
                  */
-                cleanupSucceeded &= failures.Capture(() => context?.Dispose());
+                try
+                {
+                    if (context != null)
+                        await context.DisposeAsync();
+                }
+                catch (Exception exception)
+                {
+                    failures.Add(exception);
+                    cleanupSucceeded = false;
+                }
 
                 /* Затем разрываются ссылки running instance и инициируется выгрузка ALC. */
                 cleanupSucceeded &= failures.Capture(() => runningInstance?.Dispose());
@@ -647,7 +657,7 @@ namespace KID.Services.CodeExecution
         /// и атомарно очищает <c>currentSession</c>.
         /// </summary>
         /// <remarks>
-        /// Вызывается после Dispose контекста, экземпляра выполнения, StopManager lease и session CTS.
+        /// Вызывается после DisposeAsync контекста и Dispose экземпляра, StopManager lease и session CTS.
         /// До завершения этого метода новый Run остаётся запрещённым.
         /// </remarks>
         /// <param name="session">Полностью очищенная сессия, которую необходимо снять.</param>

@@ -7,8 +7,11 @@ using System.Windows.Threading;
 
 namespace KID.Services.CodeExecution.Contexts.Interfaces
 {
-    public interface ICodeExecutionContext : IDisposable
+    public interface ICodeExecutionContext : IAsyncDisposable
     {
+        /// <summary>Идентификатор сессии, назначаемый coordinator до Init.</summary>
+        long ExecutionId { get; set; }
+
         /// <summary>
         /// Контекст графического вывода и связанных API пользовательской программы.
         /// </summary>
