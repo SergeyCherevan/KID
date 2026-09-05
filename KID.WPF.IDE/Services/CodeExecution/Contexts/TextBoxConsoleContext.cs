@@ -78,24 +78,18 @@ public sealed class TextBoxConsoleContext : IConsoleContext
     private async Task DisposeCoreAsync()
     {
         var failures = new ExecutionFailureCollector();
-        try
-        {
-            if (textBoxConsole != null) await textBoxConsole.DisposeAsync();
-        }
-        catch (Exception exception)
-        {
-            failures.Add(exception);
-        }
-        finally
-        {
-            if (originalConsoleOut != null) failures.Capture(() => Console.SetOut(originalConsoleOut));
-            if (originalConsoleIn != null) failures.Capture(() => Console.SetIn(originalConsoleIn));
-            if (originalConsoleError != null) failures.Capture(() => Console.SetError(originalConsoleError));
-            textBoxConsole = null;
-            originalConsoleOut = null;
-            originalConsoleIn = null;
-            originalConsoleError = null;
-        }
+        await failures.CaptureAsync(
+            () => textBoxConsole?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+            finallyAction: () =>
+            {
+                if (originalConsoleOut != null) failures.Capture(() => Console.SetOut(originalConsoleOut));
+                if (originalConsoleIn != null) failures.Capture(() => Console.SetIn(originalConsoleIn));
+                if (originalConsoleError != null) failures.Capture(() => Console.SetError(originalConsoleError));
+                textBoxConsole = null;
+                originalConsoleOut = null;
+                originalConsoleIn = null;
+                originalConsoleError = null;
+            });
         var failure = failures.CreateException("Console streams cleanup failed.");
         if (failure == null) disposeCompletion.TrySetResult();
         else disposeCompletion.TrySetException(failure);

@@ -208,10 +208,8 @@ namespace KID.Services.CodeExecution
             /* Проверяем обязательные аргументы до входа в критическую секцию. При ошибке здесь
              * активная сессия и счётчик execution id остаются полностью неизменными.
              */
-            if (code == null)
-                throw new ArgumentNullException(nameof(code));
-            if (contextFactory == null)
-                throw new ArgumentNullException(nameof(contextFactory));
+            ArgumentNullException.ThrowIfNull(code);
+            ArgumentNullException.ThrowIfNull(contextFactory);
 
             /* Значения создаются внутри lock как единый согласованный набор, но используются
              * снаружи lock для публикации события и запуска асинхронной orchestration.
@@ -525,16 +523,7 @@ namespace KID.Services.CodeExecution
                 /* Context освобождается первым: ожидаем выход консольных readers и WPF-очистку.
                  * Session token остаётся живым до завершения зависимых ожиданий и отписок.
                  */
-                try
-                {
-                    if (context != null)
-                        await context.DisposeAsync();
-                }
-                catch (Exception exception)
-                {
-                    failures.Add(exception);
-                    cleanupSucceeded = false;
-                }
+                cleanupSucceeded &= await failures.CaptureAsync(() => context?.DisposeAsync().AsTask() ?? Task.CompletedTask);
 
                 /* Затем разрываются ссылки running instance и инициируется выгрузка ALC. */
                 cleanupSucceeded &= failures.Capture(() => runningInstance?.Dispose());

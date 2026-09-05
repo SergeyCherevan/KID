@@ -68,4 +68,59 @@ public sealed class ExecutionErrorHandlingTests
             new Exception[] { primaryException, cleanupException, observerException },
             aggregateException.InnerExceptions);
     }
+
+    [Fact]
+    public void Capture_RunsFinallyAfterSuccessAndReportsItsFailure()
+    {
+        var finallyException = new InvalidOperationException("finally");
+        var failures = new ExecutionFailureCollector();
+        bool catchActionExecuted = false;
+
+        bool succeeded = failures.Capture(
+            () => { },
+            catchAction: () => catchActionExecuted = true,
+            finallyAction: () => throw finallyException);
+
+        Assert.False(succeeded);
+        Assert.False(catchActionExecuted);
+        Assert.Same(
+            finallyException,
+            failures.CreateException("Multiple lifecycle errors."));
+    }
+
+    [Fact]
+    public async Task CaptureAsync_RunsCatchAndFinallyActionsAndPreservesFailureOrder()
+    {
+        var actionException = new InvalidOperationException("action");
+        var catchException = new ApplicationException("catch");
+        var finallyException = new NotSupportedException("finally");
+        var failures = new ExecutionFailureCollector();
+        var executionOrder = new List<string>();
+
+        bool succeeded = await failures.CaptureAsync(
+            async () =>
+            {
+                await Task.Yield();
+                executionOrder.Add("action");
+                throw actionException;
+            },
+            catchAction: () =>
+            {
+                executionOrder.Add("catch");
+                throw catchException;
+            },
+            finallyAction: () =>
+            {
+                executionOrder.Add("finally");
+                throw finallyException;
+            });
+
+        Assert.False(succeeded);
+        Assert.Equal(new[] { "action", "catch", "finally" }, executionOrder);
+        var aggregateException = Assert.IsType<AggregateException>(
+            failures.CreateException("Multiple lifecycle errors."));
+        Assert.Equal(
+            new Exception[] { actionException, catchException, finallyException },
+            aggregateException.InnerExceptions);
+    }
 }

@@ -70,15 +70,7 @@ namespace KID.Services.CodeExecution.Contexts
         {
             var failures = new ExecutionFailureCollector();
             failures.Capture(() => GraphicsContext?.Dispose());
-            try
-            {
-                if (ConsoleContext != null)
-                    await ConsoleContext.DisposeAsync();
-            }
-            catch (Exception exception)
-            {
-                failures.Add(exception);
-            }
+            await failures.CaptureAsync(() => ConsoleContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             var failure = failures.CreateException("Execution context cleanup failed.");
             if (failure == null) disposeCompletion.TrySetResult();
             else disposeCompletion.TrySetException(failure);

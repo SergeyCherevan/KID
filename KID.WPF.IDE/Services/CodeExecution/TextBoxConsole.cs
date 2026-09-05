@@ -325,39 +325,36 @@ public sealed class TextBoxConsole : IConsole, IDisposable, IAsyncDisposable
     {
         var failures = new ExecutionFailureCollector();
         uiFailures.DrainTo(failures);
-        try
-        {
-            void CleanupUi()
+        await failures.CaptureAsync(
+            async () =>
             {
-                textBox.PreviewKeyDown -= OnPreviewKeyDown;
-                textBox.PreviewTextInput -= OnPreviewTextInput;
-                failures.Capture(() => DrainOutput(duringCleanup: true));
-                if (uiRead != null) failures.Capture(() => RestoreReadUi(uiRead));
+                void CleanupUi()
+                {
+                    textBox.PreviewKeyDown -= OnPreviewKeyDown;
+                    textBox.PreviewTextInput -= OnPreviewTextInput;
+                    failures.Capture(() => DrainOutput(duringCleanup: true));
+                    if (uiRead != null) failures.Capture(() => RestoreReadUi(uiRead));
+                    OutputReceived = null;
+                    StaticConsole.Release(this);
+                    lock (stateLock) output.Clear();
+                }
+
+                if (textBox.Dispatcher.CheckAccess()) CleanupUi();
+                else await textBox.Dispatcher.InvokeAsync(CleanupUi).Task.ConfigureAwait(false);
+            },
+            catchAction: () =>
+            {
                 OutputReceived = null;
                 StaticConsole.Release(this);
                 lock (stateLock) output.Clear();
-            }
-            if (textBox.Dispatcher.CheckAccess()) CleanupUi();
-            else await textBox.Dispatcher.InvokeAsync(CleanupUi).Task.ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            failures.Add(exception);
-            OutputReceived = null;
-            StaticConsole.Release(this);
-            lock (stateLock) output.Clear();
-        }
+            });
 
-        try
+        await failures.CaptureAsync(async () =>
         {
             await readersExited.WaitAsync().ConfigureAwait(false);
             // После отписки UI и выхода readers остаётся лишь возможный callback отмены.
             await stopRegistration.DisposeAsync().ConfigureAwait(false);
-        }
-        catch (Exception exception)
-        {
-            failures.Add(exception);
-        }
+        });
         failures.Capture(inputAvailable.Dispose);
         failures.Capture(stopRequested.Dispose);
         failures.Capture(disposeRequested.Dispose);

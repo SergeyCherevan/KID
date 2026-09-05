@@ -30,21 +30,69 @@ namespace KID.Services.CodeExecution
         /// последующих независимых lifecycle-шагов.
         /// </summary>
         /// <param name="action">Действие, которому необходимо предоставить попытку выполнения.</param>
-        /// <returns><see langword="true"/>, если действие завершилось без исключения.</returns>
-        public bool Capture(Action action)
+        /// <param name="catchAction">Необязательное действие после ошибки основного действия.</param>
+        /// <param name="finallyAction">Необязательное действие, выполняемое при любом результате.</param>
+        /// <returns><see langword="true"/>, если все выполненные действия завершились без исключения.</returns>
+        public bool Capture(
+            Action action,
+            Action? catchAction = null,
+            Action? finallyAction = null)
         {
             ArgumentNullException.ThrowIfNull(action);
 
+            bool succeeded = true;
             try
             {
                 action();
-                return true;
             }
             catch (Exception exception)
             {
                 Add(exception);
-                return false;
+                succeeded = false;
+                if (catchAction != null)
+                    succeeded &= Capture(catchAction);
             }
+            finally
+            {
+                if (finallyAction != null)
+                    succeeded &= Capture(finallyAction);
+            }
+            return succeeded;
+        }
+
+        /// <summary>
+        /// Асинхронно выполняет действие, сохраняя выброшенное им исключение вместо прерывания
+        /// последующих независимых lifecycle-шагов.
+        /// </summary>
+        /// <param name="action">Асинхронное действие, которому необходимо предоставить попытку выполнения.</param>
+        /// <param name="catchAction">Необязательное синхронное действие после ошибки основного действия.</param>
+        /// <param name="finallyAction">Необязательное синхронное действие, выполняемое при любом результате.</param>
+        /// <returns><see langword="true"/>, если все выполненные действия завершились без исключения.</returns>
+        public async Task<bool> CaptureAsync(
+            Func<Task> action,
+            Action? catchAction = null,
+            Action? finallyAction = null)
+        {
+            ArgumentNullException.ThrowIfNull(action);
+
+            bool succeeded = true;
+            try
+            {
+                await action();
+            }
+            catch (Exception exception)
+            {
+                Add(exception);
+                succeeded = false;
+                if (catchAction != null)
+                    succeeded &= Capture(catchAction);
+            }
+            finally
+            {
+                if (finallyAction != null)
+                    succeeded &= Capture(finallyAction);
+            }
+            return succeeded;
         }
 
         /// <summary>
