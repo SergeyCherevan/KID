@@ -1,6 +1,8 @@
 using KID.Services;
 using KID.Services.CodeExecution;
+using KID.Services.CodeExecution.Interfaces;
 using KID.Tests.TestDoubles;
+using System.IO;
 
 namespace KID.Tests.Execution;
 
@@ -174,6 +176,151 @@ public sealed class DefaultCodeRunnerTests
             AppContext.SetData(collectibleSignalKey, null);
             AppContext.SetData(sharedDependencySignalKey, null);
         }
+    }
+
+    [Theory]
+    [InlineData(false, "System.InvalidOperationException", "user failed")]
+    [InlineData(true, "System.InvalidOperationException", "async user failed")]
+    [InlineData(false, "System.OperationCanceledException", "user canceled itself")]
+    [InlineData(true, "System.OperationCanceledException", "async user canceled itself")]
+    public async Task Start_UserException_ReportsUnwrappedErrorUnlessSessionTokenIsCanceled(
+        bool isAsync,
+        string exceptionType,
+        string message)
+    {
+        var returnDeclaration = isAsync
+            ? "async System.Threading.Tasks.Task"
+            : "void";
+        var asynchronousYield = isAsync
+            ? "await System.Threading.Tasks.Task.Yield();"
+            : string.Empty;
+        var code = $$"""
+            public static class Program
+            {
+                public static {{returnDeclaration}} Main()
+                {
+                    {{asynchronousYield}}
+                    throw new {{exceptionType}}("{{message}}");
+                }
+            }
+            """;
+        var localizationService = new StubLocalizationService();
+        var compiler = new CSharpCompiler(localizationService);
+        var compilationResult = await compiler.CompileAsync(
+            code,
+            TestContext.Current.CancellationToken);
+        var artifact = Assert.IsType<CompilationArtifact>(compilationResult.Artifact);
+        var runner = new DefaultCodeRunner(
+            localizationService,
+            TestThreading.JoinableTaskFactory);
+        using var standardOutput = new StringWriter();
+        using var errorOutput = new StringWriter();
+        var originalOutput = global::System.Console.Out;
+        var originalError = global::System.Console.Error;
+        ICodeRunningInstance? execution = null;
+
+        try
+        {
+            global::System.Console.SetOut(standardOutput);
+            global::System.Console.SetError(errorOutput);
+            execution = runner.Start(artifact, TestContext.Current.CancellationToken);
+            await execution.Completion.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            if (execution != null)
+                execution.Dispose();
+            global::System.Console.SetOut(originalOutput);
+            global::System.Console.SetError(originalError);
+        }
+
+        Assert.Contains($"Error_Execution:{message}", errorOutput.ToString());
+        Assert.DoesNotContain("Notification_ProgramStopped", standardOutput.ToString());
+        Assert.DoesNotContain("Notification_ProgramFinished", standardOutput.ToString());
+    }
+
+    [Fact]
+    public async Task Start_SessionCancellation_ReportsStopInsteadOfUserError()
+    {
+        var startedKey = $"KID.Tests.DefaultCodeRunner.Stop.{Guid.NewGuid():N}";
+        var started = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var code = $$"""
+            public static class Program
+            {
+                public static void Main()
+                {
+                    var started = (System.Threading.Tasks.TaskCompletionSource<bool>)
+                        System.AppContext.GetData("{{startedKey}}")!;
+                    started.TrySetResult(true);
+                    global::KID.StopManager.CurrentToken.WaitHandle.WaitOne();
+                    global::KID.StopManager.StopIfButtonPressed();
+                }
+            }
+            """;
+        var localizationService = new StubLocalizationService();
+        var compiler = new CSharpCompiler(localizationService);
+        var compilationResult = await compiler.CompileAsync(
+            code,
+            TestContext.Current.CancellationToken);
+        var artifact = Assert.IsType<CompilationArtifact>(compilationResult.Artifact);
+        var runner = new DefaultCodeRunner(
+            localizationService,
+            TestThreading.JoinableTaskFactory);
+        using var cancellationSource = new CancellationTokenSource();
+        using var standardOutput = new StringWriter();
+        using var errorOutput = new StringWriter();
+        var originalOutput = global::System.Console.Out;
+        var originalError = global::System.Console.Error;
+        IDisposable? stopManagerLease = null;
+        ICodeRunningInstance? execution = null;
+
+        AppContext.SetData(startedKey, started);
+        try
+        {
+            global::System.Console.SetOut(standardOutput);
+            global::System.Console.SetError(errorOutput);
+            stopManagerLease = StopManager.BeginExecution(1, cancellationSource.Token);
+            execution = runner.Start(artifact, cancellationSource.Token);
+            await started.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+
+            await cancellationSource.CancelAsync();
+            await execution.Completion.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await cancellationSource.CancelAsync();
+            if (execution != null && !execution.Completion.IsCompleted)
+            {
+                try
+                {
+                    await execution.Completion.Task.WaitAsync(
+                        TimeSpan.FromSeconds(5),
+                        TestContext.Current.CancellationToken);
+                }
+                catch (Exception)
+                {
+                    /* Основное утверждение уже сохранит исходную ошибку; здесь нужен cleanup. */
+                }
+            }
+
+            if (execution?.Completion.IsCompleted == true)
+                execution.Dispose();
+            stopManagerLease?.Dispose();
+            global::System.Console.SetOut(originalOutput);
+            global::System.Console.SetError(originalError);
+            AppContext.SetData(startedKey, null);
+        }
+
+        Assert.Contains("Notification_ProgramStopped", standardOutput.ToString());
+        Assert.DoesNotContain("Notification_ProgramFinished", standardOutput.ToString());
+        Assert.DoesNotContain("Error_Execution", errorOutput.ToString());
     }
 
     [Theory]

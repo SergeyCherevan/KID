@@ -112,10 +112,11 @@ namespace KID.Services.CodeExecution
                  * возможный Task-результат entry point ожидается до публикации исхода.
                  */
                 var invocation = await Task.Run(
-                        LoadAndInvokeEntryPoint,
+                        () => LoadAndInvokeEntryPoint(cancellationToken),
                         cancellationToken)
                     .ConfigureAwait(false);
-                var outcome = await AwaitEntryPointAsync(invocation).ConfigureAwait(false);
+                var outcome = await AwaitEntryPointAsync(invocation, cancellationToken)
+                    .ConfigureAwait(false);
 
                 await ReportOutcomeAsync(outcome).ConfigureAwait(false);
             }
@@ -196,7 +197,8 @@ namespace KID.Services.CodeExecution
         /// Немедленный host-only результат либо Task, который необходимо дождаться перед cleanup.
         /// </returns>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private EntryPointInvocation LoadAndInvokeEntryPoint()
+        private EntryPointInvocation LoadAndInvokeEntryPoint(
+            CancellationToken cancellationToken)
         {
             /* Артефакт забирается только одним разрешённым запуском. После загрузки экземпляр больше
              * не удерживает его буферы, а runtime-объекты остаются локальными этому методу.
@@ -242,18 +244,12 @@ namespace KID.Services.CodeExecution
             }
             catch (TargetInvocationException exception)
             {
-                if (exception.InnerException is OperationCanceledException)
-                    return EntryPointInvocation.FromOutcome(ExecutionOutcome.Stopped);
-
-                var innerException = exception.InnerException;
+                /* Reflection оборачивает исключение entry point. В host-результат выносятся
+                 * данные исходной пользовательской ошибки, а не служебной оболочки Invoke.
+                 */
+                var userException = exception.InnerException ?? exception;
                 return EntryPointInvocation.FromOutcome(
-                    ExecutionOutcome.FromError(
-                        innerException?.Message ?? exception.Message,
-                        innerException?.StackTrace ?? exception.StackTrace));
-            }
-            catch (OperationCanceledException)
-            {
-                return EntryPointInvocation.FromOutcome(ExecutionOutcome.Stopped);
+                    ClassifyUserException(userException, cancellationToken));
             }
         }
 
@@ -264,7 +260,8 @@ namespace KID.Services.CodeExecution
         /// Результат загрузки и вызова, не содержащий Assembly, Type или MethodInfo.
         /// </param>
         private static async Task<ExecutionOutcome> AwaitEntryPointAsync(
-            EntryPointInvocation invocation)
+            EntryPointInvocation invocation,
+            CancellationToken cancellationToken)
         {
             var asyncCompletion = invocation.AsyncCompletion;
             if (asyncCompletion == null)
@@ -278,13 +275,9 @@ namespace KID.Services.CodeExecution
                 await asyncCompletion.ConfigureAwait(false);
                 return ExecutionOutcome.Finished;
             }
-            catch (OperationCanceledException)
-            {
-                return ExecutionOutcome.Stopped;
-            }
             catch (Exception exception)
             {
-                return ExecutionOutcome.FromError(exception.Message, exception.StackTrace);
+                return ClassifyUserException(exception, cancellationToken);
             }
             finally
             {
@@ -295,6 +288,21 @@ namespace KID.Services.CodeExecution
                 invocation = default;
             }
         }
+
+        /// <summary>
+        /// Отличает ожидаемый Stop текущей сессии от пользовательской runtime-ошибки.
+        /// </summary>
+        /// <remarks>
+        /// Сам тип OperationCanceledException недостаточен: пользовательская программа может
+        /// выбросить его без нажатия Stop. Ожидаемой остановкой он становится только после
+        /// фактической отмены token, переданного этому running instance.
+        /// </remarks>
+        private static ExecutionOutcome ClassifyUserException(
+            Exception exception,
+            CancellationToken cancellationToken) =>
+            exception is OperationCanceledException && cancellationToken.IsCancellationRequested
+                ? ExecutionOutcome.Stopped
+                : ExecutionOutcome.FromError(exception.Message, exception.StackTrace);
 
         /// <summary>
         /// Выводит host-only результат после выхода worker stack из пользовательской сборки.

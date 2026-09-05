@@ -135,8 +135,249 @@ public sealed class CodeExecutionServiceTests
             new[] { "execution context", "running instance" },
             cleanupOrder);
         Assert.Equal(1, runner.DisposeCount);
-        Assert.Equal(ExecutionState.Idle, service.State);
+        Assert.Equal(ExecutionState.CleaningUp, service.State);
+        Assert.True(service.IsExecutionActive);
         Assert.False(StopManager.CurrentToken.CanBeCanceled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_AllCleanupStepsFail_AttemptsEveryStepAndKeepsRunBlocked()
+    {
+        var cleanupOrder = new List<string>();
+        var contextException = new InvalidOperationException("context dispose failed");
+        var runningInstanceException = new InvalidOperationException("running instance dispose failed");
+        var leaseException = new InvalidOperationException("lease dispose failed");
+        var sessionException = new InvalidOperationException("session dispose failed");
+        var compiler = FakeCodeCompiler.Returning(
+            CompilationResult.FromArtifact(CreateArtifact()));
+        var runner = new FakeCodeRunner(disposeAction: () =>
+        {
+            cleanupOrder.Add("running instance");
+            throw runningInstanceException;
+        });
+        var context = new TrackingCodeExecutionContext(() =>
+        {
+            cleanupOrder.Add("execution context");
+            throw contextException;
+        });
+        var service = new CodeExecutionService(
+            compiler,
+            runner,
+            executionId => new ExecutionSession(
+                executionId,
+                new ThrowingCancellationTokenSource(() =>
+                {
+                    cleanupOrder.Add("session");
+                    throw sessionException;
+                })),
+            (executionId, cancellationToken) => new DelegatingDisposable(
+                StopManager.BeginExecution(executionId, cancellationToken),
+                () =>
+                {
+                    cleanupOrder.Add("stop manager lease");
+                    throw leaseException;
+                }));
+
+        var exception = await Record.ExceptionAsync(() =>
+            service.ExecuteAsync("valid code", _ => context).WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken));
+
+        var aggregateException = Assert.IsType<AggregateException>(exception);
+        Assert.Equal(
+            new Exception[]
+            {
+                contextException,
+                runningInstanceException,
+                leaseException,
+                sessionException
+            },
+            aggregateException.InnerExceptions);
+        Assert.Equal(
+            new[]
+            {
+                "execution context",
+                "running instance",
+                "stop manager lease",
+                "session"
+            },
+            cleanupOrder);
+        Assert.Equal(1, context.DisposeCount);
+        Assert.Equal(1, runner.DisposeCount);
+        Assert.Equal(ExecutionState.CleaningUp, service.State);
+        Assert.True(service.IsExecutionActive);
+        Assert.NotNull(service.CurrentExecutionId);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+
+        var secondContextCount = 0;
+        await service.ExecuteAsync(
+            "second run",
+            _ =>
+            {
+                secondContextCount++;
+                return new TrackingCodeExecutionContext();
+            });
+
+        Assert.Equal(0, secondContextCount);
+        Assert.Equal(1, compiler.CallCount);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ExecutionAndCleanupFail_PreservesPrimaryAndSecondaryErrors()
+    {
+        var executionException = new InvalidOperationException("execution failed");
+        var cleanupException = new InvalidOperationException("cleanup failed");
+        var runner = new FakeCodeRunner(
+            (_, _) => Task.FromException(executionException));
+        var context = new TrackingCodeExecutionContext(() => throw cleanupException);
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(
+                CompilationResult.FromArtifact(CreateArtifact())),
+            runner);
+
+        var exception = await Record.ExceptionAsync(() =>
+            service.ExecuteAsync("valid code", _ => context).WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken));
+
+        var aggregateException = Assert.IsType<AggregateException>(exception);
+        Assert.Equal(
+            new Exception[] { executionException, cleanupException },
+            aggregateException.InnerExceptions);
+        Assert.Equal(1, runner.DisposeCount);
+        Assert.Equal(ExecutionState.CleaningUp, service.State);
+        Assert.True(service.IsExecutionActive);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_StopAndCleanupFail_ReportsCleanupFailureInsteadOfCancellation()
+    {
+        var compilationStarted = new TaskCompletionSource<object?>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var compiler = new FakeCodeCompiler(async (_, cancellationToken) =>
+        {
+            compilationStarted.TrySetResult(null);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return CompilationResult.FromErrors(Array.Empty<string>());
+        });
+        var cleanupException = new InvalidOperationException("cleanup after stop failed");
+        var context = new TrackingCodeExecutionContext(() => throw cleanupException);
+        var service = new CodeExecutionService(compiler, new FakeCodeRunner());
+        var execution = service.ExecuteAsync("code", _ => context);
+
+        await compilationStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        Assert.True(service.RequestStop());
+
+        var exception = await Record.ExceptionAsync(() => execution.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken));
+
+        Assert.Same(cleanupException, exception);
+        Assert.Equal(1, context.DisposeCount);
+        Assert.Equal(ExecutionState.CleaningUp, service.State);
+        Assert.True(service.IsExecutionActive);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+    }
+
+    [Theory]
+    [InlineData(ExecutionState.CleaningUp)]
+    [InlineData(ExecutionState.Idle)]
+    public async Task ExecuteAsync_StateChangedSubscriberFails_IsolatesObserverAndCompletesLifecycle(
+        ExecutionState failingState)
+    {
+        var observerException = new InvalidOperationException(
+            $"observer failed at {failingState}");
+        var statesSeenBySecondObserver = new List<ExecutionState>();
+        var compiler = FakeCodeCompiler.Returning(
+            CompilationResult.FromArtifact(CreateArtifact()));
+        var service = new CodeExecutionService(compiler, new FakeCodeRunner());
+        EventHandler<ExecutionStateChangedEventArgs> failingObserver = (_, eventArgs) =>
+        {
+            if (eventArgs.CurrentState == failingState)
+                throw observerException;
+        };
+        service.StateChanged += failingObserver;
+        service.StateChanged += (_, eventArgs) =>
+            statesSeenBySecondObserver.Add(eventArgs.CurrentState);
+
+        var exception = await Record.ExceptionAsync(() =>
+            service.ExecuteAsync(
+                    "valid code",
+                    _ => new TrackingCodeExecutionContext())
+                .WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken));
+
+        Assert.Same(observerException, exception);
+        Assert.Contains(failingState, statesSeenBySecondObserver);
+        Assert.Equal(ExecutionState.Idle, service.State);
+        Assert.False(service.IsExecutionActive);
+        Assert.Null(service.CurrentExecutionId);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+
+        service.StateChanged -= failingObserver;
+        await service.ExecuteAsync(
+                "second run",
+                _ => new TrackingCodeExecutionContext())
+            .WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, compiler.CallCount);
+        Assert.Equal(ExecutionState.Idle, service.State);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_CompleteSessionTransitionFails_CompletesTaskAndKeepsRunBlocked()
+    {
+        ExecutionSession? createdSession = null;
+        var compiler = FakeCodeCompiler.Returning(
+            CompilationResult.FromArtifact(CreateArtifact()));
+        var service = new CodeExecutionService(
+            compiler,
+            new FakeCodeRunner(),
+            executionId => createdSession = new ExecutionSession(executionId),
+            static (executionId, cancellationToken) =>
+                StopManager.BeginExecution(executionId, cancellationToken));
+        service.StateChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.CurrentState == ExecutionState.CleaningUp)
+            {
+                /* Fault injection: нарушаем private FSM после публикации CleaningUp, чтобы
+                 * следующий внутренний CompleteSession получил недопустимый Idle -> Idle.
+                 */
+                createdSession!.TransitionTo(ExecutionState.Idle);
+            }
+        };
+
+        var exception = await Record.ExceptionAsync(() =>
+            service.ExecuteAsync(
+                    "valid code",
+                    _ => new TrackingCodeExecutionContext())
+                .WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken));
+
+        var transitionException = Assert.IsType<InvalidOperationException>(exception);
+        Assert.Contains("Idle -> Idle", transitionException.Message);
+        Assert.True(service.IsExecutionActive);
+        Assert.NotNull(service.CurrentExecutionId);
+        Assert.False(StopManager.CurrentToken.CanBeCanceled);
+
+        var secondContextCount = 0;
+        await service.ExecuteAsync(
+            "second run",
+            _ =>
+            {
+                secondContextCount++;
+                return new TrackingCodeExecutionContext();
+            });
+
+        Assert.Equal(0, secondContextCount);
+        Assert.Equal(1, compiler.CallCount);
     }
 
     [Fact]
@@ -276,4 +517,39 @@ public sealed class CodeExecutionServiceTests
     }
 
     private static CompilationArtifact CreateArtifact() => new(new byte[] { 1 });
+
+    private sealed class DelegatingDisposable : IDisposable
+    {
+        private readonly IDisposable inner;
+        private readonly Action afterDispose;
+
+        public DelegatingDisposable(IDisposable inner, Action afterDispose)
+        {
+            this.inner = inner;
+            this.afterDispose = afterDispose;
+        }
+
+        public void Dispose()
+        {
+            inner.Dispose();
+            afterDispose();
+        }
+    }
+
+    private sealed class ThrowingCancellationTokenSource : CancellationTokenSource
+    {
+        private readonly Action disposeAction;
+
+        public ThrowingCancellationTokenSource(Action disposeAction)
+        {
+            this.disposeAction = disposeAction;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (disposing)
+                disposeAction();
+        }
+    }
 }

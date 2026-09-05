@@ -18,6 +18,8 @@
 - Координация процесса выполнения кода
 - Управление жизненным циклом контекста выполнения
 - Предотвращение параллельного выполнения
+- Best-effort финализация всех независимых owners с сохранением primary и secondary errors
+- Консервативная блокировка нового Run, если хотя бы один ресурс не подтвердил cleanup
 
 **Основные методы:**
 - `ExecuteAsync(string code, ICodeExecutionContext context)` — выполняет код
@@ -61,10 +63,14 @@
 
 **Особенности:**
 - `runningInstance.Completion` — одна `JoinableTask` уже начатого выполнения, которую сервис ожидает после сохранения экземпляра; общую фабрику runner получает через DI
-- Ошибки выполнения и отмена, не обработанные внутри экземпляра, передаются через `Completion`; экземпляр остаётся доступен для cleanup
+- Reflection-оболочка `TargetInvocationException` разворачивается до исходного пользовательского message/stack trace
+- `OperationCanceledException` означает Stop только после отмены session token; без запроса Stop это обычная пользовательская runtime-ошибка
+- Host-ошибки, не обработанные внутри экземпляра, передаются через `Completion`; экземпляр остаётся доступен для cleanup
 - `CollectibleCodeRunningInstance` выполняет загрузку и вызов `Assembly.EntryPoint` через `Task.Run`, поддерживает `void`/`int`/`Task`/`Task<int>` с пустым списком параметров либо `string[]` и не завершает `Completion` раньше async Main
 - Обработка `TargetInvocationException`, `OperationCanceledException` и локализованных сообщений выполняется до публикации завершения
 - После ожидания `Completion` сервис очищает Console/Graphics, затем вызывает `Dispose()` экземпляра для инициирования выгрузки сборки
+- Исключение одного cleanup-шага не пропускает остальные; несколько ошибок возвращаются как `AggregateException` с первой primary error
+- Ошибки отдельных `StateChanged`-подписчиков изолированы от FSM и других observers; `Idle` публикуется только после подтверждённой очистки ресурсов
 
 #### 1.4. Контексты выполнения
 

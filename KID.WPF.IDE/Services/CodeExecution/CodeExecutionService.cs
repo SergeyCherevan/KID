@@ -32,6 +32,8 @@ namespace KID.Services.CodeExecution
         // управляет последовательностью, не смешивая orchestration с деталями этих операций.
         private readonly ICodeCompiler compiler;
         private readonly ICodeRunner runner;
+        private readonly Func<long, ExecutionSession> sessionFactory;
+        private readonly Func<long, CancellationToken, IDisposable> stopManagerLeaseFactory;
 
         // Monitor / Critical Section: этот объект синхронизирует чтение и изменение
         // currentSession, счётчика id и переходов state machine.
@@ -53,12 +55,33 @@ namespace KID.Services.CodeExecution
         /// <see langword="null"/>.
         /// </exception>
         public CodeExecutionService(ICodeCompiler compiler, ICodeRunner runner)
+            : this(
+                compiler,
+                runner,
+                static executionId => new ExecutionSession(executionId),
+                static (executionId, cancellationToken) =>
+                    StopManager.BeginExecution(executionId, cancellationToken))
+        {
+        }
+
+        /// <summary>
+        /// Создаёт coordinator с заменяемыми lifecycle factories для проверки отказов cleanup.
+        /// </summary>
+        internal CodeExecutionService(
+            ICodeCompiler compiler,
+            ICodeRunner runner,
+            Func<long, ExecutionSession> sessionFactory,
+            Func<long, CancellationToken, IDisposable> stopManagerLeaseFactory)
         {
             /* Fail fast: Coordinator не может поддерживать lifecycle без обеих обязательных
              * стратегий. Проверка конструктора не позволяет создать частично рабочий сервис.
              */
             this.compiler = compiler ?? throw new ArgumentNullException(nameof(compiler));
             this.runner = runner ?? throw new ArgumentNullException(nameof(runner));
+            this.sessionFactory = sessionFactory ??
+                throw new ArgumentNullException(nameof(sessionFactory));
+            this.stopManagerLeaseFactory = stopManagerLeaseFactory ??
+                throw new ArgumentNullException(nameof(stopManagerLeaseFactory));
         }
 
         /// <summary>
@@ -150,11 +173,11 @@ namespace KID.Services.CodeExecution
         /// <paramref name="contextFactory"/> и не создаёт никаких ресурсов второго запуска.
         /// </para>
         /// <para>
-        /// Возвращённая задача завершается только после перехода сессии в
-        /// <see cref="ExecutionState.Idle"/> и освобождения контекста, экземпляра выполнения,
-        /// lease объекта <see cref="StopManager"/> и принадлежащего сессии
-        /// <see cref="CancellationTokenSource"/>. Ожидаемый Stop завершает задачу успешно,
-        /// а неожиданная ошибка переводит её в состояние Faulted после обязательного cleanup.
+        /// Возвращённая задача завершается только после попыток освободить контекст, экземпляр
+        /// выполнения, lease объекта <see cref="StopManager"/> и принадлежащий сессии
+        /// <see cref="CancellationTokenSource"/>. При подтверждённом cleanup сервис переходит в
+        /// <see cref="ExecutionState.Idle"/>; ошибка освобождения оставляет его в CleaningUp и
+        /// блокирует новый Run. Ожидаемый Stop завершается успешно только при успешном cleanup.
         /// </para>
         /// </remarks>
         /// <param name="code">
@@ -218,7 +241,8 @@ namespace KID.Services.CodeExecution
                 /* Сессия является владельцем своего неизменяемого execution id,
                  * CancellationTokenSource, состояния и задачи полного lifecycle.
                  */
-                session = new ExecutionSession(executionId);
+                session = sessionFactory(executionId) ??
+                    throw new InvalidOperationException("Execution session is null.");
 
                 /* TaskCompletionSource создаёт управляемую сервисом completion task.
                  * RunContinuationsAsynchronously не позволяет коду после чужого await
@@ -248,11 +272,11 @@ namespace KID.Services.CodeExecution
              * обработчик может обновлять WPF bindings, команды и обращаться обратно к сервису.
              * К моменту события currentSession и состояние Compiling уже согласованно записаны.
              */
-            OnStateChanged(stateChange);
+            PublishStateChanged(session, stateChange);
 
             /* Запускаем внутреннюю async-orchestration. Её Task намеренно не возвращается
              * напрямую: внешний контракт представлен completionSource.Task, которую
-             * ExecuteSessionAsync завершит только после cleanup и перехода в Idle. */
+             * ExecuteSessionAsync завершит после всех доступных cleanup-шагов. */
             _ = ExecuteSessionAsync(session, code, contextFactory, completionSource);
 
             /* Вызывающая сторона ожидает не только пользовательский entry point, а весь
@@ -315,7 +339,7 @@ namespace KID.Services.CodeExecution
             /* Observer уведомляется до Cancel: UI немедленно запрещает повторные Run/Stop
              * и честно отображает ожидание реакции выполняющегося кода.
              */
-            OnStateChanged(stateChange);
+            PublishStateChanged(session, stateChange);
 
             /* ExecutionSession применяет Idempotent Operation через Interlocked.Exchange:
              * только первый принятый запрос вызывает CancellationTokenSource.Cancel().
@@ -342,14 +366,14 @@ namespace KID.Services.CodeExecution
         /// Pipeline имеет порядок:
         /// Регистрация токена StopManager → создание контекста → инициализация контекста →
         /// компиляция → при успешной компиляции Start и ожидание Completion →
-        /// CleaningUp → освобождение контекста → Dispose/Unload экземпляра выполнения → снятие
-        /// регистрации токена → освобождение сессии → Idle → завершение внешней задачи.
+        /// CleaningUp → независимые попытки освободить контекст, экземпляр выполнения,
+        /// регистрацию токена и сессию → при полном успехе Idle → завершение внешней задачи.
         /// </para>
         /// <para>
-        /// Нормальная отмена текущим session token не считается ошибкой. Любое другое
-        /// исключение сохраняется, cleanup выполняется прежде всего, и только затем сохранённое
-        /// исключение передаётся ожидающей стороне через
-        /// <see cref="TaskCompletionSource{TResult}.TrySetException(Exception)"/>.
+        /// Нормальная отмена текущим session token не считается ошибкой сама по себе. Любое
+        /// другое исключение сохраняется, все независимые cleanup-шаги получают попытку, и затем
+        /// primary error вместе с secondary diagnostics передаётся ожидающей стороне. Ошибка
+        /// cleanup не маскируется успешным Stop и не разрешает новый Run.
         /// </para>
         /// </remarks>
         /// <param name="session">
@@ -363,7 +387,8 @@ namespace KID.Services.CodeExecution
         /// </param>
         /// <param name="completionSource">
         /// Управляющая сторона публичной lifecycle task. Метод завершает её результатом либо
-        /// исключением только после обязательной очистки и снятия активной сессии.
+        /// исключением после всех доступных попыток очистки; при неподтверждённом cleanup активная
+        /// сессия намеренно остаётся зарегистрированной.
         /// </param>
         private async Task ExecuteSessionAsync(
             ExecutionSession session,
@@ -378,19 +403,20 @@ namespace KID.Services.CodeExecution
             ICodeRunningInstance? runningInstance = null;
             IDisposable? stopManagerLease = null;
 
-            /* Ошибка откладывается до окончания cleanup. Это не позволяет fault компилятора,
-             * runner или Dispose преждевременно завершить внешний await и открыть новый Run.
+            /* Все обычные ошибки откладываются до окончания cleanup. Первая причина остаётся
+             * основной, а последующие доступны через AggregateException как диагностика.
              */
-            Exception? executionException = null;
+            var failures = new LifecycleFailureCollector();
 
             try
             {
                 /* Публикуем токен текущей сессии в KID.Library. Возвращённый lease привязан
                  * к execution id и при Dispose очистит CurrentToken только для своей сессии.
                  */
-                stopManagerLease = StopManager.BeginExecution(
+                stopManagerLease = stopManagerLeaseFactory(
                     session.ExecutionId,
-                    session.CancellationToken);
+                    session.CancellationToken) ??
+                    throw new InvalidOperationException("StopManager lease is null.");
 
                 /* Контекст создаётся после принятия сессии и получает её токен уже на этапе
                  * конструирования. null означает нарушение реализации фабрики, а не ошибку
@@ -474,8 +500,8 @@ namespace KID.Services.CodeExecution
             catch (OperationCanceledException) when (session.CancellationToken.IsCancellationRequested)
             {
                 /* Отмена токеном именно этой сессии — ожидаемый результат команды Stop.
-                 * Не записываем её в executionException: внешний Task завершится успешно,
-                 * но только после обязательного cleanup и перехода StopRequested → Idle.
+                 * Не записываем её как primary failure: внешний Task завершится успешно только
+                 * при успешном cleanup; ошибка очистки всё равно будет передана вызывающему коду.
                  */
             }
             catch (Exception exception)
@@ -483,85 +509,60 @@ namespace KID.Services.CodeExecution
                 /* Не передаём ошибку ожидающей стороне прямо сейчас. Сначала сохраняем
                  * первичную причину и безусловно выполняем полный доступный cleanup.
                  */
-                executionException = exception;
+                failures.Add(exception);
             }
             finally
             {
+                bool cleanupSucceeded = true;
+
                 /* Сессия остаётся currentSession, но Run и повторный Stop уже запрещены.
-                 * Переход выполняется до Dispose, чтобы UI честно показывал фазу очистки.
+                 * Ошибка перехода не отменяет попытки освободить независимые ресурсы.
                  */
-                MoveToCleaningUp(session);
+                cleanupSucceeded &= TryFinalizeStep(
+                    () => MoveToCleaningUp(session),
+                    failures);
 
-                try
+                /* Context освобождается первым: его Console/Graphics-компоненты ещё могут читать
+                 * session token во время симметричной очистки и отписок.
+                 */
+                cleanupSucceeded &= TryFinalizeStep(() => context?.Dispose(), failures);
+
+                /* Затем разрываются ссылки running instance и инициируется выгрузка ALC. */
+                cleanupSucceeded &= TryFinalizeStep(() => runningInstance?.Dispose(), failures);
+
+                /* Lease снимается даже после ошибок предыдущих шагов и очищает ambient token
+                 * только при совпадении execution id.
+                 */
+                cleanupSucceeded &= TryFinalizeStep(() => stopManagerLease?.Dispose(), failures);
+
+                /* CTS освобождается последним из ресурсов сессии, когда зависимые ожидания уже
+                 * завершены либо получили свою попытку cleanup.
+                 */
+                cleanupSucceeded &= TryFinalizeStep(session.Dispose, failures);
+
+                if (cleanupSucceeded)
                 {
-                    /* Освобождаем Context до снятия StopManager lease и Dispose session CTS:
-                     * его Console/Graphics-компоненты ещё могут читать session token во время
-                     * симметричной очистки и отписок.
+                    /* Новый Run разрешается только после подтверждённого освобождения каждого
+                     * lifecycle-ресурса. Ошибка самого перехода оставит сессию активной.
                      */
-                    context?.Dispose();
+                    _ = TryFinalizeStep(() => CompleteSession(session), failures);
                 }
-                catch (Exception exception)
-                {
-                    /* Ошибка cleanup не должна маскировать более раннюю ошибку компилятора
-                     * или runner. Если основной pipeline был успешен, Dispose exception
-                     * становится итоговой ошибкой lifecycle task.
-                     */
-                    executionException ??= exception;
-                }
-                finally
-                {
-                    try
-                    {
-                        /* UserProgram ALC выгружается после Context.Dispose: сначала отписываем
-                         * WPF/Console/Graphics host bridges от пользовательских callbacks, затем
-                         * разрываем сильные ссылки экземпляра выполнения и вызываем Unload.
-                         */
-                        runningInstance?.Dispose();
-                    }
-                    catch (Exception exception)
-                    {
-                        /* Ошибка выгрузки не маскирует более раннюю ошибку pipeline или context. */
-                        executionException ??= exception;
-                    }
-                    finally
-                    {
-                        try
-                        {
-                            /* Lease снимается даже при ошибке Dispose контекста или экземпляра. Он
-                             * очистит CurrentToken только при совпадении execution id.
-                             */
-                            stopManagerLease?.Dispose();
-                        }
-                        catch (Exception exception)
-                        {
-                            /* Сохраняем ошибку lease cleanup только при отсутствии более ранней. */
-                            executionException ??= exception;
-                        }
 
-                        /* CTS освобождается после compiler/runner, Context, экземпляра выполнения
-                         * и token lease: зависимые ожидания больше не используют session token.
-                         */
-                        session.Dispose();
+                /* Ошибки внешних observers не влияют на FSM и cleanup, но не теряются:
+                 * добавляем их после primary execution/cleanup failures.
+                 */
+                foreach (var notificationFailure in session.DrainStateNotificationFailures())
+                    failures.Add(notificationFailure);
 
-                        /* Только после полного cleanup backend снова принимает новый Run. */
-                        CompleteSession(session);
-                    }
-                }
+                /* Внешняя задача завершается ровно здесь при любом обычном исходе внутреннего
+                 * pipeline. TrySet защищает от ошибочной повторной попытки completion.
+                 */
+                var lifecycleException = failures.CreateException();
+                if (lifecycleException == null)
+                    completionSource.TrySetResult(null);
+                else
+                    completionSource.TrySetException(lifecycleException);
             }
-
-            /* Завершаем внешний lifecycle task последним действием, уже после Idle.
-             * TrySet-методы не бросают исключение при неожиданной повторной попытке завершения.
-             */
-            if (executionException == null)
-                /* Успех, compilation diagnostics и ожидаемый Stop имеют один успешный
-                 * Task-результат; семантический результат запуска пока отдельно не хранится.
-                 */
-                completionSource.TrySetResult(null);
-            else
-                /* Await вызывающей стороны повторно выбросит сохранённое исключение,
-                 * а IAsyncOperationErrorHandler сможет показать его уже после cleanup.
-                 */
-                completionSource.TrySetException(executionException);
         }
 
         /// <summary>
@@ -607,7 +608,7 @@ namespace KID.Services.CodeExecution
             }
 
             /* Observer получает только уже подтверждённый переход. */
-            OnStateChanged(stateChange);
+            PublishStateChanged(session, stateChange);
             return true;
         }
 
@@ -639,7 +640,7 @@ namespace KID.Services.CodeExecution
 
             /* Событие вызывается только для реально выполненного перехода и вне lock. */
             if (stateChange != null)
-                OnStateChanged(stateChange);
+                PublishStateChanged(session, stateChange);
         }
 
         /// <summary>
@@ -674,21 +675,81 @@ namespace KID.Services.CodeExecution
 
             /* UI узнаёт об Idle только после удаления currentSession и полного cleanup. */
             if (stateChange != null)
-                OnStateChanged(stateChange);
+                PublishStateChanged(session, stateChange);
         }
 
         /// <summary>
-        /// Публикует подтверждённый переход всем подписчикам
-        /// <see cref="StateChanged"/>.
+        /// Выполняет один независимый шаг финализации и сохраняет его ошибку.
+        /// </summary>
+        /// <param name="action">Cleanup-операция, которую необходимо попытаться выполнить.</param>
+        /// <param name="failures">Накопитель primary и secondary lifecycle errors.</param>
+        /// <returns><see langword="true"/>, если операция завершилась без исключения.</returns>
+        private static bool TryFinalizeStep(
+            Action action,
+            LifecycleFailureCollector failures)
+        {
+            try
+            {
+                action();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Публикует подтверждённый переход каждому подписчику независимо.
         /// </summary>
         /// <remarks>
-        /// Это центральная точка <b>Observer Pattern</b>. Вызывающие методы обязаны
-        /// обращаться к ней без удержания <c>sessionLock</c>.
+        /// Ошибка одного observer не препятствует остальным callbacks и не меняет уже
+        /// подтверждённое состояние FSM. Она сохраняется в сессии и будет передана через
+        /// внешнюю lifecycle task после завершения доступного cleanup.
         /// </remarks>
-        /// <param name="eventArgs">
-        /// Неизменяемое описание execution id, предыдущего и нового состояния.
-        /// </param>
-        private void OnStateChanged(ExecutionStateChangedEventArgs eventArgs) =>
-            StateChanged?.Invoke(this, eventArgs);
+        private void PublishStateChanged(
+            ExecutionSession session,
+            ExecutionStateChangedEventArgs eventArgs)
+        {
+            var subscribers = StateChanged;
+            if (subscribers == null)
+                return;
+
+            foreach (var subscriber in subscribers.GetInvocationList())
+            {
+                try
+                {
+                    ((EventHandler<ExecutionStateChangedEventArgs>)subscriber)(this, eventArgs);
+                }
+                catch (Exception exception)
+                {
+                    session.RecordStateNotificationFailure(exception);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Сохраняет первую ошибку как primary и формирует диагностику для последующих ошибок.
+        /// </summary>
+        private sealed class LifecycleFailureCollector
+        {
+            private readonly List<Exception> failures = [];
+
+            public void Add(Exception exception)
+            {
+                ArgumentNullException.ThrowIfNull(exception);
+                failures.Add(exception);
+            }
+
+            public Exception? CreateException() => failures.Count switch
+            {
+                0 => null,
+                1 => failures[0],
+                _ => new AggregateException(
+                    "Multiple errors occurred during execution lifecycle finalization.",
+                    failures)
+            };
+        }
     }
 }

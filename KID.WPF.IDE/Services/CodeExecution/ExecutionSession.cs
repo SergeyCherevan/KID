@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,7 +30,11 @@ namespace KID.Services.CodeExecution
     {
         // CancellationTokenSource принадлежит только этой сессии. Снаружи публикуется
         // его read-only Token, а Cancel и Dispose остаются lifecycle-операциями owner.
-        private readonly CancellationTokenSource cancellationSource = new();
+        private readonly CancellationTokenSource cancellationSource;
+
+        // Ошибки внешних StateChanged-observers не должны управлять FSM или прерывать cleanup.
+        // Сессия временно накапливает их, чтобы coordinator включил их в итог lifecycle task.
+        private readonly ConcurrentQueue<Exception> stateNotificationFailures = new();
 
         // Interlocked-флаги обеспечивают атомарный принцип «первый вызов побеждает»
         // даже при конкурентных RequestStop/Dispose с разных потоков.
@@ -46,6 +51,18 @@ namespace KID.Services.CodeExecution
         /// <paramref name="executionId"/> меньше либо равен нулю.
         /// </exception>
         public ExecutionSession(long executionId)
+            : this(executionId, new CancellationTokenSource())
+        {
+        }
+
+        /// <summary>
+        /// Создаёт сессию с явно переданным источником отмены для проверки отказов lifecycle.
+        /// </summary>
+        /// <param name="executionId">Уникальный положительный id запуска.</param>
+        /// <param name="cancellationSource">Источник отмены, принадлежащий этой сессии.</param>
+        internal ExecutionSession(
+            long executionId,
+            CancellationTokenSource cancellationSource)
         {
             /* Положительность поддерживает простой инвариант: default/ошибочные значения
              * не могут быть приняты за корректную идентичность запуска.
@@ -53,10 +70,36 @@ namespace KID.Services.CodeExecution
             if (executionId <= 0)
                 throw new ArgumentOutOfRangeException(nameof(executionId));
 
+            this.cancellationSource = cancellationSource ??
+                throw new ArgumentNullException(nameof(cancellationSource));
+
             /* Свойство имеет только getter, поэтому идентичность сессии нельзя изменить
              * после публикации токена, событий и асинхронных callbacks.
              */
             ExecutionId = executionId;
+        }
+
+        /// <summary>
+        /// Сохраняет ошибку подписчика StateChanged без изменения результата перехода FSM.
+        /// </summary>
+        /// <param name="exception">Ошибка одного внешнего observer.</param>
+        internal void RecordStateNotificationFailure(Exception exception)
+        {
+            ArgumentNullException.ThrowIfNull(exception);
+            stateNotificationFailures.Enqueue(exception);
+        }
+
+        /// <summary>
+        /// Извлекает все накопленные ошибки StateChanged в порядке их регистрации.
+        /// </summary>
+        /// <returns>Host-only список ошибок, который coordinator добавит к lifecycle failure.</returns>
+        internal IReadOnlyList<Exception> DrainStateNotificationFailures()
+        {
+            var failures = new List<Exception>();
+            while (stateNotificationFailures.TryDequeue(out var failure))
+                failures.Add(failure);
+
+            return failures;
         }
 
         /// <summary>

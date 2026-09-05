@@ -112,6 +112,9 @@
 - Использует ICodeCompiler для компиляции
 - Вызывает `ICodeRunner.Start(artifact, token)` и ожидает `runningInstance.Completion`
 - Управляет жизненным циклом контекста выполнения
+- Пытается выполнить каждый независимый cleanup-шаг даже после ошибки предыдущего; primary exception сохраняется, secondary exceptions доступны через `AggregateException`
+- Публикует `StateChanged` каждому observer независимо; ошибка подписчика доставляется через lifecycle task, но не отменяет уже подтверждённый переход FSM
+- Возвращается в `Idle` только после подтверждённой очистки всех lifecycle-ресурсов; ошибка Dispose оставляет `CleaningUp` и запрещает новый Run
 
 **CSharpCompiler** (`CSharpCompiler.cs`)
 - Компилирует C# код в сборку
@@ -128,7 +131,8 @@
 - `Completion` возвращает одну задачу выполнения; повторный `await` не запускает программу заново
 - `Completion` представлен `JoinableTask`, потому что операция стартует до ожидания и может обращаться к WPF UI-потоку
 - Поддерживает `void`, `int`, `Task` и `Task<int>` entry point без параметров либо с `string[]`; `Completion` завершается только после окончания асинхронного Main
-- Сохраняет текущую обработку пользовательских ошибок и сообщений; необработанные ошибки и отмена доступны через `Completion`
+- Разворачивает служебный `TargetInvocationException`: пользовательская ошибка выводится с исходным message/stack trace, а `OperationCanceledException` считается Stop только при отменённом токене текущей сессии
+- Host-ошибки загрузки и выполнения, не классифицированные как пользовательский результат, доступны через `Completion`
 - `Dispose()` инициирует выгрузку после завершения `Completion` и очистки контекста сервисом; освобождение работающего экземпляра запрещено
 
 **Контексты выполнения:**
@@ -474,8 +478,10 @@ Console API → TextBox (UI поток)
 ```
 
 `CodeExecutionService` сохраняет экземпляр до `await runningInstance.Completion`. После завершения
-выполнения сервис очищает контекст Console/Graphics, вызывает `runningInstance.Dispose()`, снимает
-регистрацию StopManager и освобождает сессию. `Completion` не включает этот внешний cleanup.
+выполнения сервис независимо пытается очистить контекст Console/Graphics, вызвать
+`runningInstance.Dispose()`, снять регистрацию StopManager и освободить сессию. `Completion` не
+включает этот внешний cleanup. Только успешная очистка всех четырёх owners разрешает переход в
+`Idle`; иначе публичная lifecycle task завершается ошибкой, а новый Run остаётся заблокированным.
 Общая `JoinableTaskFactory` создаётся из singleton `JoinableTaskContext` и передаётся runner через DI.
 
 ### Инициализация приложения
