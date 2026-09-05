@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -34,7 +33,7 @@ namespace KID.Services.CodeExecution
 
         // Ошибки внешних StateChanged-observers не должны управлять FSM или прерывать cleanup.
         // Сессия временно накапливает их, чтобы coordinator включил их в итог lifecycle task.
-        private readonly ConcurrentQueue<Exception> stateNotificationFailures = new();
+        private readonly ExecutionFailureCollector stateNotificationFailures = new();
 
         // Interlocked-флаги обеспечивают атомарный принцип «первый вызов побеждает»
         // даже при конкурентных RequestStop/Dispose с разных потоков.
@@ -85,21 +84,22 @@ namespace KID.Services.CodeExecution
         /// <param name="exception">Ошибка одного внешнего observer.</param>
         internal void RecordStateNotificationFailure(Exception exception)
         {
-            ArgumentNullException.ThrowIfNull(exception);
-            stateNotificationFailures.Enqueue(exception);
+            stateNotificationFailures.Add(exception);
         }
 
         /// <summary>
-        /// Извлекает все накопленные ошибки StateChanged в порядке их регистрации.
+        /// Переносит все накопленные ошибки StateChanged в lifecycle-коллектор.
         /// </summary>
-        /// <returns>Host-only список ошибок, который coordinator добавит к lifecycle failure.</returns>
-        internal IReadOnlyList<Exception> DrainStateNotificationFailures()
+        /// <remarks>
+        /// Observer failures хранятся отдельно во время выполнения, чтобы они не могли стать
+        /// primary раньше ошибки execution или cleanup только из-за порядка конкурентных потоков.
+        /// </remarks>
+        /// <param name="destination">
+        /// Основной lifecycle-коллектор, в конец которого будут добавлены observer failures.
+        /// </param>
+        internal void DrainStateNotificationFailuresTo(ExecutionFailureCollector destination)
         {
-            var failures = new List<Exception>();
-            while (stateNotificationFailures.TryDequeue(out var failure))
-                failures.Add(failure);
-
-            return failures;
+            stateNotificationFailures.DrainTo(destination);
         }
 
         /// <summary>

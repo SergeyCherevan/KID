@@ -300,7 +300,7 @@ namespace KID.Services.CodeExecution
         private static ExecutionOutcome ClassifyUserException(
             Exception exception,
             CancellationToken cancellationToken) =>
-            exception is OperationCanceledException && cancellationToken.IsCancellationRequested
+            ExecutionExceptionClassifier.IsExpectedStop(exception, cancellationToken)
                 ? ExecutionOutcome.Stopped
                 : ExecutionOutcome.FromError(exception.Message, exception.StackTrace);
 

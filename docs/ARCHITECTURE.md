@@ -113,6 +113,7 @@
 - Вызывает `ICodeRunner.Start(artifact, token)` и ожидает `runningInstance.Completion`
 - Управляет жизненным циклом контекста выполнения
 - Пытается выполнить каждый независимый cleanup-шаг даже после ошибки предыдущего; primary exception сохраняется, secondary exceptions доступны через `AggregateException`
+- Использует общий `ExecutionFailureCollector` для выполнения защищённых lifecycle-шагов и агрегации ошибок; observer failures накапливаются отдельно в сессии и переносятся последними
 - Публикует `StateChanged` каждому observer независимо; ошибка подписчика доставляется через lifecycle task, но не отменяет уже подтверждённый переход FSM
 - Возвращается в `Idle` только после подтверждённой очистки всех lifecycle-ресурсов; ошибка Dispose оставляет `CleaningUp` и запрещает новый Run
 
@@ -131,7 +132,7 @@
 - `Completion` возвращает одну задачу выполнения; повторный `await` не запускает программу заново
 - `Completion` представлен `JoinableTask`, потому что операция стартует до ожидания и может обращаться к WPF UI-потоку
 - Поддерживает `void`, `int`, `Task` и `Task<int>` entry point без параметров либо с `string[]`; `Completion` завершается только после окончания асинхронного Main
-- Разворачивает служебный `TargetInvocationException`: пользовательская ошибка выводится с исходным message/stack trace, а `OperationCanceledException` считается Stop только при отменённом токене текущей сессии
+- Разворачивает служебный `TargetInvocationException`: пользовательская ошибка выводится с исходным message/stack trace, а общий `ExecutionExceptionClassifier` считает `OperationCanceledException` Stop только при отменённом токене текущей сессии
 - Host-ошибки загрузки и выполнения, не классифицированные как пользовательский результат, доступны через `Completion`
 - `Dispose()` инициирует выгрузку после завершения `Completion` и очистки контекста сервисом; освобождение работающего экземпляра запрещено
 

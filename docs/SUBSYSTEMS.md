@@ -65,11 +65,13 @@
 - `runningInstance.Completion` — одна `JoinableTask` уже начатого выполнения, которую сервис ожидает после сохранения экземпляра; общую фабрику runner получает через DI
 - Reflection-оболочка `TargetInvocationException` разворачивается до исходного пользовательского message/stack trace
 - `OperationCanceledException` означает Stop только после отмены session token; без запроса Stop это обычная пользовательская runtime-ошибка
+- Единое правило ожидаемого Stop находится в `ExecutionExceptionClassifier` и используется как running instance, так и lifecycle coordinator
 - Host-ошибки, не обработанные внутри экземпляра, передаются через `Completion`; экземпляр остаётся доступен для cleanup
 - `CollectibleCodeRunningInstance` выполняет загрузку и вызов `Assembly.EntryPoint` через `Task.Run`, поддерживает `void`/`int`/`Task`/`Task<int>` с пустым списком параметров либо `string[]` и не завершает `Completion` раньше async Main
 - Обработка `TargetInvocationException`, `OperationCanceledException` и локализованных сообщений выполняется до публикации завершения
 - После ожидания `Completion` сервис очищает Console/Graphics, затем вызывает `Dispose()` экземпляра для инициирования выгрузки сборки
 - Исключение одного cleanup-шага не пропускает остальные; несколько ошибок возвращаются как `AggregateException` с первой primary error
+- `ExecutionFailureCollector` централизует capture, порядок и агрегацию lifecycle errors; очередь observer failures остаётся отдельной до окончания cleanup
 - Ошибки отдельных `StateChanged`-подписчиков изолированы от FSM и других observers; `Idle` публикуется только после подтверждённой очистки ресурсов
 
 #### 1.4. Контексты выполнения

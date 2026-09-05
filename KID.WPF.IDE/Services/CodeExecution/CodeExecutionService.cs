@@ -406,7 +406,7 @@ namespace KID.Services.CodeExecution
             /* Все обычные ошибки откладываются до окончания cleanup. Первая причина остаётся
              * основной, а последующие доступны через AggregateException как диагностика.
              */
-            var failures = new LifecycleFailureCollector();
+            var failures = new ExecutionFailureCollector();
 
             try
             {
@@ -497,7 +497,8 @@ namespace KID.Services.CodeExecution
                     await runningInstance.Completion;
                 }
             }
-            catch (OperationCanceledException) when (session.CancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException exception) when (
+                ExecutionExceptionClassifier.IsExpectedStop(exception, session.CancellationToken))
             {
                 /* Отмена токеном именно этой сессии — ожидаемый результат команды Stop.
                  * Не записываем её как primary failure: внешний Task завершится успешно только
@@ -518,46 +519,44 @@ namespace KID.Services.CodeExecution
                 /* Сессия остаётся currentSession, но Run и повторный Stop уже запрещены.
                  * Ошибка перехода не отменяет попытки освободить независимые ресурсы.
                  */
-                cleanupSucceeded &= TryFinalizeStep(
-                    () => MoveToCleaningUp(session),
-                    failures);
+                cleanupSucceeded &= failures.Capture(() => MoveToCleaningUp(session));
 
                 /* Context освобождается первым: его Console/Graphics-компоненты ещё могут читать
                  * session token во время симметричной очистки и отписок.
                  */
-                cleanupSucceeded &= TryFinalizeStep(() => context?.Dispose(), failures);
+                cleanupSucceeded &= failures.Capture(() => context?.Dispose());
 
                 /* Затем разрываются ссылки running instance и инициируется выгрузка ALC. */
-                cleanupSucceeded &= TryFinalizeStep(() => runningInstance?.Dispose(), failures);
+                cleanupSucceeded &= failures.Capture(() => runningInstance?.Dispose());
 
                 /* Lease снимается даже после ошибок предыдущих шагов и очищает ambient token
                  * только при совпадении execution id.
                  */
-                cleanupSucceeded &= TryFinalizeStep(() => stopManagerLease?.Dispose(), failures);
+                cleanupSucceeded &= failures.Capture(() => stopManagerLease?.Dispose());
 
                 /* CTS освобождается последним из ресурсов сессии, когда зависимые ожидания уже
                  * завершены либо получили свою попытку cleanup.
                  */
-                cleanupSucceeded &= TryFinalizeStep(session.Dispose, failures);
+                cleanupSucceeded &= failures.Capture(session.Dispose);
 
                 if (cleanupSucceeded)
                 {
                     /* Новый Run разрешается только после подтверждённого освобождения каждого
                      * lifecycle-ресурса. Ошибка самого перехода оставит сессию активной.
                      */
-                    _ = TryFinalizeStep(() => CompleteSession(session), failures);
+                    _ = failures.Capture(() => CompleteSession(session));
                 }
 
                 /* Ошибки внешних observers не влияют на FSM и cleanup, но не теряются:
                  * добавляем их после primary execution/cleanup failures.
                  */
-                foreach (var notificationFailure in session.DrainStateNotificationFailures())
-                    failures.Add(notificationFailure);
+                session.DrainStateNotificationFailuresTo(failures);
 
                 /* Внешняя задача завершается ровно здесь при любом обычном исходе внутреннего
                  * pipeline. TrySet защищает от ошибочной повторной попытки completion.
                  */
-                var lifecycleException = failures.CreateException();
+                var lifecycleException = failures.CreateException(
+                    "Multiple errors occurred during the execution lifecycle.");
                 if (lifecycleException == null)
                     completionSource.TrySetResult(null);
                 else
@@ -679,28 +678,6 @@ namespace KID.Services.CodeExecution
         }
 
         /// <summary>
-        /// Выполняет один независимый шаг финализации и сохраняет его ошибку.
-        /// </summary>
-        /// <param name="action">Cleanup-операция, которую необходимо попытаться выполнить.</param>
-        /// <param name="failures">Накопитель primary и secondary lifecycle errors.</param>
-        /// <returns><see langword="true"/>, если операция завершилась без исключения.</returns>
-        private static bool TryFinalizeStep(
-            Action action,
-            LifecycleFailureCollector failures)
-        {
-            try
-            {
-                action();
-                return true;
-            }
-            catch (Exception exception)
-            {
-                failures.Add(exception);
-                return false;
-            }
-        }
-
-        /// <summary>
         /// Публикует подтверждённый переход каждому подписчику независимо.
         /// </summary>
         /// <remarks>
@@ -729,27 +706,5 @@ namespace KID.Services.CodeExecution
             }
         }
 
-        /// <summary>
-        /// Сохраняет первую ошибку как primary и формирует диагностику для последующих ошибок.
-        /// </summary>
-        private sealed class LifecycleFailureCollector
-        {
-            private readonly List<Exception> failures = [];
-
-            public void Add(Exception exception)
-            {
-                ArgumentNullException.ThrowIfNull(exception);
-                failures.Add(exception);
-            }
-
-            public Exception? CreateException() => failures.Count switch
-            {
-                0 => null,
-                1 => failures[0],
-                _ => new AggregateException(
-                    "Multiple errors occurred during execution lifecycle finalization.",
-                    failures)
-            };
-        }
     }
 }
