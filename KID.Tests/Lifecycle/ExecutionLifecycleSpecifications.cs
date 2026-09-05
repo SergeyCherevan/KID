@@ -134,12 +134,105 @@ public sealed class ExecutionLifecycleSpecifications
              attempt < 10 && contextReferences.Any(reference => reference.IsAlive);
              attempt++)
         {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
+            RunFullGarbageCollectionCycle();
         }
 
         Assert.All(contextReferences, reference => Assert.False(reference.IsAlive));
+    }
+
+    [Fact]
+    public async Task Unload_LiveUserThreadKeepsContextAliveUntilThreadExits()
+    {
+        var startedKey = $"KID.Tests.Lifecycle.BackgroundThread.{Guid.NewGuid():N}.Started";
+        var releaseKey = $"KID.Tests.Lifecycle.BackgroundThread.{Guid.NewGuid():N}.Release";
+        var exitedKey = $"KID.Tests.Lifecycle.BackgroundThread.{Guid.NewGuid():N}.Exited";
+        var started = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var release = new ManualResetEventSlim();
+        var exited = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var code = $$"""
+            public static class Program
+            {
+                public static void Main()
+                {
+                    var thread = new System.Threading.Thread(KeepAssemblyAlive)
+                    {
+                        IsBackground = true
+                    };
+                    thread.Start();
+                }
+
+                private static void KeepAssemblyAlive()
+                {
+                    var started = (System.Threading.Tasks.TaskCompletionSource<bool>)
+                        System.AppContext.GetData("{{startedKey}}")!;
+                    var release = (System.Threading.ManualResetEventSlim)
+                        System.AppContext.GetData("{{releaseKey}}")!;
+                    var exited = (System.Threading.Tasks.TaskCompletionSource<bool>)
+                        System.AppContext.GetData("{{exitedKey}}")!;
+
+                    started.TrySetResult(true);
+                    release.Wait();
+                    exited.TrySetResult(true);
+                }
+            }
+            """;
+        var localizationService = new StubLocalizationService();
+        var compiler = new CSharpCompiler(localizationService);
+        var compilationResult = await compiler.CompileAsync(
+            code,
+            TestContext.Current.CancellationToken);
+        var artifact = Assert.IsType<CompilationArtifact>(compilationResult.Artifact);
+        var runner = new DefaultCodeRunner(
+            localizationService,
+            TestThreading.JoinableTaskFactory);
+        WeakReference? contextReference = null;
+
+        AppContext.SetData(startedKey, started);
+        AppContext.SetData(releaseKey, release);
+        AppContext.SetData(exitedKey, exited);
+        try
+        {
+            contextReference = await ExecuteAndDisposeAfterSignalAsync(
+                runner,
+                artifact,
+                started.Task);
+
+            /* Dispose уже запросил Unload, но живой stack frame пользовательского потока
+             * остаётся корнем loader context. Несколько полных GC-циклов не должны создавать
+             * ложное впечатление, что выгрузка гарантированно завершилась.
+             */
+            for (var attempt = 0; attempt < 3; attempt++)
+                RunFullGarbageCollectionCycle();
+
+            Assert.True(contextReference.IsAlive);
+
+            release.Set();
+            await exited.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            release.Set();
+            if (started.Task.IsCompleted && !exited.Task.IsCompleted)
+            {
+                await exited.Task.WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken);
+            }
+
+            AppContext.SetData(startedKey, null);
+            AppContext.SetData(releaseKey, null);
+            AppContext.SetData(exitedKey, null);
+        }
+
+        var unloadDiagnostic = Assert.IsType<WeakReference>(contextReference);
+        for (var attempt = 0; attempt < 10 && unloadDiagnostic.IsAlive; attempt++)
+            RunFullGarbageCollectionCycle();
+
+        Assert.False(unloadDiagnostic.IsAlive);
     }
 
     private static string CreateAsyncMainSource(
@@ -193,5 +286,36 @@ public sealed class ExecutionLifecycleSpecifications
         {
             execution.Dispose();
         }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task<WeakReference> ExecuteAndDisposeAfterSignalAsync(
+        DefaultCodeRunner runner,
+        CompilationArtifact artifact,
+        Task executionSignal)
+    {
+        var execution = Assert.IsType<CollectibleCodeRunningInstance>(
+            runner.Start(artifact, TestContext.Current.CancellationToken));
+        try
+        {
+            await executionSignal.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+            await execution.Completion.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+            return Assert.IsType<WeakReference>(execution.LoadContextReference);
+        }
+        finally
+        {
+            execution.Dispose();
+        }
+    }
+
+    private static void RunFullGarbageCollectionCycle()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
     }
 }

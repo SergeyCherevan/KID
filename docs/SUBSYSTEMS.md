@@ -73,6 +73,8 @@
 - Исключение одного cleanup-шага не пропускает остальные; несколько ошибок возвращаются как `AggregateException` с первой primary error
 - `ExecutionFailureCollector` централизует capture, порядок и агрегацию lifecycle errors; очередь observer failures остаётся отдельной до окончания cleanup
 - Ошибки отдельных `StateChanged`-подписчиков изолированы от FSM и других observers; `Idle` публикуется только после подтверждённой очистки ресурсов
+- `Dispose()` экземпляра вызывает cooperative `AssemblyLoadContext.Unload()`, но не обещает немедленную или гарантированную сборку ALC; живой пользовательский поток и другие strong references могут отложить её
+- Unload-тесты используют только `WeakReference` и bounded GC-циклы: обычные sync/async запуски обязаны освобождаться, а диагностический background-thread сценарий удерживает ALC до фактического выхода пользовательского потока
 
 #### 1.4. Контексты выполнения
 

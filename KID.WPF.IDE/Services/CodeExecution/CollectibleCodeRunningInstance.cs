@@ -14,6 +14,9 @@ namespace KID.Services.CodeExecution
     /// Объект хранит сильную ссылку только на сам AssemblyLoadContext, пока coordinator не вызовет
     /// <see cref="Dispose"/>. Assembly, Type и MethodInfo существуют лишь внутри отдельного
     /// non-inlined метода выполнения и не сохраняются в singleton-сервисах.
+    /// Вызов <see cref="System.Runtime.Loader.AssemblyLoadContext.Unload"/> только инициирует
+    /// кооперативную выгрузку: живой пользовательский поток, delegate, static event или другой
+    /// внешний strong reference может удерживать context после завершения основного entry point.
     /// </remarks>
     internal sealed class CollectibleCodeRunningInstance : ICodeRunningInstance
     {
@@ -52,6 +55,11 @@ namespace KID.Services.CodeExecution
         /// <summary>
         /// Слабая ссылка на созданный context для регрессионной проверки фактической выгрузки.
         /// </summary>
+        /// <remarks>
+        /// После <see cref="Dispose"/> живое значение ссылки означает, что runtime ещё не собрал
+        /// context. Это диагностический сигнал, а не автоматическое доказательство host-утечки:
+        /// причиной может быть продолжающий выполняться пользовательский поток.
+        /// </remarks>
         internal WeakReference? LoadContextReference => loadContextReference;
 
         /// <summary>
@@ -132,6 +140,10 @@ namespace KID.Services.CodeExecution
         /// <summary>
         /// Инициирует выгрузку пользовательского AssemblyLoadContext и разрывает сильные ссылки.
         /// </summary>
+        /// <remarks>
+        /// Метод не ожидает и не гарантирует фактическую сборку context. CLR завершит unload
+        /// только после исчезновения всех stack frames и strong references пользовательской сборки.
+        /// </remarks>
         /// <exception cref="InvalidOperationException">
         /// Выполнение ещё находится внутри пользовательской сборки.
         /// </exception>
