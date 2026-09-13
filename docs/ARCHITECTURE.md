@@ -107,7 +107,7 @@
 
 **Расположение:** `KID.WPF.IDE/Services/CodeExecution/`
 
-Подсистема разделена на `Compilation/` (включая `Rewriters/`), `Runtime/` и `Contexts/` (включая `Console/`). Координатор и состояние сессии остаются в корне; интерфейсы размещены в `Interfaces/` соответствующей части. Полное дерево файлов и границы ответственности описаны в [структуре подсистемы выполнения кода](CodeExecution.md).
+Подсистема разделена на `Compilation/` (включая `Rewriters/`), `Runtime/`, `Console/`, `Contexts/` и `Errors/`. Координатор и состояние сессии остаются в корне; интерфейсы размещены в `Interfaces/` соответствующей части. Полное дерево файлов и границы ответственности описаны в [структуре подсистемы выполнения кода](CodeExecution.md).
 
 **CodeExecutionService** (`CodeExecutionService.cs`)
 - Координирует процесс выполнения кода
@@ -151,7 +151,7 @@
   - Получает `App` из DI контейнера
   - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
-**TextBoxConsole** (`TextBoxConsole.cs`)
+**TextBoxConsole** (`Console/TextBoxConsole.cs`)
 - Реализация IConsole для WPF TextBox
 - Перенаправляет Console.WriteLine/Write в TextBox
 - Поддерживает Console.ReadLine для ввода данных
@@ -196,7 +196,7 @@
 
 **ExecutionFailureCollector** (`ExecutionFailureCollector.cs`)
 - Собирает ошибки независимых синхронных и асинхронных шагов, сохраняя порядок исключений
-- Используется координатором выполнения, сессией и контекстами; правило ожидаемой остановки находится отдельно в `CodeExecution/ExecutionExceptionClassifier.cs`
+- Используется координатором выполнения, сессией и контекстами; правило ожидаемой остановки находится отдельно в `CodeExecution/Errors/ExecutionExceptionClassifier.cs`
 
 **IAsyncOperationErrorHandler / AsyncOperationErrorHandler**
 - Единообразная обработка исключений асинхронных операций в UI-слое

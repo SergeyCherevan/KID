@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using KID.Services.Localization.Interfaces;
 using Microsoft.VisualStudio.Threading;
+using KID.Services.CodeExecution.Errors;
 
 namespace KID.Services.CodeExecution.Runtime
 {
@@ -327,19 +328,19 @@ namespace KID.Services.CodeExecution.Runtime
                 case ExecutionOutcomeKind.None:
                     return;
                 case ExecutionOutcomeKind.Finished:
-                    Console.WriteLine(localizationService.GetString("Notification_ProgramFinished"));
+                    System.Console.WriteLine(localizationService.GetString("Notification_ProgramFinished"));
                     return;
                 case ExecutionOutcomeKind.Stopped:
-                    Console.WriteLine(localizationService.GetString("Notification_ProgramStopped"));
+                    System.Console.WriteLine(localizationService.GetString("Notification_ProgramStopped"));
                     return;
                 case ExecutionOutcomeKind.Error:
-                    await Console.Error.WriteLineAsync(
+                    await System.Console.Error.WriteLineAsync(
                         localizationService.GetString(
                             "Error_Execution",
                             outcome.ErrorMessage ?? string.Empty));
                     if (!string.IsNullOrEmpty(outcome.StackTrace))
                     {
-                        await Console.Error.WriteLineAsync(
+                        await System.Console.Error.WriteLineAsync(
                             localizationService.GetString("Error_StackTrace", outcome.StackTrace));
                     }
                     return;

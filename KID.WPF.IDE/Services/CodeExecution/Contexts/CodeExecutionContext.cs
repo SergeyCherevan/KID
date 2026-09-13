@@ -1,5 +1,4 @@
 using KID.Services.Errors;
-using KID.Services.CodeExecution.Contexts.Console.Interfaces;
 using KID.Services.CodeExecution.Contexts.Interfaces;
 using System;
 using System.Collections.Generic;

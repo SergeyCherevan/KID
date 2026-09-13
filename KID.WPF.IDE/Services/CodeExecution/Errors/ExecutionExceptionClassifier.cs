@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Errors
 {
     /// <summary>
     /// Содержит общие правила классификации исключений execution pipeline.

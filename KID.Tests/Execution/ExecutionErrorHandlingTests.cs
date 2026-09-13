@@ -1,4 +1,4 @@
-using KID.Services.CodeExecution;
+using KID.Services.CodeExecution.Errors;
 using KID.Services.Errors;
 
 namespace KID.Tests.Execution;

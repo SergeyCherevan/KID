@@ -1,9 +1,10 @@
 using KID.Services.Errors;
-using KID.Services.CodeExecution.Contexts.Console.Interfaces;
 using System.IO;
 using System.Windows.Controls;
+using KID.Services.CodeExecution.Console;
+using KID.Services.CodeExecution.Contexts.Interfaces;
 
-namespace KID.Services.CodeExecution.Contexts.Console;
+namespace KID.Services.CodeExecution.Contexts;
 
 /// <summary>
 /// Владеет перенаправлением System.Console одной сессии. Cleanup ожидает readers,

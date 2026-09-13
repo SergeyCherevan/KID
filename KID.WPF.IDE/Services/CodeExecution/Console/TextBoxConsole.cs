@@ -5,10 +5,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using KID.Services.CodeExecution.Contexts.Console.Interfaces;
 using AsyncManualResetEvent = Microsoft.VisualStudio.Threading.AsyncManualResetEvent;
+using KID.Services.CodeExecution.Console.Interfaces;
 
-namespace KID.Services.CodeExecution.Contexts.Console;
+namespace KID.Services.CodeExecution.Console;
 
 /// <summary>
 /// Адаптирует WPF <see cref="TextBox"/> к консольным потокам одного запуска
@@ -26,7 +26,7 @@ namespace KID.Services.CodeExecution.Contexts.Console;
 /// <para>
 /// Экземпляр принадлежит ровно одной execution-сессии, идентифицируемой
 /// <see cref="ExecutionId"/>. Вложенный фасад <see cref="StaticConsole"/> публикует текущего
-/// владельца для переписанного вызова <see cref="Console.Clear"/>, а проверки владельца
+/// владельца для переписанного вызова <see cref="System.Console.Clear"/>, а проверки владельца
 /// отбрасывают запоздалые ввод, вывод и UI-callbacks предыдущей сессии.
 /// </para>
 /// <para>
@@ -44,7 +44,7 @@ namespace KID.Services.CodeExecution.Contexts.Console;
 /// </para>
 /// <para>
 /// Класс не владеет глобальной подменой <see cref="Console.In"/>, <see cref="Console.Out"/>
-/// и <see cref="Console.Error"/>. Этой областью ответственности управляет
+/// и <see cref="System.Console.Error"/>. Этой областью ответственности управляет
 /// <c>TextBoxConsoleContext</c>, который после полного cleanup адаптера восстанавливает
 /// исходные системные потоки.
 /// </para>
@@ -989,13 +989,13 @@ public sealed class TextBoxConsole : IConsole, IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Предоставляет статический мост от переписанного <see cref="Console.Clear"/> к консоли
+    /// Предоставляет статический мост от переписанного <see cref="System.Console.Clear"/> к консоли
     /// текущей execution-сессии и хранит её process-wide ownership.
     /// </summary>
     /// <remarks>
     /// <para>
     /// Стандартные потоки Console можно перенаправить через TextReader/TextWriter, но
-    /// статический <see cref="Console.Clear"/> не использует эти потоки. Компилятор KID
+    /// статический <see cref="System.Console.Clear"/> не использует эти потоки. Компилятор KID
     /// семантически заменяет настоящий BCL-вызов на <see cref="StaticConsole.Clear"/>.
     /// </para>
     /// <para>

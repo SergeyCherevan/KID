@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace KID.Services.CodeExecution.Compilation.Rewriters;
 
 /// <summary>
-/// Заменяет подтверждённый вызов BCL <see cref="Console.Clear"/> публичным мостом консоли WPF
+/// Заменяет подтверждённый вызов BCL <see cref="System.Console.Clear"/> публичным мостом консоли WPF
 /// в KID, не изменяя одноимённые пользовательские типы и методы.
 /// </summary>
 /// <remarks>
@@ -32,7 +32,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
     // Полностью квалифицированная цель исключает зависимость сгенерированного кода от
     // пользовательских директив using и направляет Clear в TextBoxConsole текущей сессии.
     private const string ConsoleClearTarget =
-        "global::KID.Services.CodeExecution.Contexts.Console.TextBoxConsole.StaticConsole.Clear";
+        "global::KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear";
 
     // SemanticModel принадлежит ровно тому SyntaxTree, узлы которого передаются посетителю.
     // Токен позволяет остановить обход вместе с текущей сессией выполнения.
@@ -59,7 +59,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
         SemanticModel semanticModel,
         CancellationToken cancellationToken = default)
     {
-        /* Без SemanticModel невозможно отличить настоящий Console.Clear от метода с тем же
+        /* Без SemanticModel невозможно отличить настоящий System.Console.Clear от метода с тем же
          * текстовым именем. Немедленный отказ в конструкторе сохраняет это условие для всех
          * экземпляров класса.
          */
@@ -73,7 +73,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
          */
         systemConsoleType = RuntimeTypeSymbolResolver.Resolve(
             semanticModel.Compilation,
-            typeof(Console));
+            typeof(System.Console));
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
 
     /// <summary>
     /// Семантически анализирует вызов и при точном совпадении заменяет
-    /// <see cref="Console.Clear"/> мостом WPF-консоли.
+    /// <see cref="System.Console.Clear"/> мостом WPF-консоли.
     /// </summary>
     /// <param name="node">Исходный узел вызова из дерева связанной семантической модели.</param>
     /// <returns>
@@ -138,7 +138,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
     }
 
     /// <summary>
-    /// Проверяет точную сигнатуру и сборку, которой принадлежит метод BCL Console.Clear().
+    /// Проверяет точную сигнатуру и сборку, которой принадлежит метод BCL System.Console.Clear().
     /// </summary>
     /// <param name="method">Разрешённый Roslyn-символ метода либо <see langword="null"/>.</param>
     /// <returns>
@@ -151,7 +151,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
          */
         method is
         {
-            Name: nameof(Console.Clear),
+            Name: nameof(System.Console.Clear),
             IsStatic: true,
             Parameters.Length: 0
         } &&

@@ -21,7 +21,7 @@ public sealed class ConsoleClearRewriterTests
             rewritten.DescendantNodes().OfType<InvocationExpressionSyntax>());
 
         Assert.Equal(
-            "global::KID.Services.CodeExecution.Contexts.Console.TextBoxConsole.StaticConsole.Clear()",
+            "global::KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear()",
             invocation.ToString());
     }
 

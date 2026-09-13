@@ -5,7 +5,6 @@
 ```text
 CodeExecution/
 ├── CodeExecutionService.cs
-├── ExecutionExceptionClassifier.cs
 ├── ExecutionSession.cs
 ├── ExecutionState.cs
 ├── ExecutionStateChangedEventArgs.cs
@@ -26,30 +25,34 @@ CodeExecution/
 │   └── Interfaces/
 │       ├── ICodeRunner.cs
 │       └── ICodeRunningInstance.cs
-└── Contexts/
-    ├── CodeExecutionContext.cs
-    ├── CanvasTextBoxContextFabric.cs
-    ├── CanvasGraphicsContext.cs
-    ├── Interfaces/
-    │   ├── ICodeExecutionContext.cs
-    │   └── IGraphicsContext.cs
-    └── Console/
-        ├── TextBoxConsole.cs
-        ├── TextBoxConsoleContext.cs
-        └── Interfaces/
-            ├── IConsole.cs
-            └── IConsoleContext.cs
+├── Console/
+│   ├── TextBoxConsole.cs
+│   └── Interfaces/
+│       └── IConsole.cs
+├── Contexts/
+│   ├── CodeExecutionContext.cs
+│   ├── CanvasTextBoxContextFabric.cs
+│   ├── CanvasGraphicsContext.cs
+│   ├── TextBoxConsoleContext.cs
+│   └── Interfaces/
+│       ├── ICodeExecutionContext.cs
+│       ├── IGraphicsContext.cs
+│       └── IConsoleContext.cs
+└── Errors/
+    └── ExecutionExceptionClassifier.cs
 ```
 
 ## Границы ответственности
 
-- **Корень:** `CodeExecutionService` координирует запуск, `ExecutionSession` хранит состояние одной сессии. ExecutionExceptionClassifier определяет ожидаемую остановку для координатора и runtime. Контракт сервиса и события доступны вызывающему коду без зависимости от конкретного компилятора или runner.
+- **Корень:** `CodeExecutionService` координирует запуск, `ExecutionSession` хранит состояние одной сессии. Контракт сервиса и события доступны вызывающему коду без зависимости от конкретного компилятора или runner.
 - **Compilation:** компилятор преобразует исходный код с помощью Roslyn и возвращает PE/PDB-артефакт. `Rewriters` принадлежит этой стадии. Общие модели `CompilationArtifact` и `CompilationResult` остаются в `KID.WPF.IDE/Models/` и пространстве имён `KID.Services`.
 - **Runtime:** runner создаёт и запускает экземпляр выполнения. Экземпляр владеет загруженной сборкой и `UserProgramLoadContext`, предоставляет `Completion` и инициирует выгрузку при `Dispose`.
-- **Contexts:** фабрика собирает окружение запуска, общий контекст инициализирует графику и консоль и освобождает их. Консольная часть объединяет WPF-адаптер, перенаправление стандартных потоков и их интерфейсы.
-- **Общая обработка ошибок:** `ExecutionFailureCollector` находится вне подсистемы, в `Services/Errors/ExecutionFailureCollector.cs` (пространство имён `KID.Services.Errors`). Он собирает исключения независимых шагов и используется координатором, сессией и контекстами. Правило ожидаемой остановки остаётся в `CodeExecution/ExecutionExceptionClassifier.cs`.
+- **Console:** `TextBoxConsole` адаптирует WPF TextBox к интерфейсу `IConsole`: реализует ввод, очередь вывода, очистку и остановку чтения. Статический мост используется переписанным пользовательским `System.Console.Clear()`.
+- **Contexts:** фабрика собирает окружение запуска, общий контекст инициализирует графику и консоль и освобождает их. `TextBoxConsoleContext` создаёт адаптер из `Console/`, перенаправляет стандартные потоки и восстанавливает их после очистки адаптера. Контексты и их интерфейсы находятся вместе независимо от вида UI-ресурса.
+- **Errors:** `ExecutionExceptionClassifier` определяет ожидаемую остановку для координатора и runtime; это правило относится к выполнению пользовательского кода.
+- **Общая обработка ошибок:** `ExecutionFailureCollector` находится вне подсистемы, в `Services/Errors/ExecutionFailureCollector.cs` (пространство имён `KID.Services.Errors`). Он собирает исключения независимых шагов и используется координатором, сессией и контекстами. Правило ожидаемой остановки остаётся в `CodeExecution/Errors/ExecutionExceptionClassifier.cs`.
 
-В `Rewriters/` сейчас нет интерфейсов. При добавлении интерфейса в любую часть для него создаётся локальная подпапка `Interfaces/`; пустые папки не нужны.
+В `Rewriters/` и `CodeExecution/Errors/` сейчас нет интерфейсов. При добавлении интерфейса в любую часть для него создаётся локальная подпапка `Interfaces/`; пустые папки не нужны.
 
 ## Порядок выполнения и владение ресурсами
 
@@ -65,7 +68,7 @@ CodeExecution/
 
 Регистрация конкретных `CSharpCompiler` и `DefaultCodeRunner` находится в `Services/DI/ServiceCollectionExtensions.cs`. Координатор использует интерфейсы из `Compilation/Interfaces/` и `Runtime/Interfaces/`.
 
-`ConsoleClearRewriter` генерирует вызов `global::KID.Services.CodeExecution.Contexts.Console.TextBoxConsole.StaticConsole.Clear()`. Полное имя хранится строкой: при следующем переносе консоли нужно обновить его и тесты. `Compilation` также является именем типа Roslyn, поэтому `RuntimeTypeSymbolResolver` явно указывает `Microsoft.CodeAnalysis.Compilation`. В `Contexts.Console` обращения к стандартным потокам явно используют `System.Console`.
+`ConsoleClearRewriter` генерирует вызов `global::KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear()`. Полное имя хранится строкой: при следующем переносе консоли нужно обновить его и тесты. `Compilation` также является именем типа Roslyn, поэтому `RuntimeTypeSymbolResolver` явно указывает `Microsoft.CodeAnalysis.Compilation`. Пространство имён `CodeExecution.Console` пересекается с именем стандартного типа: в коде подсистемы, `typeof`, `nameof` и XML-ссылках используется явное `System.Console`.
 
 ## Проверки
 

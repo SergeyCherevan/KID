@@ -1,6 +1,5 @@
 using KID.Services.CodeExecution.Compilation;
-using KID.Services.CodeExecution.Contexts.Console.Interfaces;
-using KID.Services.CodeExecution.Contexts.Console;
+using KID.Services.CodeExecution.Console;
 using KID.Services.CodeExecution.Runtime;
 using System.Runtime.CompilerServices;
 using System.Windows;

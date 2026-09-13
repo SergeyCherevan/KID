@@ -317,7 +317,7 @@ Console.WriteLine("Время вышло!");
 - `System.Console.Clear()`
 
 на вызов:
-- `KID.Services.CodeExecution.Contexts.Console.TextBoxConsole.StaticConsole.Clear()`
+- `KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear()`
 
 Именно поэтому `Console.Clear()` корректно очищает панель консоли приложения, даже если пользовательский код использует стандартный API.
 

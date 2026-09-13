@@ -1,3 +1,4 @@
+using KID.Services.CodeExecution.Errors;
 using KID.Services.Errors;
 using KID.Services.CodeExecution.Runtime.Interfaces;
 using KID.Services.CodeExecution.Compilation.Interfaces;
@@ -463,7 +464,7 @@ namespace KID.Services.CodeExecution
                         foreach (var error in result.Errors)
                         {
                             if (error != null)
-                                await Console.Error.WriteLineAsync(error);
+                                await System.Console.Error.WriteLineAsync(error);
                         }
                     }
                 }
