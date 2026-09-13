@@ -80,7 +80,6 @@ public sealed class ExecutionLifecycleSpecifications
     [Theory(Skip = KnownIssueReasons.RuntimeCleanup)]
     [InlineData("Keyboard and Mouse handlers")]
     [InlineData("active audio resources")]
-    [InlineData("queued Dispatcher operations")]
     public void Cleanup_PreventsPreviousRunResourcesFromAffectingNextRun(string resource)
     {
         Assert.Fail($"Deterministic cleanup is not implemented for {resource}.");

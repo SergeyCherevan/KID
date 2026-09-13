@@ -9,6 +9,21 @@ namespace KID
     /// </summary>
     public partial class Sprite
     {
+        // Спрайт сохраняет owner создания: ссылка из старой программы не получает новый scope.
+        private readonly ExecutionDispatcherScope executionScope = DispatcherManager.GetScope();
+        private T InvokeOnUI<T>(Func<T> action) => DispatcherManager.InvokeOnUI(executionScope, action);
+
+        private static List<UIElement> CollectElements(IEnumerable<UIElement>? elements)
+        {
+            var result = new List<UIElement>();
+            if (elements == null) return result;
+            foreach (var element in elements)
+            {
+                DispatcherManager.CheckStop();
+                if (element != null) result.Add(element);
+            }
+            return result;
+        }
         private double _x;
         private double _y;
         private bool _isVisible = true;
@@ -21,6 +36,7 @@ namespace KID
             get => _isVisible;
             set
             {
+                executionScope.CheckAccess(DispatcherManager.IsExecuting(executionScope));
                 if (_isVisible == value)
                     return;
 
@@ -84,7 +100,7 @@ namespace KID
         public Sprite(double x, double y, params UIElement[] graphicElements)
         {
             SetPosition(x, y);
-            GraphicElements = graphicElements?.Where(e => e != null).ToList() ?? [];
+            GraphicElements = CollectElements(graphicElements);
         }
 
         /// <summary>
@@ -96,7 +112,7 @@ namespace KID
         public Sprite(double x, double y, IEnumerable<UIElement> graphicElements)
         {
             SetPosition(x, y);
-            GraphicElements = graphicElements?.Where(e => e != null).ToList() ?? [];
+            GraphicElements = CollectElements(graphicElements);
         }
 
         /// <summary>

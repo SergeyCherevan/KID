@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–4 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC и cancellation-aware Console с полной очисткой. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync консольного/execution-контекста; общий runtime cleanup ещё не завершён.
+- **Статус:** in progress — этапы 0–5 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console и execution-aware Dispatcher/Graphics/Sprite. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/execution-контекста; общий runtime cleanup ввода/аудио ещё не завершён.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -110,7 +110,8 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [x] `async Task Main` и `async Task<int> Main` действительно ожидаются; lifecycle specification подтверждает отсутствие преждевременного завершения и cleanup.
 - [x] Повторный Run не начинает вторую компиляцию, пока активен первый `CodeExecutionService.ExecuteAsync`; полная state/cleanup гарантия остаётся задачей этапов 1 и 8.
 - [ ] Обработчики Keyboard/Mouse из первого запуска не вызываются во втором — executable specification добавлена, реализация относится к этапу 6.
-- [ ] Звук и отложенные Dispatcher-команды первого запуска не продолжаются во втором — executable specification добавлена, реализация относится к этапам 5 и 7.
+- [x] Отложенные Dispatcher-команды первого запуска не продолжаются во втором — проверено в этапе 5.
+- [ ] Звук первого запуска не продолжается во втором — executable specification остаётся для этапа 7.
 - [x] После серии синхронных и асинхронных запусков пользовательские ALC становятся collectible.
 
 **Критерий этапа выполнен:** `KID.Tests` запускается отдельно и в составе решения; test doubles и lifecycle-тест различают запрос Stop, завершение execution и cleanup; ещё не реализованные гарантии видны как skipped specifications с целевыми этапами.
@@ -242,17 +243,21 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 Затрагиваемые области: `DispatcherManager`, `Graphics/*`, `Sprite/*`, `CanvasGraphicsContext`.
 
-- [ ] Инициализировать `DispatcherManager` execution id и токеном текущей сессии через lease/scope, а не бессрочной статической ссылкой.
-- [ ] На публичной границе пользовательской операции проверять Stop до постановки WPF-команды в очередь.
-- [ ] Внутри уже поставленной Dispatcher-команды не бросать cancellation exception в UI-поток: молча пропускать операцию отменённой/устаревшей сессии.
-- [ ] Отслеживать `DispatcherOperation` там, где это безопасно, и abort/ignore pending operations при cleanup.
-- [ ] Для синхронных WPF-запросов с результатом использовать cancellation-aware ожидание DispatcherOperation; не оставлять пользовательский поток навсегда внутри `Dispatcher.Invoke`.
-- [ ] Выделить uncancelable host-cleanup путь, чтобы отменённый токен не мешал очистить Canvas и восстановить UI.
-- [ ] Добавить проверки Stop в продолжительные циклы `Sprite` (видимость, перемещение, collision) и другие библиотечные обходы UIElement.
-- [ ] Сбрасывать между запусками Canvas reference, fill/stroke/font defaults и другие статические графические настройки.
-- [ ] Сделать `CanvasGraphicsContext.DisposeAsync` реальной точкой оркестрации runtime teardown, а не пустым методом.
+- [x] Инициализировать `DispatcherManager` execution id и токеном текущей сессии через lease/scope, а не бессрочной статической ссылкой.
+- [x] На публичной границе пользовательской операции проверять Stop до постановки WPF-команды в очередь.
+- [x] Внутри уже поставленной Dispatcher-команды не бросать cancellation exception в UI-поток: молча пропускать операцию отменённой/устаревшей сессии.
+- [x] Отслеживать `DispatcherOperation` там, где это безопасно, и abort/ignore pending operations при cleanup.
+- [x] Для синхронных WPF-запросов с результатом использовать cancellation-aware ожидание DispatcherOperation; не оставлять пользовательский поток навсегда внутри `Dispatcher.Invoke`.
+- [x] Выделить uncancelable host-cleanup путь, чтобы отменённый токен не мешал освободить Canvas reference и восстановить UI. Готовый рисунок сохраняется до следующего Run.
+- [x] Добавить проверки Stop в продолжительные циклы `Sprite` (видимость, перемещение, collision) и другие библиотечные обходы UIElement.
+- [x] Сбрасывать между запусками Canvas reference, fill/stroke/font defaults и другие статические графические настройки.
+- [x] Сделать `CanvasGraphicsContext.DisposeAsync` реальной точкой оркестрации runtime teardown, а не пустым методом.
 
 **Критерий этапа:** после Stop ни одна отложенная команда старого запуска не меняет Canvas нового; WPF UI не получает необработанный `OperationCanceledException`; статические graphics-настройки предсказуемо сброшены.
+
+**Реализация и проверка этапа 2026-09-13:** execution scope владеет id/token, queued и inline операциями. Stop освобождает синхронного waiter и отменяет pending-команды; normal completion дожидается принятого вывода. Уже исполняющийся callback заканчивается кооперативно до освобождения scope. Ошибки queued callbacks и host cleanup наблюдаются; повторный Dispose возвращает тот же результат. Sprite сохраняет исходный scope, Graphics defaults сбрасываются в Black/Arial 20. Canvas.Children остаётся видимым до очистки следующим Run; размеры Canvas остаются состоянием представления IDE.
+
+Добавлены 26 DispatcherGraphicsTests: блокированный UI, гонки, nested dispatch, stale Sprite, checkpoints, partial Init, shutdown Dispatcher, cleanup faults, четыре исхода скомпилированного кода, ожидание cleanup до unload/следующего Run, GC scope и queued delegate ALC. Полный Release test: 129 пройдено, 1 пропущен, 0 провалено. Оставшийся skip — ввод/аудио этапов 6–8. STA-проверки без видимых окон; visual acceptance не выполнялась. Прямые WPF-ссылки, пользовательские background tasks и удерживаемые UI-делегаты не получают гарантии изоляции/выгрузки; отписки ввода и audio teardown ещё впереди.
 
 ## ⌨️🖱️ Этап 6. Keyboard и Mouse: остановка worker-задач и отписки
 
@@ -292,13 +297,13 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 Затрагиваемые области: execution contexts/interfaces, `CodeExecutionService`, `MenuViewModel`, `MenuView.xaml`, локализации.
 
 - [ ] Перевести контексты, которым нужно ожидать worker-задачи, на `IAsyncDisposable`/`DisposeAsync`.
-  - Console и объединяющий execution-контекст переведены в этапе 4; ожидание Graphics/Keyboard/Mouse/Music workers остаётся работой этапов 5–8.
+  - Console и объединяющий execution-контекст переведены в этапе 4, Graphics — в этапе 5; ожидание Keyboard/Mouse/Music workers остаётся работой этапов 6–8.
 - [ ] Сделать Init/Dispose частично-инициализированного контекста безопасными и идемпотентными.
 - [ ] Зафиксировать порядок cleanup:
   1. [ ] перевести state в `CleaningUp` и инвалидировать execution id для новых callback;
   2. [ ] остановить входящие Console/Keyboard/Mouse события;
   3. [ ] отменить и дождаться библиотечных worker/playback-задач;
-  4. [ ] abort/ignore pending Dispatcher operations;
+  4. [x] abort/ignore pending Dispatcher operations;
   5. [ ] остановить звук и очистить Canvas/runtime static state;
   6. [ ] восстановить глобальные Console streams и static bridges;
   7. [ ] удалить пользовательские delegates/references;
@@ -344,7 +349,7 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 - [ ] 50–100 последовательных Run/Stop не увеличивают количество WPF handlers, event workers и активных sound players.
 - [ ] Static events и shortcuts очищаются между запусками.
-- [ ] Stale Dispatcher callbacks не меняют новый Canvas/TextBox.
+- [x] Stale Dispatcher callbacks не меняют новый Canvas/TextBox.
 - [x] Console streams восстанавливаются при success, compilation error, runtime fault и cancellation. Проверено на этапе 4.
 - [x] Collectible ALC освобождается в штатных синхронных и асинхронных сценариях.
 - [x] Release build остаётся с 0 warnings/0 errors.

@@ -39,7 +39,7 @@ namespace KID
         /// <returns>Кортеж (width, height) в DIP.</returns>
         public static (double width, double height) GetCanvasSize()
         {
-            return (GetCanvasWidth(), GetCanvasHeight());
+            return DispatcherManager.InvokeOnUI(() => (GetCanvasWidth(), GetCanvasHeight()));
         }
 
         private static Window? TryGetWindow()
@@ -137,8 +137,11 @@ namespace KID
         /// </summary>
         public static void SetCanvasMinSize(double minWidth, double minHeight)
         {
-            SetCanvasMinWidth(minWidth);
-            SetCanvasMinHeight(minHeight);
+            DispatcherManager.InvokeOnUI(() =>
+            {
+                SetCanvasMinWidth(minWidth);
+                SetCanvasMinHeight(minHeight);
+            });
         }
 
         /// <summary>
@@ -223,9 +226,11 @@ namespace KID
         /// </summary>
         public static void SetCanvasSize(double width, double height)
         {
-            // Important: pair version delegates to single versions.
-            SetCanvasWidth(width);
-            SetCanvasHeight(height);
+            DispatcherManager.InvokeOnUI(() =>
+            {
+                SetCanvasWidth(width);
+                SetCanvasHeight(height);
+            });
         }
     }
 }

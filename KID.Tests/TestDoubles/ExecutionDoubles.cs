@@ -133,7 +133,7 @@ internal sealed class TrackingCodeExecutionContext : ICodeExecutionContext
     public void Init()
     {
         InitCount++;
-        GraphicsContext.Init();
+        GraphicsContext.Init(ExecutionId, CancellationToken, Dispatcher);
         ConsoleContext.Init(ExecutionId, CancellationToken);
     }
 
@@ -142,7 +142,7 @@ internal sealed class TrackingCodeExecutionContext : ICodeExecutionContext
         DisposeCount++;
         try
         {
-            GraphicsContext.Dispose();
+            await GraphicsContext.DisposeAsync();
             await ConsoleContext.DisposeAsync();
         }
         finally
@@ -160,9 +160,13 @@ internal sealed class TrackingGraphicsContext : IGraphicsContext
 
     public int DisposeCount { get; private set; }
 
-    public void Init() => InitCount++;
+    public void Init(long executionId, CancellationToken cancellationToken, Dispatcher dispatcher) => InitCount++;
 
-    public void Dispose() => DisposeCount++;
+    public ValueTask DisposeAsync()
+    {
+        DisposeCount++;
+        return ValueTask.CompletedTask;
+    }
 }
 
 internal sealed class TrackingConsoleContext : IConsoleContext

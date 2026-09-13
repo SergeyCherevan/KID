@@ -367,7 +367,7 @@
 #### Graphics API
 
 **Graphics.System.cs**
-- `Graphics.Init(Canvas)` — инициализация с Canvas
+- Внутренний `Graphics.Init(Canvas, scope)` — инициализация Canvas в execution scope
 - `Graphics.Clear()` — очистка холста
 - Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
 
@@ -566,7 +566,7 @@ Save / Discard / Cancel для каждой изменённой вкладки
 ## Потокобезопасность
 
 - Все операции с UI выполняются через централизованный `DispatcherManager`
-- `DispatcherManager` инициализируется в `CodeExecutionContext.Init()` с Dispatcher из `App`
+- `CanvasGraphicsContext` открывает Dispatcher scope с execution id/token; DisposeAsync закрывает приём, ожидает принятые операции и освобождает Graphics до выгрузки ALC
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
 - Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
 - Mouse API собирает события в UI потоке и доставляет обработчики в фоновом потоке

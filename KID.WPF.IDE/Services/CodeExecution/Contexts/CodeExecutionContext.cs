@@ -20,7 +20,7 @@ namespace KID.Services.CodeExecution.Contexts
         private int disposeStarted;
         private bool initialized;
 
-        /// <summary>Идентификатор сессии, передаваемый её консольному контексту.</summary>
+        /// <summary>Идентификатор сессии, передаваемый графическому и консольному контекстам.</summary>
         public long ExecutionId { get; set; }
 
         /// <summary>
@@ -51,13 +51,12 @@ namespace KID.Services.CodeExecution.Contexts
             ObjectDisposedException.ThrowIf(Volatile.Read(ref disposeStarted) != 0, this);
             if (initialized) throw new InvalidOperationException("Execution context is already initialized.");
             initialized = true;
-            DispatcherManager.Init(Dispatcher);
-            GraphicsContext?.Init();
+            GraphicsContext?.Init(ExecutionId, CancellationToken, Dispatcher);
             ConsoleContext?.Init(ExecutionId, CancellationToken);
         }
 
         /// <summary>
-        /// Ожидает консольную очистку, даже если освобождение графики завершилось ошибкой.
+        /// Ожидает графическую, затем консольную очистку, не пропуская консоль после ошибки графики.
         /// Coordinator вызывает метод после Completion и до выгрузки ALC и session CTS.
         /// </summary>
         public ValueTask DisposeAsync()
@@ -70,7 +69,7 @@ namespace KID.Services.CodeExecution.Contexts
         private async Task DisposeCoreAsync()
         {
             var failures = new ExecutionFailureCollector();
-            failures.Capture(() => GraphicsContext?.Dispose());
+            await failures.CaptureAsync(() => GraphicsContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             await failures.CaptureAsync(() => ConsoleContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             var failure = failures.CreateException("Execution context cleanup failed.");
             if (failure == null) disposeCompletion.TrySetResult();

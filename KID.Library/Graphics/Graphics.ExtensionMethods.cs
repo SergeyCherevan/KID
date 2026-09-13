@@ -59,7 +59,7 @@ namespace KID
         }
         public static Point GetLeftTopXY(this UIElement element)
         {
-            return new Point(element.GetLeftX(), element.GetTopY());
+            return DispatcherManager.InvokeOnUI(() => new Point(Canvas.GetLeft(element), Canvas.GetTop(element)));
         }
 
         // Общие методы для FrameworkElement (центрирование и размеры)
@@ -98,28 +98,28 @@ namespace KID
 
         public static double GetCenterX(this FrameworkElement element)
         {
-            return element.GetLeftX() + element.ActualWidth / 2;
+            return DispatcherManager.InvokeOnUI(() => Canvas.GetLeft(element) + element.ActualWidth / 2);
         }
         public static double GetCenterY(this FrameworkElement element)
         {
-            return element.GetTopY() + element.ActualHeight / 2;
+            return DispatcherManager.InvokeOnUI(() => Canvas.GetTop(element) + element.ActualHeight / 2);
         }
         public static Point GetCenterXY(this FrameworkElement element)
         {
-            return new Point(element.GetCenterX(), element.GetCenterY());
+            return DispatcherManager.InvokeOnUI(() => new Point(element.GetCenterX(), element.GetCenterY()));
         }
 
         public static UIElement MoveToRight(this UIElement element, double x)
         {
-            return element.SetLeftX(element.GetLeftX() + x);
+            return DispatcherManager.InvokeOnUI(() => element.SetLeftX(element.GetLeftX() + x));
         }
         public static UIElement MoveToBottom(this UIElement element, double y)
         {
-            return element.SetTopY(element.GetTopY() + y);
+            return DispatcherManager.InvokeOnUI(() => element.SetTopY(element.GetTopY() + y));
         }
         public static UIElement MoveToRightBottom(this UIElement element, double x, double y)
         {
-            return element.MoveToRight(x).MoveToBottom(y);
+            return DispatcherManager.InvokeOnUI(() => element.MoveToRight(x).MoveToBottom(y));
         }
 
         public static FrameworkElement SetWidth(this FrameworkElement element, double width)

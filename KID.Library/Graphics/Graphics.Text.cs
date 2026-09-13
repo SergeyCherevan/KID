@@ -55,9 +55,12 @@ namespace KID
         }
         public static TextBlock SetFont(this TextBlock textBlock, string fontName, double fontSize)
         {
-            textBlock.FontFamily = new FontFamily(fontName);
-            textBlock.FontSize = fontSize;
-            return textBlock;
+            return DispatcherManager.InvokeOnUI(() =>
+            {
+                textBlock.FontFamily = new FontFamily(fontName);
+                textBlock.FontSize = fontSize;
+                return textBlock;
+            });
         }
     }
 }

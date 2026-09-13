@@ -1,9 +1,9 @@
 ﻿namespace KID.Services.CodeExecution.Contexts.Interfaces
 {
-    public interface IGraphicsContext : IDisposable
+    public interface IGraphicsContext : IAsyncDisposable
     {
         object GraphicsTarget { get; set; }
 
-        void Init();
+        void Init(long executionId, CancellationToken cancellationToken, System.Windows.Threading.Dispatcher dispatcher);
     }
 }

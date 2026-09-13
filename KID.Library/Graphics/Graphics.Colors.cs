@@ -4,7 +4,7 @@ namespace KID
     {
         public static ColorType FillColor
         {
-            get => new ColorType(() => fillBrush);
+            get => DispatcherManager.InvokeOnUI(() => { var brush = fillBrush; return new ColorType(() => brush); });
             set
             {
                 DispatcherManager.InvokeOnUI(() =>
@@ -16,7 +16,7 @@ namespace KID
 
         public static ColorType StrokeColor
         {
-            get => new ColorType(() => strokeBrush);
+            get => DispatcherManager.InvokeOnUI(() => { var brush = strokeBrush; return new ColorType(() => brush); });
             set
             {
                 DispatcherManager.InvokeOnUI(() =>
@@ -28,7 +28,7 @@ namespace KID
 
         public static ColorType Color
         {
-            get => new ColorType(() => fillBrush);
+            get => DispatcherManager.InvokeOnUI(() => { var brush = fillBrush; return new ColorType(() => brush); });
             set
             {
                 DispatcherManager.InvokeOnUI(() =>

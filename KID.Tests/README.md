@@ -1,5 +1,11 @@
 # KID.Tests
 
+## Dispatcher/Graphics: этап 5
+
+`Library/DispatcherGraphicsTests.cs` содержит 26 сценариев: scope ownership, Stop до очереди и при занятом UI, отменяемое синхронное ожидание, normal drain, вложенные операции, queued faults, ошибки/частичный Init/повторный Dispose, shutdown Dispatcher, defaults, старый Sprite, checkpoints в обходах, 20 конкурентных прогонов и сборка 50 освобождённых scopes. Интеграционные проверки компилируют настоящий пользовательский код, проверяют четыре исхода выполнения, задержанный cleanup до unload/следующего Run и освобождение ALC после queued delegate.
+
+Оставшаяся skipped specification относится к Keyboard/Mouse и Music (этапы 6–8), а не к Dispatcher. Проверки выполняются без видимых окон; визуальная приёмка отдельно.
+
 ## Запуск и структура
 
 Из корня репозитория:

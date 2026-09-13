@@ -11,12 +11,13 @@ namespace KID
         /// <returns>Текущий спрайт (для цепочки вызовов).</returns>
         public virtual Sprite Show()
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
                 if (Graphics.Canvas == null) throw new ArgumentNullException("Canvas is null");
 
                 foreach (var element in GraphicElements)
                 {
+                    DispatcherManager.CheckStop();
                     if (element == null) continue;
                     element.Visibility = Visibility.Visible;
                 }
@@ -32,12 +33,13 @@ namespace KID
         /// <returns>Текущий спрайт (для цепочки вызовов).</returns>
         public virtual Sprite Hide()
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
                 if (Graphics.Canvas == null) throw new ArgumentNullException("Canvas is null");
 
                 foreach (var element in GraphicElements)
                 {
+                    DispatcherManager.CheckStop();
                     if (element == null) continue;
                     element.Visibility = Visibility.Hidden;
                 }

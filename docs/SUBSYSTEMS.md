@@ -86,14 +86,15 @@
 - Объединяет графический и консольный контексты
 - Управляет инициализацией и освобождением ресурсов
 - Содержит CancellationToken для отмены
-- Получает ExecutionId от coordinator и передаёт id/token в ConsoleContext.Init
-- DisposeAsync ожидает консоль и восстанавливает потоки даже после ошибки графического Dispose
+- Получает ExecutionId от coordinator и передаёт id/token обоим контекстам
+- DisposeAsync ожидает графику, затем консоль; ошибка графики не мешает восстановлению потоков
 - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
-- Инициализирует `DispatcherManager` в методе `Init()` перед инициализацией контекстов
+- Передаёт Dispatcher в CanvasGraphicsContext, который открывает execution scope
 
 **CanvasGraphicsContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs`)
 - Инициализирует Graphics API с Canvas
 - Реализует `IGraphicsContext`
+- Асинхронно закрывает приём команд, ожидает принятые операции и сбрасывает Graphics до освобождения scope; host cleanup не использует отменённый token
 
 **TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
 - Инициализирует консоль с TextBox
@@ -639,13 +640,13 @@
 **Файл:** `KID.Library/Graphics/Graphics.System.cs`
 
 **Функции:**
-- `Init(Canvas)` — инициализация с Canvas
+- Внутренний `Init(Canvas, scope)` — привязка Canvas к execution scope
 - `Clear()` — очистка холста
 - Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
 
 **Особенности:**
 - Все операции с UI выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
-- `DispatcherManager` — статический класс для централизованного управления Dispatcher, инициализируется в `CodeExecutionContext.Init()`
+- `DispatcherManager` управляет временным execution scope (id, token, pending operations), открываемым CanvasGraphicsContext
 
 #### 8.2. Работа с цветами
 **Файлы:** `KID.Library/Graphics/Graphics.Colors.cs`, `KID.Library/Graphics/ColorType.cs`

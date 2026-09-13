@@ -586,8 +586,8 @@ public sealed class TextBoxConsoleSpecifications
         public object GraphicsTarget { get; set; } = new();
         public Exception Failure { get; } = new InvalidOperationException("graphics cleanup");
         public int DisposeCount { get; private set; }
-        public void Init() { }
-        public void Dispose()
+        public void Init(long executionId, CancellationToken cancellationToken, Dispatcher dispatcher) { }
+        public ValueTask DisposeAsync()
         {
             DisposeCount++;
             throw Failure;

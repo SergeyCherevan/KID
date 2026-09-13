@@ -12,7 +12,7 @@ namespace KID
         /// <returns>Текущий спрайт (для цепочки вызовов).</returns>
         public virtual Sprite Move(double dx, double dy)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
                 if (Graphics.Canvas == null) throw new ArgumentNullException("Canvas is null");
 
@@ -21,6 +21,7 @@ namespace KID
 
                 foreach (var element in GraphicElements)
                 {
+                    DispatcherManager.CheckStop();
                     if (element == null) continue;
 
                     var tt = GetOrCreateTranslateTransform(element);
@@ -39,6 +40,7 @@ namespace KID
         /// <param name="y">Новый Y anchor.</param>
         protected virtual void SetPosition(double x, double y)
         {
+            executionScope.CheckAccess(DispatcherManager.IsExecuting(executionScope));
             var dx = x - _x;
             var dy = y - _y;
 

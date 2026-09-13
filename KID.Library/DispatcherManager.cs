@@ -1,68 +1,82 @@
-using System;
 using System.Windows.Threading;
 
-namespace KID
+namespace KID;
+
+/// <summary>Направляет пользовательские WPF-операции в scope одного запуска.</summary>
+public static class DispatcherManager
 {
-    /// <summary>
-    /// Статический класс для централизованного управления Dispatcher и выполнения операций в UI потоке.
-    /// </summary>
-    public static class DispatcherManager
+    private static readonly object gate = new();
+    private static ExecutionDispatcherScope? current;
+    [ThreadStatic] private static ExecutionDispatcherScope? executing;
+
+    internal static ExecutionDispatcherScope BeginExecution(long executionId, Dispatcher dispatcher,
+        CancellationToken cancellationToken)
     {
-        private static Dispatcher? _dispatcher;
-
-        /// <summary>
-        /// Инициализирует DispatcherManager с указанным Dispatcher.
-        /// </summary>
-        /// <param name="dispatcher">Dispatcher для использования при выполнении операций в UI потоке.</param>
-        public static void Init(Dispatcher dispatcher)
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(executionId);
+        ArgumentNullException.ThrowIfNull(dispatcher);
+        lock (gate)
         {
-            _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+            if (current != null) throw new InvalidOperationException("A dispatcher execution is already active.");
+            var scope = new ExecutionDispatcherScope(executionId, dispatcher, cancellationToken);
+            current = scope;
+            return scope;
         }
+    }
 
-        /// <summary>
-        /// Выполняет действие в UI потоке.
-        /// Если текущий поток уже является UI потоком, действие выполняется синхронно.
-        /// В противном случае действие выполняется асинхронно через BeginInvoke.
-        /// </summary>
-        /// <param name="action">Действие для выполнения.</param>
-        public static void InvokeOnUI(Action action)
+    internal static bool IsCurrent(ExecutionDispatcherScope scope) => ReferenceEquals(Volatile.Read(ref current), scope);
+    internal static bool IsExecuting(ExecutionDispatcherScope scope) => ReferenceEquals(executing, scope);
+
+    internal static void Release(ExecutionDispatcherScope scope)
+    {
+        lock (gate)
+            if (ReferenceEquals(current, scope)) current = null;
+    }
+
+    internal static ExecutionDispatcherScope GetScope()
+    {
+        var scope = executing ?? Volatile.Read(ref current)
+            ?? throw new InvalidOperationException("No graphics execution is active.");
+        scope.CheckAccess(ReferenceEquals(executing, scope));
+        return scope;
+    }
+
+    /// <summary>Проверяет token, захваченный исходной операцией, внутри библиотечного обхода.</summary>
+    internal static void CheckStop() => GetScope().Token.ThrowIfCancellationRequested();
+
+    internal static T Execute<T>(ExecutionDispatcherScope scope, Func<T> action)
+    {
+        var previous = executing;
+        executing = scope;
+        try { return action(); }
+        finally { executing = previous; }
+    }
+
+    /// <summary>Фоновый caller не ожидает UI. Ошибка принятого действия доставляется через cleanup.</summary>
+    public static void InvokeOnUI(Action action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+        var scope = GetScope();
+        if (scope.Dispatcher.CheckAccess())
         {
-            if (action == null)
-                return;
-
-            if (_dispatcher == null || _dispatcher.CheckAccess())
-            {
-                action();
-            }
-            else
-            {
-                _dispatcher.BeginInvoke(action, DispatcherPriority.Background);
-            }
+            _ = InvokeOnUI(() => { action(); return true; });
+            return;
         }
+        scope.Post(() => { action(); return true; }, reportFailure: true);
+    }
 
-        /// <summary>
-        /// Выполняет функцию в UI потоке с возвратом значения.
-        /// Если текущий поток уже является UI потоком, функция выполняется синхронно.
-        /// В противном случае функция выполняется синхронно через Invoke.
-        /// </summary>
-        /// <typeparam name="T">Тип возвращаемого значения.</typeparam>
-        /// <param name="func">Функция для выполнения.</param>
-        /// <returns>Результат выполнения функции.</returns>
-        public static T InvokeOnUI<T>(Func<T> func)
-        {
-            if (func == null)
-                return default!;
+    /// <summary>Ожидает результат на worker; Stop освобождает ожидание даже при занятом UI.</summary>
+    public static T InvokeOnUI<T>(Func<T> func)
+    {
+        ArgumentNullException.ThrowIfNull(func);
+        var scope = GetScope();
+        return InvokeOnUI(scope, func);
+    }
 
-            if (_dispatcher == null || _dispatcher.CheckAccess())
-            {
-                return func();
-            }
-            else
-            {
-                T result = default!;
-                _dispatcher.Invoke(() => { result = func(); }, DispatcherPriority.Background);
-                return result;
-            }
-        }
+    internal static T InvokeOnUI<T>(ExecutionDispatcherScope scope, Func<T> func)
+    {
+        scope.CheckAccess(IsExecuting(scope));
+        if (scope.Dispatcher.CheckAccess()) return scope.RunInline(func);
+        var work = scope.Post(func, reportFailure: false);
+        return work.Result.Task.WaitAsync(scope.Token).GetAwaiter().GetResult();
     }
 }

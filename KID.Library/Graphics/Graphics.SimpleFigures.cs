@@ -211,7 +211,7 @@ namespace KID
                 if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var polygon = new Polygon
                 {
-                    Points = [.. points],
+                    Points = CreatePoints(points),
                     Fill = fillBrush,
                     Stroke = strokeBrush
                 };
@@ -221,7 +221,26 @@ namespace KID
         }
         public static Polygon Polygon((double x, double y)[] points)
         {
-            return Polygon(points.Select(p => new Point(p.x, p.y)).ToArray());
+            DispatcherManager.CheckStop();
+            ArgumentNullException.ThrowIfNull(points);
+            var converted = new Point[points.Length];
+            for (var i = 0; i < points.Length; i++)
+            {
+                DispatcherManager.CheckStop();
+                converted[i] = new Point(points[i].x, points[i].y);
+            }
+            return Polygon(converted);
+        }
+
+        private static PointCollection CreatePoints(IEnumerable<Point> points)
+        {
+            var result = new PointCollection();
+            foreach (var point in points)
+            {
+                DispatcherManager.CheckStop();
+                result.Add(point);
+            }
+            return result;
         }
     }
 }

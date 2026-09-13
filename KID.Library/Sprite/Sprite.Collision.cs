@@ -15,7 +15,7 @@ namespace KID
         /// <returns>Список обнаруженных столкновений.</returns>
         public virtual List<Collision> DetectCollisions(List<Sprite> sprites)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnUI(() =>
             {
                 if (Graphics.Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var canvas = Graphics.Canvas;
@@ -33,8 +33,10 @@ namespace KID
                 if (thisSpriteBounds.IsEmpty)
                     return result;
 
-                foreach (var other in sprites.Where(s => s != null))
+                foreach (var other in sprites)
                 {
+                    DispatcherManager.CheckStop();
+                    if (other == null) continue;
                     if (ReferenceEquals(this, other))
                         continue;
 
@@ -51,6 +53,7 @@ namespace KID
                     // Попарно проверяем элементы
                     foreach (var e1 in GraphicElements)
                     {
+                        DispatcherManager.CheckStop();
                         if (e1 == null || !IsElementVisible(e1))
                             continue;
 
@@ -60,6 +63,7 @@ namespace KID
 
                         foreach (var e2 in other.GraphicElements)
                         {
+                            DispatcherManager.CheckStop();
                             if (e2 == null || !IsElementVisible(e2))
                                 continue;
 
@@ -91,6 +95,7 @@ namespace KID
 
             foreach (var element in sprite.GraphicElements)
             {
+                DispatcherManager.CheckStop();
                 if (element == null || !IsElementVisible(element))
                     continue;
 
