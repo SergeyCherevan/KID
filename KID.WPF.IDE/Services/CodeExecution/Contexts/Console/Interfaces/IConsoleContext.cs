@@ -1,4 +1,4 @@
-﻿namespace KID.Services.CodeExecution.Contexts.Interfaces
+namespace KID.Services.CodeExecution.Contexts.Console.Interfaces
 {
     public interface IConsoleContext : IAsyncDisposable
     {

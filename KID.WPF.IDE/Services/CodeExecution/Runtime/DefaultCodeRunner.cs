@@ -1,8 +1,8 @@
-using KID.Services.CodeExecution.Interfaces;
+using KID.Services.CodeExecution.Runtime.Interfaces;
 using KID.Services.Localization.Interfaces;
 using Microsoft.VisualStudio.Threading;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Runtime
 {
     /// <summary>
     /// Создаёт и запускает отдельный экземпляр выполнения скомпилированного артефакта.

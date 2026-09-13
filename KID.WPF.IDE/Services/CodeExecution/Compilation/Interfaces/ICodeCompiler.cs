@@ -1,4 +1,4 @@
-namespace KID.Services.CodeExecution.Interfaces
+namespace KID.Services.CodeExecution.Compilation.Interfaces
 {
     /// <summary>
     /// Компилирует пользовательский исходный код в PE/PDB-артефакт без загрузки сборки в CLR.

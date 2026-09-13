@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KID.Services.CodeExecution.Rewriters;
+namespace KID.Services.CodeExecution.Compilation.Rewriters;
 
 /// <summary>
 /// Заменяет подтверждённый вызов BCL <see cref="Console.Clear"/> публичным мостом консоли WPF
@@ -32,7 +32,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
     // Полностью квалифицированная цель исключает зависимость сгенерированного кода от
     // пользовательских директив using и направляет Clear в TextBoxConsole текущей сессии.
     private const string ConsoleClearTarget =
-        "global::KID.Services.CodeExecution.TextBoxConsole.StaticConsole.Clear";
+        "global::KID.Services.CodeExecution.Contexts.Console.TextBoxConsole.StaticConsole.Clear";
 
     // SemanticModel принадлежит ровно тому SyntaxTree, узлы которого передаются посетителю.
     // Токен позволяет остановить обход вместе с текущей сессией выполнения.

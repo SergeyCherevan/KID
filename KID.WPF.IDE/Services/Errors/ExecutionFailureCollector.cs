@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.Errors
 {
     /// <summary>
     /// Потокобезопасно накапливает ошибки одного execution lifecycle в порядке регистрации.

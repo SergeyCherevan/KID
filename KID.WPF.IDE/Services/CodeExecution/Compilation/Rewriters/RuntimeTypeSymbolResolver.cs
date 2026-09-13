@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace KID.Services.CodeExecution.Rewriters;
+namespace KID.Services.CodeExecution.Compilation.Rewriters;
 
 /// <summary>
 /// Находит символ Roslyn, принадлежащий той же сборке, что и указанный тип среды выполнения.
@@ -44,7 +44,7 @@ internal static class RuntimeTypeSymbolResolver
     /// <paramref name="compilation"/> или <paramref name="runtimeType"/> имеют значение
     /// <see langword="null"/>.
     /// </exception>
-    public static INamedTypeSymbol? Resolve(Compilation compilation, Type runtimeType)
+    public static INamedTypeSymbol? Resolve(Microsoft.CodeAnalysis.Compilation compilation, Type runtimeType)
     {
         /* Обязательные аргументы проверяются до обращения к Roslyn и Reflection, чтобы ошибка
          * вызова метода не маскировалась как обычный результат «символ отсутствует».

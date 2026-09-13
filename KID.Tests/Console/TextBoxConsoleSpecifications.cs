@@ -1,3 +1,7 @@
+using KID.Services.CodeExecution.Compilation;
+using KID.Services.CodeExecution.Contexts.Console.Interfaces;
+using KID.Services.CodeExecution.Contexts.Console;
+using KID.Services.CodeExecution.Runtime;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -456,6 +460,41 @@ public sealed class TextBoxConsoleSpecifications
         }
         Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
+    }
+
+    [Fact]
+    public async Task CompiledProgram_ConsoleClear_UsesConsoleContextBridge()
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            var box = new TextBox { IsReadOnly = true, Text = "before-clear" };
+            var localization = new StubLocalizationService();
+            var service = new CodeExecutionService(new CSharpCompiler(localization),
+                new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory));
+            const string code = """
+                class Program
+                {
+                    static void Main()
+                    {
+                        System.Console.Clear();
+                        System.Console.Write("after-clear");
+                    }
+                }
+                """;
+
+            await service.ExecuteAsync(code, token => new CodeExecutionContext
+            {
+                ConsoleContext = new TextBoxConsoleContext(box),
+                GraphicsContext = new TrackingGraphicsContext(),
+                Dispatcher = box.Dispatcher,
+                CancellationToken = token
+            }).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+            Assert.Equal(ExecutionState.Idle, service.State);
+            Assert.DoesNotContain("before-clear", box.Text);
+            Assert.Contains("after-clear", box.Text);
+            Assert.DoesNotContain("Error_RuntimeError", box.Text);
+        });
     }
 
     [Theory]

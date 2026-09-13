@@ -143,6 +143,7 @@ if (cursor.Position.HasValue)
 
 - [Архитектура проекта](ARCHITECTURE.md) — общее описание архитектуры и компонентов
 - [Подсистемы проекта](SUBSYSTEMS.md) — детальное описание всех подсистем и их взаимодействия
+- [Структура выполнения кода](CodeExecution.md) — папки, интерфейсы, зависимости и проверки CodeExecution
 - [Функциональность](FEATURES.md) — подробное описание всех функций
 - [Console API](Console-API.md) - полная документация по Console API
 - [Graphics API](Graphics-API.md) — полная документация по Graphics API

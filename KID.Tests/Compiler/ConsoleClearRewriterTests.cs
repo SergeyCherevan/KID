@@ -1,4 +1,4 @@
-using KID.Services.CodeExecution.Rewriters;
+using KID.Services.CodeExecution.Compilation.Rewriters;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace KID.Tests.Compiler;
@@ -21,7 +21,7 @@ public sealed class ConsoleClearRewriterTests
             rewritten.DescendantNodes().OfType<InvocationExpressionSyntax>());
 
         Assert.Equal(
-            "global::KID.Services.CodeExecution.TextBoxConsole.StaticConsole.Clear()",
+            "global::KID.Services.CodeExecution.Contexts.Console.TextBoxConsole.StaticConsole.Clear()",
             invocation.ToString());
     }
 

@@ -107,6 +107,8 @@
 
 **Расположение:** `KID.WPF.IDE/Services/CodeExecution/`
 
+Подсистема разделена на `Compilation/` (включая `Rewriters/`), `Runtime/` и `Contexts/` (включая `Console/`). Координатор и состояние сессии остаются в корне; интерфейсы размещены в `Interfaces/` соответствующей части. Полное дерево файлов и границы ответственности описаны в [структуре подсистемы выполнения кода](CodeExecution.md).
+
 **CodeExecutionService** (`CodeExecutionService.cs`)
 - Координирует процесс выполнения кода
 - Использует ICodeCompiler для компиляции
@@ -118,17 +120,17 @@
 - Публикует `StateChanged` каждому observer независимо; ошибка подписчика доставляется через lifecycle task, но не отменяет уже подтверждённый переход FSM
 - Возвращается в `Idle` только после подтверждённой очистки всех lifecycle-ресурсов; ошибка Dispose оставляет `CleaningUp` и запрещает новый Run
 
-**CSharpCompiler** (`CSharpCompiler.cs`)
+**CSharpCompiler** (`Compilation/CSharpCompiler.cs`)
 - Компилирует C# код в сборку
 - Использует Microsoft.CodeAnalysis для парсинга и компиляции
 - Применяет реврайтер для замены `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()`
 - Обрабатывает ошибки компиляции и возвращает их в локализованном виде
 
-**DefaultCodeRunner** (`DefaultCodeRunner.cs`)
+**DefaultCodeRunner** (`Runtime/DefaultCodeRunner.cs`)
 - Создаёт и запускает `CollectibleCodeRunningInstance`, возвращая его как `ICodeRunningInstance`
 - `Start()` возвращается без ожидания завершения программы; runner не хранит состояние запусков
 
-**CollectibleCodeRunningInstance** (`CollectibleCodeRunningInstance.cs`)
+**CollectibleCodeRunningInstance** (`Runtime/CollectibleCodeRunningInstance.cs`)
 - Владеет ресурсами одного запуска и загружает PE/PDB в collectible `AssemblyLoadContext`
 - `Completion` возвращает одну задачу выполнения; повторный `await` не запускает программу заново
 - `Completion` представлен `JoinableTask`, потому что операция стартует до ожидания и может обращаться к WPF UI-потоку
@@ -188,9 +190,13 @@
 - Возвращает независимый от `MessageBoxResult` enum `UnsavedChangesDecision`
 - Используется одной и той же логикой закрытия отдельной вкладки и всего приложения
 
-#### 3.2.1. Errors (Обработка ошибок async-операций)
+#### 3.2.1. Errors (Обработка ошибок)
 
 **Расположение:** `KID.WPF.IDE/Services/Errors/`
+
+**ExecutionFailureCollector** (`ExecutionFailureCollector.cs`)
+- Собирает ошибки независимых синхронных и асинхронных шагов, сохраняя порядок исключений
+- Используется координатором выполнения, сессией и контекстами; правило ожидаемой остановки находится отдельно в `CodeExecution/ExecutionExceptionClassifier.cs`
 
 **IAsyncOperationErrorHandler / AsyncOperationErrorHandler**
 - Единообразная обработка исключений асинхронных операций в UI-слое

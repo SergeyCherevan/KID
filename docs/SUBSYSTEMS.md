@@ -9,6 +9,8 @@
 ### Назначение
 Компиляция и выполнение C# кода, написанного пользователем в редакторе.
 
+Код разделён на `Compilation/`, `Runtime/` и `Contexts/` с консольной частью `Contexts/Console/`. Интерфейсы находятся в подпапках `Interfaces/` своих частей. См. [полную структуру и зависимости](CodeExecution.md).
+
 ### Компоненты
 
 #### 1.1. CodeExecutionService
@@ -22,15 +24,17 @@
 - Консервативная блокировка нового Run, если хотя бы один ресурс не подтвердил cleanup
 
 **Основные методы:**
-- `ExecuteAsync(string code, ICodeExecutionContext context)` — выполняет код
+- `ExecuteAsync(string code, Func<CancellationToken, ICodeExecutionContext> contextFactory)` — принимает запуск и создаёт его контекст через фабрику
+- `RequestStop()` — запрашивает кооперативную остановку активной компиляции или выполнения
 
 **Особенности:**
-- Использует флаг `isRunning` для предотвращения параллельного выполнения
+- Резервирует `ExecutionSession` под `sessionLock`, предотвращая параллельное выполнение
+- Отклоняет повторный Run до вызова фабрики контекста
 - Инициализирует контекст перед выполнением
 - Освобождает контекст после выполнения
 
 #### 1.2. CSharpCompiler
-**Файл:** `KID.WPF.IDE/Services/CodeExecution/CSharpCompiler.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Compilation/CSharpCompiler.cs`
 
 **Ответственность:**
 - Парсинг C# кода
@@ -48,11 +52,11 @@
 
 **ConsoleClearRewriter:**
 - Внутренний класс, наследующий `CSharpSyntaxRewriter`
-- Заменяет `Console.Clear()` и `System.Console.Clear()` на `KID.Services.CodeExecution.TextBoxConsole.StaticConsole.Clear()`
+- Заменяет `Console.Clear()` и `System.Console.Clear()` на `KID.Services.CodeExecution.Contexts.Console.TextBoxConsole.StaticConsole.Clear()`
 - Работает с обоими вариантами: с `using System;` и без него
 
 #### 1.3. DefaultCodeRunner
-**Файл:** `KID.WPF.IDE/Services/CodeExecution/DefaultCodeRunner.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Runtime/DefaultCodeRunner.cs`
 
 **Ответственность:**
 - Создание и запуск отдельного `CollectibleCodeRunningInstance` для PE/PDB-артефакта
@@ -91,7 +95,7 @@
 - Инициализирует Graphics API с Canvas
 - Реализует `IGraphicsContext`
 
-**TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
+**TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/Console/TextBoxConsoleContext.cs`)
 - Инициализирует консоль с TextBox
 - Реализует `IConsoleContext`
 
@@ -102,7 +106,7 @@
 - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
 #### 1.5. TextBoxConsole
-**Файл:** `KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/Console/TextBoxConsole.cs`
 
 **Ответственность:**
 - Реализация IConsole для WPF TextBox
@@ -140,7 +144,7 @@
 ### Компоненты
 
 #### 2.1. TextBoxConsole
-**Файл:** `KID.WPF.IDE/Services/CodeExecution/TextBoxConsole.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/Console/TextBoxConsole.cs`
 
 **Ответственность:**
 - Реализация интерфейса IConsole для WPF TextBox
@@ -178,7 +182,7 @@
 - Cleanup восстанавливает IsReadOnly/фокус, очищает OutputReceived и снимает только собственный StaticConsole
 
 #### 2.2. TextBoxConsoleContext
-**Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/Console/TextBoxConsoleContext.cs`
 
 **Ответственность:**
 - Инициализация TextBoxConsole с TextBox из ViewModel
@@ -326,6 +330,11 @@
 - Выполнение `Func<Task>` с перехватом исключений
 - Показ локализованного MessageBox по ключу ошибки
 - Унификация логики обработки ошибок в `MenuViewModel` и `CodeEditorsViewModel`
+
+#### 3.6.2. ExecutionFailureCollector
+**Файл:** `KID.WPF.IDE/Services/Errors/ExecutionFailureCollector.cs`
+
+Собирает ошибки независимых шагов через `Capture` и `CaptureAsync`, сохраняя порядок причин. Используется координатором выполнения, сессией и контекстами. Классификация ожидаемой остановки остаётся в `KID.WPF.IDE/Services/CodeExecution/ExecutionExceptionClassifier.cs`.
 
 ## 4. Подсистема локализации (Localization)
 

@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace KID.Services.Interfaces
+namespace KID.Services.CodeExecution.Contexts.Console.Interfaces
 {
     /// <summary>
     /// Полная абстракция для эмуляции System.Console

@@ -1,6 +1,6 @@
 using Microsoft.VisualStudio.Threading;
 
-namespace KID.Services.CodeExecution.Interfaces
+namespace KID.Services.CodeExecution.Runtime.Interfaces
 {
     /// <summary>
     /// Владеет runtime-ресурсами одного запуска пользовательской программы.

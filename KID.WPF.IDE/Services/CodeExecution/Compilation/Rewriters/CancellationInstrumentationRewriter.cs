@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace KID.Services.CodeExecution.Rewriters;
+namespace KID.Services.CodeExecution.Compilation.Rewriters;
 
 /// <summary>
 /// Добавляет в пользовательский код точки кооперативной проверки Stop,

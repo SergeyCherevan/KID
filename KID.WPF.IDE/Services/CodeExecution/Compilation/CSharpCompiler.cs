@@ -1,5 +1,5 @@
-using KID.Services.CodeExecution.Interfaces;
-using KID.Services.CodeExecution.Rewriters;
+using KID.Services.CodeExecution.Compilation.Interfaces;
+using KID.Services.CodeExecution.Compilation.Rewriters;
 using KID.Services.Localization.Interfaces;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -8,7 +8,7 @@ using NAudio.Wave;
 using System.IO;
 using System.Text;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Compilation
 {
     /// <summary>
     /// Компилирует исходный C#-код пользовательской программы, предварительно применяя

@@ -1,4 +1,4 @@
-namespace KID.Services.CodeExecution.Interfaces
+namespace KID.Services.CodeExecution.Runtime.Interfaces
 {
     /// <summary>
     /// Создаёт и запускает отдельное выполнение скомпилированного PE/PDB-артефакта.

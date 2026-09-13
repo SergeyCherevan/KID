@@ -1,8 +1,9 @@
-using KID.Services.CodeExecution.Contexts.Interfaces;
+using KID.Services.Errors;
+using KID.Services.CodeExecution.Contexts.Console.Interfaces;
 using System.IO;
 using System.Windows.Controls;
 
-namespace KID.Services.CodeExecution.Contexts;
+namespace KID.Services.CodeExecution.Contexts.Console;
 
 /// <summary>
 /// Владеет перенаправлением System.Console одной сессии. Cleanup ожидает readers,
@@ -24,9 +25,9 @@ public sealed class TextBoxConsoleContext : IConsoleContext
 
     public TextBoxConsoleContext(TextBox textBox) : this(textBox, console =>
     {
-        Console.SetOut(console.Out);
-        Console.SetIn(console.In);
-        Console.SetError(console.Error);
+        System.Console.SetOut(console.Out);
+        System.Console.SetIn(console.In);
+        System.Console.SetError(console.Error);
     })
     {
     }
@@ -51,9 +52,9 @@ public sealed class TextBoxConsoleContext : IConsoleContext
                 throw new InvalidOperationException("ConsoleTarget must be a TextBox.");
             textBox.Dispatcher.VerifyAccess();
             initialized = true;
-            originalConsoleOut = Console.Out;
-            originalConsoleIn = Console.In;
-            originalConsoleError = Console.Error;
+            originalConsoleOut = System.Console.Out;
+            originalConsoleIn = System.Console.In;
+            originalConsoleError = System.Console.Error;
             textBoxConsole = new TextBoxConsole(textBox, executionId, cancellationToken);
             redirectStreams(textBoxConsole);
         }
@@ -82,9 +83,9 @@ public sealed class TextBoxConsoleContext : IConsoleContext
             () => textBoxConsole?.DisposeAsync().AsTask() ?? Task.CompletedTask,
             finallyAction: () =>
             {
-                if (originalConsoleOut != null) failures.Capture(() => Console.SetOut(originalConsoleOut));
-                if (originalConsoleIn != null) failures.Capture(() => Console.SetIn(originalConsoleIn));
-                if (originalConsoleError != null) failures.Capture(() => Console.SetError(originalConsoleError));
+                if (originalConsoleOut != null) failures.Capture(() => System.Console.SetOut(originalConsoleOut));
+                if (originalConsoleIn != null) failures.Capture(() => System.Console.SetIn(originalConsoleIn));
+                if (originalConsoleError != null) failures.Capture(() => System.Console.SetError(originalConsoleError));
                 textBoxConsole = null;
                 originalConsoleOut = null;
                 originalConsoleIn = null;

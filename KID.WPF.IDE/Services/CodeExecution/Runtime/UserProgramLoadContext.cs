@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.Loader;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Runtime
 {
     /// <summary>
     /// Выгружаемый контекст загрузки ровно одной пользовательской программы.

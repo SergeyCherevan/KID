@@ -1,13 +1,14 @@
+using KID.Services.Errors;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using KID.Services.Interfaces;
+using KID.Services.CodeExecution.Contexts.Console.Interfaces;
 using AsyncManualResetEvent = Microsoft.VisualStudio.Threading.AsyncManualResetEvent;
 
-namespace KID.Services.CodeExecution;
+namespace KID.Services.CodeExecution.Contexts.Console;
 
 /// <summary>
 /// Адаптирует WPF <see cref="TextBox"/> к консольным потокам одного запуска

@@ -1,6 +1,7 @@
+using KID.Services.CodeExecution.Compilation;
+using KID.Services.CodeExecution.Runtime.Interfaces;
+using KID.Services.CodeExecution.Runtime;
 using KID.Services;
-using KID.Services.CodeExecution;
-using KID.Services.CodeExecution.Interfaces;
 using KID.Tests.TestDoubles;
 using System.IO;
 

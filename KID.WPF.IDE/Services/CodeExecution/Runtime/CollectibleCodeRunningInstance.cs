@@ -1,11 +1,11 @@
+using KID.Services.CodeExecution.Runtime.Interfaces;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using KID.Services.CodeExecution.Interfaces;
 using KID.Services.Localization.Interfaces;
 using Microsoft.VisualStudio.Threading;
 
-namespace KID.Services.CodeExecution
+namespace KID.Services.CodeExecution.Runtime
 {
     /// <summary>
     /// Загружает и выполняет одну пользовательскую программу в собственном collectible context.

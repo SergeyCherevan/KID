@@ -1,4 +1,4 @@
-using KID.Services.CodeExecution.Rewriters;
+using KID.Services.CodeExecution.Compilation.Rewriters;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
