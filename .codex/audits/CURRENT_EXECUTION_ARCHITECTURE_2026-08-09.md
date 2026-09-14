@@ -483,7 +483,7 @@ await runner.RunAsync(
 
 # 9. 🌉 `StopManager`: мост к пользовательскому коду
 
-[StopManager.cs](</D:/Visual Studio Projects/KID/KID.Library/StopManager.cs>) связывает внутреннюю сессию IDE с кодом ученика и функциями `KID.Library`.
+[StopManager.cs](</D:/Visual Studio Projects/KID/KID.Library/ExecutionEnvironment/StopManager.cs>) связывает внутреннюю сессию IDE с кодом ученика и функциями `KID.Library`.
 
 Пользователь видит:
 

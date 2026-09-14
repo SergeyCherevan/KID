@@ -661,12 +661,12 @@ public sealed class DispatcherGraphicsTests
 
     private sealed class DispatcherTestExecution(
         IDisposable environmentLease,
-        ExecutionDispatcherScope scope) : IAsyncDisposable
+        DispatcherScope scope) : IAsyncDisposable
     {
-        internal ExecutionDispatcherScope Scope { get; } = scope;
+        internal DispatcherScope Scope { get; } = scope;
         internal int PendingCount => Scope.PendingCount;
 
-        internal ExecutionDispatcherScope.Work<T> Post<T>(Func<T> action, bool reportFailure) =>
+        internal DispatcherScope.Work<T> Post<T>(Func<T> action, bool reportFailure) =>
             Scope.Post(action, reportFailure);
 
         internal async ValueTask ShutdownAsync(Action cleanup)
@@ -681,7 +681,7 @@ public sealed class DispatcherGraphicsTests
             finally { environmentLease.Dispose(); }
         }
 
-        public static implicit operator ExecutionDispatcherScope(DispatcherTestExecution execution) =>
+        public static implicit operator DispatcherScope(DispatcherTestExecution execution) =>
             execution.Scope;
     }
 }

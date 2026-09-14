@@ -38,7 +38,7 @@ internal static class ExecutionEnvironmentManager
     /// Проверка identity и публикация capability атомарны относительно release environment.
     /// Scope нельзя прикрепить к ссылке, которая между этими действиями перестала быть current.
     /// </summary>
-    internal static ExecutionDispatcherScope AttachDispatcher(
+    internal static DispatcherScope AttachDispatcher(
         long executionId,
         System.Windows.Threading.Dispatcher dispatcher)
     {

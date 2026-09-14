@@ -10,7 +10,7 @@ namespace KID
     public partial class Sprite
     {
         // Спрайт сохраняет owner создания: ссылка из старой программы не получает новый scope.
-        private readonly ExecutionDispatcherScope executionScope = DispatcherManager.GetScope();
+        private readonly DispatcherScope executionScope = DispatcherManager.GetScope();
         private T InvokeOnUI<T>(Func<T> action) => DispatcherManager.InvokeOnUI(executionScope, action);
 
         private List<UIElement> CollectElements(IEnumerable<UIElement>? elements)

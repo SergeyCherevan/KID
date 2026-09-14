@@ -5,20 +5,20 @@ namespace KID;
 /// <summary>Направляет пользовательские WPF-операции в scope одного запуска.</summary>
 public static class DispatcherManager
 {
-    [ThreadStatic] private static ExecutionDispatcherScope? executing;
+    [ThreadStatic] private static DispatcherScope? executing;
 
-    internal static ExecutionDispatcherScope AttachDispatcher(long executionId, Dispatcher dispatcher)
+    internal static DispatcherScope AttachDispatcher(long executionId, Dispatcher dispatcher)
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         return ExecutionEnvironmentManager.AttachDispatcher(executionId, dispatcher);
     }
 
-    internal static bool IsExecuting(ExecutionDispatcherScope scope) => ReferenceEquals(executing, scope);
+    internal static bool IsExecuting(DispatcherScope scope) => ReferenceEquals(executing, scope);
 
-    internal static void Release(ExecutionDispatcherScope scope) =>
+    internal static void Release(DispatcherScope scope) =>
         scope.Environment.ReleaseDispatcher(scope);
 
-    internal static ExecutionDispatcherScope GetScope()
+    internal static DispatcherScope GetScope()
     {
         var scope = executing ?? ExecutionEnvironmentManager.Current?.GetDispatcher()
             ?? throw new InvalidOperationException("No graphics execution is active.");
@@ -26,7 +26,7 @@ public static class DispatcherManager
         return scope;
     }
 
-    internal static T Execute<T>(ExecutionDispatcherScope scope, Func<T> action)
+    internal static T Execute<T>(DispatcherScope scope, Func<T> action)
     {
         var previous = executing;
         executing = scope;
@@ -55,7 +55,7 @@ public static class DispatcherManager
         return InvokeOnUI(scope, func);
     }
 
-    internal static T InvokeOnUI<T>(ExecutionDispatcherScope scope, Func<T> func)
+    internal static T InvokeOnUI<T>(DispatcherScope scope, Func<T> func)
     {
         scope.CheckAccess(IsExecuting(scope));
         if (scope.Dispatcher.CheckAccess()) return scope.RunInline(func);

@@ -210,7 +210,7 @@ namespace KID
             return Polygon(scope, points);
         }
 
-        private static Polygon Polygon(ExecutionDispatcherScope scope, IEnumerable<Point> points)
+        private static Polygon Polygon(DispatcherScope scope, IEnumerable<Point> points)
         {
             return DispatcherManager.InvokeOnUI(scope, () =>
             {

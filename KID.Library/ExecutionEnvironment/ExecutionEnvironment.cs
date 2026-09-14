@@ -10,7 +10,7 @@ namespace KID;
 internal sealed class ExecutionEnvironment
 {
     private readonly object capabilityGate = new();
-    private ExecutionDispatcherScope? dispatcherScope;
+    private DispatcherScope? dispatcherScope;
 
     internal ExecutionEnvironment(long executionId, CancellationToken cancellationToken)
     {
@@ -25,7 +25,7 @@ internal sealed class ExecutionEnvironment
     /// <summary>Единственная реализация проверки Stop для состояния execution.</summary>
     internal void ThrowIfCancellationRequested() => CancellationToken.ThrowIfCancellationRequested();
 
-    internal ExecutionDispatcherScope AttachDispatcher(Dispatcher dispatcher)
+    internal DispatcherScope AttachDispatcher(Dispatcher dispatcher)
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
         lock (capabilityGate)
@@ -33,13 +33,13 @@ internal sealed class ExecutionEnvironment
             if (dispatcherScope != null)
                 throw new InvalidOperationException("A dispatcher is already attached to this execution.");
 
-            var scope = new ExecutionDispatcherScope(this, dispatcher);
+            var scope = new DispatcherScope(this, dispatcher);
             Volatile.Write(ref dispatcherScope, scope);
             return scope;
         }
     }
 
-    internal ExecutionDispatcherScope GetDispatcher() =>
+    internal DispatcherScope GetDispatcher() =>
         Volatile.Read(ref dispatcherScope) ??
         throw new InvalidOperationException("No graphics execution is active.");
 
@@ -47,10 +47,10 @@ internal sealed class ExecutionEnvironment
     /// Lock-free read не создаёт порядок scope gate → environment gate и тем самым
     /// исключает инверсию блокировок с синхронным cancellation callback конструктора scope.
     /// </summary>
-    internal bool OwnsDispatcher(ExecutionDispatcherScope scope) =>
+    internal bool OwnsDispatcher(DispatcherScope scope) =>
         ReferenceEquals(Volatile.Read(ref dispatcherScope), scope);
 
-    internal void ReleaseDispatcher(ExecutionDispatcherScope scope)
+    internal void ReleaseDispatcher(DispatcherScope scope)
     {
         lock (capabilityGate)
         {

@@ -13,10 +13,10 @@ namespace KID
         private static Brush strokeBrush = Brushes.Black;
         private static Typeface currentFont = new Typeface("Arial");
         private static double currentFontSize = 20;
-        private static ExecutionDispatcherScope? owner;
+        private static DispatcherScope? owner;
         private static readonly object ownershipGate = new();
 
-        internal static void Init(Canvas targetCanvas, ExecutionDispatcherScope scope)
+        internal static void Init(Canvas targetCanvas, DispatcherScope scope)
         {
             if (targetCanvas == null)
                 throw new ArgumentNullException(nameof(targetCanvas));
@@ -32,7 +32,7 @@ namespace KID
         }
 
         // Host-only, без проверки Stop. Compare-and-release защищает новую сессию.
-        internal static void Release(ExecutionDispatcherScope scope)
+        internal static void Release(DispatcherScope scope)
         {
             lock (ownershipGate)
             {

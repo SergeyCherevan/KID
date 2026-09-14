@@ -9,7 +9,7 @@ namespace KID.Services.CodeExecution.Contexts
     public class CanvasGraphicsContext : IGraphicsContext
     {
         private readonly object gate = new();
-        private ExecutionDispatcherScope? scope;
+        private DispatcherScope? scope;
         private bool initialized;
         private bool disposing;
         private readonly TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -348,7 +348,7 @@
 
 #### ExecutionEnvironment
 
-**ExecutionEnvironment.cs / ExecutionEnvironmentManager.cs**
+**ExecutionEnvironment/ExecutionEnvironment.cs / ExecutionEnvironmentManager.cs**
 - Единственный ambient registry execution identity в KID.Library
 - Публикует immutable execution id и CancellationToken одной сессии
 - Подключает и освобождает Dispatcher как временную capability
@@ -357,7 +357,7 @@
 
 #### DispatcherManager
 
-**DispatcherManager.cs**
+**ExecutionEnvironment/DispatcherManager.cs / DispatcherScope.cs**
 - Статический класс для централизованного управления Dispatcher
 - Внутренний `AttachDispatcher(executionId, dispatcher)` подключает capability к текущему environment
 - `InvokeOnUI(Action action)` — выполнение действия в UI потоке
@@ -367,7 +367,7 @@
 
 #### StopManager
 
-**StopManager.cs**
+**ExecutionEnvironment/StopManager.cs**
 - Статический класс для управления остановкой выполнения программы
 - `CurrentToken` (CancellationToken) — текущий токен отмены выполнения
 - `StopIfButtonPressed()` — проверяет, была ли нажата кнопка остановки, и выбрасывает исключение при необходимости

@@ -7,7 +7,7 @@ namespace KID;
 /// Владеет принятыми Dispatcher-командами. Drain закрывает приём, но сохраняет принятый
 /// вывод при штатном завершении. Stop отменяет pending-команды; выполняющиеся выходят кооперативно.
 /// </summary>
-internal sealed class ExecutionDispatcherScope : IAsyncDisposable
+internal sealed class DispatcherScope : IAsyncDisposable
 {
     private readonly object gate = new();
     private readonly HashSet<IWork> pending = [];
@@ -16,7 +16,7 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
     private readonly CancellationTokenRegistration registration;
     private bool closing;
 
-    internal ExecutionDispatcherScope(ExecutionEnvironment environment, Dispatcher dispatcher)
+    internal DispatcherScope(ExecutionEnvironment environment, Dispatcher dispatcher)
     {
         Environment = environment ?? throw new ArgumentNullException(nameof(environment));
         Dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
@@ -36,7 +36,7 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
                 !Environment.OwnsDispatcher(this) ||
                 (closing && !nested))
             {
-                throw new ObjectDisposedException(nameof(ExecutionDispatcherScope));
+                throw new ObjectDisposedException(nameof(DispatcherScope));
             }
     }
 
@@ -137,7 +137,7 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
 
     internal sealed class Work<T> : IWork
     {
-        private readonly ExecutionDispatcherScope owner;
+        private readonly DispatcherScope owner;
         private Func<T>? action;
         private readonly bool reportFailure;
         private readonly TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -145,7 +145,7 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
         internal DispatcherOperation? Operation { get; set; }
         public Task Completion => completion.Task;
 
-        internal Work(ExecutionDispatcherScope owner, Func<T> action, bool reportFailure)
+        internal Work(DispatcherScope owner, Func<T> action, bool reportFailure)
         {
             this.owner = owner;
             this.action = action;
@@ -159,7 +159,7 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
                 if (!ExecutionEnvironmentManager.IsCurrent(owner.Environment) ||
                     !owner.Environment.OwnsDispatcher(owner))
                 {
-                    throw new ObjectDisposedException(nameof(ExecutionDispatcherScope));
+                    throw new ObjectDisposedException(nameof(DispatcherScope));
                 }
                 owner.Environment.ThrowIfCancellationRequested();
                 Result.TrySetResult(DispatcherManager.Execute(owner, action!));

@@ -52,7 +52,7 @@ KID остаётся полноценной учебной средой, а не
 | Проблема | Исходная точка | Целевое состояние |
 |---|---|---|
 | Циклы пользователя не видят Stop | `CSharpCompiler.cs` переписывает только `Console.Clear()` | отдельный cancellation rewriter вставляет проверки во все поддерживаемые контрольные точки |
-| Токен глобален и имеет публичный setter | `KID.Library/StopManager.cs` | публичный getter, host-only lifecycle, стабильный метод проверки и сброс по завершении сессии |
+| Токен глобален и имеет публичный setter | `KID.Library/ExecutionEnvironment/StopManager.cs` | публичный getter, host-only lifecycle, стабильный метод проверки и сброс по завершении сессии |
 | `Read`/`ReadLine` не просыпаются по Stop | `TextBoxConsole.cs`: `WaitOne()` перед проверкой | ожидание ввода и token wait handle одновременно; Dispose также пробуждает ожидание |
 | Stop сразу выглядит завершённым | `MenuViewModel.ExecuteStop()` сразу ставит `CanStop = false` | отдельные состояния `StopRequested`/`CleaningUp`; Run разрешается только после `Idle` |
 | Async entry point не ожидается | `CollectibleCodeRunningInstance` игнорирует результат `Invoke()` | ожидание `Task`/`Task<int>`, корректная классификация cancellation/fault/result |
@@ -118,7 +118,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 
 ## 🧭 Этап 1. Контракт StopManager и одна execution-сессия
 
-Затрагиваемые области: `KID.Library/StopManager.cs`, новый session/lifecycle-код в `KID.WPF.IDE/Services/CodeExecution/`, DI и `MenuViewModel`.
+Затрагиваемые области: `KID.Library/ExecutionEnvironment/StopManager.cs`, новый session/lifecycle-код в `KID.WPF.IDE/Services/CodeExecution/`, DI и `MenuViewModel`.
 
 - [x] Ввести неизменяемый `ExecutionId` и enum состояния: `Idle`, `Compiling`, `Running`, `StopRequested`, `CleaningUp`.
 - [x] Создать объект `ExecutionSession`, который единолично владеет `CancellationTokenSource`, активной задачей, execution id и переходами состояния.
@@ -261,14 +261,14 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 ## 🧭 Этап 5.1. Единый ambient ExecutionEnvironment
 
-Затрагиваемые области: `ExecutionEnvironment*`, `StopManager`, `DispatcherManager`, `ExecutionDispatcherScope`, `Sprite/*`, `Graphics.SimpleFigures`, execution contexts/coordinator.
+Затрагиваемые области: `ExecutionEnvironment*`, `StopManager`, `DispatcherManager`, `DispatcherScope`, `Sprite/*`, `Graphics.SimpleFigures`, execution contexts/coordinator.
 
 - [x] Оставить `ExecutionSession` владельцем полного host lifecycle/FSM, а в KID.Library публиковать ровно одну ambient identity.
 - [x] Добавить immutable `ExecutionEnvironment` с execution id/token и подключаемой Dispatcher capability.
 - [x] Добавить один `ExecutionEnvironmentManager` с reference-based idempotent lease и защитой от stale release.
 - [x] Превратить `StopManager` в публичный facade без собственного id/token registry, lock и lease; сохранить `CurrentToken`, `StopIfButtonPressed` и `Sleep`.
 - [x] Превратить `DispatcherManager` в WPF facade без собственного current execution; `AttachDispatcher` атомарно проверяет id и подключает scope к environment.
-- [x] Убрать копии id/token из `ExecutionDispatcherScope`; сохранить race barriers до Post, в Work.Run, token registration, cancellation-aware wait и длинных обходах.
+- [x] Убрать копии id/token из `DispatcherScope`; сохранить race barriers до Post, в Work.Run, token registration, cancellation-aware wait и длинных обходах.
 - [x] Удалить `DispatcherManager.CheckStop`; Sprite и Polygon проверяют захваченный environment, поэтому stale object не принимает identity нового запуска.
 - [x] Убрать token из `IGraphicsContext.Init`: CanvasGraphicsContext получает его через уже опубликованный environment.
 - [x] Сохранить порядок cleanup: context/Dispatcher capability → running instance/ALC → environment lease → session CTS → Idle.
