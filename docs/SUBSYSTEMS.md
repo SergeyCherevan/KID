@@ -94,7 +94,9 @@
 **CanvasGraphicsContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs`)
 - Инициализирует Graphics API с Canvas
 - Реализует `IGraphicsContext`
-- Асинхронно закрывает приём команд, ожидает принятые операции и сбрасывает Graphics до освобождения scope; host cleanup не использует отменённый token
+- Сохраняет исходный `ExecutionEnvironment`; при Dispose одновременно закрывает вход Keyboard/Mouse, независимо ожидает оба input shutdown, затем освобождает Graphics/Dispatcher
+- Частичная инициализация безопасна: если Mouse уже подключён, а следующий runtime-шаг упал, Dispose всё равно освободит input scope
+- Host cleanup не использует отменённый session token для WPF-отписок
 
 **TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
 - Инициализирует консоль с TextBox
@@ -755,7 +757,8 @@
 **Файл:** `KID.Library/Mouse/Mouse.System.cs`
 
 **Функции:**
-- `Mouse.Init(Canvas)` — инициализация Mouse API и подписка на события мыши Canvas (Enter/Leave/Move/Down/Up)
+- `Mouse.Init(Canvas)` — создаёт scope текущей execution и подписывается на события мыши Canvas (Enter/Leave/Move/Down/Up)
+- внутренний `Mouse.ShutdownAsync(environment)` — идемпотентно закрывает вход, снимает подписки и ожидает worker/pulse
 
 #### 9.2. Состояние
 **Файл:** `KID.Library/Mouse/Mouse.State.cs`
@@ -776,8 +779,10 @@
 
 ### Особенности
 - События мыши собираются в UI-потоке, но обработчики пользователя вызываются в фоновом потоке (чтобы не блокировать UI).
+- Очередь, semaphore, linked token и task принадлежат конкретному `MouseExecutionScope`, а не живут между запусками.
+- Cleanup отбрасывает queued handlers, ожидает уже выполняющийся handler, сбрасывает state и очищает три публичных events.
 - `PressButtonStatus` поддерживает комбинации флагов (включая `OutOfArea`).
-- `CurrentClick` автоматически сбрасывается в `NoClick` через короткий интервал, чтобы его было удобно использовать в polling-циклах.
+- `CurrentClick` автоматически сбрасывается execution-aware pulse-задачей; старый pulse не может изменить новый Run.
 
 ## 10. Подсистема Keyboard API
 
@@ -790,7 +795,8 @@
 **Файл:** `KID.Library/Keyboard/Keyboard.System.cs`
 
 **Функции:**
-- `Keyboard.Init(Window)` — инициализация Keyboard API и подписка на `Window.PreviewKeyDown/PreviewKeyUp/PreviewTextInput`
+- `Keyboard.Init(Window)` — создаёт scope текущей execution и подписывается на `Window.PreviewKeyDown/PreviewKeyUp/PreviewTextInput`
+- внутренний `Keyboard.ShutdownAsync(environment)` — идемпотентно закрывает вход, снимает подписки и ожидает worker/pulse
 
 #### 10.2. Состояние
 **Файл:** `KID.Library/Keyboard/Keyboard.State.cs`
@@ -813,6 +819,8 @@
 
 ### Особенности
 - События клавиатуры собираются в UI-потоке, но обработчики пользователя вызываются в фоновом потоке (как в Mouse API).
+- Keyboard и Mouse используют общий тип `ExecutionEventWorker`, но разные экземпляры, очереди и linked token в каждой execution.
+- Cleanup сбрасывает polling-state, shortcuts/ID, `CapturePolicy` и очищает четыре публичных events; следующий Run начинает с чистого состояния.
 - `CapturePolicy` помогает не мешать вводу в консоль (по умолчанию клавиатура активна всегда).
 
 ## 11. Подсистема Dependency Injection

@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–5 и инфраструктурный рефакторинг 5.1 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console и execution-aware Dispatcher/Graphics/Sprite. В KID.Library действует единый ambient ExecutionEnvironment. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/execution-контекста; общий runtime cleanup ввода/аудио ещё не завершён.
+- **Статус:** in progress — этапы 0–6 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite и детерминированный cleanup Keyboard/Mouse. В KID.Library действует единый ambient ExecutionEnvironment. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/input/execution-контекста; runtime cleanup аудио остаётся этапом 7.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -109,7 +109,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [x] Stop во время `Console.Read()` и `ReadLine()` завершает ожидание без следующей клавиши — подтверждено STA-тестами и скомпилированными программами этапа 4.
 - [x] `async Task Main` и `async Task<int> Main` действительно ожидаются; lifecycle specification подтверждает отсутствие преждевременного завершения и cleanup.
 - [x] Повторный Run не начинает вторую компиляцию, пока активен первый `CodeExecutionService.ExecuteAsync`; полная state/cleanup гарантия остаётся задачей этапов 1 и 8.
-- [ ] Обработчики Keyboard/Mouse из первого запуска не вызываются во втором — executable specification добавлена, реализация относится к этапу 6.
+- [x] Обработчики Keyboard/Mouse из первого запуска не вызываются во втором — подтверждено per-run scope, WPF unsubscribe, очисткой delegates и повторными lifecycle-тестами этапа 6.
 - [x] Отложенные Dispatcher-команды первого запуска не продолжаются во втором — проверено в этапе 5.
 - [ ] Звук первого запуска не продолжается во втором — executable specification остаётся для этапа 7.
 - [x] После серии синхронных и асинхронных запусков пользовательские ALC становятся collectible.
@@ -276,22 +276,24 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 **Критерий этапа:** в KID.Library существует один ambient current; managers имеют разные функциональные роли, но не дублируют ownership execution. Повторные cancellation points сохраняются как отдельные race barriers.
 
-**Реализация и проверка этапа 2026-09-14:** добавлены `ExecutionEnvironment` и `ExecutionEnvironmentManager`; attach Dispatcher атомарен относительно release environment и не создаёт порядок блокировок scope → environment. Добавлены 4 новых environment-теста, существующие Stop/Dispatcher/Graphics/compiled-program сценарии переведены на общий registry. Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Release --no-restore`: 133 пройдено, 1 пропущен, 0 провалено. Оставшийся skip относится к cleanup Keyboard/Mouse/Music этапов 6–8.
+**Реализация и проверка этапа 2026-09-14:** добавлены `ExecutionEnvironment` и `ExecutionEnvironmentManager`; attach Dispatcher атомарен относительно release environment и не создаёт порядок блокировок scope → environment. Добавлены 4 новых environment-теста, существующие Stop/Dispatcher/Graphics/compiled-program сценарии переведены на общий registry. Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Release --no-restore`: 133 пройдено, 1 пропущен, 0 провалено. На момент завершения этапа 5.1 skip относился к cleanup Keyboard/Mouse/Music; input-часть позднее закрыта этапом 6.
 
 ## ⌨️🖱️ Этап 6. Keyboard и Mouse: остановка worker-задач и отписки
 
 Затрагиваемые области: `Keyboard/*.cs`, `Mouse/*.cs`.
 
-- [ ] Связать внутренние CTS worker-задач с токеном execution-сессии.
-- [ ] Разделить `Init` и `ShutdownAsync`; shutdown должен быть идемпотентным.
-- [ ] Сначала прекратить приём новых WPF-событий и отписаться от Window/Canvas, затем отменить и дождаться worker task.
-- [ ] Не обнулять `_eventWorkerTask` до фактического завершения.
-- [ ] После остановки очистить очереди, state snapshots, pulse versions, shortcuts runtime и registered shortcuts согласно выбранному per-run контракту.
-- [ ] Внутри owning-классов очистить публичные пользовательские events (`KeyDownEvent`, `MouseMoveEvent` и остальные), чтобы delegates из пользовательской ALC не удерживали сборку.
-- [ ] Не позволять fire-and-forget pulse-задачам первого запуска менять state второго: применять execution id/token guard.
-- [ ] Ошибки пользовательских handlers не должны скрывать Stop и не должны препятствовать shutdown.
+- [x] Связать внутренние CTS worker-задач с токеном execution-сессии.
+- [x] Разделить `Init` и `ShutdownAsync`; shutdown должен быть идемпотентным.
+- [x] Сначала прекратить приём новых WPF-событий и отписаться от Window/Canvas, затем отменить и дождаться worker task.
+- [x] Не обнулять `_eventWorkerTask` до фактического завершения.
+- [x] После остановки очистить очереди, state snapshots, pulse versions, shortcuts runtime и registered shortcuts согласно выбранному per-run контракту.
+- [x] Внутри owning-классов очистить публичные пользовательские events (`KeyDownEvent`, `MouseMoveEvent` и остальные), чтобы delegates из пользовательской ALC не удерживали сборку.
+- [x] Не позволять fire-and-forget pulse-задачам первого запуска менять state второго: применять execution id/token guard.
+- [x] Ошибки пользовательских handlers не должны скрывать Stop и не должны препятствовать shutdown.
 
 **Критерий этапа:** после cleanup нет живых event worker tasks, WPF-подписок и пользовательских delegates старой сессии; события второго запуска доставляются ровно один раз.
+
+**Реализация и проверка этапа 2026-09-14:** добавлен общий внутренний `ExecutionEventWorker` в `KID.Library/ExecutionEnvironment/` и отдельные `KeyboardExecutionScope`/`MouseExecutionScope`. У каждого модуля и запуска собственные очередь, semaphore, linked CTS, точная worker task и отслеживаемые pulse-задачи. `CanvasGraphicsContext.DisposeAsync` сначала закрывает и независимо ожидает оба input scope, включая partial Init, затем освобождает Graphics/Dispatcher. Cleanup снимает WPF-подписки, отбрасывает queued handlers, ожидает уже выполняющийся handler, сбрасывает per-run state/shortcuts/policy и очищает семь пользовательских events. Добавлено 8 focused-тестов, включая 20 последовательных Run, handler fault isolation и сборку 8 пользовательских ALC; focused-набор выдержал 10/10 повторных прогонов. Dispatcher/Graphics regression: 26/26. Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Release --no-restore`: 141 пройдено, 1 пропущен, 0 провалено; оставшийся skip относится только к Music/audio этапа 7.
 
 ## 🎵 Этап 7. Music: кооперативная отмена и детерминированный shutdown
 
@@ -316,11 +318,11 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 Затрагиваемые области: execution contexts/interfaces, `CodeExecutionService`, `MenuViewModel`, `MenuView.xaml`, локализации.
 
 - [ ] Перевести контексты, которым нужно ожидать worker-задачи, на `IAsyncDisposable`/`DisposeAsync`.
-  - Console и объединяющий execution-контекст переведены в этапе 4, Graphics — в этапе 5; ожидание Keyboard/Mouse/Music workers остаётся работой этапов 6–8.
+  - Console и объединяющий execution-контекст переведены в этапе 4, Graphics — в этапе 5, Keyboard/Mouse workers — в этапе 6; ожидание Music playback остаётся работой этапов 7–8.
 - [ ] Сделать Init/Dispose частично-инициализированного контекста безопасными и идемпотентными.
 - [ ] Зафиксировать порядок cleanup:
   1. [ ] перевести state в `CleaningUp` и инвалидировать execution id для новых callback;
-  2. [ ] остановить входящие Console/Keyboard/Mouse события;
+  2. [x] остановить входящие Console/Keyboard/Mouse события;
   3. [ ] отменить и дождаться библиотечных worker/playback-задач;
   4. [x] abort/ignore pending Dispatcher operations;
   5. [ ] остановить звук и очистить Canvas/runtime static state;

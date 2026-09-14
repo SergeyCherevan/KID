@@ -140,9 +140,10 @@ Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
 ```
 
 ## Архитектура (как устроено внутри)
-- `Keyboard.System.cs` — подписки на WPF `Window.PreviewKeyDown/Up/PreviewTextInput`, обновление состояния, распознавание хоткеев
+- `Keyboard.System.cs` — per-run scope, подписки на WPF `Window.PreviewKeyDown/Up/PreviewTextInput`, обновление состояния, распознавание хоткеев и `ShutdownAsync`
 - `Keyboard.State.cs` — потокобезопасные polling-геттеры + буферы/edge-флаги
-- `Keyboard.Events.cs` — очередь событий и фоновой воркер доставки (как у `Mouse`)
+- `Keyboard.Events.cs` — публичные события и постановка отдельных подписчиков в очередь
+- `KeyboardExecutionScope.cs` — владелец `Window`, исходного `ExecutionEnvironment` и экземпляра общего `ExecutionEventWorker`
 
 ## Архитектура и паттерны (реализация модуля Keyboard)
 
@@ -150,7 +151,7 @@ Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
 
 ### Статический Facade (Singleton-подобный модуль)
 - **Что это даёт**: единая точка входа `Keyboard.*` для пользовательского кода (состояние + события), без создания объектов.
-- **Как реализовано**: `Keyboard` — `public static partial class`, инициализация через `Keyboard.Init(Window)`; при повторной инициализации модуль отписывается от старого `Window` и подписывается на новый.
+- **Как реализовано**: `Keyboard` — `public static partial class`, но его внутренний scope принадлежит одной execution-сессии. Повторный `Init` до завершения обязательного `ShutdownAsync` отклоняется как ошибка lifecycle, а не заменяет живой scope.
 
 ### Observer (события) + асинхронная доставка обработчиков
 - **Что это даёт**: реактивная модель через `KeyDownEvent`, `KeyUpEvent`, `TextInputEvent`, `ShortcutEvent`.
@@ -159,9 +160,10 @@ Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
 ### Producer–Consumer (очередь событий) + “воркер доставки”
 - **Что это даёт**: развязку UI-потока (производит события) и фонового потока (потребляет и вызывает обработчики).
 - **Как реализовано**:
-  - UI-поток ставит `Action` в потокобезопасную очередь.
-  - Фоновая задача ждёт сигнал и последовательно исполняет действия.
-  - При переинициализации воркер корректно останавливается и очищает очередь.
+  - каждый запуск получает собственный `KeyboardExecutionScope` и собственный экземпляр `ExecutionEventWorker`;
+  - UI-поток ставит отдельный `Action` для каждого подписчика в очередь только текущего scope;
+  - linked token соединяет lifetime worker с токеном execution;
+  - shutdown закрывает вход, снимает WPF-подписки, отменяет worker и ожидает уже выполняющийся handler; оставшаяся очередь отбрасывается.
 
 ### Snapshot / DTO-подход к данным (значимые типы)
 - **Что это даёт**: наружу отдаются “снимки” состояния и событий, которые удобно передавать и безопасно читать из разных потоков.
@@ -173,7 +175,7 @@ Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
 
 ### “Пульс” (temporal cache) + защита от гонок версией
 - **Что это даёт**: `CurrentKeyPress` и `CurrentTextInput` держат значение короткое время (примерно 50–100 мс), чтобы его можно было “поймать” polling’ом, и затем автоматически сбрасываются.
-- **Защита от гонок**: сброс выполняется только если за время ожидания не пришло новое событие (используется версионный счётчик).
+- **Защита от гонок**: pulse-задача принадлежит тому же scope и linked token; перед сбросом проверяются ownership и версия. Shutdown отменяет и ожидает pulse, поэтому старый запуск не может изменить состояние нового.
 
 ### Edge/Consume-семантика для polling (one-shot)
 - **Что это даёт**: `WasPressed(key)` / `WasReleased(key)` позволяют “поймать” событие один раз в цикле без подписок.
@@ -196,10 +198,23 @@ Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
 `Keyboard.Events.cs` доставляет события Keyboard API в обработчики пользователя **в фоновом потоке**. Это сделано специально: WPF события окна приходят в UI-потоке, а “тяжёлый” пользовательский код не должен замораживать интерфейс.
 
 Внутри реализована схема **Producer–Consumer**:
-- **Producer**: UI-поток кладёт `Action` в очередь и сигналит семафор.
-- **Consumer**: один фоновый воркер ждёт семафор и вычитывает очередь “пачкой”, исполняя `Action` последовательно.
+- **Producer**: UI-поток кладёт `Action` в очередь текущего `KeyboardExecutionScope` и сигналит его семафору.
+- **Consumer**: один `ExecutionEventWorker` этой execution ждёт сигнал и исполняет действия последовательно.
+
+### Завершение execution
+
+`CanvasGraphicsContext.DisposeAsync` запускает cleanup Keyboard и Mouse до освобождения Graphics/Dispatcher. Для Keyboard порядок такой:
+
+1. атомарно запретить новые события;
+2. снять три WPF-подписки с исходного `Window` через его Dispatcher;
+3. отменить linked token, удалить queued handlers и дождаться текущего handler и pulse-задач;
+4. сбросить polling-state, pulse versions, shortcuts и их ID, `CapturePolicy`;
+5. очистить четыре публичных события, чтобы delegates пользовательской collectible ALC не оставались host-корнями.
+
+Повторный `ShutdownAsync` ожидает ту же completion task. Уже выполняющийся пользовательский handler завершается кооперативно; принудительно оборвать произвольный блокирующий вызов внутри процесса невозможно.
 
 ### Важные свойства/ограничения
 - **Один consumer**: обработчики выполняются последовательно в одном фоне (упрощает модель и снижает гонки в пользовательском коде).
 - **Нет backpressure**: если обработчики медленные, очередь может расти; зато UI не блокируется.
-- **Исключения изолируются**: ошибки в обработчиках перехватываются и не ломают доставку событий.
+- **Исключения изолируются**: каждый подписчик является отдельной работой; ошибка одного наблюдается диагностически, не пропускает остальных и не превращает успешный resource cleanup в ошибку.
+- **Per-run контракт**: события, shortcuts, состояния и очередь не переносятся в следующий запуск.

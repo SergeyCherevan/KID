@@ -77,12 +77,10 @@ public sealed class ExecutionLifecycleSpecifications
         }
     }
 
-    [Theory(Skip = KnownIssueReasons.RuntimeCleanup)]
-    [InlineData("Keyboard and Mouse handlers")]
-    [InlineData("active audio resources")]
-    public void Cleanup_PreventsPreviousRunResourcesFromAffectingNextRun(string resource)
+    [Fact(Skip = KnownIssueReasons.AudioRuntimeCleanup)]
+    public void Cleanup_PreventsPreviousRunAudioResourcesFromAffectingNextRun()
     {
-        Assert.Fail($"Deterministic cleanup is not implemented for {resource}.");
+        Assert.Fail("Deterministic cleanup is not implemented for active audio resources.");
     }
 
     [Theory]

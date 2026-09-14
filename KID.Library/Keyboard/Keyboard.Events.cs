@@ -1,18 +1,9 @@
 using System;
-using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace KID
 {
     public static partial class Keyboard
     {
-        private static readonly ConcurrentQueue<Action> _eventQueue = new ConcurrentQueue<Action>();
-        private static readonly SemaphoreSlim _eventSignal = new SemaphoreSlim(0, int.MaxValue);
-
-        private static CancellationTokenSource? _eventCts;
-        private static Task? _eventWorkerTask;
-
         /// <summary>
         /// Событие нажатия клавиши (KeyDown).
         /// Обработчики вызываются в фоновом потоке (не в UI).
@@ -37,75 +28,34 @@ namespace KID
         /// </summary>
         public static event Action<ShortcutFiredInfo>? ShortcutEvent;
 
-        private static void EnqueueEvent(Action action)
+        /// <summary>
+        /// Создаёт отдельное действие для каждого подписчика. Исключение одного handler не
+        /// пропускает остальных подписчиков и обрабатывается общей границей event worker.
+        /// </summary>
+        private static void EnqueueHandlers<T>(
+            KeyboardExecutionScope scope,
+            Action<T>? handlers,
+            T value)
         {
-            if (action == null)
-                return;
-
-            var cts = _eventCts;
-            if (cts == null || cts.IsCancellationRequested)
-                return;
-
-            _eventQueue.Enqueue(action);
-            _eventSignal.Release();
-        }
-
-        private static void StartEventWorker()
-        {
-            StopEventWorker();
-
-            _eventCts = new CancellationTokenSource();
-            var token = _eventCts.Token;
-
-            _eventWorkerTask = Task.Run(async () =>
+            if (handlers == null) return;
+            foreach (var candidate in handlers.GetInvocationList())
             {
-                while (!token.IsCancellationRequested)
+                var handler = (Action<T>)candidate;
+                _ = scope.EventWorker.TryEnqueue(() =>
                 {
-                    try
-                    {
-                        await _eventSignal.WaitAsync(token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-
-                    while (_eventQueue.TryDequeue(out var a))
-                    {
-                        try
-                        {
-                            a();
-                        }
-                        catch
-                        {
-                            // Ошибки пользовательских обработчиков не должны «ронять» поток доставки событий.
-                        }
-                    }
-                }
-
-                while (_eventQueue.TryDequeue(out _)) { }
-            }, token);
+                    if (IsCurrent(scope) && scope.EventWorker.IsAccepting)
+                        handler(value);
+                });
+            }
         }
 
-        private static void StopEventWorker()
+        /// <summary>Освобождает все delegates, которые могли ссылаться на пользовательскую ALC.</summary>
+        private static void ClearUserEvents()
         {
-            try
-            {
-                _eventCts?.Cancel();
-            }
-            catch { }
-            finally
-            {
-                _eventCts?.Dispose();
-                _eventCts = null;
-            }
-
-            // «Пнуть» WaitAsync, чтобы loop смог выйти.
-            try { _eventSignal.Release(); } catch { }
-
-            _eventWorkerTask = null;
-
-            while (_eventQueue.TryDequeue(out _)) { }
+            KeyDownEvent = null;
+            KeyUpEvent = null;
+            TextInputEvent = null;
+            ShortcutEvent = null;
         }
     }
 }

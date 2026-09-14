@@ -355,6 +355,14 @@
 - Lease использует reference compare: поздний Dispose старого запуска не очищает новый environment
 - Полным lifecycle и FSM по-прежнему владеют `CodeExecutionService` и `ExecutionSession`
 
+#### ExecutionEventWorker
+
+**ExecutionEnvironment/ExecutionEventWorker.cs**
+- Общий внутренний тип доставки событий для Keyboard и Mouse; это не singleton и не второй ambient registry
+- Каждый `KeyboardExecutionScope`/`MouseExecutionScope` создаёт собственные очередь, семафор, linked token, worker task и набор pulse-задач
+- `ShutdownAsync` идемпотентно закрывает вход, выполняет WPF-отписку, отменяет и ожидает фоновые задачи, затем освобождает per-run state
+- Ошибка одного пользовательского handler наблюдается отдельно и не препятствует другим подписчикам или обязательному cleanup
+
 #### DispatcherManager
 
 **ExecutionEnvironment/DispatcherManager.cs / DispatcherScope.cs**
@@ -462,7 +470,8 @@
 **Расположение:** `KID.Library/Mouse/`
 
 **Mouse.System.cs**
-- `Mouse.Init(Canvas)` — инициализация и подписка на события мыши Canvas
+- `Mouse.Init(Canvas)` — создаёт per-run `MouseExecutionScope` и подписывается на события Canvas
+- `Mouse.ShutdownAsync(environment)` — закрывает вход, снимает подписки и ожидает worker/pulse до освобождения scope
 
 **Mouse.State.cs**
 - `Mouse.CurrentCursor` — текущее состояние курсора (позиция и кнопки)
@@ -474,6 +483,7 @@
 - `Mouse.MouseMoveEvent` — событие перемещения мыши
 - `Mouse.MousePressButtonEvent` — событие изменения нажатых кнопок
 - `Mouse.MouseClickEvent` — событие клика по Canvas
+- Пользовательские delegates очищаются при завершении execution, чтобы не удерживать collectible ALC
 
 ## Потоки данных
 
@@ -499,9 +509,9 @@ Console API → TextBox (UI поток)
 ```
 
 `CodeExecutionService` сохраняет экземпляр до `await runningInstance.Completion`. После завершения
-выполнения сервис независимо пытается очистить контекст Console/Graphics, вызвать
+выполнения сервис независимо пытается очистить контекст Console/Graphics/Input, вызвать
 `runningInstance.Dispose()`, снять lease ambient ExecutionEnvironment и освободить сессию. `Completion` не
-включает этот внешний cleanup. Только успешная очистка всех четырёх owners разрешает переход в
+включает этот внешний cleanup. Только успешная очистка всех lifecycle owners разрешает переход в
 `Idle`; иначе публичная lifecycle task завершается ошибкой, а новый Run остаётся заблокированным.
 Общая `JoinableTaskFactory` создаётся из singleton `JoinableTaskContext` и передаётся runner через DI.
 
@@ -578,10 +588,11 @@ Save / Discard / Cancel для каждой изменённой вкладки
 - Все операции с UI выполняются через централизованный `DispatcherManager`
 - `CodeExecutionService` публикует единый `ExecutionEnvironment`; `CanvasGraphicsContext` подключает его Dispatcher capability
 - Dispatcher scope ссылается на environment вместо хранения копий id/token; DisposeAsync закрывает приём, ожидает принятые операции и освобождает Graphics до выгрузки ALC
+- Keyboard и Mouse создают отдельные per-run scopes поверх общего `ExecutionEventWorker`; очереди и pulse-задачи связаны с token/identity исходного environment
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
 - Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
-- Mouse API собирает события в UI потоке и доставляет обработчики в фоновом потоке
-- Keyboard API собирает события в UI потоке и доставляет обработчики в фоновом потоке
+- Mouse API собирает события в UI-потоке и последовательно доставляет обработчики worker-ом своей execution; cleanup снимает Canvas-подписки и очищает delegates/state
+- Keyboard API делает то же для Window, дополнительно сбрасывая shortcuts и `CapturePolicy`; worker текущего Run никогда не видит очередь следующего
 - TextBoxConsole использует Dispatcher своего TextBox и отбрасывает команды устаревшей консоли; context DisposeAsync завершается до следующего Run
 - `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
 - `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса

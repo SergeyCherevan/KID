@@ -13,7 +13,7 @@ namespace KID
     public static partial class Keyboard
     {
         private static readonly object _initLock = new object();
-        private static Window? _window;
+        private static KeyboardExecutionScope? _executionScope;
 
         private static int _keyPressPulseVersion;
         private static int _textInputPulseVersion;
@@ -41,21 +41,92 @@ namespace KID
         /// </summary>
         public static void Init(Window window)
         {
+            var environment = ExecutionEnvironmentManager.Current ??
+                throw new InvalidOperationException("No execution is active.");
+            _ = Init(window, environment);
+        }
+
+        /// <summary>Подключает Keyboard к явно захваченному environment текущего запуска.</summary>
+        internal static KeyboardExecutionScope Init(Window window, ExecutionEnvironment environment)
+        {
             if (window == null)
                 throw new ArgumentNullException(nameof(window));
+            if (environment == null)
+                throw new ArgumentNullException(nameof(environment));
+
+            window.VerifyAccess();
 
             lock (_initLock)
             {
-                if (_window != null)
-                    Unsubscribe(_window);
-
-                _window = window;
+                if (_executionScope != null)
+                    throw new InvalidOperationException("Keyboard is already initialized.");
+                if (!ExecutionEnvironmentManager.IsCurrent(environment))
+                    throw new InvalidOperationException("Execution does not own the current environment.");
+                environment.ThrowIfCancellationRequested();
 
                 ResetState();
-                ResetShortcutsRuntime();
+                ResetShortcuts();
+                ClearUserEvents();
+                CapturePolicy = KeyboardCapturePolicy.CaptureAlways;
 
+                var scope = new KeyboardExecutionScope(environment, window);
+                Volatile.Write(ref _executionScope, scope);
                 Subscribe(window);
-                StartEventWorker();
+                environment.ThrowIfCancellationRequested();
+                return scope;
+            }
+        }
+
+        /// <summary>
+        /// Закрывает Keyboard только для указанного environment. Повторный или stale shutdown
+        /// не может снять ownership более нового запуска.
+        /// </summary>
+        internal static ValueTask ShutdownAsync(ExecutionEnvironment environment)
+        {
+            ArgumentNullException.ThrowIfNull(environment);
+            var scope = Volatile.Read(ref _executionScope);
+            if (scope == null || !ReferenceEquals(scope.Environment, environment))
+                return ValueTask.CompletedTask;
+
+            return scope.EventWorker.ShutdownAsync(
+                () => UnsubscribeAsync(scope),
+                () => Release(scope));
+        }
+
+        internal static KeyboardExecutionScope? CurrentScope => Volatile.Read(ref _executionScope);
+
+        private static KeyboardExecutionScope? GetActiveScope()
+        {
+            var scope = Volatile.Read(ref _executionScope);
+            return scope != null && IsCurrent(scope) && scope.EventWorker.IsAccepting ? scope : null;
+        }
+
+        private static bool IsCurrent(KeyboardExecutionScope scope) =>
+            ReferenceEquals(Volatile.Read(ref _executionScope), scope) &&
+            ExecutionEnvironmentManager.IsCurrent(scope.Environment);
+
+        private static Task UnsubscribeAsync(KeyboardExecutionScope scope)
+        {
+            void RemoveHandlers() => Unsubscribe(scope.Window);
+            if (scope.Window.Dispatcher.CheckAccess())
+            {
+                RemoveHandlers();
+                return Task.CompletedTask;
+            }
+
+            return scope.Window.Dispatcher.InvokeAsync(RemoveHandlers).Task;
+        }
+
+        private static void Release(KeyboardExecutionScope scope)
+        {
+            lock (_initLock)
+            {
+                if (!ReferenceEquals(_executionScope, scope)) return;
+                ResetState();
+                ResetShortcuts();
+                ClearUserEvents();
+                CapturePolicy = KeyboardCapturePolicy.CaptureAlways;
+                Volatile.Write(ref _executionScope, null);
             }
         }
 
@@ -132,6 +203,9 @@ namespace KID
 
         private static void OnPreviewKeyDown(object sender, KeyEventArgs e)
         {
+            var scope = GetActiveScope();
+            if (scope == null)
+                return;
             if (!ShouldCaptureInput())
                 return;
 
@@ -147,6 +221,7 @@ namespace KID
             WpfKey lastDown;
             WpfKey lastUp;
             bool caps, num, scroll;
+            int pulseVersion;
 
             lock (_stateLock)
             {
@@ -172,28 +247,22 @@ namespace KID
                 _lastKeyPress = snapshot;
                 _currentKeyPress = snapshot;
 
-                var pulseVersion = ++_keyPressPulseVersion;
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(CurrentPulseMs).ConfigureAwait(false);
-                    lock (_stateLock)
-                    {
-                        if (_keyPressPulseVersion != pulseVersion)
-                            return;
-                        _currentKeyPress = new KeyPressInfo(WpfKey.None, KeyModifiers.None, isRepeat: false, DateTimeOffset.MinValue);
-                    }
-                });
+                pulseVersion = ++_keyPressPulseVersion;
             }
 
-            // KeyDown event (в фоне)
-            var handler = KeyDownEvent;
-            if (handler != null)
+            _ = scope.EventWorker.TrySchedule(TimeSpan.FromMilliseconds(CurrentPulseMs), () =>
             {
-                EnqueueEvent(() =>
+                if (!IsCurrent(scope)) return;
+                lock (_stateLock)
                 {
-                    try { handler(snapshot); } catch { }
-                });
-            }
+                    if (_keyPressPulseVersion != pulseVersion)
+                        return;
+                    _currentKeyPress = new KeyPressInfo(WpfKey.None, KeyModifiers.None, isRepeat: false, DateTimeOffset.MinValue);
+                }
+            });
+
+            // KeyDown event (в фоне)
+            EnqueueHandlers(scope, KeyDownEvent, snapshot);
 
             // Shortcuts обрабатываем на первичном KeyDown (не repeat)
             if (!isRepeat)
@@ -201,21 +270,16 @@ namespace KID
                 var fired = TryProcessShortcuts(snapshot);
                 if (fired.HasValue)
                 {
-                    var sh = ShortcutEvent;
-                    if (sh != null)
-                    {
-                        var fi = fired.Value;
-                        EnqueueEvent(() =>
-                        {
-                            try { sh(fi); } catch { }
-                        });
-                    }
+                    EnqueueHandlers(scope, ShortcutEvent, fired.Value);
                 }
             }
         }
 
         private static void OnPreviewKeyUp(object sender, KeyEventArgs e)
         {
+            var scope = GetActiveScope();
+            if (scope == null)
+                return;
             if (!ShouldCaptureInput())
                 return;
 
@@ -250,14 +314,7 @@ namespace KID
                 snapshot = new KeyPressInfo(key, modifiers, isRepeat: false, now);
             }
 
-            var handler = KeyUpEvent;
-            if (handler != null)
-            {
-                EnqueueEvent(() =>
-                {
-                    try { handler(snapshot); } catch { }
-                });
-            }
+            EnqueueHandlers(scope, KeyUpEvent, snapshot);
 
             // На KeyUp обновим armed-статусы chord-only, чтобы хоткеи могли сработать снова.
             UpdateShortcutArmedStates();
@@ -265,6 +322,9 @@ namespace KID
 
         private static void OnPreviewTextInput(object sender, TextCompositionEventArgs e)
         {
+            var scope = GetActiveScope();
+            if (scope == null)
+                return;
             if (!ShouldCaptureInput())
                 return;
 
@@ -276,6 +336,7 @@ namespace KID
             var modifiers = ToKeyModifiers(global::System.Windows.Input.Keyboard.Modifiers);
 
             TextInputInfo snapshot;
+            int pulseVersion;
             lock (_stateLock)
             {
                 AppendTextToBuffer(text);
@@ -284,35 +345,31 @@ namespace KID
                 _lastTextInput = snapshot;
                 _currentTextInput = snapshot;
 
-                var pulseVersion = ++_textInputPulseVersion;
-                _ = Task.Run(async () =>
-                {
-                    await Task.Delay(CurrentPulseMs).ConfigureAwait(false);
-                    lock (_stateLock)
-                    {
-                        if (_textInputPulseVersion != pulseVersion)
-                            return;
-                        _currentTextInput = new TextInputInfo(string.Empty, KeyModifiers.None, DateTimeOffset.MinValue);
-                    }
-                });
+                pulseVersion = ++_textInputPulseVersion;
             }
 
-            var handler = TextInputEvent;
-            if (handler != null)
+            _ = scope.EventWorker.TrySchedule(TimeSpan.FromMilliseconds(CurrentPulseMs), () =>
             {
-                EnqueueEvent(() =>
+                if (!IsCurrent(scope)) return;
+                lock (_stateLock)
                 {
-                    try { handler(snapshot); } catch { }
-                });
-            }
+                    if (_textInputPulseVersion != pulseVersion)
+                        return;
+                    _currentTextInput = new TextInputInfo(string.Empty, KeyModifiers.None, DateTimeOffset.MinValue);
+                }
+            });
+
+            EnqueueHandlers(scope, TextInputEvent, snapshot);
         }
 
-        private static void ResetShortcutsRuntime()
+        private static void ResetShortcuts()
         {
             lock (_shortcutsLock)
             {
+                _shortcuts.Clear();
                 _shortcutProgress.Clear();
                 _shortcutArmed.Clear();
+                _nextShortcutId = 1;
             }
         }
 
@@ -323,9 +380,18 @@ namespace KID
         {
             if (shortcut == null)
                 return 0;
+            var scope = GetActiveScope();
+            if (scope == null)
+                return 0;
 
             lock (_shortcutsLock)
             {
+                // Вторая проверка закрывает race между ранним чтением scope и началом shutdown.
+                // Если Register успел войти раньше Close, Release позже очистит регистрацию;
+                // если shutdown уже завершился, stale shortcut вообще не будет добавлен.
+                if (!IsCurrent(scope) || !scope.EventWorker.IsAccepting)
+                    return 0;
+
                 var id = _nextShortcutId++;
                 _shortcuts[id] = shortcut;
                 _shortcutProgress[id] = new ShortcutProgress { Index = 0, LastStepTime = DateTimeOffset.MinValue };

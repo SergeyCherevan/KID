@@ -1,12 +1,14 @@
 # Руководство разработчика
 
-## Проверки Dispatcher/Graphics (C2/C3, этап 5)
+## Проверки Dispatcher/Graphics/Input (C2/C3, этапы 5–6)
 
 Новая пользовательская UI-операция должна проходить через DispatcherManager целиком, включая чтение WPF-свойств. Пользовательский/инструментированный код проверяет Stop через `StopManager`; execution-bound объекты и длинные обходы используют захваченный `scope.Environment.ThrowIfCancellationRequested()`. Не добавляйте новые глобальные способы проверки token и не перехватывайте отмену общим catch с продолжением работы. Host cleanup не использует session token. Scope закрывается только после завершения принятых операций; синхронный Dispatcher.Invoke для ожидания из пользовательского потока не применяется.
 
-Из корня: `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~DispatcherGraphicsTests`, затем `dotnet test KID.sln -c Release --no-restore` и `dotnet build KID.sln -c Release --no-restore`.
+Для Keyboard/Mouse нельзя добавлять static очередь, CTS или worker task. Новый input scope должен захватывать исходный `ExecutionEnvironment`, использовать отдельный экземпляр `ExecutionEventWorker`, закрывать вход до WPF-отписки и ожидать текущий handler/pulse в host cleanup. Runtime events, shortcuts и polling-state считаются per-run. Ошибка пользовательского handler не должна останавливать остальных подписчиков или превращаться в cleanup failure.
 
-STA-тесты не открывают видимые окна и не используют аудиоустройство. Они проверяют блокированный Dispatcher, Stop/Dispose races, normal drain, cleanup faults, defaults, старый Sprite и реальные скомпилированные программы. Эти проверки не заменяют визуальную приёмку и не объявляют завершёнными cleanup ввода/аудио.
+Из корня: `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~KeyboardMouseTests`, затем `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~DispatcherGraphicsTests`, `dotnet test KID.sln -c Release --no-restore` и `dotnet build KID.sln -c Release --no-restore`.
+
+STA-тесты не открывают видимые окна и не используют аудиоустройство. Они проверяют блокированный Dispatcher, Stop/Dispose races, normal drain, cleanup faults, input WPF-отписки, per-run state, 20 повторных input scopes и освобождение ALC после пользовательских event delegates. Эти проверки не заменяют визуальную приёмку; cleanup аудио остаётся работой этапа 7.
 
 ## Начало работы
 
@@ -136,9 +138,11 @@ public static void MyNewMethod(SoundNote note)
    - `Mouse.Events.cs` — публичные события и доставка обработчиков в фоновом потоке
 2. Помните про потоки:
    - события Canvas приходят в UI-потоке
-   - обработчики пользователя должны вызываться в фоне (через очередь), чтобы не блокировать UI
+   - обработчики пользователя должны вызываться в фоне через `MouseExecutionScope.EventWorker`, чтобы не блокировать UI
+   - каждый подписчик ставится отдельной работой, чтобы исключение одного не пропустило остальных
 3. Для доступа к общему состоянию используйте синхронизацию (например, `lock`) и возвращайте копии структур
-4. Обновите документацию в `docs/Mouse-API.md`
+4. Любую новую отложенную задачу регистрируйте в per-run worker и проверяйте scope ownership после ожидания
+5. Добавьте сценарий cleanup/следующего Run в `KeyboardMouseTests` и обновите `docs/Mouse-API.md`
 
 ### Добавление нового языка
 

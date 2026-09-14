@@ -10,7 +10,7 @@ namespace KID
     {
         private static readonly object _initLock = new object();
 
-        private static Canvas? _canvas;
+        private static MouseExecutionScope? _executionScope;
 
         private static bool _isLeftPressed;
         private static bool _isRightPressed;
@@ -24,20 +24,87 @@ namespace KID
         /// </summary>
         public static void Init(Canvas canvas)
         {
+            var environment = ExecutionEnvironmentManager.Current ??
+                throw new InvalidOperationException("No execution is active.");
+            _ = Init(canvas, environment);
+        }
+
+        /// <summary>Подключает Mouse к явно захваченному environment текущего запуска.</summary>
+        internal static MouseExecutionScope Init(Canvas canvas, ExecutionEnvironment environment)
+        {
             if (canvas == null)
                 throw new ArgumentNullException(nameof(canvas));
+            if (environment == null)
+                throw new ArgumentNullException(nameof(environment));
+
+            canvas.VerifyAccess();
 
             lock (_initLock)
             {
-                if (_canvas != null)
-                    Unsubscribe(_canvas);
-
-                _canvas = canvas;
+                if (_executionScope != null)
+                    throw new InvalidOperationException("Mouse is already initialized.");
+                if (!ExecutionEnvironmentManager.IsCurrent(environment))
+                    throw new InvalidOperationException("Execution does not own the current environment.");
+                environment.ThrowIfCancellationRequested();
 
                 ResetState();
+                ClearUserEvents();
+                var scope = new MouseExecutionScope(environment, canvas);
+                Volatile.Write(ref _executionScope, scope);
                 Subscribe(canvas);
+                environment.ThrowIfCancellationRequested();
+                return scope;
+            }
+        }
 
-                StartEventWorker();
+        /// <summary>
+        /// Закрывает Mouse только для указанного environment. Повторный или stale shutdown
+        /// не может снять ownership более нового запуска.
+        /// </summary>
+        internal static ValueTask ShutdownAsync(ExecutionEnvironment environment)
+        {
+            ArgumentNullException.ThrowIfNull(environment);
+            var scope = Volatile.Read(ref _executionScope);
+            if (scope == null || !ReferenceEquals(scope.Environment, environment))
+                return ValueTask.CompletedTask;
+
+            return scope.EventWorker.ShutdownAsync(
+                () => UnsubscribeAsync(scope),
+                () => Release(scope));
+        }
+
+        internal static MouseExecutionScope? CurrentScope => Volatile.Read(ref _executionScope);
+
+        private static MouseExecutionScope? GetActiveScope()
+        {
+            var scope = Volatile.Read(ref _executionScope);
+            return scope != null && IsCurrent(scope) && scope.EventWorker.IsAccepting ? scope : null;
+        }
+
+        private static bool IsCurrent(MouseExecutionScope scope) =>
+            ReferenceEquals(Volatile.Read(ref _executionScope), scope) &&
+            ExecutionEnvironmentManager.IsCurrent(scope.Environment);
+
+        private static Task UnsubscribeAsync(MouseExecutionScope scope)
+        {
+            void RemoveHandlers() => Unsubscribe(scope.Canvas);
+            if (scope.Canvas.Dispatcher.CheckAccess())
+            {
+                RemoveHandlers();
+                return Task.CompletedTask;
+            }
+
+            return scope.Canvas.Dispatcher.InvokeAsync(RemoveHandlers).Task;
+        }
+
+        private static void Release(MouseExecutionScope scope)
+        {
+            lock (_initLock)
+            {
+                if (!ReferenceEquals(_executionScope, scope)) return;
+                ResetState();
+                ClearUserEvents();
+                Volatile.Write(ref _executionScope, null);
             }
         }
 
@@ -54,6 +121,7 @@ namespace KID
 
                 _currentClick = new MouseClickInfo(ClickStatus.NoClick, null);
                 _lastClick = new MouseClickInfo(ClickStatus.NoClick, null);
+                _clickPulseVersion = unchecked(_clickPulseVersion + 1);
             }
         }
 
@@ -89,7 +157,10 @@ namespace KID
             return status;
         }
 
-        private static void UpdateCursor(Point? position, bool isActualOnCanvas)
+        private static void UpdateCursor(
+            MouseExecutionScope scope,
+            Point? position,
+            bool isActualOnCanvas)
         {
             CursorInfo cursorSnapshot;
             CursorInfo? pressChangedSnapshot = null;
@@ -119,27 +190,13 @@ namespace KID
 
             if (positionChanged)
             {
-                var moveHandler = MouseMoveEvent;
-                if (moveHandler != null)
-                {
-                    EnqueueEvent(() =>
-                    {
-                        try { moveHandler(cursorSnapshot); } catch { }
-                    });
-                }
+                EnqueueHandlers(scope, MouseMoveEvent, cursorSnapshot);
             }
 
             if (pressChangedSnapshot.HasValue)
             {
-                var pressHandler = MousePressButtonEvent;
                 var pressSnapshot = pressChangedSnapshot.Value;
-                if (pressHandler != null)
-                {
-                    EnqueueEvent(() =>
-                    {
-                        try { pressHandler(pressSnapshot); } catch { }
-                    });
-                }
+                EnqueueHandlers(scope, MousePressButtonEvent, pressSnapshot);
             }
         }
 
@@ -153,7 +210,10 @@ namespace KID
             return a!.Value == b!.Value;
         }
 
-        private static void RegisterClick(ClickStatus status, Point position)
+        private static void RegisterClick(
+            MouseExecutionScope scope,
+            ClickStatus status,
+            Point position)
         {
             MouseClickInfo clickSnapshot;
             int pulseVersion;
@@ -167,20 +227,12 @@ namespace KID
                 pulseVersion = ++_clickPulseVersion;
             }
 
-            var clickHandler = MouseClickEvent;
-            if (clickHandler != null)
-            {
-                EnqueueEvent(() =>
-                {
-                    try { clickHandler(clickSnapshot); } catch { }
-                });
-            }
+            EnqueueHandlers(scope, MouseClickEvent, clickSnapshot);
 
             // Сброс CurrentClick через короткое окно, чтобы его можно было «поймать» polling'ом.
-            _ = Task.Run(async () =>
+            _ = scope.EventWorker.TrySchedule(TimeSpan.FromMilliseconds(CurrentClickPulseMs), () =>
             {
-                await Task.Delay(CurrentClickPulseMs).ConfigureAwait(false);
-
+                if (!IsCurrent(scope)) return;
                 lock (_stateLock)
                 {
                     if (_clickPulseVersion != pulseVersion)
@@ -193,36 +245,42 @@ namespace KID
 
         private static void OnMouseEnter(object sender, MouseEventArgs e)
         {
-            if (_canvas == null)
+            var scope = GetActiveScope();
+            if (scope == null)
                 return;
 
             _isOutOfArea = false;
-            UpdateCursor(e.GetPosition(_canvas), isActualOnCanvas: true);
+            UpdateCursor(scope, e.GetPosition(scope.Canvas), isActualOnCanvas: true);
         }
 
         private static void OnMouseLeave(object sender, MouseEventArgs e)
         {
+            var scope = GetActiveScope();
+            if (scope == null)
+                return;
             _isOutOfArea = true;
-            UpdateCursor(position: null, isActualOnCanvas: false);
+            UpdateCursor(scope, position: null, isActualOnCanvas: false);
         }
 
         private static void OnMouseMove(object sender, MouseEventArgs e)
         {
-            if (_canvas == null)
+            var scope = GetActiveScope();
+            if (scope == null)
                 return;
 
             if (_isOutOfArea)
             {
-                UpdateCursor(position: null, isActualOnCanvas: false);
+                UpdateCursor(scope, position: null, isActualOnCanvas: false);
                 return;
             }
 
-            UpdateCursor(e.GetPosition(_canvas), isActualOnCanvas: true);
+            UpdateCursor(scope, e.GetPosition(scope.Canvas), isActualOnCanvas: true);
         }
 
         private static void OnMouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (_canvas == null)
+            var scope = GetActiveScope();
+            if (scope == null)
                 return;
 
             _isOutOfArea = false;
@@ -232,17 +290,18 @@ namespace KID
             else if (e.ChangedButton == MouseButton.Right)
                 _isRightPressed = true;
 
-            var pos = e.GetPosition(_canvas);
-            UpdateCursor(pos, isActualOnCanvas: true);
+            var pos = e.GetPosition(scope.Canvas);
+            UpdateCursor(scope, pos, isActualOnCanvas: true);
 
             var clickStatus = ToClickStatus(e.ChangedButton, e.ClickCount);
             if (clickStatus != ClickStatus.NoClick)
-                RegisterClick(clickStatus, pos);
+                RegisterClick(scope, clickStatus, pos);
         }
 
         private static void OnMouseUp(object sender, MouseButtonEventArgs e)
         {
-            if (_canvas == null)
+            var scope = GetActiveScope();
+            if (scope == null)
                 return;
 
             _isOutOfArea = false;
@@ -252,7 +311,7 @@ namespace KID
             else if (e.ChangedButton == MouseButton.Right)
                 _isRightPressed = false;
 
-            UpdateCursor(e.GetPosition(_canvas), isActualOnCanvas: true);
+            UpdateCursor(scope, e.GetPosition(scope.Canvas), isActualOnCanvas: true);
         }
 
         private static ClickStatus ToClickStatus(MouseButton button, int clickCount)

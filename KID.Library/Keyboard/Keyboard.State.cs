@@ -161,6 +161,8 @@ namespace KID
                 _releasedEdges.Clear();
                 _repeatCounts.Clear();
                 _textBuffer.Clear();
+                _keyPressPulseVersion = unchecked(_keyPressPulseVersion + 1);
+                _textInputPulseVersion = unchecked(_textInputPulseVersion + 1);
 
                 _currentState = new KeyboardState(
                     modifiers: KeyModifiers.None,

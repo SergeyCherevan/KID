@@ -10,15 +10,27 @@ namespace KID.Services.CodeExecution.Contexts
     {
         private readonly object gate = new();
         private DispatcherScope? scope;
+        private ExecutionEnvironment? environment;
         private bool initialized;
         private bool disposing;
         private readonly TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private readonly Action<Canvas> initializeRuntime;
+        private readonly Action<Canvas, ExecutionEnvironment> initializeRuntime;
         public object GraphicsTarget { get; set; }
 
         public CanvasGraphicsContext(Canvas graphicsCanvas) : this(graphicsCanvas, InitializeRuntime) { }
 
         internal CanvasGraphicsContext(Canvas graphicsCanvas, Action<Canvas> initializeRuntime)
+            : this(
+                graphicsCanvas,
+                initializeRuntime == null
+                    ? throw new ArgumentNullException(nameof(initializeRuntime))
+                    : (canvas, _) => initializeRuntime(canvas))
+        {
+        }
+
+        private CanvasGraphicsContext(
+            Canvas graphicsCanvas,
+            Action<Canvas, ExecutionEnvironment> initializeRuntime)
         {
             if (graphicsCanvas == null)
                 throw new ArgumentNullException(nameof(graphicsCanvas));
@@ -37,19 +49,20 @@ namespace KID.Services.CodeExecution.Contexts
                 canvas.VerifyAccess();
                 if (canvas.Dispatcher != dispatcher) throw new ArgumentException("Dispatcher must own the Canvas.", nameof(dispatcher));
                 initialized = true;
+                environment = ExecutionEnvironmentManager.GetCurrent(executionId);
                 scope = DispatcherManager.AttachDispatcher(executionId, dispatcher);
                 Graphics.Init(canvas, scope);
-                initializeRuntime(canvas);
+                initializeRuntime(canvas, environment);
             }
         }
 
-        private static void InitializeRuntime(Canvas canvas)
+        private static void InitializeRuntime(Canvas canvas, ExecutionEnvironment environment)
         {
-            Mouse.Init(canvas);
+            Mouse.Init(canvas, environment);
             Music.Init();
             var window = Window.GetWindow(canvas);
-            if (window != null) Keyboard.Init(window);
-            // Ожидание shutdown этих модулей добавляется в этапах 6–7.
+            if (window != null) Keyboard.Init(window, environment);
+            // Music остаётся отдельной lifecycle-границей до этапа 7.
         }
 
         /// <summary>Ожидает принятые UI-команды и сбрасывает bridges до выгрузки пользовательской ALC.</summary>
@@ -69,6 +82,18 @@ namespace KID.Services.CodeExecution.Contexts
         private async Task DisposeCoreAsync()
         {
             var failures = new ExecutionFailureCollector();
+            var ownedEnvironment = environment;
+
+            if (ownedEnvironment != null)
+            {
+                // Оба модуля синхронно закрывают приём в ShutdownAsync. Запускаем shutdown
+                // до первого await, чтобы Keyboard и Mouse перестали принимать WPF-события вместе.
+                _ = Keyboard.ShutdownAsync(ownedEnvironment);
+                _ = Mouse.ShutdownAsync(ownedEnvironment);
+                await failures.CaptureAsync(() => Keyboard.ShutdownAsync(ownedEnvironment).AsTask());
+                await failures.CaptureAsync(() => Mouse.ShutdownAsync(ownedEnvironment).AsTask());
+            }
+
             var owned = scope;
             if (owned != null)
             {
@@ -78,10 +103,15 @@ namespace KID.Services.CodeExecution.Contexts
                         // Сброс только managed static-ссылок допустим и после shutdown Dispatcher.
                         Graphics.Release(owned);
                         scope = null;
+                        environment = null;
                         GraphicsTarget = null!;
                     });
             }
-            else GraphicsTarget = null!;
+            else
+            {
+                environment = null;
+                GraphicsTarget = null!;
+            }
             var failure = failures.CreateException("Graphics cleanup failed.");
             if (failure == null) disposed.TrySetResult();
             else disposed.TrySetException(failure);

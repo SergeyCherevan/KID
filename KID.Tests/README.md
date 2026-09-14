@@ -6,7 +6,11 @@
 
 `Library/ExecutionEnvironmentTests.cs` проверяет единую ambient identity/token для facade, несовпадающий execution id, запрет двойного подключения Dispatcher, повторное подключение capability внутри той же execution и недоступность scope после release environment. `StopManagerTests` проверяет сохранённый публичный API поверх нового registry.
 
-Оставшаяся skipped specification относится к Keyboard/Mouse и Music (этапы 6–8), а не к Dispatcher. Проверки выполняются без видимых окон; визуальная приёмка отдельно.
+## Keyboard/Mouse: этап 6
+
+`Library/KeyboardMouseTests.cs` содержит 8 сценариев: linked Stop и отмена pulse, ожидание уже выполняющегося handler, отбрасывание очереди, конкурентно-идемпотентный shutdown, изоляция ошибки подписчика, WPF-отписки и полный reset Keyboard/Mouse, 20 повторных запусков, partial runtime Init, ожидание input cleanup контекстом и сборка 8 collectible ALC после подписки пользовательской программы на все семь events.
+
+Оставшаяся skipped specification относится только к Music/audio cleanup этапов 7–8. Проверки выполняются без видимых окон; визуальная приёмка отдельно.
 
 ## Запуск и структура
 
