@@ -1,6 +1,6 @@
 # Функциональность проекта .KID
 
-Единый `ExecutionEnvironment` публикует ambient id/token запуска для KID.Library; StopManager и DispatcherManager работают как специализированные facade без собственных execution registry. Dispatcher/Graphics учитывают текущий запуск: Stop отменяет ожидание UI-результата и pending-команды; следующий Run ждёт окончания графического cleanup. Sprite сохраняет исходный environment и проверяет отмену в обходах. Рисунок остаётся видимым, а статические графические настройки сбрасываются. Очистка обработчиков ввода и аудио — отдельные этапы C2/C3.
+Единый `ExecutionEnvironment` публикует ambient id/token запуска для KID.Library; StopManager и DispatcherManager работают как специализированные facade без собственных execution registry. Dispatcher/Graphics учитывают текущий запуск: Stop отменяет ожидание UI-результата и pending-команды; следующий Run ждёт окончания графического cleanup. Keyboard, Mouse и Music имеют отдельные per-run scopes над тем же environment: input cleanup снимает подписки и delegates, а audio cleanup останавливает output, отменяет и ожидает playback/fade/I/O, освобождает файлы и не допускает позднего влияния на следующий Run.
 
 ## Обзор возможностей
 
@@ -134,6 +134,9 @@
 - **Автоматическая синхронизация**
   - Все операции выполняются безопасно
   - Интеграция с StopManager для отмены
+  - Активные звуки и фоновые задачи принадлежат текущей execution-сессии
+  - Stop и штатное завершение дожидаются детерминированного audio cleanup
+  - Старый `SoundPlayer` не может управлять звуком нового Run даже при совпавшем ID
 
 - **Типобезопасность**
   - Использование структуры `SoundNote` вместо массивов чисел

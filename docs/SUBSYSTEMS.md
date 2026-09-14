@@ -94,8 +94,8 @@
 **CanvasGraphicsContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs`)
 - Инициализирует Graphics API с Canvas
 - Реализует `IGraphicsContext`
-- Сохраняет исходный `ExecutionEnvironment`; при Dispose одновременно закрывает вход Keyboard/Mouse, независимо ожидает оба input shutdown, затем освобождает Graphics/Dispatcher
-- Частичная инициализация безопасна: если Mouse уже подключён, а следующий runtime-шаг упал, Dispose всё равно освободит input scope
+- Сохраняет исходный `ExecutionEnvironment`; при Dispose одновременно закрывает Keyboard/Mouse/Music, независимо ожидает три shutdown, затем освобождает Graphics/Dispatcher
+- Частичная инициализация безопасна: уже подключённые Mouse или Music будут освобождены, даже если следующий runtime-шаг упал
 - Host cleanup не использует отменённый session token для WPF-отписок
 
 **TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
@@ -582,7 +582,7 @@
 - Блокирующее воспроизведение (программа ждёт окончания)
 - Поддержка пауз (Frequency = 0)
 - Индивидуальная громкость для каждого звука
-- Интеграция с StopManager для отмены
+- Блокирующее ожидание и внутренние циклы прерываются session token текущего `ExecutionEnvironment`
 
 #### 7.3. Управление громкостью
 **Файл:** `KID.Library/Music/Music.Volume.cs`
@@ -595,7 +595,7 @@
 
 **Функции:**
 - Генерация синусоидальных тонов через NAudio
-- Поддержка частотного диапазона 50-7000 Hz
+- Ограничение синтетической частоты диапазоном 20-20000 Hz
 - Генерация пауз (тишины)
 
 #### 7.5. Полифония
@@ -613,6 +613,7 @@
 - Воспроизведение аудиофайлов (WAV, MP3 и др.)
 - Поддержка локальных путей и URL
 - Автоматическая загрузка и удаление временных файлов для URL
+- HTTP, чтение ответа и запись файла получают session token; временный путь регистрируется за scope до записи
 
 #### 7.7. Расширенное API
 **Файл:** `KID.Library/Music/Music.Advanced.cs`
@@ -623,13 +624,15 @@
 - `SoundVolume()`, `SoundLoop()` — настройка звука
 - `SoundLength()`, `SoundPosition()`, `SoundState()` — информация о звуке
 - `SoundSeek()`, `SoundFade()` — дополнительные возможности
-- `SoundPlayerOFF()` — остановка всех звуков
+- `SoundPlayerOFF()` — остановка текущих звуков без закрытия Music-сессии
 
 **Особенности:**
 - Асинхронное воспроизведение (не блокирует программу)
-- Управление несколькими звуками одновременно через ID
+- Числовой ID является handle внутри запуска; управление дополнительно проверяет точные scope/playback-ссылки
 - Зацикливание звуков
 - Плавное изменение громкости
+- Все playback/fade-задачи отслеживаются per-run scope и ожидаются обязательным host `ShutdownAsync`
+- Cleanup останавливает output, отменяет задачи, освобождает player/file resources и удаляет временные файлы; ошибки агрегируются после попытки очистить всё
 
 ## 8. Подсистема Graphics API
 

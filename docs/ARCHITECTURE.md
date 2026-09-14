@@ -426,9 +426,15 @@
 **Расположение:** `KID.Library/Music/`
 
 **Music.System.cs**
-- Инициализация и базовые утилиты
-- Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
-- Интеграция с `StopManager`
+- Публикует одну `MusicExecutionScope`, принадлежащую точной ссылке на текущий `ExecutionEnvironment`
+- `Init` открывает регистрацию звуков, а идемпотентный `ShutdownAsync` синхронно закрывает её до первого ожидания
+- Music не работает с WPF UI и не использует Dispatcher; session token берётся из общего environment
+
+**MusicExecutionScope.cs / MusicPlayback.cs / MusicRuntime.cs**
+- Scope владеет реестром активных playback, всеми playback/fade-задачами, linked cancellation и временными URL-файлами одного запуска
+- `SoundPlayer.Id` — только пользовательский handle; реальная ownership-проверка использует ссылки на scope и playback, поэтому повторившийся id другого Run ничего не меняет
+- Shutdown сначала останавливает output, затем отменяет и ожидает задачи, освобождает NAudio/file resources, удаляет временные файлы и только после этого снимает static owner
+- Runtime-адаптеры отделяют NAudio/HTTP/файловую систему от lifecycle и позволяют тестировать cleanup без звукового устройства и сети
 
 **Music.Volume.cs**
 - `Music.Volume` — управление громкостью (0-10, по умолчанию 5)
@@ -463,7 +469,7 @@
   - `SoundVolume()`, `SoundLoop()` — настройка звука
   - `SoundLength()`, `SoundPosition()`, `SoundState()` — информация о звуке
   - `SoundSeek()`, `SoundFade()` — дополнительные возможности
-  - `SoundPlayerOFF()` — остановка всех звуков
+  - `SoundPlayerOFF()` — остановка всех текущих звуков без закрытия сессии; обязательный host cleanup выполняется отдельно
 
 #### Mouse API
 
@@ -590,7 +596,7 @@ Save / Discard / Cancel для каждой изменённой вкладки
 - Dispatcher scope ссылается на environment вместо хранения копий id/token; DisposeAsync закрывает приём, ожидает принятые операции и освобождает Graphics до выгрузки ALC
 - Keyboard и Mouse создают отдельные per-run scopes поверх общего `ExecutionEventWorker`; очереди и pulse-задачи связаны с token/identity исходного environment
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
-- Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
+- Music API не обращается к UI: playback, fade, HTTP и file I/O привязаны к token и task registry исходной execution
 - Mouse API собирает события в UI-потоке и последовательно доставляет обработчики worker-ом своей execution; cleanup снимает Canvas-подписки и очищает delegates/state
 - Keyboard API делает то же для Window, дополнительно сбрасывая shortcuts и `CapturePolicy`; worker текущего Run никогда не видит очередь следующего
 - TextBoxConsole использует Dispatcher своего TextBox и отбрасывает команды устаревшей консоли; context DisposeAsync завершается до следующего Run

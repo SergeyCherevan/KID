@@ -1,269 +1,130 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 
-namespace KID
+namespace KID;
+
+/// <summary>Асинхронный API генерации звуков внутри текущей execution-сессии.</summary>
+public static partial class Music
 {
-    /// <summary>
-    /// Часть класса Music для асинхронного воспроизведения тонов/мелодий/полифонии через SoundPlayer.
-    /// </summary>
-    public static partial class Music
+    private const int GeneratedSampleRate = 44100;
+    private const int GeneratedChannels = 1;
+
+    /// <summary>Запускает тон и сразу возвращает управляемый плеер.</summary>
+    public static SoundPlayer SoundPlay(double frequency, double durationMs)
     {
-        private const int GeneratedSampleRate = 44100;
-        private const int GeneratedChannels = 1;
+        if (durationMs <= 0)
+            return new SoundPlayer(0);
 
-        /// <summary>
-        /// Асинхронно воспроизводит тон заданной частоты и длительности и возвращает плеер для управления.
-        /// </summary>
-        /// <param name="frequency">Частота в Герцах (Hz). Значение 0 означает паузу (тишину).</param>
-        /// <param name="durationMs">Длительность в миллисекундах (ms).</param>
-        /// <returns>Плеер для управления воспроизведением.</returns>
-        public static SoundPlayer SoundPlay(double frequency, double durationMs)
+        var amplitude = VolumeToAmplitude(Volume);
+        return StartGeneratedSound(token => frequency == 0
+            ? CreateSilenceProvider(durationMs, token)
+            : CreateToneProvider(frequency, durationMs, amplitude, token));
+    }
+
+    /// <summary>Запускает последовательность нот и сразу возвращает плеер.</summary>
+    public static SoundPlayer SoundPlay(params SoundNote[] notes) =>
+        notes == null ? new SoundPlayer(0) : SoundPlay((IEnumerable<SoundNote>)notes);
+
+    /// <summary>Запускает последовательность нот и сразу возвращает плеер.</summary>
+    public static SoundPlayer SoundPlay(IEnumerable<SoundNote> notes)
+    {
+        if (notes == null)
+            return new SoundPlayer(0);
+
+        var scope = GetActiveScope();
+        if (scope == null)
+            return new SoundPlayer(0);
+
+        var snapshot = SnapshotNotes(notes, scope.CancellationToken);
+        if (snapshot.Length == 0 || snapshot.All(static note => note.DurationMs <= 0))
+            return new SoundPlayer(0);
+
+        return StartGeneratedSound(
+            token => CreateMelodyProvider(snapshot, token),
+            scope);
+    }
+
+    /// <summary>Запускает несколько дорожек одновременно и сразу возвращает плеер.</summary>
+    public static SoundPlayer SoundPlay(params SoundNote[][] tracks) =>
+        tracks == null
+            ? new SoundPlayer(0)
+            : SoundPlay((IEnumerable<IEnumerable<SoundNote>>)tracks);
+
+    /// <summary>Запускает несколько дорожек одновременно и сразу возвращает плеер.</summary>
+    public static SoundPlayer SoundPlay(IEnumerable<IEnumerable<SoundNote>> tracks)
+    {
+        if (tracks == null)
+            return new SoundPlayer(0);
+
+        var scope = GetActiveScope();
+        if (scope == null)
+            return new SoundPlayer(0);
+
+        var token = scope.CancellationToken;
+        var snapshots = new List<SoundNote[]>();
+        using (var enumerator = tracks.GetEnumerator())
         {
-            if (durationMs <= 0)
-                return new SoundPlayer(0);
-
-            // Снимаем срез глобальной громкости на момент запуска (как в синхронном Sound()).
-            var amplitude = VolumeToAmplitude(Volume);
-
-            return StartGeneratedSound(() =>
+            while (true)
             {
-                if (frequency == 0)
-                    return CreateSilenceProvider(durationMs);
-
-                return CreateToneProvider(frequency, durationMs, amplitude);
-            });
-        }
-
-        /// <summary>
-        /// Асинхронно воспроизводит последовательность звуков без пауз между ними и возвращает плеер для управления.
-        /// </summary>
-        /// <param name="notes">Массив звуков для воспроизведения.</param>
-        /// <returns>Плеер для управления воспроизведением.</returns>
-        public static SoundPlayer SoundPlay(params SoundNote[] notes)
-        {
-            if (notes == null || notes.Length == 0)
-                return new SoundPlayer(0);
-
-            return SoundPlay((IEnumerable<SoundNote>)notes);
-        }
-
-        /// <summary>
-        /// Асинхронно воспроизводит последовательность звуков без пауз между ними и возвращает плеер для управления.
-        /// </summary>
-        /// <param name="notes">Коллекция звуков для воспроизведения.</param>
-        /// <returns>Плеер для управления воспроизведением.</returns>
-        public static SoundPlayer SoundPlay(IEnumerable<SoundNote> notes)
-        {
-            if (notes == null)
-                return new SoundPlayer(0);
-
-            // Материализуем, чтобы можно было корректно зациклить и не перечислять внешний enumerable многократно.
-            var snapshot = notes.ToArray();
-            if (snapshot.Length == 0 || snapshot.All(n => n.DurationMs <= 0))
-                return new SoundPlayer(0);
-
-            return StartGeneratedSound(() => CreateMelodyProvider(snapshot));
-        }
-
-        /// <summary>
-        /// Асинхронно воспроизводит полифоническую музыку - несколько дорожек одновременно - и возвращает плеер для управления.
-        /// </summary>
-        /// <param name="tracks">Массив дорожек, каждая дорожка - массив звуков.</param>
-        /// <returns>Плеер для управления воспроизведением.</returns>
-        public static SoundPlayer SoundPlay(params SoundNote[][] tracks)
-        {
-            if (tracks == null || tracks.Length == 0)
-                return new SoundPlayer(0);
-
-            return SoundPlay((IEnumerable<IEnumerable<SoundNote>>)tracks);
-        }
-
-        /// <summary>
-        /// Асинхронно воспроизводит полифоническую музыку - несколько дорожек одновременно - и возвращает плеер для управления.
-        /// </summary>
-        /// <param name="tracks">Коллекция дорожек, каждая дорожка - коллекция звуков.</param>
-        /// <returns>Плеер для управления воспроизведением.</returns>
-        public static SoundPlayer SoundPlay(IEnumerable<IEnumerable<SoundNote>> tracks)
-        {
-            if (tracks == null)
-                return new SoundPlayer(0);
-
-            var tracksSnapshot = tracks
-                .Select(t => t?.ToArray() ?? Array.Empty<SoundNote>())
-                .Where(t => t.Length > 0)
-                .ToArray();
-
-            if (tracksSnapshot.Length == 0)
-                return new SoundPlayer(0);
-
-            if (tracksSnapshot.All(t => t.All(n => n.DurationMs <= 0)))
-                return new SoundPlayer(0);
-
-            return StartGeneratedSound(() => CreatePolyphonyProvider(tracksSnapshot));
-        }
-
-        private static SoundPlayer StartGeneratedSound(Func<ISampleProvider> sampleProviderFactory)
-        {
-            if (sampleProviderFactory == null)
-                return new SoundPlayer(0);
-
-            lock (_lockObject)
-            {
-                int soundId = _nextSoundId++;
-                var player = new SoundPlayer(soundId)
-                {
-                    // Для синтетики громкости нот/дорожек уже учитывают Music.Volume (или Note.Volume),
-                    // а громкость плеера — общий множитель (по умолчанию 1.0).
-                    Volume = 1.0,
-                    SampleProviderFactory = sampleProviderFactory
-                };
-
-                _activeSounds[soundId] = player;
-
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        await PlayGeneratedAsync(player);
-                    }
-                    catch
-                    {
-                        // Игнорируем ошибки
-                    }
-                    finally
-                    {
-                        if (!player.Loop)
-                        {
-                            lock (_lockObject)
-                            {
-                                if (_activeSounds.Remove(player.Id))
-                                {
-                                    player.Dispose();
-                                }
-                            }
-                        }
-                    }
-                });
-
-                return player;
-            }
-        }
-
-        private static ISampleProvider CreateToneProvider(double frequency, double durationMs, double volume)
-        {
-            if (durationMs <= 0)
-                return CreateSilenceProvider(0);
-
-            // Ограничиваем частоту разумными пределами (как в синхронном PlayTone()).
-            frequency = Math.Max(20, Math.Min(20000, frequency));
-
-            // Если частота некорректна — считаем тишиной.
-            if (frequency <= 0 || volume <= 0)
-                return CreateSilenceProvider(durationMs);
-
-            var generator = new SignalGenerator(GeneratedSampleRate, GeneratedChannels)
-            {
-                Type = SignalGeneratorType.Sin,
-                Frequency = frequency,
-                Gain = Math.Max(0.0, Math.Min(1.0, volume))
-            };
-
-            return new OffsetSampleProvider(generator)
-            {
-                Take = TimeSpan.FromMilliseconds(durationMs)
-            };
-        }
-
-        private static ISampleProvider CreateSilenceProvider(double durationMs)
-        {
-            if (durationMs <= 0)
-                durationMs = 0;
-
-            var generator = new SignalGenerator(GeneratedSampleRate, GeneratedChannels)
-            {
-                Type = SignalGeneratorType.Sin,
-                Frequency = 440,
-                Gain = 0.0
-            };
-
-            return new OffsetSampleProvider(generator)
-            {
-                Take = TimeSpan.FromMilliseconds(durationMs)
-            };
-        }
-
-        private static ISampleProvider CreateMelodyProvider(IReadOnlyList<SoundNote> notes)
-        {
-            var parts = new List<ISampleProvider>(notes.Count);
-            foreach (var note in notes)
-            {
-                if (note.DurationMs <= 0)
+                token.ThrowIfCancellationRequested();
+                if (!enumerator.MoveNext())
+                    break;
+                if (enumerator.Current == null)
                     continue;
 
-                if (note.IsSilence)
-                {
-                    parts.Add(CreateSilenceProvider(note.DurationMs));
-                }
-                else
-                {
-                    parts.Add(CreateToneProvider(note.Frequency, note.DurationMs, note.GetEffectiveVolume()));
-                }
+                var track = SnapshotNotes(enumerator.Current, token);
+                if (track.Length > 0)
+                    snapshots.Add(track);
             }
-
-            if (parts.Count == 0)
-                return CreateSilenceProvider(0);
-
-            return new ConcatenatingSampleProvider(parts);
         }
 
-        private static ISampleProvider CreatePolyphonyProvider(IReadOnlyList<SoundNote[]> tracks)
+        if (snapshots.Count == 0 ||
+            snapshots.All(static track => track.All(static note => note.DurationMs <= 0)))
+            return new SoundPlayer(0);
+
+        var snapshot = snapshots.ToArray();
+        return StartGeneratedSound(
+            currentToken => CreatePolyphonyProvider(snapshot, currentToken),
+            scope);
+    }
+
+    private static SoundPlayer StartGeneratedSound(
+        Func<CancellationToken, ISampleProvider> sampleProviderFactory,
+        MusicExecutionScope? knownScope = null)
+    {
+        ArgumentNullException.ThrowIfNull(sampleProviderFactory);
+        var scope = knownScope ?? GetActiveScope();
+        if (scope == null)
+            return new SoundPlayer(0);
+
+        var playback = scope.CreatePlayback(1.0, sampleProviderFactory: sampleProviderFactory);
+        if (playback == null)
+            return new SoundPlayer(0);
+
+        try
         {
-            // Максимальная длительность по дорожкам (включая паузы).
-            double maxMs = 0;
-            var trackDurationsMs = new double[tracks.Count];
-
-            for (int i = 0; i < tracks.Count; i++)
-            {
-                var track = tracks[i] ?? Array.Empty<SoundNote>();
-                double sum = 0;
-                foreach (var note in track)
-                {
-                    if (note.DurationMs > 0)
-                        sum += note.DurationMs;
-                }
-                trackDurationsMs[i] = sum;
-                maxMs = Math.Max(maxMs, sum);
-            }
-
-            if (maxMs <= 0)
-                return CreateSilenceProvider(0);
-
-            var mixer = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(GeneratedSampleRate, GeneratedChannels));
-
-            for (int i = 0; i < tracks.Count; i++)
-            {
-                var track = tracks[i] ?? Array.Empty<SoundNote>();
-                var sequential = CreateMelodyProvider(track);
-
-                var paddingMs = maxMs - trackDurationsMs[i];
-                if (paddingMs > 0.0)
-                {
-                    sequential = new ConcatenatingSampleProvider(new[]
-                    {
-                        sequential,
-                        CreateSilenceProvider(paddingMs)
-                    });
-                }
-
-                mixer.AddMixerInput(sequential);
-            }
-
-            return mixer;
+            scope.StartPlayback(playback, PlayGeneratedCoreAsync);
+            return playback.Player;
+        }
+        catch
+        {
+            scope.StopPlayerAsync(playback).GetAwaiter().GetResult();
+            throw;
         }
     }
-}
 
+    private static SoundNote[] SnapshotNotes(
+        IEnumerable<SoundNote> notes,
+        CancellationToken cancellationToken)
+    {
+        var snapshot = new List<SoundNote>();
+        using var enumerator = notes.GetEnumerator();
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!enumerator.MoveNext())
+                break;
+            snapshot.Add(enumerator.Current);
+        }
+        return snapshot.ToArray();
+    }
+}

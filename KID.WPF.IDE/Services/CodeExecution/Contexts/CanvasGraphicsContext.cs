@@ -28,7 +28,7 @@ namespace KID.Services.CodeExecution.Contexts
         {
         }
 
-        private CanvasGraphicsContext(
+        internal CanvasGraphicsContext(
             Canvas graphicsCanvas,
             Action<Canvas, ExecutionEnvironment> initializeRuntime)
         {
@@ -59,10 +59,9 @@ namespace KID.Services.CodeExecution.Contexts
         private static void InitializeRuntime(Canvas canvas, ExecutionEnvironment environment)
         {
             Mouse.Init(canvas, environment);
-            Music.Init();
+            Music.Init(environment);
             var window = Window.GetWindow(canvas);
             if (window != null) Keyboard.Init(window, environment);
-            // Music остаётся отдельной lifecycle-границей до этапа 7.
         }
 
         /// <summary>Ожидает принятые UI-команды и сбрасывает bridges до выгрузки пользовательской ALC.</summary>
@@ -86,12 +85,15 @@ namespace KID.Services.CodeExecution.Contexts
 
             if (ownedEnvironment != null)
             {
-                // Оба модуля синхронно закрывают приём в ShutdownAsync. Запускаем shutdown
-                // до первого await, чтобы Keyboard и Mouse перестали принимать WPF-события вместе.
+                // Все runtime-модули синхронно закрывают приём в ShutdownAsync. Запускаем
+                // shutdown до первого await: никакой новый звук или input callback уже не
+                // сможет попасть в завершающуюся execution-сессию.
                 _ = Keyboard.ShutdownAsync(ownedEnvironment);
                 _ = Mouse.ShutdownAsync(ownedEnvironment);
+                _ = Music.ShutdownAsync(ownedEnvironment);
                 await failures.CaptureAsync(() => Keyboard.ShutdownAsync(ownedEnvironment).AsTask());
                 await failures.CaptureAsync(() => Mouse.ShutdownAsync(ownedEnvironment).AsTask());
+                await failures.CaptureAsync(() => Music.ShutdownAsync(ownedEnvironment).AsTask());
             }
 
             var owned = scope;

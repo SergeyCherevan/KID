@@ -1,14 +1,16 @@
 # Руководство разработчика
 
-## Проверки Dispatcher/Graphics/Input (C2/C3, этапы 5–6)
+## Проверки Dispatcher/Graphics/Input/Music (C2/C3, этапы 5–7)
 
 Новая пользовательская UI-операция должна проходить через DispatcherManager целиком, включая чтение WPF-свойств. Пользовательский/инструментированный код проверяет Stop через `StopManager`; execution-bound объекты и длинные обходы используют захваченный `scope.Environment.ThrowIfCancellationRequested()`. Не добавляйте новые глобальные способы проверки token и не перехватывайте отмену общим catch с продолжением работы. Host cleanup не использует session token. Scope закрывается только после завершения принятых операций; синхронный Dispatcher.Invoke для ожидания из пользовательского потока не применяется.
 
 Для Keyboard/Mouse нельзя добавлять static очередь, CTS или worker task. Новый input scope должен захватывать исходный `ExecutionEnvironment`, использовать отдельный экземпляр `ExecutionEventWorker`, закрывать вход до WPF-отписки и ожидать текущий handler/pulse в host cleanup. Runtime events, shortcuts и polling-state считаются per-run. Ошибка пользовательского handler не должна останавливать остальных подписчиков или превращаться в cleanup failure.
 
-Из корня: `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~KeyboardMouseTests`, затем `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~DispatcherGraphicsTests`, `dotnet test KID.sln -c Release --no-restore` и `dotnet build KID.sln -c Release --no-restore`.
+Для Music нельзя создавать static fire-and-forget playback/fade task или второй registry execution identity. Любой звук должен принадлежать `MusicExecutionScope`, каждая async-операция — получать playback/session token и находиться в task registry, а временный файл — регистрироваться до первой отменяемой записи. Host shutdown закрывает регистрацию синхронно, пытается остановить все outputs и только затем отменяет и ожидает задачи; `SoundPlayerOFF()` этот host-контракт не заменяет.
 
-STA-тесты не открывают видимые окна и не используют аудиоустройство. Они проверяют блокированный Dispatcher, Stop/Dispose races, normal drain, cleanup faults, input WPF-отписки, per-run state, 20 повторных input scopes и освобождение ALC после пользовательских event delegates. Эти проверки не заменяют визуальную приёмку; cleanup аудио остаётся работой этапа 7.
+Из корня: `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~MusicLifecycleTests`, затем focused-наборы `KeyboardMouseTests` и `DispatcherGraphicsTests`, `dotnet test KID.sln -c Release --no-restore` и `dotnet build KID.sln -c Release --no-restore`.
+
+STA/audio lifecycle-тесты не открывают видимые окна, не используют звуковое устройство и не выходят в сеть: `IMusicRuntime` подменяет NAudio/HTTP/filesystem. Набор проверяет Stop/Dispose races, normal drain, cleanup faults, input WPF-отписки, stale audio handle, отмену URL-записи, повторные scopes и освобождение пользовательских ALC. Это не заменяет ручную проверку реального аудиоустройства и кодеков ОС.
 
 ## Начало работы
 
@@ -115,20 +117,27 @@ public static Shape? MyNewMethod(double x, double y)
 ### Добавление нового метода Music API
 
 1. Определите, в какой файл добавить метод (Sound.cs, Advanced.cs, и т.д.)
-2. Добавьте метод с использованием `StopManager.StopIfButtonPressed()` для поддержки отмены:
+2. Получите текущую `MusicExecutionScope`; длительные синхронные обходы проверяют её token на каждой итерации:
 
 ```csharp
-public static void MyNewMethod(SoundNote note)
+private static SoundNote[] Snapshot(
+    IEnumerable<SoundNote> notes,
+    CancellationToken cancellationToken)
 {
-    StopManager.StopIfButtonPressed();
-    // Ваш код
-    PlayTone(note.Frequency, note.DurationMs, note.GetEffectiveVolume());
+    var result = new List<SoundNote>();
+    foreach (var note in notes)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        result.Add(note);
+    }
+    return result.ToArray();
 }
 ```
 
-3. Для работы с тонами используйте `PlayTone()` или `PlaySilence()`
-4. Для работы с файлами используйте методы из `Music.FilePlayback.cs`
-5. Обновите документацию в `docs/Music-API.md`
+3. Playback/fade запускайте только через `scope.StartPlayback`/`StartAuxiliary`; передавайте token в `Task.Delay`, HTTP и файловые async API.
+4. NAudio, HTTP и filesystem вызывайте через `IMusicRuntime`; временный файл сразу передавайте `scope.TrackTemporaryFile`.
+5. Cleanup не должен держать scope lock во время `await`/чужого `Dispose`; ошибки ресурсов собираются после попытки очистить остальные.
+6. Добавьте сценарий в `MusicLifecycleTests` и обновите `docs/Music-API.md`.
 
 ### Добавление нового метода Mouse API
 

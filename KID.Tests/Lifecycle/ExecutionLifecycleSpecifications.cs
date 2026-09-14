@@ -77,12 +77,6 @@ public sealed class ExecutionLifecycleSpecifications
         }
     }
 
-    [Fact(Skip = KnownIssueReasons.AudioRuntimeCleanup)]
-    public void Cleanup_PreventsPreviousRunAudioResourcesFromAffectingNextRun()
-    {
-        Assert.Fail("Deterministic cleanup is not implemented for active audio resources.");
-    }
-
     [Theory]
     [InlineData("void")]
     [InlineData("Task<int>")]

@@ -325,7 +325,7 @@ Console.WriteLine("Время вышло!");
 
 - **Слои и разделение ответственности**
   - Реализация консоли живёт в слое сервисов: `KID.WPF.IDE/Services/CodeExecution/*` (`TextBoxConsole`, `TextBoxConsoleContext`)
-  - Консоль владеет своими UI-командами; библиотечный `DispatcherManager` остаётся отдельным механизмом Graphics/Music
+  - Консоль владеет своими UI-командами; библиотечный `DispatcherManager` остаётся отдельным механизмом Graphics, а Music не обращается к WPF UI
 
 - **Потоковая модель и потокобезопасность**
   - Пользовательское чтение выполняется в фоне, UI-команды проходят через Dispatcher своего TextBox

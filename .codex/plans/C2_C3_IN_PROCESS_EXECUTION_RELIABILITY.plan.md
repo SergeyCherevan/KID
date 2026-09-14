@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–6 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite и детерминированный cleanup Keyboard/Mouse. В KID.Library действует единый ambient ExecutionEnvironment. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/input/execution-контекста; runtime cleanup аудио остаётся этапом 7.
+- **Статус:** in progress — этапы 0–7 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite и детерминированный cleanup Keyboard/Mouse/Music. В KID.Library действует единый ambient ExecutionEnvironment. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/input/audio/execution-контекста; формализация общего cleanup/UI state остаётся этапом 8.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -111,7 +111,7 @@ Idle → Compiling → Running → StopRequested → CleaningUp → Idle
 - [x] Повторный Run не начинает вторую компиляцию, пока активен первый `CodeExecutionService.ExecuteAsync`; полная state/cleanup гарантия остаётся задачей этапов 1 и 8.
 - [x] Обработчики Keyboard/Mouse из первого запуска не вызываются во втором — подтверждено per-run scope, WPF unsubscribe, очисткой delegates и повторными lifecycle-тестами этапа 6.
 - [x] Отложенные Dispatcher-команды первого запуска не продолжаются во втором — проверено в этапе 5.
-- [ ] Звук первого запуска не продолжается во втором — executable specification остаётся для этапа 7.
+- [x] Звук первого запуска не продолжается во втором; старый handle с повторившимся числовым id не управляет новым playback.
 - [x] После серии синхронных и асинхронных запусков пользовательские ALC становятся collectible.
 
 **Критерий этапа выполнен:** `KID.Tests` запускается отдельно и в составе решения; test doubles и lifecycle-тест различают запрос Stop, завершение execution и cleanup; ещё не реализованные гарантии видны как skipped specifications с целевыми этапами.
@@ -299,33 +299,35 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 Затрагиваемые области: `Music/*.cs`, `SoundPlayer.cs`.
 
-- [ ] Вызывать `StopManager.StopIfButtonPressed()` во всех продолжительных синхронных циклах генерации, полифонии и ожидания playback state.
-- [ ] Передавать session token во внутренние `Task.Run`, `Task.Delay`, HTTP/download и другие async-операции, где API поддерживает cancellation.
-- [ ] Связать каждый активный `SoundPlayer` с execution id, чтобы старый task не удалил/не изменил player новой сессии с переиспользованным id.
-- [ ] Сделать единый `ShutdownAsync`:
-  - [ ] запретить регистрацию новых звуков;
-  - [ ] остановить WaveOut;
-  - [ ] отменить и дождаться фоновых playback-задач;
-  - [ ] Dispose player/audio/file resources;
-  - [ ] очистить `_activeSounds` и временные файлы, принадлежащие сессии.
-- [ ] Сохранить `SoundPlayerOFF()` как пользовательскую операцию, но не использовать отменяемый пользовательский путь вместо обязательного host cleanup.
-- [ ] Устранить глухие catch в lifecycle-критичных местах либо передавать ошибки в session diagnostics без падения cleanup.
+- [x] Проверять captured session token во всех продолжительных синхронных обходах генерации/полифонии и ожидать playback state через отменяемый `Task.Delay`; это execution-bound эквивалент facade-вызова `StopManager.StopIfButtonPressed()` без повторного чтения ambient identity.
+- [x] Передавать session token во внутренние `Task.Run`, `Task.Delay`, HTTP/download и другие async-операции, где API поддерживает cancellation.
+- [x] Связать каждый активный `SoundPlayer` с execution identity через точные ссылки на scope/playback, чтобы старый task/handle не удалил и не изменил player новой сессии с переиспользованным id.
+- [x] Сделать единый `ShutdownAsync`:
+  - [x] запретить регистрацию новых звуков;
+  - [x] остановить WaveOut;
+  - [x] отменить и дождаться фоновых playback/fade/I/O-задач;
+  - [x] Dispose player/audio/file resources;
+  - [x] очистить per-run active registry и временные файлы, принадлежащие сессии.
+- [x] Сохранить `SoundPlayerOFF()` как пользовательскую операцию, но не использовать отменяемый пользовательский путь вместо обязательного host cleanup.
+- [x] Устранить глухие catch в lifecycle-критичных местах и передавать resource/task failures через Music scope в session cleanup diagnostics, продолжая независимые cleanup-шаги.
 
 **Критерий этапа:** Stop прекращает весь звук текущей сессии; после cleanup реестр пуст, playback-задачи завершены, повторный запуск не затрагивается поздними callbacks.
+
+**Реализация и проверка этапа 2026-09-14:** добавлены `MusicExecutionScope`, `MusicPlayback` и тестируемые адаптеры `IMusicRuntime`/`IMusicOutput`/`IMusicFileSource`. Scope использует linked session token, владеет активными playback, основными и fade-задачами, output/file resources и временными URL-файлами. `SoundPlayer` стал тонким handle; ownership определяется ссылками, а id нумеруется только внутри запуска. `CanvasGraphicsContext.DisposeAsync` синхронно закрывает Keyboard/Mouse/Music до первого await и независимо ожидает все три scope перед Graphics/Dispatcher release. `SoundPlayerOFF()` останавливает текущий snapshot, но сохраняет сессию открытой для новых звуков. Добавлено 9 focused-тестов без реального устройства и сети: idempotent shutdown, user stop-all, stale handle/id reuse, отмена file I/O и удаление temp, cleanup faults, blocking Sound cancellation, cancellation в синхронном enumerable, partial Init и 8 compiled ALC. Focused-набор выдержал 10/10 повторных прогонов. Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Release --no-build --no-restore`: 150 пройдено, 0 пропущено, 0 провалено. Ручная проверка реального аудиоустройства/кодеков не выполнялась.
 
 ## 🧹 Этап 8. Единый async cleanup и корректный UI state
 
 Затрагиваемые области: execution contexts/interfaces, `CodeExecutionService`, `MenuViewModel`, `MenuView.xaml`, локализации.
 
-- [ ] Перевести контексты, которым нужно ожидать worker-задачи, на `IAsyncDisposable`/`DisposeAsync`.
-  - Console и объединяющий execution-контекст переведены в этапе 4, Graphics — в этапе 5, Keyboard/Mouse workers — в этапе 6; ожидание Music playback остаётся работой этапов 7–8.
+- [x] Перевести контексты, которым нужно ожидать worker-задачи, на `IAsyncDisposable`/`DisposeAsync`.
+  - Console и объединяющий execution-контекст переведены в этапе 4, Graphics — в этапе 5, Keyboard/Mouse workers — в этапе 6; Music playback подключён к `CanvasGraphicsContext.DisposeAsync` в этапе 7.
 - [ ] Сделать Init/Dispose частично-инициализированного контекста безопасными и идемпотентными.
 - [ ] Зафиксировать порядок cleanup:
   1. [ ] перевести state в `CleaningUp` и инвалидировать execution id для новых callback;
   2. [x] остановить входящие Console/Keyboard/Mouse события;
-  3. [ ] отменить и дождаться библиотечных worker/playback-задач;
+  3. [x] отменить и дождаться библиотечных worker/playback-задач;
   4. [x] abort/ignore pending Dispatcher operations;
-  5. [ ] остановить звук и очистить Canvas/runtime static state;
+  5. [x] остановить звук и очистить Canvas/runtime static state;
   6. [ ] восстановить глобальные Console streams и static bridges;
   7. [ ] удалить пользовательские delegates/references;
   8. [ ] выгрузить ALC и освободить session CTS;
@@ -360,7 +362,7 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 - [ ] Stop во время compilation.
 - [ ] Stop в tight loop без вызовов KID API.
-- [ ] Stop в Graphics/Sprite/Music loop.
+- [x] Stop в Graphics/Sprite/Music loop.
 - [ ] Stop во время `Console.Read`, `ReadLine`, `Task.Delay` и поддержанного `Thread.Sleep`.
 - [x] `void Main`, `int Main`, `Task Main`, `Task<int> Main`; каждый вариант проверен без параметров и с `string[]`.
 - [x] пользовательское исключение, cancellation и compilation error имеют разные результаты.
