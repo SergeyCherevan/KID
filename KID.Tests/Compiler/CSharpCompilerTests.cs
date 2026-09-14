@@ -132,7 +132,7 @@ public sealed class CSharpCompilerTests
             Assert.NotNull(assembly.EntryPoint);
 
             using var cancellationSource = new CancellationTokenSource();
-            using var lease = StopManager.BeginExecution(1001, cancellationSource.Token);
+            using var lease = ExecutionEnvironmentManager.BeginExecution(1001, cancellationSource.Token);
             var execution = Task.Run(
                 () => assembly.EntryPoint.Invoke(null, null));
 

@@ -27,7 +27,7 @@ namespace KID.Services.CodeExecution.Contexts
             this.initializeRuntime = initializeRuntime ?? throw new ArgumentNullException(nameof(initializeRuntime));
         }
 
-        public void Init(long executionId, CancellationToken cancellationToken, Dispatcher dispatcher)
+        public void Init(long executionId, Dispatcher dispatcher)
         {
             lock (gate)
             {
@@ -37,7 +37,7 @@ namespace KID.Services.CodeExecution.Contexts
                 canvas.VerifyAccess();
                 if (canvas.Dispatcher != dispatcher) throw new ArgumentException("Dispatcher must own the Canvas.", nameof(dispatcher));
                 initialized = true;
-                scope = DispatcherManager.BeginExecution(executionId, dispatcher, cancellationToken);
+                scope = DispatcherManager.AttachDispatcher(executionId, dispatcher);
                 Graphics.Init(canvas, scope);
                 initializeRuntime(canvas);
             }

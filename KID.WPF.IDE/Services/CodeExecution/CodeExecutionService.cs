@@ -37,7 +37,7 @@ namespace KID.Services.CodeExecution
         private readonly ICodeCompiler compiler;
         private readonly ICodeRunner runner;
         private readonly Func<long, ExecutionSession> sessionFactory;
-        private readonly Func<long, CancellationToken, IDisposable> stopManagerLeaseFactory;
+        private readonly Func<long, CancellationToken, IDisposable> executionEnvironmentLeaseFactory;
 
         // Monitor / Critical Section: этот объект синхронизирует чтение и изменение
         // currentSession, счётчика id и переходов state machine.
@@ -64,7 +64,7 @@ namespace KID.Services.CodeExecution
                 runner,
                 static executionId => new ExecutionSession(executionId),
                 static (executionId, cancellationToken) =>
-                    StopManager.BeginExecution(executionId, cancellationToken))
+                    ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken))
         {
         }
 
@@ -75,7 +75,7 @@ namespace KID.Services.CodeExecution
             ICodeCompiler compiler,
             ICodeRunner runner,
             Func<long, ExecutionSession> sessionFactory,
-            Func<long, CancellationToken, IDisposable> stopManagerLeaseFactory)
+            Func<long, CancellationToken, IDisposable> executionEnvironmentLeaseFactory)
         {
             /* Fail fast: Coordinator не может поддерживать lifecycle без обеих обязательных
              * стратегий. Проверка конструктора не позволяет создать частично рабочий сервис.
@@ -84,8 +84,8 @@ namespace KID.Services.CodeExecution
             this.runner = runner ?? throw new ArgumentNullException(nameof(runner));
             this.sessionFactory = sessionFactory ??
                 throw new ArgumentNullException(nameof(sessionFactory));
-            this.stopManagerLeaseFactory = stopManagerLeaseFactory ??
-                throw new ArgumentNullException(nameof(stopManagerLeaseFactory));
+            this.executionEnvironmentLeaseFactory = executionEnvironmentLeaseFactory ??
+                throw new ArgumentNullException(nameof(executionEnvironmentLeaseFactory));
         }
 
         /// <summary>
@@ -178,7 +178,7 @@ namespace KID.Services.CodeExecution
         /// </para>
         /// <para>
         /// Возвращённая задача завершается только после попыток освободить контекст, экземпляр
-        /// выполнения, lease объекта <see cref="StopManager"/> и принадлежащий сессии
+        /// выполнения, lease ambient execution environment и принадлежащий сессии
         /// <see cref="CancellationTokenSource"/>. При подтверждённом cleanup сервис переходит в
         /// <see cref="ExecutionState.Idle"/>; ошибка освобождения оставляет его в CleaningUp и
         /// блокирует новый Run. Ожидаемый Stop завершается успешно только при успешном cleanup.
@@ -355,7 +355,7 @@ namespace KID.Services.CodeExecution
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Метод является внутренним pipeline Coordinator. StopManager lease применяет
+        /// Метод является внутренним pipeline Coordinator. ExecutionEnvironment lease применяет
         /// <b>Lease / Scope Guard</b>, фабрика контекста — <b>Factory</b>, completion source —
         /// <b>Promise / Future</b>, а единый токен — <b>Cooperative Cancellation</b>.
         /// </para>
@@ -366,10 +366,10 @@ namespace KID.Services.CodeExecution
         /// </para>
         /// <para>
         /// Pipeline имеет порядок:
-        /// Регистрация токена StopManager → создание контекста → инициализация контекста →
+        /// Публикация ExecutionEnvironment → создание контекста → инициализация контекста →
         /// компиляция → при успешной компиляции Start и ожидание Completion →
         /// CleaningUp → независимые попытки освободить контекст, экземпляр выполнения,
-        /// регистрацию токена и сессию → при полном успехе Idle → завершение внешней задачи.
+        /// environment lease и сессию → при полном успехе Idle → завершение внешней задачи.
         /// </para>
         /// <para>
         /// Нормальная отмена текущим session token не считается ошибкой сама по себе. Любое
@@ -403,7 +403,7 @@ namespace KID.Services.CodeExecution
              */
             ICodeExecutionContext? context = null;
             ICodeRunningInstance? runningInstance = null;
-            IDisposable? stopManagerLease = null;
+            IDisposable? executionEnvironmentLease = null;
 
             /* Все обычные ошибки откладываются до окончания cleanup. Первая причина остаётся
              * основной, а последующие доступны через AggregateException как диагностика.
@@ -412,13 +412,13 @@ namespace KID.Services.CodeExecution
 
             try
             {
-                /* Публикуем токен текущей сессии в KID.Library. Возвращённый lease привязан
-                 * к execution id и при Dispose очистит CurrentToken только для своей сессии.
+                /* Публикуем единую ambient identity текущей сессии в KID.Library.
+                 * Возвращённый lease снимает только environment этой сессии.
                  */
-                stopManagerLease = stopManagerLeaseFactory(
+                executionEnvironmentLease = executionEnvironmentLeaseFactory(
                     session.ExecutionId,
                     session.CancellationToken) ??
-                    throw new InvalidOperationException("StopManager lease is null.");
+                    throw new InvalidOperationException("Execution environment lease is null.");
 
                 /* Контекст создаётся после принятия сессии и получает её токен уже на этапе
                  * конструирования. null означает нарушение реализации фабрики, а не ошибку
@@ -428,7 +428,7 @@ namespace KID.Services.CodeExecution
                     throw new InvalidOperationException("Execution context is null.");
 
                 /* Защитно восстанавливаем главный инвариант даже для ошибочной фабрики:
-                 * Context, compiler, runner и StopManager обязаны использовать один session token.
+                 * Context, compiler, runner и ambient environment обязаны использовать один token.
                  */
                 context.CancellationToken = session.CancellationToken;
                 context.ExecutionId = session.ExecutionId;
@@ -532,10 +532,10 @@ namespace KID.Services.CodeExecution
                 /* Затем разрываются ссылки running instance и инициируется выгрузка ALC. */
                 cleanupSucceeded &= failures.Capture(() => runningInstance?.Dispose());
 
-                /* Lease снимается даже после ошибок предыдущих шагов и очищает ambient token
-                 * только при совпадении execution id.
+                /* Environment lease снимается даже после ошибок предыдущих шагов.
+                 * Reference compare не позволяет stale cleanup очистить новый environment.
                  */
-                cleanupSucceeded &= failures.Capture(() => stopManagerLease?.Dispose());
+                cleanupSucceeded &= failures.Capture(() => executionEnvironmentLease?.Dispose());
 
                 /* CTS освобождается последним из ресурсов сессии, когда зависимые ожидания уже
                  * завершены либо получили свою попытку cleanup.
@@ -650,7 +650,7 @@ namespace KID.Services.CodeExecution
         /// и атомарно очищает <c>currentSession</c>.
         /// </summary>
         /// <remarks>
-        /// Вызывается после DisposeAsync контекста и Dispose экземпляра, StopManager lease и session CTS.
+        /// Вызывается после DisposeAsync контекста и Dispose экземпляра, environment lease и session CTS.
         /// До завершения этого метода новый Run остаётся запрещённым.
         /// </remarks>
         /// <param name="session">Полностью очищенная сессия, которую необходимо снять.</param>

@@ -35,7 +35,7 @@ namespace KID
 
                 foreach (var other in sprites)
                 {
-                    DispatcherManager.CheckStop();
+                    executionScope.Environment.ThrowIfCancellationRequested();
                     if (other == null) continue;
                     if (ReferenceEquals(this, other))
                         continue;
@@ -53,7 +53,7 @@ namespace KID
                     // Попарно проверяем элементы
                     foreach (var e1 in GraphicElements)
                     {
-                        DispatcherManager.CheckStop();
+                        executionScope.Environment.ThrowIfCancellationRequested();
                         if (e1 == null || !IsElementVisible(e1))
                             continue;
 
@@ -63,7 +63,7 @@ namespace KID
 
                         foreach (var e2 in other.GraphicElements)
                         {
-                            DispatcherManager.CheckStop();
+                            executionScope.Environment.ThrowIfCancellationRequested();
                             if (e2 == null || !IsElementVisible(e2))
                                 continue;
 
@@ -95,7 +95,7 @@ namespace KID
 
             foreach (var element in sprite.GraphicElements)
             {
-                DispatcherManager.CheckStop();
+                sprite.executionScope.Environment.ThrowIfCancellationRequested();
                 if (element == null || !IsElementVisible(element))
                     continue;
 

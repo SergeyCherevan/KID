@@ -112,7 +112,8 @@ namespace KID.Services.CodeExecution
         /// Возвращает токен принадлежащего сессии <see cref="CancellationTokenSource"/>.
         /// </summary>
         /// <remarks>
-        /// Один и тот же токен передаётся в StopManager, execution-контекст, compiler и runner,
+        /// Один и тот же токен публикуется через ExecutionEnvironment, передаётся в
+        /// execution-контекст, compiler и runner,
         /// образуя единый канал cooperative cancellation.
         /// </remarks>
         public CancellationToken CancellationToken => cancellationSource.Token;
@@ -251,7 +252,7 @@ namespace KID.Services.CodeExecution
         /// </summary>
         /// <remarks>
         /// Coordinator вызывает Dispose после завершения compiler/runner, очистки
-        /// execution-контекста и снятия StopManager lease. Повторный вызов безопасен и
+        /// execution-контекста и снятия ExecutionEnvironment lease. Повторный вызов безопасен и
         /// не выполняет Dispose ресурса второй раз.
         /// </remarks>
         public void Dispose()

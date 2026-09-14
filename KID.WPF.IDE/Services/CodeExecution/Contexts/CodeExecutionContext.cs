@@ -51,7 +51,7 @@ namespace KID.Services.CodeExecution.Contexts
             ObjectDisposedException.ThrowIf(Volatile.Read(ref disposeStarted) != 0, this);
             if (initialized) throw new InvalidOperationException("Execution context is already initialized.");
             initialized = true;
-            GraphicsContext?.Init(ExecutionId, CancellationToken, Dispatcher);
+            GraphicsContext?.Init(ExecutionId, Dispatcher);
             ConsoleContext?.Init(ExecutionId, CancellationToken);
         }
 

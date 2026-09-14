@@ -171,10 +171,10 @@ public sealed class CodeExecutionServiceTests
                     throw sessionException;
                 })),
             (executionId, cancellationToken) => new DelegatingDisposable(
-                StopManager.BeginExecution(executionId, cancellationToken),
+                ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken),
                 () =>
                 {
-                    cleanupOrder.Add("stop manager lease");
+                    cleanupOrder.Add("execution environment lease");
                     throw leaseException;
                 }));
 
@@ -198,7 +198,7 @@ public sealed class CodeExecutionServiceTests
             {
                 "execution context",
                 "running instance",
-                "stop manager lease",
+                "execution environment lease",
                 "session"
             },
             cleanupOrder);
@@ -341,7 +341,7 @@ public sealed class CodeExecutionServiceTests
             new FakeCodeRunner(),
             executionId => createdSession = new ExecutionSession(executionId),
             static (executionId, cancellationToken) =>
-                StopManager.BeginExecution(executionId, cancellationToken));
+                ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken));
         service.StateChanged += (_, eventArgs) =>
         {
             if (eventArgs.CurrentState == ExecutionState.CleaningUp)

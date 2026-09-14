@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–5 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console и execution-aware Dispatcher/Graphics/Sprite. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/execution-контекста; общий runtime cleanup ввода/аудио ещё не завершён.
+- **Статус:** in progress — этапы 0–5 и инфраструктурный рефакторинг 5.1 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console и execution-aware Dispatcher/Graphics/Sprite. В KID.Library действует единый ambient ExecutionEnvironment. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/execution-контекста; общий runtime cleanup ввода/аудио ещё не завершён.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -255,9 +255,28 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 **Критерий этапа:** после Stop ни одна отложенная команда старого запуска не меняет Canvas нового; WPF UI не получает необработанный `OperationCanceledException`; статические graphics-настройки предсказуемо сброшены.
 
-**Реализация и проверка этапа 2026-09-13:** execution scope владеет id/token, queued и inline операциями. Stop освобождает синхронного waiter и отменяет pending-команды; normal completion дожидается принятого вывода. Уже исполняющийся callback заканчивается кооперативно до освобождения scope. Ошибки queued callbacks и host cleanup наблюдаются; повторный Dispose возвращает тот же результат. Sprite сохраняет исходный scope, Graphics defaults сбрасываются в Black/Arial 20. Canvas.Children остаётся видимым до очистки следующим Run; размеры Canvas остаются состоянием представления IDE.
+**Реализация и проверка этапа 2026-09-13:** Dispatcher scope владеет queued и inline операциями и получает id/token из environment запуска. Stop освобождает синхронного waiter и отменяет pending-команды; normal completion дожидается принятого вывода. Уже исполняющийся callback заканчивается кооперативно до освобождения scope. Ошибки queued callbacks и host cleanup наблюдаются; повторный Dispose возвращает тот же результат. Sprite сохраняет исходный scope, Graphics defaults сбрасываются в Black/Arial 20. Canvas.Children остаётся видимым до очистки следующим Run; размеры Canvas остаются состоянием представления IDE.
 
 Добавлены 26 DispatcherGraphicsTests: блокированный UI, гонки, nested dispatch, stale Sprite, checkpoints, partial Init, shutdown Dispatcher, cleanup faults, четыре исхода скомпилированного кода, ожидание cleanup до unload/следующего Run, GC scope и queued delegate ALC. Полный Release test: 129 пройдено, 1 пропущен, 0 провалено. Оставшийся skip — ввод/аудио этапов 6–8. STA-проверки без видимых окон; visual acceptance не выполнялась. Прямые WPF-ссылки, пользовательские background tasks и удерживаемые UI-делегаты не получают гарантии изоляции/выгрузки; отписки ввода и audio teardown ещё впереди.
+
+## 🧭 Этап 5.1. Единый ambient ExecutionEnvironment
+
+Затрагиваемые области: `ExecutionEnvironment*`, `StopManager`, `DispatcherManager`, `ExecutionDispatcherScope`, `Sprite/*`, `Graphics.SimpleFigures`, execution contexts/coordinator.
+
+- [x] Оставить `ExecutionSession` владельцем полного host lifecycle/FSM, а в KID.Library публиковать ровно одну ambient identity.
+- [x] Добавить immutable `ExecutionEnvironment` с execution id/token и подключаемой Dispatcher capability.
+- [x] Добавить один `ExecutionEnvironmentManager` с reference-based idempotent lease и защитой от stale release.
+- [x] Превратить `StopManager` в публичный facade без собственного id/token registry, lock и lease; сохранить `CurrentToken`, `StopIfButtonPressed` и `Sleep`.
+- [x] Превратить `DispatcherManager` в WPF facade без собственного current execution; `AttachDispatcher` атомарно проверяет id и подключает scope к environment.
+- [x] Убрать копии id/token из `ExecutionDispatcherScope`; сохранить race barriers до Post, в Work.Run, token registration, cancellation-aware wait и длинных обходах.
+- [x] Удалить `DispatcherManager.CheckStop`; Sprite и Polygon проверяют захваченный environment, поэтому stale object не принимает identity нового запуска.
+- [x] Убрать token из `IGraphicsContext.Init`: CanvasGraphicsContext получает его через уже опубликованный environment.
+- [x] Сохранить порядок cleanup: context/Dispatcher capability → running instance/ALC → environment lease → session CTS → Idle.
+- [x] Обновить unit/integration tests и документацию без изменения Roslyn instrumentation и публичного пользовательского Stop API.
+
+**Критерий этапа:** в KID.Library существует один ambient current; managers имеют разные функциональные роли, но не дублируют ownership execution. Повторные cancellation points сохраняются как отдельные race barriers.
+
+**Реализация и проверка этапа 2026-09-14:** добавлены `ExecutionEnvironment` и `ExecutionEnvironmentManager`; attach Dispatcher атомарен относительно release environment и не создаёт порядок блокировок scope → environment. Добавлены 4 новых environment-теста, существующие Stop/Dispatcher/Graphics/compiled-program сценарии переведены на общий registry. Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Release --no-restore`: 133 пройдено, 1 пропущен, 0 провалено. Оставшийся skip относится к cleanup Keyboard/Mouse/Music этапов 6–8.
 
 ## ⌨️🖱️ Этап 6. Keyboard и Mouse: остановка worker-задач и отписки
 
@@ -356,7 +375,7 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 ### Ошибки финализации
 
-- [x] Поочерёдно имитировать исключение при освобождении context, экземпляра выполнения, StopManager lease и session CTS; проверить попытки выполнить оставшиеся независимые шаги очистки и передачу ошибки вызывающей стороне.
+- [x] Поочерёдно имитировать исключение при освобождении context, экземпляра выполнения, ExecutionEnvironment lease и session CTS; проверить попытки выполнить оставшиеся независимые шаги очистки и передачу ошибки вызывающей стороне.
 - [x] Имитировать исключение из подписчика `StateChanged` при переходах в `CleaningUp` и `Idle`; проверить продолжение финализации, согласованность состояния с `currentSession` и завершение внешней задачи.
 - [x] Имитировать сбой `CompleteSession()` до и после изменения состояния; проверить, что внешняя задача завершается с ошибкой, а доступность нового Run соответствует фактическому состоянию ресурсов.
 - [x] Проверить сочетания «ошибка выполнения + ошибка cleanup», «несколько ошибок cleanup» и «ожидаемый Stop + ошибка cleanup»: первичная неожиданная ошибка сохраняется, вторичные доступны в диагностике, ошибка очистки не маскируется успешной остановкой.

@@ -205,13 +205,19 @@ namespace KID
         {
             if (points == null || points.Length == 0)
                 throw new ArgumentNullException("Points array is null or empty");
-            
-            return DispatcherManager.InvokeOnUI(() =>
+
+            var scope = DispatcherManager.GetScope();
+            return Polygon(scope, points);
+        }
+
+        private static Polygon Polygon(ExecutionDispatcherScope scope, IEnumerable<Point> points)
+        {
+            return DispatcherManager.InvokeOnUI(scope, () =>
             {
                 if (Canvas == null) throw new ArgumentNullException("Canvas is null");
                 var polygon = new Polygon
                 {
-                    Points = CreatePoints(points),
+                    Points = CreatePoints(points, scope.Environment),
                     Fill = fillBrush,
                     Stroke = strokeBrush
                 };
@@ -221,23 +227,26 @@ namespace KID
         }
         public static Polygon Polygon((double x, double y)[] points)
         {
-            DispatcherManager.CheckStop();
+            var scope = DispatcherManager.GetScope();
+            scope.Environment.ThrowIfCancellationRequested();
             ArgumentNullException.ThrowIfNull(points);
             var converted = new Point[points.Length];
             for (var i = 0; i < points.Length; i++)
             {
-                DispatcherManager.CheckStop();
+                scope.Environment.ThrowIfCancellationRequested();
                 converted[i] = new Point(points[i].x, points[i].y);
             }
-            return Polygon(converted);
+            return Polygon(scope, converted);
         }
 
-        private static PointCollection CreatePoints(IEnumerable<Point> points)
+        private static PointCollection CreatePoints(
+            IEnumerable<Point> points,
+            ExecutionEnvironment environment)
         {
             var result = new PointCollection();
             foreach (var point in points)
             {
-                DispatcherManager.CheckStop();
+                environment.ThrowIfCancellationRequested();
                 result.Add(point);
             }
             return result;

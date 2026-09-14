@@ -2,7 +2,7 @@
 
 ## Проверки Dispatcher/Graphics (C2/C3, этап 5)
 
-Новая пользовательская UI-операция должна проходить через DispatcherManager целиком, включая чтение WPF-свойств. В длинных обходах добавляйте CheckStop; не перехватывайте его общим catch с продолжением работы. Host cleanup не использует session token. Scope закрывается только после завершения принятых операций; синхронный Dispatcher.Invoke для ожидания из пользовательского потока не применяется.
+Новая пользовательская UI-операция должна проходить через DispatcherManager целиком, включая чтение WPF-свойств. Пользовательский/инструментированный код проверяет Stop через `StopManager`; execution-bound объекты и длинные обходы используют захваченный `scope.Environment.ThrowIfCancellationRequested()`. Не добавляйте новые глобальные способы проверки token и не перехватывайте отмену общим catch с продолжением работы. Host cleanup не использует session token. Scope закрывается только после завершения принятых операций; синхронный Dispatcher.Invoke для ожидания из пользовательского потока не применяется.
 
 Из корня: `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~DispatcherGraphicsTests`, затем `dotnet test KID.sln -c Release --no-restore` и `dotnet build KID.sln -c Release --no-restore`.
 
@@ -333,7 +333,7 @@ var result = DispatcherManager.InvokeOnUI<ReturnType>(() =>
 });
 ```
 
-**Важно:** `DispatcherManager` должен быть инициализирован в `CodeExecutionContext.Init()` перед использованием. Это происходит автоматически при создании контекста выполнения.
+**Важно:** `CodeExecutionService` сначала публикует единый `ExecutionEnvironment`, после чего `CanvasGraphicsContext.Init()` автоматически подключает к нему Dispatcher capability. Пользовательский код не инициализирует managers самостоятельно.
 
 ### Асинхронность
 

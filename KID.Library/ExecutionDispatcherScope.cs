@@ -16,25 +16,28 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
     private readonly CancellationTokenRegistration registration;
     private bool closing;
 
-    internal ExecutionDispatcherScope(long executionId, Dispatcher dispatcher, CancellationToken token)
+    internal ExecutionDispatcherScope(ExecutionEnvironment environment, Dispatcher dispatcher)
     {
-        ExecutionId = executionId;
-        Dispatcher = dispatcher;
-        Token = token;
-        registration = token.Register(AbortPending);
+        Environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        Dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        registration = environment.CancellationToken.Register(AbortPending);
     }
 
-    internal long ExecutionId { get; }
+    internal ExecutionEnvironment Environment { get; }
+    internal long ExecutionId => Environment.ExecutionId;
     internal Dispatcher Dispatcher { get; }
-    internal CancellationToken Token { get; }
     internal int PendingCount { get { lock (gate) return pending.Count; } }
 
     internal void CheckAccess(bool nested = false)
     {
-        Token.ThrowIfCancellationRequested();
+        Environment.ThrowIfCancellationRequested();
         lock (gate)
-            if (!DispatcherManager.IsCurrent(this) || (closing && !nested))
+            if (!ExecutionEnvironmentManager.IsCurrent(Environment) ||
+                !Environment.OwnsDispatcher(this) ||
+                (closing && !nested))
+            {
                 throw new ObjectDisposedException(nameof(ExecutionDispatcherScope));
+            }
     }
 
     internal Work<T> Post<T>(Func<T> action, bool reportFailure)
@@ -49,7 +52,7 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
             catch { pending.Remove(work); throw; }
         }
         _ = work.ObserveAsync();
-        if (Token.IsCancellationRequested) work.Abort();
+        if (Environment.CancellationToken.IsCancellationRequested) work.Abort();
         return work;
     }
 
@@ -105,7 +108,7 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
     {
         try
         {
-            if (Token.IsCancellationRequested) AbortPending();
+            if (Environment.CancellationToken.IsCancellationRequested) AbortPending();
             await Task.WhenAll(tasks).ConfigureAwait(false);
             await registration.DisposeAsync().ConfigureAwait(false);
         }
@@ -153,20 +156,25 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
         {
             try
             {
-                if (!DispatcherManager.IsCurrent(owner))
+                if (!ExecutionEnvironmentManager.IsCurrent(owner.Environment) ||
+                    !owner.Environment.OwnsDispatcher(owner))
+                {
                     throw new ObjectDisposedException(nameof(ExecutionDispatcherScope));
-                owner.Token.ThrowIfCancellationRequested();
+                }
+                owner.Environment.ThrowIfCancellationRequested();
                 Result.TrySetResult(DispatcherManager.Execute(owner, action!));
             }
             catch (OperationCanceledException exception) when (
-                owner.Token.IsCancellationRequested && exception.CancellationToken == owner.Token)
+                owner.Environment.CancellationToken.IsCancellationRequested &&
+                exception.CancellationToken == owner.Environment.CancellationToken)
             {
-                Result.TrySetCanceled(owner.Token);
+                Result.TrySetCanceled(owner.Environment.CancellationToken);
             }
             catch (Exception exception)
             {
                 // После отмены waiter уже мог уйти. Не теряем поздний неожиданный fault.
-                if (reportFailure || owner.Token.IsCancellationRequested) owner.failures.Enqueue(exception);
+                if (reportFailure || owner.Environment.CancellationToken.IsCancellationRequested)
+                    owner.failures.Enqueue(exception);
                 Result.TrySetException(exception);
             }
             finally { action = null; }
@@ -177,9 +185,9 @@ internal sealed class ExecutionDispatcherScope : IAsyncDisposable
         internal async Task ObserveAsync()
         {
             try { await Operation!.Task.ConfigureAwait(false); }
-            catch (OperationCanceledException) when (owner.Token.IsCancellationRequested)
+            catch (OperationCanceledException) when (owner.Environment.CancellationToken.IsCancellationRequested)
             {
-                Result.TrySetCanceled(owner.Token);
+                Result.TrySetCanceled(owner.Environment.CancellationToken);
             }
             catch (Exception exception)
             {

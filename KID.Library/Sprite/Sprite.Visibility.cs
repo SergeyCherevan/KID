@@ -17,7 +17,7 @@ namespace KID
 
                 foreach (var element in GraphicElements)
                 {
-                    DispatcherManager.CheckStop();
+                    executionScope.Environment.ThrowIfCancellationRequested();
                     if (element == null) continue;
                     element.Visibility = Visibility.Visible;
                 }
@@ -39,7 +39,7 @@ namespace KID
 
                 foreach (var element in GraphicElements)
                 {
-                    DispatcherManager.CheckStop();
+                    executionScope.Environment.ThrowIfCancellationRequested();
                     if (element == null) continue;
                     element.Visibility = Visibility.Hidden;
                 }

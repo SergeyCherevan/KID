@@ -27,7 +27,7 @@ public sealed class StopManagerTests
     public async Task Sleep_WithActiveExecution_IsInterruptedByStop()
     {
         using var cancellationSource = new CancellationTokenSource();
-        using var lease = StopManager.BeginExecution(1002, cancellationSource.Token);
+        using var lease = ExecutionEnvironmentManager.BeginExecution(1002, cancellationSource.Token);
         var sleep = Task.Run(() => Record.Exception(
             () => StopManager.Sleep(Timeout.Infinite)));
 
@@ -41,10 +41,10 @@ public sealed class StopManagerTests
     }
 
     [Fact]
-    public void ExecutionLease_PublishesCancellationAndResetsTokenOnDispose()
+    public void EnvironmentLease_PublishesCancellationAndResetsTokenOnDispose()
     {
         using var cancellationSource = new CancellationTokenSource();
-        var lease = StopManager.BeginExecution(1, cancellationSource.Token);
+        var lease = ExecutionEnvironmentManager.BeginExecution(1, cancellationSource.Token);
 
         try
         {
@@ -64,14 +64,14 @@ public sealed class StopManagerTests
     }
 
     [Fact]
-    public void BeginExecution_WhileTokenIsActive_IsRejected()
+    public void BeginEnvironment_WhileExecutionIsActive_IsRejected()
     {
         using var firstCancellationSource = new CancellationTokenSource();
         using var secondCancellationSource = new CancellationTokenSource();
-        using var firstLease = StopManager.BeginExecution(1, firstCancellationSource.Token);
+        using var firstLease = ExecutionEnvironmentManager.BeginExecution(1, firstCancellationSource.Token);
 
         Assert.Throws<InvalidOperationException>(() =>
-            StopManager.BeginExecution(2, secondCancellationSource.Token));
+            ExecutionEnvironmentManager.BeginExecution(2, secondCancellationSource.Token));
         Assert.Equal(firstCancellationSource.Token, StopManager.CurrentToken);
     }
 
@@ -80,10 +80,10 @@ public sealed class StopManagerTests
     {
         using var firstCancellationSource = new CancellationTokenSource();
         using var secondCancellationSource = new CancellationTokenSource();
-        var firstLease = StopManager.BeginExecution(1, firstCancellationSource.Token);
+        var firstLease = ExecutionEnvironmentManager.BeginExecution(1, firstCancellationSource.Token);
         firstLease.Dispose();
 
-        using var secondLease = StopManager.BeginExecution(2, secondCancellationSource.Token);
+        using var secondLease = ExecutionEnvironmentManager.BeginExecution(2, secondCancellationSource.Token);
 
         firstLease.Dispose();
 

@@ -275,7 +275,7 @@ public sealed class DefaultCodeRunnerTests
         using var errorOutput = new StringWriter();
         var originalOutput = global::System.Console.Out;
         var originalError = global::System.Console.Error;
-        IDisposable? stopManagerLease = null;
+        IDisposable? executionEnvironmentLease = null;
         ICodeRunningInstance? execution = null;
 
         AppContext.SetData(startedKey, started);
@@ -283,7 +283,7 @@ public sealed class DefaultCodeRunnerTests
         {
             global::System.Console.SetOut(standardOutput);
             global::System.Console.SetError(errorOutput);
-            stopManagerLease = StopManager.BeginExecution(1, cancellationSource.Token);
+            executionEnvironmentLease = ExecutionEnvironmentManager.BeginExecution(1, cancellationSource.Token);
             execution = runner.Start(artifact, cancellationSource.Token);
             await started.Task.WaitAsync(
                 TimeSpan.FromSeconds(5),
@@ -313,7 +313,7 @@ public sealed class DefaultCodeRunnerTests
 
             if (execution?.Completion.IsCompleted == true)
                 execution.Dispose();
-            stopManagerLease?.Dispose();
+            executionEnvironmentLease?.Dispose();
             global::System.Console.SetOut(originalOutput);
             global::System.Console.SetError(originalError);
             AppContext.SetData(startedKey, null);

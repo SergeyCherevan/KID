@@ -144,7 +144,7 @@
 **Контексты выполнения:**
 - **CodeExecutionContext** — контекст выполнения, объединяющий графический и консольный контексты
   - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
-  - Инициализирует `DispatcherManager` в методе `Init()`
+  - Передаёт execution id в оба контекста, token — консольному; графический контекст получает token из ambient environment
 - **CanvasGraphicsContext** — инициализирует Graphics API с Canvas
 - **TextBoxConsoleContext** — инициализирует консоль с TextBox
 - **CanvasTextBoxContextFabric** — фабрика для создания контекстов
@@ -346,13 +346,23 @@
 
 Этот слой предоставляет API, доступный в пользовательском коде.
 
+#### ExecutionEnvironment
+
+**ExecutionEnvironment.cs / ExecutionEnvironmentManager.cs**
+- Единственный ambient registry execution identity в KID.Library
+- Публикует immutable execution id и CancellationToken одной сессии
+- Подключает и освобождает Dispatcher как временную capability
+- Lease использует reference compare: поздний Dispose старого запуска не очищает новый environment
+- Полным lifecycle и FSM по-прежнему владеют `CodeExecutionService` и `ExecutionSession`
+
 #### DispatcherManager
 
 **DispatcherManager.cs**
 - Статический класс для централизованного управления Dispatcher
-- `Init(Dispatcher dispatcher)` — инициализация с Dispatcher из контекста выполнения
+- Внутренний `AttachDispatcher(executionId, dispatcher)` подключает capability к текущему environment
 - `InvokeOnUI(Action action)` — выполнение действия в UI потоке
 - `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
+- Не хранит собственный current execution, id или token
 - Используется библиотечными API (Graphics, Music) для работы с UI; TextBoxConsole использует собственный Dispatcher с проверкой execution-owner
 
 #### StopManager
@@ -362,7 +372,7 @@
 - `CurrentToken` (CancellationToken) — текущий токен отмены выполнения
 - `StopIfButtonPressed()` — проверяет, была ли нажата кнопка остановки, и выбрасывает исключение при необходимости
 - Используется API (Music и другими) для проверки отмены выполнения
-- Потокобезопасная работа с CancellationToken через блокировку
+- Является публичным facade над текущим `ExecutionEnvironment`; собственного registry и блокировки не имеет
 
 #### Graphics API
 
@@ -490,7 +500,7 @@ Console API → TextBox (UI поток)
 
 `CodeExecutionService` сохраняет экземпляр до `await runningInstance.Completion`. После завершения
 выполнения сервис независимо пытается очистить контекст Console/Graphics, вызвать
-`runningInstance.Dispose()`, снять регистрацию StopManager и освободить сессию. `Completion` не
+`runningInstance.Dispose()`, снять lease ambient ExecutionEnvironment и освободить сессию. `Completion` не
 включает этот внешний cleanup. Только успешная очистка всех четырёх owners разрешает переход в
 `Idle`; иначе публичная lifecycle task завершается ошибкой, а новый Run остаётся заблокированным.
 Общая `JoinableTaskFactory` создаётся из singleton `JoinableTaskContext` и передаётся runner через DI.
@@ -566,7 +576,8 @@ Save / Discard / Cancel для каждой изменённой вкладки
 ## Потокобезопасность
 
 - Все операции с UI выполняются через централизованный `DispatcherManager`
-- `CanvasGraphicsContext` открывает Dispatcher scope с execution id/token; DisposeAsync закрывает приём, ожидает принятые операции и освобождает Graphics до выгрузки ALC
+- `CodeExecutionService` публикует единый `ExecutionEnvironment`; `CanvasGraphicsContext` подключает его Dispatcher capability
+- Dispatcher scope ссылается на environment вместо хранения копий id/token; DisposeAsync закрывает приём, ожидает принятые операции и освобождает Graphics до выгрузки ALC
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
 - Music API использует `DispatcherManager.InvokeOnUI()` для безопасной работы с UI потоком
 - Mouse API собирает события в UI потоке и доставляет обработчики в фоновом потоке

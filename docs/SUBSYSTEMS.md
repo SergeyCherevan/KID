@@ -86,10 +86,10 @@
 - Объединяет графический и консольный контексты
 - Управляет инициализацией и освобождением ресурсов
 - Содержит CancellationToken для отмены
-- Получает ExecutionId от coordinator и передаёт id/token обоим контекстам
+- Получает ExecutionId от coordinator и передаёт id обоим контекстам, а token — консольному
 - DisposeAsync ожидает графику, затем консоль; ошибка графики не мешает восстановлению потоков
 - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
-- Передаёт Dispatcher в CanvasGraphicsContext, который открывает execution scope
+- Передаёт Dispatcher в CanvasGraphicsContext, который подключает capability к текущему environment
 
 **CanvasGraphicsContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs`)
 - Инициализирует Graphics API с Canvas
@@ -646,7 +646,8 @@
 
 **Особенности:**
 - Все операции с UI выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
-- `DispatcherManager` управляет временным execution scope (id, token, pending operations), открываемым CanvasGraphicsContext
+- `ExecutionEnvironmentManager` — единственный ambient registry id/token в KID.Library
+- `DispatcherManager` подключает временный scope к environment и управляет pending operations, не дублируя execution identity
 
 #### 8.2. Работа с цветами
 **Файлы:** `KID.Library/Graphics/Graphics.Colors.cs`, `KID.Library/Graphics/ColorType.cs`

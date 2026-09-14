@@ -21,7 +21,7 @@ namespace KID
 
                 foreach (var element in GraphicElements)
                 {
-                    DispatcherManager.CheckStop();
+                    executionScope.Environment.ThrowIfCancellationRequested();
                     if (element == null) continue;
 
                     var tt = GetOrCreateTranslateTransform(element);

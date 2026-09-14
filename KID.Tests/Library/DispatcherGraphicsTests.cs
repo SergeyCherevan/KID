@@ -24,12 +24,12 @@ public sealed class DispatcherGraphicsTests
         await StaTest.RunAsync(async () =>
         {
             var dispatcher = Dispatcher.CurrentDispatcher;
-            Assert.Throws<ArgumentOutOfRangeException>(() => DispatcherManager.BeginExecution(0, dispatcher, TestContext.Current.CancellationToken));
-            var old = DispatcherManager.BeginExecution(1, dispatcher, default);
-            Assert.Throws<InvalidOperationException>(() => DispatcherManager.BeginExecution(2, dispatcher, TestContext.Current.CancellationToken));
+            Assert.Throws<ArgumentOutOfRangeException>(() => BeginDispatcherExecution(0, dispatcher, TestContext.Current.CancellationToken));
+            var old = BeginDispatcherExecution(1, dispatcher, default);
+            Assert.Throws<InvalidOperationException>(() => BeginDispatcherExecution(2, dispatcher, TestContext.Current.CancellationToken));
             Assert.Equal(42, DispatcherManager.InvokeOnUI(() => 42));
             await old.DisposeAsync();
-            await using var next = DispatcherManager.BeginExecution(2, dispatcher, default);
+            await using var next = BeginDispatcherExecution(2, dispatcher, default);
             await old.DisposeAsync();
             Assert.Throws<ObjectDisposedException>(() => old.Post(() => 0, false));
             Assert.Equal(43, DispatcherManager.InvokeOnUI(() => 43));
@@ -43,7 +43,7 @@ public sealed class DispatcherGraphicsTests
         await StaTest.RunAsync(async () =>
         {
             using var stop = new CancellationTokenSource();
-            await using var scope = DispatcherManager.BeginExecution(1, Dispatcher.CurrentDispatcher, stop.Token);
+            await using var scope = BeginDispatcherExecution(1, Dispatcher.CurrentDispatcher, stop.Token);
             await stop.CancelAsync();
             var error = await Task.Run(() => Record.Exception(() => DispatcherManager.InvokeOnUI(() => 42)), TestContext.Current.CancellationToken);
             Assert.Equal(stop.Token, Assert.IsAssignableFrom<OperationCanceledException>(error).CancellationToken);
@@ -57,7 +57,7 @@ public sealed class DispatcherGraphicsTests
         await StaTest.RunAsync(async () =>
         {
             using var stop = new CancellationTokenSource();
-            await using var scope = DispatcherManager.BeginExecution(1, Dispatcher.CurrentDispatcher, stop.Token);
+            await using var scope = BeginDispatcherExecution(1, Dispatcher.CurrentDispatcher, stop.Token);
             var canvas = new Canvas();
             var worker = Task.Run(() => Record.Exception(() => DispatcherManager.InvokeOnUI(() =>
             {
@@ -86,7 +86,7 @@ public sealed class DispatcherGraphicsTests
     {
         await StaTest.RunAsync(async () =>
         {
-            await using var scope = DispatcherManager.BeginExecution(1, Dispatcher.CurrentDispatcher, default);
+            await using var scope = BeginDispatcherExecution(1, Dispatcher.CurrentDispatcher, default);
             var values = new List<int>();
             Task drain;
             using (Dispatcher.CurrentDispatcher.DisableProcessing())
@@ -115,7 +115,7 @@ public sealed class DispatcherGraphicsTests
         {
             var canvas = new Canvas();
             using var stop = new CancellationTokenSource();
-            var old = DispatcherManager.BeginExecution(1, canvas.Dispatcher, stop.Token);
+            var old = BeginDispatcherExecution(1, canvas.Dispatcher, stop.Token);
             Graphics.Init(canvas, old);
             var oldSprite = new Sprite();
             using (canvas.Dispatcher.DisableProcessing())
@@ -132,7 +132,7 @@ public sealed class DispatcherGraphicsTests
                 CancelWithBlockedUi(stop);
             }
             await old.ShutdownAsync(() => Graphics.Release(old));
-            await using var next = DispatcherManager.BeginExecution(2, canvas.Dispatcher, default);
+            await using var next = BeginDispatcherExecution(2, canvas.Dispatcher, default);
             Graphics.Init(canvas, next);
             try
             {
@@ -158,13 +158,13 @@ public sealed class DispatcherGraphicsTests
     {
         await StaTest.RunAsync(async () =>
         {
-            var scope = DispatcherManager.BeginExecution(1, Dispatcher.CurrentDispatcher, default);
+            var scope = BeginDispatcherExecution(1, Dispatcher.CurrentDispatcher, default);
             var failure = new InvalidOperationException("queued");
             await Task.Run(() => DispatcherManager.InvokeOnUI((Action)(() => throw failure)), TestContext.Current.CancellationToken);
             var error = await Record.ExceptionAsync(async () => await scope.DisposeAsync());
             Assert.Same(failure, error);
             Assert.Same(error, await Record.ExceptionAsync(async () => await scope.DisposeAsync()));
-            await using var next = DispatcherManager.BeginExecution(2, Dispatcher.CurrentDispatcher, default);
+            await using var next = BeginDispatcherExecution(2, Dispatcher.CurrentDispatcher, default);
             var syncError = await Task.Run(() => Record.Exception(() => DispatcherManager.InvokeOnUI<int>(() => throw failure)), TestContext.Current.CancellationToken);
             Assert.Same(failure, syncError);
         });
@@ -176,14 +176,14 @@ public sealed class DispatcherGraphicsTests
         await StaTest.RunAsync(async () =>
         {
             using var stop = new CancellationTokenSource();
-            await using var scope = DispatcherManager.BeginExecution(1, Dispatcher.CurrentDispatcher, stop.Token);
+            await using var scope = BeginDispatcherExecution(1, Dispatcher.CurrentDispatcher, stop.Token);
             using var entered = new ManualResetEventSlim();
             using var release = new ManualResetEventSlim();
             var waiter = Task.Run(() => Record.Exception(() => DispatcherManager.InvokeOnUI(() =>
             {
                 entered.Set();
                 Assert.True(release.Wait(Timeout));
-                DispatcherManager.CheckStop();
+                scope.Scope.Environment.ThrowIfCancellationRequested();
                 return 1;
             })), TestContext.Current.CancellationToken);
             var controller = Task.Run(async () =>
@@ -212,7 +212,8 @@ public sealed class DispatcherGraphicsTests
         {
             var canvas = new Canvas();
             var context = new CanvasGraphicsContext(canvas);
-            context.Init(1, default, canvas.Dispatcher);
+            using var environment = ExecutionEnvironmentManager.BeginExecution(1, default);
+            context.Init(1, canvas.Dispatcher);
             Graphics.Color = "Red";
             Graphics.SetFont("Consolas", 55);
             var shape = Graphics.Circle(3, 3, 2);
@@ -220,9 +221,11 @@ public sealed class DispatcherGraphicsTests
             Assert.Null(Graphics.Canvas);
             Assert.Null(context.GraphicsTarget);
             Assert.Contains(shape, canvas.Children.Cast<UIElement>());
-            Assert.Throws<ObjectDisposedException>(() => context.Init(2, TestContext.Current.CancellationToken, canvas.Dispatcher));
+            Assert.Throws<ObjectDisposedException>(() => context.Init(2, canvas.Dispatcher));
+            environment.Dispose();
+            using var nextEnvironment = ExecutionEnvironmentManager.BeginExecution(2, default);
             await using var next = new CanvasGraphicsContext(canvas);
-            next.Init(2, default, canvas.Dispatcher);
+            next.Init(2, canvas.Dispatcher);
             Assert.Same(Brushes.Black, Graphics.Circle(2, 2, 1).Fill);
             Assert.Equal(20, Graphics.Text(0, 0, "default").FontSize);
         });
@@ -236,10 +239,10 @@ public sealed class DispatcherGraphicsTests
             var canvas = new Canvas();
             var empty = new CanvasGraphicsContext(canvas);
             await empty.DisposeAsync();
-            Assert.Throws<ObjectDisposedException>(() => empty.Init(1, TestContext.Current.CancellationToken, canvas.Dispatcher));
-            await using var active = DispatcherManager.BeginExecution(1, canvas.Dispatcher, default);
+            Assert.Throws<ObjectDisposedException>(() => empty.Init(1, canvas.Dispatcher));
+            await using var active = BeginDispatcherExecution(1, canvas.Dispatcher, default);
             var partial = new CanvasGraphicsContext(canvas);
-            Assert.Throws<InvalidOperationException>(() => partial.Init(2, TestContext.Current.CancellationToken, canvas.Dispatcher));
+            Assert.Throws<InvalidOperationException>(() => partial.Init(2, canvas.Dispatcher));
             await partial.DisposeAsync();
             Assert.Equal(4, DispatcherManager.InvokeOnUI(() => 4));
         });
@@ -251,7 +254,7 @@ public sealed class DispatcherGraphicsTests
         await StaTest.RunAsync(async () =>
         {
             var canvas = new Canvas();
-            await using var scope = DispatcherManager.BeginExecution(1, canvas.Dispatcher, default);
+            await using var scope = BeginDispatcherExecution(1, canvas.Dispatcher, default);
             Graphics.Init(canvas, scope);
             try
             {
@@ -281,7 +284,7 @@ public sealed class DispatcherGraphicsTests
         {
             var canvas = new Canvas();
             using var stop = new CancellationTokenSource();
-            await using var scope = DispatcherManager.BeginExecution(1, canvas.Dispatcher, stop.Token);
+            await using var scope = BeginDispatcherExecution(1, canvas.Dispatcher, stop.Token);
             Graphics.Init(canvas, scope);
             try
             {
@@ -379,10 +382,10 @@ public sealed class DispatcherGraphicsTests
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static async Task<WeakReference> CreateAndDisposeAsync(long id, CancellationToken token)
     {
-        var scope = DispatcherManager.BeginExecution(id, Dispatcher.CurrentDispatcher, token);
+        var scope = BeginDispatcherExecution(id, Dispatcher.CurrentDispatcher, token);
         await Task.Run(() => DispatcherManager.InvokeOnUI(() => { }), TestContext.Current.CancellationToken);
         await scope.DisposeAsync();
-        return new WeakReference(scope);
+        return new WeakReference(scope.Scope);
     }
 
     [Fact]
@@ -393,7 +396,7 @@ public sealed class DispatcherGraphicsTests
             for (var id = 1; id <= 20; id++)
             {
                 using var stop = new CancellationTokenSource();
-                var scope = DispatcherManager.BeginExecution(id, Dispatcher.CurrentDispatcher, stop.Token);
+                var scope = BeginDispatcherExecution(id, Dispatcher.CurrentDispatcher, stop.Token);
                 var writes = 0;
                 var producer = Task.Run(() =>
                 {
@@ -425,12 +428,12 @@ public sealed class DispatcherGraphicsTests
             owned.InvokeShutdown();
             return owned;
         }, TestContext.Current.CancellationToken);
-        var scope = DispatcherManager.BeginExecution(1, dispatcher, TestContext.Current.CancellationToken);
+        var scope = BeginDispatcherExecution(1, dispatcher, TestContext.Current.CancellationToken);
         var work = scope.Post(() => 1, false);
         var resultError = await Record.ExceptionAsync(async () => await work.Result.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken));
         Assert.IsAssignableFrom<OperationCanceledException>(resultError);
         Assert.NotNull(await Record.ExceptionAsync(async () => await scope.DisposeAsync()));
-        Assert.False(DispatcherManager.IsCurrent(scope));
+        Assert.False(ExecutionEnvironmentManager.IsCurrent(scope.Scope.Environment));
     }
 
     [Fact]
@@ -438,12 +441,12 @@ public sealed class DispatcherGraphicsTests
     {
         await StaTest.RunAsync(async () =>
         {
-            var scope = DispatcherManager.BeginExecution(1, Dispatcher.CurrentDispatcher, default);
+            var scope = BeginDispatcherExecution(1, Dispatcher.CurrentDispatcher, default);
             var failure = new InvalidOperationException("host cleanup");
             var error = await Record.ExceptionAsync(async () => await scope.ShutdownAsync(() => throw failure));
             Assert.Same(failure, error);
             Assert.Same(failure, await Record.ExceptionAsync(async () => await scope.DisposeAsync()));
-            Assert.False(DispatcherManager.IsCurrent(scope));
+            Assert.False(ExecutionEnvironmentManager.IsCurrent(scope.Scope.Environment));
         });
     }
 
@@ -486,7 +489,7 @@ public sealed class DispatcherGraphicsTests
         : KID.Services.CodeExecution.Contexts.Interfaces.IGraphicsContext
     {
         public object GraphicsTarget { get; set; } = new();
-        public void Init(long executionId, CancellationToken cancellationToken, Dispatcher dispatcher) { }
+        public void Init(long executionId, Dispatcher dispatcher) { }
         public async ValueTask DisposeAsync()
         {
             entered.TrySetResult();
@@ -519,8 +522,11 @@ public sealed class DispatcherGraphicsTests
         var artifact = (await new CSharpCompiler(localization).CompileAsync(
             "KID.DispatcherManager.InvokeOnUI(() => { KID.Graphics.Circle(10,10,5); });",
             TestContext.Current.CancellationToken)).Artifact!;
+        using var environment = ExecutionEnvironmentManager.BeginExecution(
+            1,
+            TestContext.Current.CancellationToken);
         var context = new CanvasGraphicsContext(canvas);
-        context.Init(1, TestContext.Current.CancellationToken, canvas.Dispatcher);
+        context.Init(1, canvas.Dispatcher);
         var runner = new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory);
         var running = Assert.IsType<CollectibleCodeRunningInstance>(runner.Start(artifact, TestContext.Current.CancellationToken));
         try
@@ -545,12 +551,16 @@ public sealed class DispatcherGraphicsTests
             var canvas = new Canvas();
             var failure = new InvalidOperationException("partial runtime init");
             var context = new CanvasGraphicsContext(canvas, _ => throw failure);
+            var environment = ExecutionEnvironmentManager.BeginExecution(
+                1,
+                TestContext.Current.CancellationToken);
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
-                context.Init(1, TestContext.Current.CancellationToken, canvas.Dispatcher)));
+                context.Init(1, canvas.Dispatcher)));
             Assert.Same(canvas, Graphics.Canvas);
             await context.DisposeAsync();
             Assert.Null(Graphics.Canvas);
-            await using var next = DispatcherManager.BeginExecution(2, canvas.Dispatcher, default);
+            environment.Dispose();
+            await using var next = BeginDispatcherExecution(2, canvas.Dispatcher, default);
             Assert.Equal(7, DispatcherManager.InvokeOnUI(() => 7));
         });
     }
@@ -627,4 +637,51 @@ public sealed class DispatcherGraphicsTests
     // Синхронная часть stress-сценария намеренно не качает Dispatcher: отмена и worker
     // обязаны завершаться без UI continuation. За пределами этого теста используем CancelAsync.
     private static void CancelWithBlockedUi(CancellationTokenSource stop) => stop.Cancel();
+
+    private static DispatcherTestExecution BeginDispatcherExecution(
+        long executionId,
+        Dispatcher dispatcher,
+        CancellationToken cancellationToken)
+    {
+        var environmentLease = ExecutionEnvironmentManager.BeginExecution(
+            executionId,
+            cancellationToken);
+        try
+        {
+            return new DispatcherTestExecution(
+                environmentLease,
+                DispatcherManager.AttachDispatcher(executionId, dispatcher));
+        }
+        catch
+        {
+            environmentLease.Dispose();
+            throw;
+        }
+    }
+
+    private sealed class DispatcherTestExecution(
+        IDisposable environmentLease,
+        ExecutionDispatcherScope scope) : IAsyncDisposable
+    {
+        internal ExecutionDispatcherScope Scope { get; } = scope;
+        internal int PendingCount => Scope.PendingCount;
+
+        internal ExecutionDispatcherScope.Work<T> Post<T>(Func<T> action, bool reportFailure) =>
+            Scope.Post(action, reportFailure);
+
+        internal async ValueTask ShutdownAsync(Action cleanup)
+        {
+            try { await Scope.ShutdownAsync(cleanup); }
+            finally { environmentLease.Dispose(); }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            try { await Scope.DisposeAsync(); }
+            finally { environmentLease.Dispose(); }
+        }
+
+        public static implicit operator ExecutionDispatcherScope(DispatcherTestExecution execution) =>
+            execution.Scope;
+    }
 }

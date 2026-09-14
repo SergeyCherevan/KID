@@ -13,13 +13,13 @@ namespace KID
         private readonly ExecutionDispatcherScope executionScope = DispatcherManager.GetScope();
         private T InvokeOnUI<T>(Func<T> action) => DispatcherManager.InvokeOnUI(executionScope, action);
 
-        private static List<UIElement> CollectElements(IEnumerable<UIElement>? elements)
+        private List<UIElement> CollectElements(IEnumerable<UIElement>? elements)
         {
             var result = new List<UIElement>();
             if (elements == null) return result;
             foreach (var element in elements)
             {
-                DispatcherManager.CheckStop();
+                executionScope.Environment.ThrowIfCancellationRequested();
                 if (element != null) result.Add(element);
             }
             return result;

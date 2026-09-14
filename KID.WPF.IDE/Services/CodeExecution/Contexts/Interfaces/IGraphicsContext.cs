@@ -4,6 +4,6 @@
     {
         object GraphicsTarget { get; set; }
 
-        void Init(long executionId, CancellationToken cancellationToken, System.Windows.Threading.Dispatcher dispatcher);
+        void Init(long executionId, System.Windows.Threading.Dispatcher dispatcher);
     }
 }

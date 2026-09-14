@@ -4,6 +4,8 @@
 
 `Library/DispatcherGraphicsTests.cs` содержит 26 сценариев: scope ownership, Stop до очереди и при занятом UI, отменяемое синхронное ожидание, normal drain, вложенные операции, queued faults, ошибки/частичный Init/повторный Dispose, shutdown Dispatcher, defaults, старый Sprite, checkpoints в обходах, 20 конкурентных прогонов и сборка 50 освобождённых scopes. Интеграционные проверки компилируют настоящий пользовательский код, проверяют четыре исхода выполнения, задержанный cleanup до unload/следующего Run и освобождение ALC после queued delegate.
 
+`Library/ExecutionEnvironmentTests.cs` проверяет единую ambient identity/token для facade, несовпадающий execution id, запрет двойного подключения Dispatcher, повторное подключение capability внутри той же execution и недоступность scope после release environment. `StopManagerTests` проверяет сохранённый публичный API поверх нового registry.
+
 Оставшаяся skipped specification относится к Keyboard/Mouse и Music (этапы 6–8), а не к Dispatcher. Проверки выполняются без видимых окон; визуальная приёмка отдельно.
 
 ## Запуск и структура
