@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Controls;
 using KID.Services;
@@ -250,6 +251,40 @@ public sealed class MusicLifecycleTests
     }
 
     [Fact]
+    public async Task BlockingMelody_PreservesSequentialToneAndPauseTiming()
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(
+            1,
+            TestContext.Current.CancellationToken);
+        var environment = ExecutionEnvironmentManager.GetCurrent(1);
+        var runtime = new FakeMusicRuntime { DrainProviderDuringInit = true };
+        Music.Init(environment, runtime);
+
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            Music.Sound(
+                new SoundNote(262, 150),
+                new SoundNote(0, 30),
+                new SoundNote(330, 150),
+                new SoundNote(0, 30),
+                new SoundNote(392, 150),
+                new SoundNote(0, 30),
+                new SoundNote(330, 250));
+            stopwatch.Stop();
+
+            Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(80));
+            Assert.Equal(
+                [6_615, 6_615, 6_615, 11_025],
+                runtime.Outputs.Select(static output => output.CapturedSamples.Count));
+        }
+        finally
+        {
+            await IgnoreCleanupFailureAsync(environment);
+        }
+    }
+
+    [Fact]
     public async Task CanvasContext_PartialRuntimeInitializationStillShutsMusicDown()
     {
         await StaTest.RunAsync(async () =>
@@ -372,10 +407,14 @@ public sealed class MusicLifecycleTests
         internal bool BlockWrite { get; init; }
         internal bool ThrowOnStop { get; init; }
         internal bool ThrowOnDispose { get; init; }
+        internal bool DrainProviderDuringInit { get; init; }
 
         public IMusicOutput CreateOutput()
         {
-            var output = new FakeMusicOutput(ThrowOnStop, ThrowOnDispose);
+            var output = new FakeMusicOutput(
+                ThrowOnStop,
+                ThrowOnDispose,
+                DrainProviderDuringInit);
             lock (gate)
             {
                 Outputs.Add(output);
@@ -451,7 +490,10 @@ public sealed class MusicLifecycleTests
         }
     }
 
-    private sealed class FakeMusicOutput(bool throwOnStop, bool throwOnDispose) : IMusicOutput
+    private sealed class FakeMusicOutput(
+        bool throwOnStop,
+        bool throwOnDispose,
+        bool drainProviderDuringInit) : IMusicOutput
     {
         private readonly object gate = new();
         private PlaybackState state;
@@ -459,6 +501,7 @@ public sealed class MusicLifecycleTests
         internal int PlayCount { get; private set; }
         internal int StopCount { get; private set; }
         internal int DisposeCount { get; private set; }
+        internal List<float> CapturedSamples { get; } = [];
 
         public PlaybackState PlaybackState
         {
@@ -471,15 +514,26 @@ public sealed class MusicLifecycleTests
             }
         }
 
-        public void Init(ISampleProvider sampleProvider) =>
+        public void Init(ISampleProvider sampleProvider)
+        {
             ArgumentNullException.ThrowIfNull(sampleProvider);
+            if (!drainProviderDuringInit)
+                return;
+
+            var buffer = new float[257];
+            int read;
+            while ((read = sampleProvider.Read(buffer, 0, buffer.Length)) > 0)
+                CapturedSamples.AddRange(buffer.Take(read));
+        }
 
         public void Play()
         {
             lock (gate)
             {
                 PlayCount++;
-                state = PlaybackState.Playing;
+                state = drainProviderDuringInit
+                    ? PlaybackState.Stopped
+                    : PlaybackState.Playing;
             }
         }
 
