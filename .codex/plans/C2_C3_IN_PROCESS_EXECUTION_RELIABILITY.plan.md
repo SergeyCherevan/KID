@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–9 полностью реализованы и подтверждены автоматизированными тестами, статическим аудитом, headless runtime smoke и ручным GUI/visual acceptance; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, типизированные terminal outcomes, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite, детерминированный cleanup Keyboard/Mouse/Music и единая UI/FSM-модель `StopRequested → CleaningUp → Idle`. Следующий незавершённый этап — этап 10: документация и повторная оценка production-readiness аудита.
+- **Статус:** completed — этапы 0–10 полностью реализованы. Код и lifecycle подтверждены автоматизированными тестами, статическим аудитом, headless runtime smoke и ручным GUI/visual acceptance; документация и production-readiness аудит приведены к фактической in-process trust model и явно отделяют доказанные гарантии от остаточных ограничений.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -416,16 +416,18 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 ## 📝 Этап 10. Документация и повторная оценка аудита
 
-- [ ] Обновить `.codex/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md` только после подтверждения реализации тестами.
-- [ ] Переформулировать C2 как осознанную in-process trust model, а не обязательную security sandbox.
-- [ ] Удалить из обязательного исправления C2 restricted token/AppContainer, файловые/сетевые запреты и worker-процесс.
-- [ ] Не объявлять абсолютную принудительную остановку произвольного C# внутри одного процесса.
-- [ ] Отметить закрытые части C3 отдельно: instrumentation, Console cancellation, async Main, state synchronization, cleanup, event/audio/dispatcher reset, ALC unload.
-- [ ] Обновить `docs/ARCHITECTURE.md`, `docs/SUBSYSTEMS.md`, `docs/FEATURES.md`, `docs/DEVELOPMENT.md` и API-документы Console/Graphics/Keyboard/Mouse/Music.
-- [ ] Исправить преждевременные утверждения документации о том, что все Music API уже проверяют Stop и все Mouse/Keyboard ресурсы уже освобождаются.
-- [ ] Разделить доказательства: static/build, automated runtime tests, runtime smoke, visual acceptance и остаточные in-process ограничения.
+- [x] Обновить `.codex/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md` только после подтверждения реализации тестами.
+- [x] Переформулировать C2 как осознанную in-process trust model, а не обязательную security sandbox.
+- [x] Удалить из обязательного исправления C2 restricted token/AppContainer, файловые/сетевые запреты и worker-процесс.
+- [x] Не объявлять абсолютную принудительную остановку произвольного C# внутри одного процесса.
+- [x] Отметить закрытые части C3 отдельно: instrumentation, Console cancellation, async Main, state synchronization, cleanup, event/audio/dispatcher reset, ALC unload.
+- [x] Обновить `docs/ARCHITECTURE.md`, `docs/SUBSYSTEMS.md`, `docs/FEATURES.md`, `docs/DEVELOPMENT.md` и API-документы Console/Graphics/Keyboard/Mouse/Music.
+- [x] Исправить преждевременные утверждения документации о том, что все Music API уже проверяют Stop и все Mouse/Keyboard ресурсы уже освобождаются.
+- [x] Разделить доказательства: static/build, automated runtime tests, runtime smoke, visual acceptance и остаточные in-process ограничения.
 
 **Критерий этапа:** документация описывает фактический код и подтверждённые тестами границы; C2/C3 не считаются закрытыми только на основании текста плана или успешной сборки.
+
+**Проверка этапа 2026-09-15:** до обновления аудита повторно выполнены `dotnet restore KID.sln`, Release build с 0 warnings/0 errors и полный `dotnet test KID.sln -c Release --no-restore` — 166 пройдено, 0 пропущено, 0 провалено. Аудит повторно оценён в принятой trust model: C2 закрыт как продуктовое решение для доверенного кода без sandbox-обещаний, C3 — по отдельным подтверждённым механизмам. Обновлены архитектурные, feature/developer, execution/test и пять API-документов; доказательства разделены на static/build, automated runtime, headless smoke и сообщённую пользователем manual visual acceptance. Остаточные in-process ограничения сохранены явно.
 
 ## ✅ Итоговые критерии готовности согласованного scope
 

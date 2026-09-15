@@ -11,6 +11,11 @@
 
 Код разделён на `Compilation/`, `Runtime/`, `Console/`, `Contexts/` и `Errors/`. Интерфейсы находятся в подпапках `Interfaces/` своих частей. См. [полную структуру и зависимости](CodeExecution.md).
 
+Подсистема использует осознанную in-process trust model: учебная программа работает с правами
+текущего пользователя внутри процесса IDE. Она не является sandbox и не запрещает файлы, сеть,
+реестр или процессы. Stop кооперативен; новый Run остаётся запрещённым, пока предыдущий lifecycle
+не дошёл до подтверждённого cleanup.
+
 ### Компоненты
 
 #### 1.1. CodeExecutionService
@@ -38,7 +43,7 @@
 
 **Ответственность:**
 - Парсинг C# кода
-- Компиляция в сборку
+- Компиляция в PE/PDB-артефакт без `Assembly.Load(byte[])`
 - Обработка ошибок компиляции
 
 **Основные методы:**
@@ -47,11 +52,16 @@
 **Особенности:**
 - Использует `Microsoft.CodeAnalysis` для парсинга
 - Применяет `ConsoleClearRewriter` для замены `Console.Clear()`
+- Применяет `CancellationInstrumentationRewriter` для поддержанных циклов, тел функций,
+  `await`/`yield`, `Task.Delay` и `Thread.Sleep`
+- Передаёт один session token в parsing, semantic analysis и emit
+- Не вставляет синтетическую отмену в пользовательский `finally` и не переписывает
+  неподдержанную форму ценой изменения семантики
 - Собирает все ссылки на сборки из текущего домена приложения
 - Возвращает локализованные ошибки компиляции
 
 **ConsoleClearRewriter:**
-- Внутренний класс, наследующий `CSharpSyntaxRewriter`
+- Отдельный компонент, наследующий `CSharpSyntaxRewriter`
 - Заменяет `Console.Clear()` и `System.Console.Clear()` на `KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear()`
 - Работает с обоими вариантами: с `using System;` и без него
 
@@ -138,6 +148,19 @@
 - Статический класс для замены `Console.Clear()`
 - Инициализируется при создании TextBoxConsole
 - Используется компилятором для замены вызовов
+
+### Подтверждённый lifecycle и ограничения
+
+- FSM различает `Compiling`, `Running`, `StopRequested`, `CleaningUp` и `Idle`; terminal outcome
+  (`Completed`, `Stopped`, `Faulted`) хранится отдельно от активного состояния.
+- Все восемь форм `void`/`int`/`Task`/`Task<int>` Main ожидаются до cleanup.
+- Console, Dispatcher/Graphics, Keyboard, Mouse и Music очищают per-run ресурсы до выгрузки ALC.
+- Ошибка одного cleanup-шага не отменяет попытки остальных; незавершённая очистка оставляет
+  сервис в `CleaningUp` и блокирует новый Run.
+- Release build и 166 automated runtime tests подтверждают поддержанный scope; headless smoke и
+  сообщённая пользователем visual acceptance учитываются отдельными evidence layers.
+- Произвольный native/сторонний вызов или неинструментированный пользовательский поток нельзя
+  принудительно завершить безопасно внутри процесса.
 
 ## 2. Подсистема консольного ввода/вывода (Console I/O)
 

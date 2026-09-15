@@ -1,5 +1,10 @@
 # Структура подсистемы выполнения кода
 
+KID использует осознанную in-process trust model для доверенного учебного кода. Пользовательская
+программа работает с правами текущего Windows-пользователя; подсистема не является sandbox и не
+ограничивает файлы, сеть, реестр или процессы. Stop — кооперативный запрос, а не безопасный
+process kill. Worker-процесс и OS-level containment потребуют отдельного продуктового решения.
+
 Оба контекста получают execution id, консольный также получает token напрямую, а графический получает его из текущего `ExecutionEnvironment`. Контексты реализуют асинхронное освобождение. CanvasGraphicsContext владеет Dispatcher scope: закрывает приём команд, дожидается принятых операций и сбрасывает Graphics. CodeExecutionContext затем освобождает консоль даже после ошибки графики. Coordinator ожидает обе очистки до выгрузки ALC, освобождения session CTS и перехода в Idle. Ошибка очистки не маскируется успешным завершением.
 
 Подсистема находится в `KID.WPF.IDE/Services/CodeExecution/`. Она разделена по обязанностям внутри одного модуля. Пространства имён соответствуют папкам; интерфейсы каждой части находятся в её подпапке `Interfaces/`.
@@ -29,6 +34,11 @@ CodeExecution/
 │       └── ICodeRunningInstance.cs
 ├── Console/
 │   ├── TextBoxConsole.cs
+│   ├── TextBoxConsole.Input.cs
+│   ├── TextBoxConsole.Lifecycle.cs
+│   ├── TextBoxConsole.Output.cs
+│   ├── TextBoxConsole.StaticConsole.cs
+│   ├── TextBoxConsole.Streams.cs
 │   └── Interfaces/
 │       └── IConsole.cs
 ├── Contexts/
@@ -66,6 +76,12 @@ CodeExecution/
 
 Перенос файлов не меняет этот порядок. `AssemblyLoadContext.Unload()` остаётся кооперативным запросом, а остановка пользовательской программы — кооперативной отменой.
 
+Instrumentation покрывает поддержанные циклы, тела функций, безопасные точки `await`/`yield` и
+известные `Task.Delay`/`Thread.Sleep`. Оно намеренно не вставляет отмену в пользовательский
+`finally` и не может безопасно оборвать native/сторонний вызов либо неинструментированный поток.
+Если выполнение не завершилось, FSM остаётся в `StopRequested`; если не подтверждён cleanup — в
+`CleaningUp`. В обоих случаях новый Run запрещён.
+
 ## Зависимости, важные при изменении пространств имён
 
 Регистрация конкретных `CSharpCompiler` и `DefaultCodeRunner` находится в `Services/DI/ServiceCollectionExtensions.cs`. Координатор использует интерфейсы из `Compilation/Interfaces/` и `Runtime/Interfaces/`.
@@ -82,3 +98,8 @@ dotnet test KID.Tests/KID.Tests.csproj -c Release --no-build
 ```
 
 Тесты `Compiler/` проверяют компиляцию и переписывание кода; `Execution/` — координатор, runner и обработку ошибок; `Console/` — ввод, вывод и очистку консоли; `Lifecycle/` — жизненный цикл. Тест `CompiledProgram_ConsoleClear_UsesConsoleContextBridge` компилирует и выполняет программу через настоящий компилятор, runner и WPF-консоль, проверяя удаление прежнего текста и вывод после `Clear`.
+
+Контрольный прогон 2026-09-15: Release build — 0 warnings/0 errors; полный suite — 166 passed,
+0 skipped, 0 failed; Stage 9 focused repeat — 10/10. Static/build, automated runtime, headless smoke
+и сообщённая пользователем visual acceptance являются разными evidence layers. Ни один из них не
+доказывает security isolation или возможность принудительно завершить произвольный in-process код.

@@ -709,3 +709,14 @@ img3.SetSource("new_icon.png", 120, 120);
 5. **Производительность:** Для большого количества фигур рекомендуется использовать методы расширения для модификации существующих фигур вместо создания новых.
 
 6. **DispatcherManager:** Все операции используют централизованный Dispatcher facade. Его scope автоматически подключается к текущему `ExecutionEnvironment` при создании графического контекста.
+
+## Проверка и границы
+
+`KID.Tests/Library/DispatcherGraphicsTests.cs` и lifecycle tests проверяют Stop до/после постановки
+команд, занятый UI, normal drain, stale Dispatcher callbacks/Sprite, ошибки cleanup, повторные scopes
+и освобождение пользовательской ALC. Они входят в полный результат 2026-09-15 — 166 passed,
+0 skipped, 0 failed.
+
+Это headless STA/runtime evidence. Внешний вид Canvas подтверждается отдельной visual acceptance.
+Прямой пользовательский доступ к WPF-объекту, произвольный callback/native-вызов и сохранённые
+strong references остаются за границей гарантированной кооперативной остановки.

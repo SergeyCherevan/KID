@@ -1,6 +1,17 @@
 # Руководство разработчика
 
-## Проверки Dispatcher/Graphics/Input/Music (C2/C3, этапы 5–7)
+## Надёжность in-process выполнения (C2/C3, этапы 1–10)
+
+KID рассчитан на доверенный учебный код и сохраняет in-process WPF-модель. Не описывайте
+`Task.Run`, collectible ALC или кооперативный Stop как sandbox: пользовательская программа имеет
+права текущего Windows-пользователя и может обращаться к файлам, сети, реестру и процессам.
+Worker-процесс, restricted token/AppContainer и OS-level ограничения не входят в согласованный scope.
+
+Stop-checkpoint нужно добавлять через существующий Roslyn pipeline или передавать точный session
+token в поддерживающий cancellation API. Нельзя применять `Thread.Abort`, маскировать
+неинструментированный блокирующий код как успешно остановленный или переводить FSM в `Idle` до
+фактического завершения cleanup. Пользовательский `finally` не инструментируется синтетической
+отменой.
 
 Новая пользовательская UI-операция должна проходить через DispatcherManager целиком, включая чтение WPF-свойств. Пользовательский/инструментированный код проверяет Stop через `StopManager`; execution-bound объекты и длинные обходы используют захваченный `scope.Environment.ThrowIfCancellationRequested()`. Не добавляйте новые глобальные способы проверки token и не перехватывайте отмену общим catch с продолжением работы. Host cleanup не использует session token. Scope закрывается только после завершения принятых операций; синхронный Dispatcher.Invoke для ожидания из пользовательского потока не применяется.
 
@@ -8,7 +19,10 @@
 
 Для Music нельзя создавать static fire-and-forget playback/fade task или второй registry execution identity. Любой звук должен принадлежать `MusicExecutionScope`, каждая async-операция — получать playback/session token и находиться в task registry, а временный файл — регистрироваться до первой отменяемой записи. Host shutdown закрывает регистрацию синхронно, пытается остановить все outputs и только затем отменяет и ожидает задачи; `SoundPlayerOFF()` этот host-контракт не заменяет.
 
-Из корня: `dotnet test KID.Tests/KID.Tests.csproj -c Release --filter FullyQualifiedName~MusicLifecycleTests`, затем focused-наборы `KeyboardMouseTests` и `DispatcherGraphicsTests`, `dotnet test KID.sln -c Release --no-restore` и `dotnet build KID.sln -c Release --no-restore`.
+Из корня: `dotnet restore KID.sln`, `dotnet build KID.sln -c Release --no-restore`, затем
+`dotnet test KID.sln -c Release --no-restore`. Для локальной диагностики используйте focused-наборы
+`TextBoxConsoleSpecifications`, `DispatcherGraphicsTests`, `KeyboardMouseTests`,
+`MusicLifecycleTests`, `Stage9ReliabilityTests` и execution lifecycle/error tests.
 
 STA/audio lifecycle-тесты не открывают видимые окна, не используют звуковое устройство и не выходят в сеть: `IMusicRuntime` подменяет NAudio/HTTP/filesystem. Набор проверяет Stop/Dispose races, normal drain, cleanup faults, input WPF-отписки, stale audio handle, отмену URL-записи, повторные scopes и освобождение пользовательских ALC. Это не заменяет ручную проверку реального аудиоустройства и кодеков ОС.
 
@@ -378,7 +392,22 @@ public async Task DoSomethingAsync()
 
 ## Тестирование
 
-### Автоматизированные проверки консоли (Этап 4 C2/C3)
+### Автоматизированные проверки C2/C3
+
+Контрольный прогон 2026-09-15: Release build — 0 warnings/0 errors; полный suite — 166 passed,
+0 skipped, 0 failed. Stage 9 focused-набор ранее повторён 10 раз (10/10 PASS). Проверки разделены
+по слоям:
+
+- compiler tests — instrumentation, BCL rewrites, PE/PDB и диагностика строк;
+- execution tests — все формы Main, terminal outcomes, FSM, Run/Stop races и ошибки финализации;
+- library tests — Dispatcher/Graphics, Keyboard/Mouse, Music и ambient execution ownership;
+- lifecycle tests — скомпилированные программы, 50 последовательных Run/Stop и collectible ALC.
+
+Headless runtime smoke подтверждает путь compile → Run → Stop → cleanup → Idle отдельно от
+визуальной проверки. Manual visual acceptance не заменяется STA-тестами и фиксируется отдельным
+результатом пользователя.
+
+### Автоматизированные проверки консоли
 
 `dotnet test KID.Tests/KID.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~TextBoxConsoleSpecifications`
 проверяет отмену Read/ReadLine без клавиатуры, Stop при занятом UI, Dispose с живыми readers,
@@ -521,10 +550,20 @@ if (string.IsNullOrEmpty(input))
 
 ### Выполнение кода
 
-Код пользователя выполняется в отдельном потоке с ограничениями:
-- Используется CancellationToken для остановки
-- Ошибки обрабатываются и не крашат приложение
-- Нет доступа к файловой системе (кроме через API)
+Код пользователя выполняется через `Task.Run`, но внутри процесса IDE и с правами текущего
+Windows-пользователя:
+
+- session `CancellationToken` обеспечивает кооперативную остановку в инструментированных точках,
+  поддержанных KID API, Console input и известных BCL-ожиданиях;
+- ошибки обычного выполнения классифицируются и запускают обязательный cleanup;
+- файловая система, сеть, реестр и запуск процессов не ограничиваются;
+- collectible `AssemblyLoadContext` позволяет штатную выгрузку, но не является sandbox;
+- произвольный native/сторонний вызов, process-wide API и пользовательский поток без cancellation
+  могут повредить или удерживать IDE и не получают обещания принудительной остановки.
+
+Если Stop не может завершиться кооперативно, сервис остаётся в `StopRequested`, предупреждает о
+задержке и не разрешает новый Run. Ошибка cleanup оставляет `CleaningUp`; она не маскируется
+сообщением об успешной остановке.
 
 ## Версионирование
 

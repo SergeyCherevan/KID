@@ -121,9 +121,11 @@
 - Возвращается в `Idle` только после подтверждённой очистки всех lifecycle-ресурсов; ошибка Dispose оставляет `CleaningUp` и запрещает новый Run
 
 **CSharpCompiler** (`Compilation/CSharpCompiler.cs`)
-- Компилирует C# код в сборку
+- Компилирует C# код в PE/PDB-артефакт без загрузки результата в default context
 - Использует Microsoft.CodeAnalysis для парсинга и компиляции
 - Применяет реврайтер для замены `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()`
+- Применяет `CancellationInstrumentationRewriter`: добавляет Stop-checkpoints в поддержанные циклы, тела функций и безопасные точки `await`/`yield`, а также передаёт session token в поддержанные `Task.Delay`/`Thread.Sleep`
+- Не переписывает пользовательский `finally` и формы, для которых нельзя доказуемо сохранить семантику
 - Обрабатывает ошибки компиляции и возвращает их в локализованном виде
 
 **DefaultCodeRunner** (`Runtime/DefaultCodeRunner.cs`)
@@ -159,6 +161,19 @@
 - Статический класс StaticConsole для замены Console.Clear()
 - Использует Dispatcher своего TextBox с проверкой владельца каждой UI-команды; Stop и Dispose пробуждают Read/ReadLine без клавиатурного ввода
 - DisposeAsync ожидает readers, отписывает UI-события, закрывает регистрацию отмены и wait handles, освобождает StaticConsole только своей сессии
+
+#### Trust model и граница Stop
+
+KID выполняет доверенный учебный код внутри `KID.WPF.IDE.exe` с обычными правами текущего
+Windows-пользователя. Отдельный worker-процесс, restricted token/AppContainer, запреты файловой
+системы или сети в архитектуру не входят. Collectible `AssemblyLoadContext` даёт execution-scoped
+загрузку и штатную выгрузку, но не является security sandbox.
+
+Stop — кооперативный запрос. Он надёжно обслуживает инструментированные контрольные точки,
+поддержанные KID/BCL-ожидания и Console input, но не может безопасно оборвать произвольный
+native/сторонний вызов, неинструментированный пользовательский поток или код, который намеренно
+не доходит до cancellation. В таком случае FSM остаётся в `StopRequested`, не публикует ложный
+успех и не разрешает следующий Run.
 
 #### 3.2. Files (Работа с файлами)
 
@@ -521,6 +536,18 @@ Console API → TextBox (UI поток)
 `Idle`; иначе публичная lifecycle task завершается ошибкой, а новый Run остаётся заблокированным.
 Общая `JoinableTaskFactory` создаётся из singleton `JoinableTaskContext` и передаётся runner через DI.
 
+### Доказательства lifecycle
+
+- **Static/build:** Release build проходит с 0 warnings/0 errors; компилятор не использует
+  `Assembly.Load(byte[])`, а lifecycle Dispose не остаются пустыми.
+- **Automated runtime:** полный suite на 2026-09-15 — 166 passed, 0 skipped, 0 failed; отдельно
+  проверены compiled Stop, async Main, FSM/races, cleanup faults, stale callbacks/resources,
+  50 последовательных Run/Stop и collectible ALC.
+- **Runtime smoke:** headless-путь compile → Run → Stop → cleanup → Idle проверен отдельно от UI.
+- **Visual acceptance:** интерактивные сценарии подтверждены пользователем отдельно; headless
+  WPF-тесты не считаются визуальной приёмкой.
+- **Остаток:** in-process ограничения из раздела trust model не закрываются успешной сборкой или тестами.
+
 ### Инициализация приложения
 
 ```
@@ -602,8 +629,8 @@ Save / Discard / Cancel для каждой изменённой вкладки
 - TextBoxConsole использует Dispatcher своего TextBox и отбрасывает команды устаревшей консоли; context DisposeAsync завершается до следующего Run
 - `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
 - `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса
-- Выполнение кода происходит в отдельном потоке (Task.Run)
-- CancellationToken используется для безопасной отмены выполнения
+- Выполнение entry point происходит через `Task.Run`, но остаётся внутри процесса IDE
+- CancellationToken обеспечивает кооперативную отмену только там, где код достигает поддержанной точки Stop
 
 ## Расширяемость
 
