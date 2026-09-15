@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–8 реализованы и подтверждены автоматизированными тестами; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, типизированные terminal outcomes, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite, детерминированный cleanup Keyboard/Mouse/Music и единая UI/FSM-модель `StopRequested → CleaningUp → Idle`. Ручной GUI smoke/visual acceptance и полный этап 9 ещё не выполнены.
+- **Статус:** in progress — этапы 0–9 полностью реализованы и подтверждены автоматизированными тестами, статическим аудитом, headless runtime smoke и ручным GUI/visual acceptance; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, типизированные terminal outcomes, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite, детерминированный cleanup Keyboard/Mouse/Music и единая UI/FSM-модель `StopRequested → CleaningUp → Idle`. Следующий незавершённый этап — этап 10: документация и повторная оценка production-readiness аудита.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -360,26 +360,26 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 ### Compiler/rewrite
 
-- [ ] Все виды циклов, вложенность, single/empty statements, async iterator и директивы.
-- [ ] Методы/лямбды/local functions и поддержанные expression-bodied forms.
-- [ ] Идемпотентность rewrite.
-- [ ] Отсутствие rewrite пользовательских одноимённых `Console`, `Sleep`, `Delay` без подтверждения semantic symbol.
-- [ ] Исходные номера строк diagnostics.
+- [x] Все виды циклов, вложенность, single/empty statements, async iterator и директивы.
+- [x] Методы/лямбды/local functions и поддержанные expression-bodied forms.
+- [x] Идемпотентность rewrite.
+- [x] Отсутствие rewrite пользовательских одноимённых `Console`, `Sleep`, `Delay` без подтверждения semantic symbol.
+- [x] Исходные номера строк diagnostics.
 
 ### Runtime
 
-- [ ] Stop во время compilation.
-- [ ] Stop в tight loop без вызовов KID API.
+- [x] Stop во время compilation.
+- [x] Stop в tight loop без вызовов KID API.
 - [x] Stop в Graphics/Sprite/Music loop.
-- [ ] Stop во время `Console.Read`, `ReadLine`, `Task.Delay` и поддержанного `Thread.Sleep`.
+- [x] Stop во время `Console.Read`, `ReadLine`, `Task.Delay` и поддержанного `Thread.Sleep`.
 - [x] `void Main`, `int Main`, `Task Main`, `Task<int> Main`; каждый вариант проверен без параметров и с `string[]`.
 - [x] пользовательское исключение, cancellation и compilation error имеют разные результаты.
-- [ ] двойной Stop и попытка Run во время cleanup безопасны.
+- [x] двойной Stop и попытка Run во время cleanup безопасны.
 
 ### Resource/lifecycle
 
-- [ ] 50–100 последовательных Run/Stop не увеличивают количество WPF handlers, event workers и активных sound players.
-- [ ] Static events и shortcuts очищаются между запусками.
+- [x] 50–100 последовательных Run/Stop не увеличивают количество WPF handlers, event workers и активных sound players.
+- [x] Static events и shortcuts очищаются между запусками.
 - [x] Stale Dispatcher callbacks не меняют новый Canvas/TextBox.
 - [x] Console streams восстанавливаются при success, compilation error, runtime fault и cancellation. Проверено на этапе 4.
 - [x] Collectible ALC освобождается в штатных синхронных и асинхронных сценариях.
@@ -395,11 +395,24 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 ### Validation layers
 
-- [ ] `dotnet restore` / `dotnet build KID.sln -c Release`.
+- [x] `dotnet restore` / `dotnet build KID.sln -c Release`.
 - [x] `dotnet test KID.sln -c Release`.
-- [ ] Статический поиск незакрытых `WaitOne`, `Assembly.Load(byte[])`, пустых lifecycle Dispose и прямого раннего `CanStop = false`.
-- [ ] Runtime smoke Run/Stop отдельно от visual acceptance.
-- [ ] Ручной visual checklist выполнять только после отдельного разрешения пользователя на запуск GUI.
+- [x] Статический поиск незакрытых `WaitOne`, `Assembly.Load(byte[])`, пустых lifecycle Dispose и прямого раннего `CanStop = false`.
+- [x] Runtime smoke Run/Stop отдельно от visual acceptance.
+- [x] Ручной visual checklist выполнять только после отдельного разрешения пользователя на запуск GUI.
+
+**Автоматизированная проверка этапа 2026-09-15:** добавлены end-to-end сценарии Stop для скомпилированных `Task.Delay` и `Thread.Sleep`, точная гонка «двойной Stop + второй Run во время `CleaningUp`» и единый soak из 50 последовательных Run/Stop с реальными WPF Console/Canvas/Keyboard/Mouse adapters и тестовым Music output без звуковой карты. Soak проверяет завершение event workers, пустые очереди, снятие старых WPF handlers, очистку static events/shortcuts/scopes, отсутствие активных playback/background tasks и однократный Dispose каждого audio output. `dotnet restore` прошёл; Release build — 0 warnings/0 errors; полный suite — 166 пройдено, 0 пропущено, 0 провалено; новый focused-набор — 10/10 повторных прогонов. Статический аудит нашёл `WaitOne` только внутри cancellation-aware `StopManager.Sleep`, не нашёл `Assembly.Load(byte[])`, пустых lifecycle Dispose и раннего `CanStop = false`; пользовательские PE/PDB загружаются через collectible `LoadFromStream`. Runtime smoke выполнен headless отдельно от visual acceptance. После отдельного разрешения выполнена попытка видимого запуска GUI, но процесс не создал доступное desktop-окно (`MainWindowHandle = 0`) и был остановлен; native UI automation также недоступна в текущем окружении. На стороне агента manual checkbox поэтому не отмечался без реального наблюдения; последующее пользовательское подтверждение зафиксировано отдельным доказательным слоем ниже.
+
+**Ручная GUI/visual acceptance 2026-09-15 (подтверждено пользователем):** пользователь выполнил checklist в интерактивной desktop-сессии и сообщил успешный результат для каждого сценария:
+
+1. Обычный `async Task Main` оставался в состоянии выполнения до завершения `await`, вывел начальное и конечное сообщения, затем штатно вернулся в `Готово` и разрешил повторный Run.
+2. Инструментированный tight loop `while (true)` без ручного вызова KID Stop API был остановлен кнопкой Stop; IDE не зависла и после cleanup снова разрешила Run.
+3. Stop во время `Console.ReadLine()` завершил ожидание без ввода текста и без нажатия Enter; консоль и UI вернулись в штатное состояние.
+4. Оба поддержанных BCL-ожидания — `Task.Delay` и `Thread.Sleep` — были отдельно остановлены через общий session token и завершили полный lifecycle.
+5. Compilation error и runtime exception были проверены отдельно и отображались как разные terminal outcomes: ошибка компиляции не маскировалась как Stop, runtime fault содержал пользовательскую ошибку и возвращал IDE в `Готово`.
+6. Последовательные графический/музыкальный и контрольный запуски подтвердили visual resource isolation: звук первого запуска прекратился по Stop, следующий Run очистил прежний Canvas, не получил запоздалый вывод и штатно завершился.
+
+Во всех сценариях пользователь поставил отметку `✅`. Это evidence ручного visual acceptance, сообщённое пользователем в чате; оно хранится отдельно от автоматических результатов `166/166` и focused repeat `10/10`. Ручной слой Этапа 9 подтверждён, поэтому Этап 9 полностью завершён.
 
 ## 📝 Этап 10. Документация и повторная оценка аудита
 
@@ -416,16 +429,16 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 ## ✅ Итоговые критерии готовности согласованного scope
 
-- [ ] Нормальная учебная программа не обязана вручную вызывать Stop API для остановки циклов.
-- [ ] Кнопка Stop немедленно отменяет поддержанные циклы, KID API и Console input.
-- [ ] IDE не сообщает об остановке до фактического завершения и cleanup.
-- [ ] Ни один ресурс первого запуска не влияет на следующий запуск.
-- [ ] Async entry point полностью ожидается.
+- [x] Нормальная учебная программа не обязана вручную вызывать Stop API для остановки циклов.
+- [x] Кнопка Stop немедленно отменяет поддержанные циклы, KID API и Console input.
+- [x] IDE не сообщает об остановке до фактического завершения и cleanup.
+- [x] Ни один ресурс первого запуска не влияет на следующий запуск.
+- [x] Async entry point полностью ожидается.
 - [x] Пользовательская сборка штатного запуска выгружается из collectible ALC.
 - [x] Все новые tests проходят, Release build имеет 0 warnings/0 errors.
-- [ ] Публичная WPF-модель `KID.Library` сохранена без IPC/proxy-слоя.
-- [ ] Права пользовательского кода не урезаны.
-- [ ] Остаточные невозможные для in-process модели сценарии явно задокументированы и не маскируются как решённые.
+- [x] Публичная WPF-модель `KID.Library` сохранена без IPC/proxy-слоя.
+- [x] Права пользовательского кода не урезаны.
+- [x] Остаточные невозможные для in-process модели сценарии явно задокументированы и не маскируются как решённые.
 
 ## 🚫 Stop-условия при реализации
 

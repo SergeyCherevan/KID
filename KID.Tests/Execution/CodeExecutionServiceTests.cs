@@ -614,6 +614,64 @@ public sealed class CodeExecutionServiceTests
     }
 
     [Fact]
+    public async Task RequestStop_TwiceAndRunDuringCleanup_AreRejectedUntilCleanupCompletes()
+    {
+        var runnerStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var cleanupEntered = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCleanup = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var runner = new FakeCodeRunner(async (_, cancellationToken) =>
+        {
+            runnerStarted.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+        });
+        var context = new DelayedCodeExecutionContext(cleanupEntered, releaseCleanup);
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(CompilationResult.FromArtifact(CreateArtifact())),
+            runner);
+
+        var execution = service.ExecuteAsync("first", _ => context);
+        await runnerStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(service.RequestStop());
+        Assert.False(service.RequestStop());
+        await cleanupEntered.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        try
+        {
+            Assert.Equal(ExecutionState.CleaningUp, service.State);
+            Assert.False(service.RequestStop());
+            var secondFactoryCallCount = 0;
+
+            var rejected = await service.ExecuteAsync("second", _ =>
+            {
+                secondFactoryCallCount++;
+                return new TrackingCodeExecutionContext();
+            });
+
+            Assert.Equal(ExecutionResultKind.Rejected, rejected.Kind);
+            Assert.Equal(0, secondFactoryCallCount);
+            Assert.False(execution.IsCompleted);
+        }
+        finally
+        {
+            releaseCleanup.TrySetResult();
+        }
+
+        var result = await execution.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(ExecutionResultKind.Stopped, result.Kind);
+        Assert.Equal(ExecutionState.Idle, service.State);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_PublishesTerminalResultOnlyAfterCleanupAndIdle()
     {
         var cleanupEntered = new TaskCompletionSource(
