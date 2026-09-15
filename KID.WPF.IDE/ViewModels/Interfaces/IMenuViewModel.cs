@@ -9,6 +9,7 @@ namespace KID.ViewModels.Interfaces
     public interface IMenuViewModel
     {
         ExecutionState ExecutionState { get; }
+        string ExecutionStatusText { get; }
         bool IsExecutionActive { get; }
         bool CanRun { get; }
         bool CanRequestStop { get; }

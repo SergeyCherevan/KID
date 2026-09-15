@@ -13,14 +13,13 @@ namespace KID.Services.CodeExecution.Runtime
     /// </remarks>
     public class DefaultCodeRunner : ICodeRunner
     {
-        private readonly ILocalizationService _localizationService;
         private readonly JoinableTaskFactory joinableTaskFactory;
 
         public DefaultCodeRunner(
             ILocalizationService localizationService,
             JoinableTaskFactory joinableTaskFactory)
         {
-            _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            ArgumentNullException.ThrowIfNull(localizationService);
             this.joinableTaskFactory = joinableTaskFactory ??
                 throw new ArgumentNullException(nameof(joinableTaskFactory));
         }
@@ -39,7 +38,7 @@ namespace KID.Services.CodeExecution.Runtime
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(artifact);
-            var runningInstance = new CollectibleCodeRunningInstance(artifact, _localizationService);
+            var runningInstance = new CollectibleCodeRunningInstance(artifact);
             runningInstance.Start(joinableTaskFactory, cancellationToken);
             return runningInstance;
         }

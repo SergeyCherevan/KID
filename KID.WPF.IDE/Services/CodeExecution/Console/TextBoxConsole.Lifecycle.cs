@@ -4,6 +4,23 @@ namespace KID.Services.CodeExecution.Console;
 
 public sealed partial class TextBoxConsole
 {
+    private int cleanupTaskStarted;
+
+    /// <summary>
+    /// Идемпотентно закрывает приём нового ввода/вывода и пробуждает readers, но не запускает
+    /// финальную WPF-очистку до команды владельца.
+    /// </summary>
+    internal void BeginCleanup()
+    {
+        lock (stateLock)
+        {
+            if (isDisposed) return;
+            isDisposed = true;
+            disposeRequested.Set();
+            if (readerCount == 0) readersExited.Set();
+        }
+    }
+
     /// <summary>
     /// Идемпотентно запрещает новые операции, пробуждает readers и запускает общую
     /// асинхронную очистку без блокировки вызывающего потока.
@@ -16,25 +33,13 @@ public sealed partial class TextBoxConsole
     /// </remarks>
     public void Dispose()
     {
-        lock (stateLock)
-        {
-            /* isDisposed является идемпотентным gate: ровно первый caller меняет состояние,
-             * устанавливает сигналы и запускает CompleteDisposeAsync.
-             */
-            if (isDisposed) return;
-            isDisposed = true;
-
-            /* Сигнал освобождает ReadCharacter независимо от наличия клавиатурного ввода.
-             * Если readers не было, барьер можно открыть немедленно.
-             */
-            disposeRequested.Set();
-            if (readerCount == 0) readersExited.Set();
-        }
+        BeginCleanup();
 
         /* Task не ожидается синхронным Dispose намеренно. Ошибка не теряется: единый disposed.Task
          * завершится исключением и будет наблюдаться владельцем через DisposeAsync.
          */
-        _ = CompleteDisposeAsync();
+        if (Interlocked.Exchange(ref cleanupTaskStarted, 1) == 0)
+            _ = CompleteDisposeAsync();
     }
 
     /// <summary>

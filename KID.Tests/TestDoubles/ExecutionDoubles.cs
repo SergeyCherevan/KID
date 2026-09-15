@@ -1,5 +1,6 @@
 using KID.Services.CodeExecution.Runtime.Interfaces;
 using KID.Services.CodeExecution.Compilation.Interfaces;
+using KID.Services.CodeExecution;
 using KID.Services;
 using KID.Services.CodeExecution.Contexts.Interfaces;
 using Microsoft.VisualStudio.Threading;
@@ -88,12 +89,13 @@ internal sealed class FakeCodeRunner : ICodeRunner
                 () => ExecuteAsync(cancellationToken));
         }
 
-        public JoinableTask Completion { get; }
+        public JoinableTask<ExecutionResult> Completion { get; }
 
-        private async Task ExecuteAsync(CancellationToken cancellationToken)
+        private async Task<ExecutionResult> ExecuteAsync(CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref owner.callCount);
             await owner.implementation(artifact, cancellationToken);
+            return ExecutionResult.Completed;
         }
 
         public void Dispose()
@@ -130,11 +132,25 @@ internal sealed class TrackingCodeExecutionContext : ICodeExecutionContext
 
     public int DisposeCount { get; private set; }
 
+    public int BeginCleanupCount { get; private set; }
+
+    private int cleanupStarted;
+
     public void Init()
     {
         InitCount++;
         GraphicsContext.Init(ExecutionId, Dispatcher);
         ConsoleContext.Init(ExecutionId, CancellationToken);
+    }
+
+    public void BeginCleanup()
+    {
+        if (Interlocked.Exchange(ref cleanupStarted, 1) != 0)
+            return;
+
+        BeginCleanupCount++;
+        ConsoleContext.BeginCleanup();
+        GraphicsContext.BeginCleanup();
     }
 
     public async ValueTask DisposeAsync()
@@ -160,7 +176,11 @@ internal sealed class TrackingGraphicsContext : IGraphicsContext
 
     public int DisposeCount { get; private set; }
 
+    public int BeginCleanupCount { get; private set; }
+
     public void Init(long executionId, Dispatcher dispatcher) => InitCount++;
+
+    public void BeginCleanup() => BeginCleanupCount++;
 
     public ValueTask DisposeAsync()
     {
@@ -177,7 +197,11 @@ internal sealed class TrackingConsoleContext : IConsoleContext
 
     public int DisposeCount { get; private set; }
 
+    public int BeginCleanupCount { get; private set; }
+
     public void Init(long executionId, CancellationToken cancellationToken) => InitCount++;
+
+    public void BeginCleanup() => BeginCleanupCount++;
 
     public ValueTask DisposeAsync()
     {

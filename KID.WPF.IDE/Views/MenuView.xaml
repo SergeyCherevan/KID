@@ -130,5 +130,9 @@
             <MenuItem Header="{localization:Localization Menu_Run}" InputGestureText="Ctrl+F5" Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}" />
             <MenuItem Header="{localization:Localization Menu_Stop}" InputGestureText="Shift+F5" Command="{Binding StopCommand}" IsEnabled="{Binding CanRequestStop}" />
         </Menu>
+        <TextBlock Margin="12,0,0,5"
+                   VerticalAlignment="Center"
+                   Foreground="{DynamicResource TextBrush}"
+                   Text="{Binding ExecutionStatusText}" />
     </StackPanel>
 </UserControl>

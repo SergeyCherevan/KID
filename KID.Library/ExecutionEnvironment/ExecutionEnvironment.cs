@@ -11,6 +11,7 @@ internal sealed class ExecutionEnvironment
 {
     private readonly object capabilityGate = new();
     private DispatcherScope? dispatcherScope;
+    private int cleanupStarted;
 
     internal ExecutionEnvironment(long executionId, CancellationToken cancellationToken)
     {
@@ -21,6 +22,9 @@ internal sealed class ExecutionEnvironment
 
     internal long ExecutionId { get; }
     internal CancellationToken CancellationToken { get; }
+    internal bool IsAcceptingNewWork => Volatile.Read(ref cleanupStarted) == 0;
+
+    internal void BeginCleanup() => Interlocked.Exchange(ref cleanupStarted, 1);
 
     /// <summary>Единственная реализация проверки Stop для состояния execution.</summary>
     internal void ThrowIfCancellationRequested() => CancellationToken.ThrowIfCancellationRequested();
@@ -30,6 +34,8 @@ internal sealed class ExecutionEnvironment
         ArgumentNullException.ThrowIfNull(dispatcher);
         lock (capabilityGate)
         {
+            if (!IsAcceptingNewWork)
+                throw new ObjectDisposedException(nameof(ExecutionEnvironment));
             if (dispatcherScope != null)
                 throw new InvalidOperationException("A dispatcher is already attached to this execution.");
 

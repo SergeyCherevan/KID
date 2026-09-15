@@ -121,6 +121,27 @@
   <data name="Notification_ProgramFinished" xml:space="preserve">
     <value>Программа закончила выполнение</value>
   </data>
+  <data name="ExecutionStatus_Ready" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="ExecutionStatus_Compiling" xml:space="preserve">
+    <value>Компиляция…</value>
+  </data>
+  <data name="ExecutionStatus_Running" xml:space="preserve">
+    <value>Выполнение…</value>
+  </data>
+  <data name="ExecutionStatus_Stopping" xml:space="preserve">
+    <value>Остановка…</value>
+  </data>
+  <data name="ExecutionStatus_CleaningUp" xml:space="preserve">
+    <value>Очистка ресурсов…</value>
+  </data>
+  <data name="Notification_StopResponseDelayed" xml:space="preserve">
+    <value>Программа пока не отреагировала на запрос остановки. Ожидание продолжается; принудительная остановка недоступна для выполнения внутри процесса.</value>
+  </data>
+  <data name="Error_StopFailed" xml:space="preserve">
+    <value>Не удалось запросить остановку программы: {0}</value>
+  </data>
   <data name="FileFilter_CSharp" xml:space="preserve">
     <value>C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*</value>
   </data>

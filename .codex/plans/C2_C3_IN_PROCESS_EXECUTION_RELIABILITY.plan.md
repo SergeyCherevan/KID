@@ -1,7 +1,7 @@
 # План C2/C3: надёжное in-process выполнение, Stop и очистка ресурсов
 
 - **Дата:** 2026-08-09
-- **Статус:** in progress — этапы 0–7 выполнены; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, runtime-исходы, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite и детерминированный cleanup Keyboard/Mouse/Music. В KID.Library действует единый ambient ExecutionEnvironment. Из этапа 8 выполнены усиленная финализация и ожидание DisposeAsync графического/консольного/input/audio/execution-контекста; формализация общего cleanup/UI state остаётся этапом 8.
+- **Статус:** in progress — этапы 0–8 реализованы и подтверждены автоматизированными тестами; готовы instrumentation, PE/PDB, started-running-instance, все восемь сигнатур Main, async entry point, типизированные terminal outcomes, collectible ALC, cancellation-aware Console, execution-aware Dispatcher/Graphics/Sprite, детерминированный cleanup Keyboard/Mouse/Music и единая UI/FSM-модель `StopRequested → CleaningUp → Idle`. Ручной GUI smoke/visual acceptance и полный этап 9 ещё не выполнены.
 - **Целевая ветка:** `feature/FixC2C3`
 - **Область:** `KID.WPF.IDE`, `KID.Library`, execution-тесты и связанная документация
 
@@ -321,19 +321,24 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 - [x] Перевести контексты, которым нужно ожидать worker-задачи, на `IAsyncDisposable`/`DisposeAsync`.
   - Console и объединяющий execution-контекст переведены в этапе 4, Graphics — в этапе 5, Keyboard/Mouse workers — в этапе 6; Music playback подключён к `CanvasGraphicsContext.DisposeAsync` в этапе 7.
-- [ ] Сделать Init/Dispose частично-инициализированного контекста безопасными и идемпотентными.
-- [ ] Зафиксировать порядок cleanup:
-  1. [ ] перевести state в `CleaningUp` и инвалидировать execution id для новых callback;
+- [x] Сделать Init/Dispose частично-инициализированного контекста безопасными и идемпотентными.
+  - первый `Init` фиксирует execution id, cancellation token, Dispatcher, экземпляры контекстов и UI targets;
+  - повторный `Init` с той же identity является no-op и не создаёт ресурсы повторно;
+  - изменение execution id, token, Dispatcher, context или UI target даёт `InvalidOperationException`;
+  - ошибка посередине `Init` переводит экземпляр в cleanup-only: повторная инициализация запрещена, а `DisposeAsync` освобождает все успевшие появиться owners;
+  - все последовательные и конкурентные `DisposeAsync` наблюдают одну общую completion task.
+- [x] Зафиксировать порядок cleanup:
+  1. [x] только после завершения entry point перевести state в `CleaningUp`, закрыть admission текущего execution environment и всех context ingress до публикации UI-события; identity сохраняется для точного owner cleanup, но новые callbacks/work отклоняются;
   2. [x] остановить входящие Console/Keyboard/Mouse события;
   3. [x] отменить и дождаться библиотечных worker/playback-задач;
   4. [x] abort/ignore pending Dispatcher operations;
   5. [x] остановить звук и очистить Canvas/runtime static state;
-  6. [ ] восстановить глобальные Console streams и static bridges;
-  7. [ ] удалить пользовательские delegates/references;
-  8. [ ] выгрузить ALC и освободить session CTS;
-  9. [ ] только после этого перейти в `Idle` и разрешить Run.
+  6. [x] восстановить глобальные Console streams и static bridges;
+  7. [x] удалить пользовательские delegates/references;
+  8. [x] выгрузить ALC и освободить session CTS;
+  9. [x] только после этого перейти в `Idle` и разрешить Run.
 - [x] Заменить использование одного `CanStop` для двух смыслов отдельными вычисляемыми свойствами `CanRun`, `CanRequestStop`, `IsExecutionActive` — выполнено заранее в этапе 1 как часть единого state-контракта.
-- [ ] После клика Stop показывать состояние «Остановка…», не «Готово».
+- [x] После клика Stop показывать состояние «Остановка…», не «Готово»; отдельно отображать `Compiling`, `Running`, `CleaningUp` и `Idle`.
 - [x] Не разрешать повторный Run при `StopRequested` или `CleaningUp`.
 - [x] Сохранять централизованную передачу неожиданных ошибок в `IAsyncOperationErrorHandler`, но не показывать нормальный cancellation как ошибку.
 - [x] Защитить финализацию `ExecuteSessionAsync` от обычных исключений в `Dispose`/`DisposeAsync`, включая `session.Dispose()`: сбой одного шага не должен пропускать оставшиеся независимые шаги очистки и обработку завершения сессии.
@@ -341,9 +346,12 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 - [x] Гарантировать однократное завершение внешней `completionSource.Task` после попыток очистки и определения итогового состояния, в том числе при исключениях из `session.Dispose()` и `CompleteSession()`. Завершение внутренней `ExecuteSessionAsync` не заменяет завершение задачи, возвращённой вызывающей стороне; ошибка финализации должна быть доставлена ей, а не оставлять бесконечный `await`.
 - [x] Сохранять первичную ошибку выполнения или cleanup; последующие ошибки финализации учитывать в диагностике, не подменяя исходную причину. Ожидаемый Stop не должен скрывать возникшую при очистке неожиданную ошибку.
 - [x] Разделить завершение внешней задачи и разрешение нового Run: ошибка финализации должна завершать ожидание с ошибкой, но не давать ложный `Idle`, если остались активные ресурсы или безопасное завершение cleanup не подтверждено.
-- [ ] Если выполнение не достигло точки отмены, оставить честное `StopRequested` и диагностическое сообщение; не выполнять ранний Dispose живого контекста.
+- [x] Если выполнение не достигло точки отмены, оставить честное `StopRequested` и через диагностический интервал показать сообщение; не выполнять ранний Dispose живого контекста и не обещать принудительную остановку произвольного in-process кода.
+- [x] Представлять `Completed`, `Stopped`, `CompilationFailed`, `RuntimeFaulted` и другие terminal outcomes отдельным результатом, а не активным состоянием FSM; UI публикует `ProgramStopped`/`ProgramFinished` только после полного cleanup и перехода в `Idle`.
 
 **Критерий этапа:** UI и сервис имеют одну и ту же модель состояния; `ProgramStopped` появляется только после прекращения выполнения и cleanup; Run никогда не пересекается с хвостами предыдущей сессии. Обычная ошибка финализации не оставляет внешнюю задачу незавершённой, передаётся вызывающей стороне и не приводит к преждевременному разрешению Run.
+
+**Реализация и автоматизированная проверка этапа 2026-09-15:** execution context и дочерние Console/Graphics contexts получили identity-aware идемпотентный `Init`, отдельную синхронную фазу `BeginCleanup` и общую идемпотентную `DisposeAsync`. `CodeExecutionService` закрывает environment/context admission до публикации `CleaningUp`, ожидает cleanup перед `Idle`, возвращает host-only `ExecutionResult` и публикует terminal outcome только после подтверждённой очистки. `MenuViewModel` отображает локализованные `Готово`/`Компиляция…`/`Выполнение…`/`Остановка…`/`Очистка ресурсов…`; delayed Stop сообщает честное ограничение in-process модели. Добавлены regression-тесты same/conflicting Init identity, partial Init, повторного Dispose, ingress-before-event, Stop без реакции, отсутствия раннего Dispose, terminal-after-cleanup и ownership при mutation. Release build — 0 warnings/0 errors; полный suite — 162 теста. Focused lifecycle-набор из 85 тестов выдержал 10/10 повторных прогонов. Ручной запуск GUI не выполнялся и остаётся отдельным пунктом visual acceptance этапа 9.
 
 **Проверка усиленной финализации 2026-09-05:** Release — 0 warnings/0 errors; `KID.Tests` — 67 пройдено, 3 пропущено, 0 провалено. Проверены ошибки каждого cleanup-owner, сочетания execution/Stop с cleanup failure, сбои `CompleteSession()` до и после смены состояния, изоляция observers, завершение публичной task с таймаутом и блокировка нового Run при неподтверждённой очистке.
 

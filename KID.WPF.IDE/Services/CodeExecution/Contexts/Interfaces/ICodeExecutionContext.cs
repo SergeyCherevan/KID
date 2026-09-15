@@ -33,5 +33,8 @@ namespace KID.Services.CodeExecution.Contexts.Interfaces
         Dispatcher Dispatcher { get; set; }
 
         void Init();
+
+        /// <summary>Синхронно и идемпотентно закрывает приём новой session work.</summary>
+        void BeginCleanup();
     }
 }

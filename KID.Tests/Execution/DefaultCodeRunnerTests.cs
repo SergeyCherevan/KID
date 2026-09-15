@@ -1,4 +1,5 @@
 using KID.Services.CodeExecution.Compilation;
+using KID.Services.CodeExecution;
 using KID.Services.CodeExecution.Runtime.Interfaces;
 using KID.Services.CodeExecution.Runtime;
 using KID.Services;
@@ -219,13 +220,14 @@ public sealed class DefaultCodeRunnerTests
         var originalOutput = global::System.Console.Out;
         var originalError = global::System.Console.Error;
         ICodeRunningInstance? execution = null;
+        ExecutionResult? outcome = null;
 
         try
         {
             global::System.Console.SetOut(standardOutput);
             global::System.Console.SetError(errorOutput);
             execution = runner.Start(artifact, TestContext.Current.CancellationToken);
-            await execution.Completion.Task.WaitAsync(
+            outcome = await execution.Completion.Task.WaitAsync(
                 TimeSpan.FromSeconds(5),
                 TestContext.Current.CancellationToken);
         }
@@ -237,7 +239,10 @@ public sealed class DefaultCodeRunnerTests
             global::System.Console.SetError(originalError);
         }
 
-        Assert.Contains($"Error_Execution:{message}", errorOutput.ToString());
+        Assert.Equal(ExecutionResultKind.RuntimeFaulted, outcome!.Kind);
+        Assert.Equal(message, outcome.ErrorMessage);
+        Assert.False(string.IsNullOrEmpty(outcome.StackTrace));
+        Assert.Empty(errorOutput.ToString());
         Assert.DoesNotContain("Notification_ProgramStopped", standardOutput.ToString());
         Assert.DoesNotContain("Notification_ProgramFinished", standardOutput.ToString());
     }
@@ -277,6 +282,7 @@ public sealed class DefaultCodeRunnerTests
         var originalError = global::System.Console.Error;
         IDisposable? executionEnvironmentLease = null;
         ICodeRunningInstance? execution = null;
+        ExecutionResult? outcome = null;
 
         AppContext.SetData(startedKey, started);
         try
@@ -290,7 +296,7 @@ public sealed class DefaultCodeRunnerTests
                 TestContext.Current.CancellationToken);
 
             await cancellationSource.CancelAsync();
-            await execution.Completion.Task.WaitAsync(
+            outcome = await execution.Completion.Task.WaitAsync(
                 TimeSpan.FromSeconds(5),
                 TestContext.Current.CancellationToken);
         }
@@ -319,7 +325,8 @@ public sealed class DefaultCodeRunnerTests
             AppContext.SetData(startedKey, null);
         }
 
-        Assert.Contains("Notification_ProgramStopped", standardOutput.ToString());
+        Assert.Equal(ExecutionResultKind.Stopped, outcome!.Kind);
+        Assert.Empty(standardOutput.ToString());
         Assert.DoesNotContain("Notification_ProgramFinished", standardOutput.ToString());
         Assert.DoesNotContain("Error_Execution", errorOutput.ToString());
     }
@@ -378,11 +385,12 @@ public sealed class DefaultCodeRunnerTests
                 release.TrySetResult(true);
             }
 
-            await execution.Completion.Task.WaitAsync(
+            var outcome = await execution.Completion.Task.WaitAsync(
                 TimeSpan.FromSeconds(5),
                 TestContext.Current.CancellationToken);
 
             Assert.Equal(true, AppContext.GetData(signalKey));
+            Assert.Equal(ExecutionResultKind.Completed, outcome.Kind);
         }
         finally
         {

@@ -15,6 +15,7 @@ internal sealed class DispatcherScope : IAsyncDisposable
     private readonly TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly CancellationTokenRegistration registration;
     private bool closing;
+    private bool shutdownStarted;
 
     internal DispatcherScope(ExecutionEnvironment environment, Dispatcher dispatcher)
     {
@@ -32,7 +33,7 @@ internal sealed class DispatcherScope : IAsyncDisposable
     {
         Environment.ThrowIfCancellationRequested();
         lock (gate)
-            if (!ExecutionEnvironmentManager.IsCurrent(Environment) ||
+            if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(Environment) ||
                 !Environment.OwnsDispatcher(this) ||
                 (closing && !nested))
             {
@@ -88,15 +89,25 @@ internal sealed class DispatcherScope : IAsyncDisposable
 
     public ValueTask DisposeAsync() => ShutdownAsync(null);
 
+    /// <summary>Синхронно закрывает приём новых Dispatcher-команд до начала ожидания.</summary>
+    internal void Close()
+    {
+        lock (gate)
+        {
+            closing = true;
+        }
+    }
+
     /// <summary>Ownership сохраняется до окончания переданного host-сброса Graphics.</summary>
     internal ValueTask ShutdownAsync(Action? cleanup)
     {
         Task[]? tasks = null;
         lock (gate)
         {
-            if (!closing)
+            closing = true;
+            if (!shutdownStarted)
             {
-                closing = true;
+                shutdownStarted = true;
                 tasks = pending.Select(work => work.Completion).ToArray();
             }
         }

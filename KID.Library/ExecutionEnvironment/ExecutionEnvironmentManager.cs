@@ -11,7 +11,7 @@ internal static class ExecutionEnvironmentManager
 
     internal static ExecutionEnvironment? Current => Volatile.Read(ref current);
 
-    internal static IDisposable BeginExecution(long executionId, CancellationToken cancellationToken)
+    internal static IExecutionEnvironmentLease BeginExecution(long executionId, CancellationToken cancellationToken)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(executionId);
         lock (gate)
@@ -31,6 +31,8 @@ internal static class ExecutionEnvironmentManager
             throw new InvalidOperationException("No execution is active.");
         if (environment.ExecutionId != executionId)
             throw new InvalidOperationException("Execution does not own the current environment.");
+        if (!environment.IsAcceptingNewWork)
+            throw new ObjectDisposedException(nameof(ExecutionEnvironment));
         return environment;
     }
 
@@ -49,12 +51,17 @@ internal static class ExecutionEnvironmentManager
                 throw new InvalidOperationException("No execution is active.");
             if (environment.ExecutionId != executionId)
                 throw new InvalidOperationException("Execution does not own the current environment.");
+            if (!environment.IsAcceptingNewWork)
+                throw new ObjectDisposedException(nameof(ExecutionEnvironment));
             return environment.AttachDispatcher(dispatcher);
         }
     }
 
     internal static bool IsCurrent(ExecutionEnvironment environment) =>
         ReferenceEquals(Current, environment);
+
+    internal static bool IsCurrentAndAccepting(ExecutionEnvironment environment) =>
+        ReferenceEquals(Current, environment) && environment.IsAcceptingNewWork;
 
     private static void Release(ExecutionEnvironment environment)
     {
@@ -65,14 +72,19 @@ internal static class ExecutionEnvironmentManager
         }
     }
 
-    private sealed class ExecutionEnvironmentLease(ExecutionEnvironment environment) : IDisposable
+    private sealed class ExecutionEnvironmentLease(ExecutionEnvironment environment) : IExecutionEnvironmentLease
     {
         private int disposed;
+
+        public void BeginCleanup() => environment.BeginCleanup();
 
         public void Dispose()
         {
             if (Interlocked.Exchange(ref disposed, 1) == 0)
+            {
+                environment.BeginCleanup();
                 Release(environment);
+            }
         }
     }
 }

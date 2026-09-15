@@ -27,7 +27,7 @@ public static partial class Music
 
         lock (_lockObject)
         {
-            if (!ExecutionEnvironmentManager.IsCurrent(environment))
+            if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(environment))
                 throw new InvalidOperationException("Execution does not own the current environment.");
             if (executionScope != null)
                 throw new InvalidOperationException("Music is already initialized for an execution.");

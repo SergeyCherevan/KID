@@ -110,7 +110,7 @@ internal sealed class ExecutionEventWorker : IAsyncDisposable
     private bool CanExecuteUnsafe() =>
         !closing &&
         !lifetimeSource.IsCancellationRequested &&
-        ExecutionEnvironmentManager.IsCurrent(Environment);
+        ExecutionEnvironmentManager.IsCurrentAndAccepting(Environment);
 
     private bool CanExecute()
     {

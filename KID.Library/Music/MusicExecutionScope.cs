@@ -290,7 +290,7 @@ internal sealed class MusicExecutionScope : IAsyncDisposable
     private bool CanAcceptUnsafe() =>
         !closing &&
         !lifetimeSource.IsCancellationRequested &&
-        ExecutionEnvironmentManager.IsCurrent(Environment);
+        ExecutionEnvironmentManager.IsCurrentAndAccepting(Environment);
 
     private bool OwnsUnsafe(MusicPlayback playback) =>
         ReferenceEquals(playback.Scope, this) &&

@@ -16,9 +16,20 @@ namespace KID.Services.CodeExecution.Contexts
     /// </summary>
     public class CodeExecutionContext : ICodeExecutionContext
     {
+        private readonly object lifecycleLock = new();
         private readonly TaskCompletionSource disposeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private int disposeStarted;
+        private bool disposeStarted;
+        private bool cleanupStarted;
         private bool initialized;
+        private bool initializationFailed;
+        private readonly ExecutionFailureCollector beginCleanupFailures = new();
+        private long initializedExecutionId;
+        private CancellationToken initializedCancellationToken;
+        private Dispatcher? initializedDispatcher;
+        private IGraphicsContext? initializedGraphicsContext;
+        private IConsoleContext? initializedConsoleContext;
+        private object? initializedGraphicsTarget;
+        private object? initializedConsoleTarget;
 
         /// <summary>Идентификатор сессии, передаваемый графическому и консольному контекстам.</summary>
         public long ExecutionId { get; set; }
@@ -48,12 +59,55 @@ namespace KID.Services.CodeExecution.Contexts
 
         public void Init()
         {
-            ObjectDisposedException.ThrowIf(Volatile.Read(ref disposeStarted) != 0, this);
-            if (initialized) throw new InvalidOperationException("Execution context is already initialized.");
-            initialized = true;
-            GraphicsContext?.Init(ExecutionId, Dispatcher);
-            ConsoleContext?.Init(ExecutionId, CancellationToken);
+            lock (lifecycleLock)
+            {
+                ObjectDisposedException.ThrowIf(disposeStarted || cleanupStarted, this);
+
+                if (initialized)
+                {
+                    if (HasSameInitializationIdentity())
+                        return;
+
+                    throw new InvalidOperationException(
+                        "Execution context is already initialized for another session or UI target.");
+                }
+
+                if (initializationFailed)
+                {
+                    throw new InvalidOperationException(
+                        "Execution context cannot be initialized after a partial initialization failure.");
+                }
+
+                initializedExecutionId = ExecutionId;
+                initializedCancellationToken = CancellationToken;
+                initializedDispatcher = Dispatcher;
+                initializedGraphicsContext = GraphicsContext;
+                initializedConsoleContext = ConsoleContext;
+                initializedGraphicsTarget = GraphicsContext?.GraphicsTarget;
+                initializedConsoleTarget = ConsoleContext?.ConsoleTarget;
+
+                try
+                {
+                    GraphicsContext?.Init(ExecutionId, Dispatcher);
+                    ConsoleContext?.Init(ExecutionId, CancellationToken);
+                    initialized = true;
+                }
+                catch
+                {
+                    initializationFailed = true;
+                    throw;
+                }
+            }
         }
+
+        private bool HasSameInitializationIdentity() =>
+            initializedExecutionId == ExecutionId &&
+            initializedCancellationToken == CancellationToken &&
+            ReferenceEquals(initializedDispatcher, Dispatcher) &&
+            ReferenceEquals(initializedGraphicsContext, GraphicsContext) &&
+            ReferenceEquals(initializedConsoleContext, ConsoleContext) &&
+            ReferenceEquals(initializedGraphicsTarget, GraphicsContext?.GraphicsTarget) &&
+            ReferenceEquals(initializedConsoleTarget, ConsoleContext?.ConsoleTarget);
 
         /// <summary>
         /// Ожидает графическую, затем консольную очистку, не пропуская консоль после ошибки графики.
@@ -61,7 +115,14 @@ namespace KID.Services.CodeExecution.Contexts
         /// </summary>
         public ValueTask DisposeAsync()
         {
-            if (Interlocked.Exchange(ref disposeStarted, 1) == 0)
+            bool startDispose;
+            lock (lifecycleLock)
+            {
+                startDispose = !disposeStarted;
+                disposeStarted = true;
+            }
+
+            if (startDispose)
                 _ = DisposeCoreAsync();
             return new ValueTask(disposeCompletion.Task);
         }
@@ -69,11 +130,51 @@ namespace KID.Services.CodeExecution.Contexts
         private async Task DisposeCoreAsync()
         {
             var failures = new ExecutionFailureCollector();
-            await failures.CaptureAsync(() => GraphicsContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
-            await failures.CaptureAsync(() => ConsoleContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
+            IGraphicsContext? ownedGraphicsContext;
+            IConsoleContext? ownedConsoleContext;
+
+            lock (lifecycleLock)
+            {
+                /* После первой попытки Init ownership привязан к тем же экземплярам,
+                 * даже если вызывающая сторона позже ошибочно изменила public properties.
+                 * До Init Dispose освобождает переданные на текущий момент контексты.
+                 */
+                ownedGraphicsContext = initializedGraphicsContext ?? GraphicsContext;
+                ownedConsoleContext = initializedConsoleContext ?? ConsoleContext;
+            }
+
+            /* До первого await закрываем приём во всех дочерних контекстах. Console при этом
+             * ещё не восстанавливает глобальные streams: они нужны до завершения library workers.
+             */
+            failures.Capture(BeginCleanup);
+            beginCleanupFailures.DrainTo(failures);
+            await failures.CaptureAsync(() => ownedGraphicsContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
+            await failures.CaptureAsync(() => ownedConsoleContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             var failure = failures.CreateException("Execution context cleanup failed.");
             if (failure == null) disposeCompletion.TrySetResult();
             else disposeCompletion.TrySetException(failure);
+        }
+
+        public void BeginCleanup()
+        {
+            IGraphicsContext? ownedGraphicsContext;
+            IConsoleContext? ownedConsoleContext;
+
+            lock (lifecycleLock)
+            {
+                if (cleanupStarted)
+                    return;
+
+                cleanupStarted = true;
+                ownedGraphicsContext = initializedGraphicsContext ?? GraphicsContext;
+                ownedConsoleContext = initializedConsoleContext ?? ConsoleContext;
+
+                /* Захват failures остаётся под lifecycle lock, чтобы конкурентный
+                 * DisposeAsync не успел опустошить collector до окончания этой фазы.
+                 */
+                beginCleanupFailures.Capture(() => ownedConsoleContext?.BeginCleanup());
+                beginCleanupFailures.Capture(() => ownedGraphicsContext?.BeginCleanup());
+            }
         }
     }
 }

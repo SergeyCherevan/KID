@@ -362,6 +362,41 @@ public sealed class TextBoxConsoleSpecifications
     }
 
     [Fact]
+    public async Task Context_InitSameIdentityIsNoOp_AndConflictsAreRejected()
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            var box = new TextBox { IsReadOnly = true };
+            using var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
+                TestContext.Current.CancellationToken);
+            var context = new TextBoxConsoleContext(box);
+            try
+            {
+                context.Init(17, cancellationSource.Token);
+                var redirectedOut = global::System.Console.Out;
+                var redirectedIn = global::System.Console.In;
+                var redirectedError = global::System.Console.Error;
+
+                context.Init(17, cancellationSource.Token);
+
+                Assert.Same(redirectedOut, global::System.Console.Out);
+                Assert.Same(redirectedIn, global::System.Console.In);
+                Assert.Same(redirectedError, global::System.Console.Error);
+                Assert.Throws<InvalidOperationException>(() =>
+                    context.Init(18, cancellationSource.Token));
+
+                context.ConsoleTarget = new TextBox();
+                Assert.Throws<InvalidOperationException>(() =>
+                    context.Init(17, cancellationSource.Token));
+            }
+            finally
+            {
+                await context.DisposeAsync();
+            }
+        });
+    }
+
+    [Fact]
     public async Task Context_DisposeBeforeInit_LeavesStreamsUntouched()
     {
         await StaTest.RunAsync(async () =>
@@ -516,6 +551,7 @@ public sealed class TextBoxConsoleSpecifications
                 Dispatcher = box.Dispatcher,
                 CancellationToken = token
             });
+            ExecutionResult? result = null;
             try
             {
                 await WaitUntilAsync(() => !box.IsReadOnly);
@@ -524,12 +560,13 @@ public sealed class TextBoxConsoleSpecifications
             finally
             {
                 service.RequestStop();
-                await execution.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+                result = await execution.WaitAsync(Timeout, TestContext.Current.CancellationToken);
             }
             Assert.Equal(ExecutionState.Idle, service.State);
+            Assert.Equal(ExecutionResultKind.Stopped, result!.Kind);
             Assert.True(box.IsReadOnly);
             Assert.Contains("ready", box.Text);
-            Assert.Contains("Notification_ProgramStopped", box.Text);
+            Assert.DoesNotContain("Notification_ProgramStopped", box.Text);
             Assert.DoesNotContain("Error_RuntimeError", box.Text);
         });
     }
@@ -587,6 +624,7 @@ public sealed class TextBoxConsoleSpecifications
         public Exception Failure { get; } = new InvalidOperationException("graphics cleanup");
         public int DisposeCount { get; private set; }
         public void Init(long executionId, Dispatcher dispatcher) { }
+        public void BeginCleanup() { }
         public ValueTask DisposeAsync()
         {
             DisposeCount++;
@@ -598,6 +636,7 @@ public sealed class TextBoxConsoleSpecifications
     {
         public object ConsoleTarget { get; set; } = new();
         public void Init(long executionId, CancellationToken cancellationToken) { }
+        public void BeginCleanup() { }
         public async ValueTask DisposeAsync()
         {
             entered.TrySetResult();

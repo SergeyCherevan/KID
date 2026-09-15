@@ -232,6 +232,46 @@ public sealed class DispatcherGraphicsTests
     }
 
     [Fact]
+    public async Task Context_InitSameIdentityIsNoOp_AndConflictsAreRejected()
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            var canvas = new Canvas();
+            using var environment = ExecutionEnvironmentManager.BeginExecution(
+                17,
+                TestContext.Current.CancellationToken);
+            var context = new CanvasGraphicsContext(canvas);
+            context.Init(17, canvas.Dispatcher);
+            var originalScope = DispatcherManager.GetScope();
+            var originalMouse = Mouse.CurrentScope;
+            var originalMusic = Music.CurrentScope;
+
+            context.Init(17, canvas.Dispatcher);
+
+            Assert.Same(originalScope, DispatcherManager.GetScope());
+            Assert.Same(originalMouse, Mouse.CurrentScope);
+            Assert.Same(originalMusic, Music.CurrentScope);
+            Assert.Throws<InvalidOperationException>(() =>
+                context.Init(18, canvas.Dispatcher));
+
+            var otherDispatcher = await Task.Run(() =>
+            {
+                var dispatcher = Dispatcher.CurrentDispatcher;
+                dispatcher.InvokeShutdown();
+                return dispatcher;
+            }, TestContext.Current.CancellationToken);
+            Assert.Throws<InvalidOperationException>(() =>
+                context.Init(17, otherDispatcher));
+
+            context.GraphicsTarget = new Canvas();
+            Assert.Throws<InvalidOperationException>(() =>
+                context.Init(17, canvas.Dispatcher));
+
+            await context.DisposeAsync();
+        });
+    }
+
+    [Fact]
     public async Task Context_DisposeBeforeInit_AndPartialInitReleaseOwnership()
     {
         await StaTest.RunAsync(async () =>
@@ -490,6 +530,7 @@ public sealed class DispatcherGraphicsTests
     {
         public object GraphicsTarget { get; set; } = new();
         public void Init(long executionId, Dispatcher dispatcher) { }
+        public void BeginCleanup() { }
         public async ValueTask DisposeAsync()
         {
             entered.TrySetResult();

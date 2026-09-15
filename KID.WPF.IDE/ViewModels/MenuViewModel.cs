@@ -14,6 +14,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 
 namespace KID.ViewModels
@@ -154,8 +155,13 @@ namespace KID.ViewModels
             ChangeFontSizeCommand = new RelayCommand<double>(fontSize => ChangeFontSize(fontSize));
 
             codeExecutionService.StateChanged += CodeExecutionService_StateChanged;
+            codeExecutionService.StopResponseDelayed += CodeExecutionService_StopResponseDelayed;
 
-            localizationService.CultureChanged += (s, e) => OnPropertyChanged(nameof(SelectedLanguageKey));
+            localizationService.CultureChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(SelectedLanguageKey));
+                OnPropertyChanged(nameof(ExecutionStatusText));
+            };
 
             windowConfigurationService.UILanguageSettingsChanged += (s, e) =>
             {
@@ -178,8 +184,19 @@ namespace KID.ViewModels
 
 
         public ExecutionState ExecutionState => codeExecutionService.State;
+        public string ExecutionStatusText => localizationService.GetString(
+            ExecutionState switch
+            {
+                ExecutionState.Idle => "ExecutionStatus_Ready",
+                ExecutionState.Compiling => "ExecutionStatus_Compiling",
+                ExecutionState.Running => "ExecutionStatus_Running",
+                ExecutionState.StopRequested => "ExecutionStatus_Stopping",
+                ExecutionState.CleaningUp => "ExecutionStatus_CleaningUp",
+                _ => "ExecutionStatus_Ready"
+            });
         public bool IsExecutionActive => codeExecutionService.IsExecutionActive;
-        public bool CanRun => ExecutionState == ExecutionState.Idle;
+        public bool CanRun =>
+            ExecutionState == ExecutionState.Idle && !IsExecutionActive;
         public bool CanRequestStop =>
             ExecutionState is ExecutionState.Compiling or ExecutionState.Running;
         public bool CanUndo => codeEditorsViewModel.CanUndo;
@@ -306,18 +323,21 @@ namespace KID.ViewModels
             var code = currentFileTab?.CurrentContent ?? string.Empty;
             if (!string.IsNullOrEmpty(code))
             {
-                await codeExecutionService.ExecuteAsync(
+                var result = await codeExecutionService.ExecuteAsync(
                     code,
                     cancellationToken => canvasTextBoxContextFabric.Create(
                         graphicsCanvasControl,
                         consoleOutputControl,
                         cancellationToken));
+                ReportExecutionResult(result);
             }
         }
 
         private void ExecuteStop()
         {
-            codeExecutionService.RequestStop();
+            asyncOperationErrorHandler.Execute(
+                () => codeExecutionService.RequestStop(),
+                "Error_StopFailed");
         }
 
         private void ExecuteUndo()
@@ -407,12 +427,85 @@ namespace KID.ViewModels
             object? sender,
             ExecutionStateChangedEventArgs e)
         {
-            OnPropertyChanged(nameof(ExecutionState));
-            OnPropertyChanged(nameof(IsExecutionActive));
-            OnPropertyChanged(nameof(CanRun));
-            OnPropertyChanged(nameof(CanRequestStop));
-            RunCommand.RaiseCanExecuteChanged();
-            StopCommand.RaiseCanExecuteChanged();
+            RunOnUiThread(() =>
+            {
+                OnPropertyChanged(nameof(ExecutionState));
+                OnPropertyChanged(nameof(ExecutionStatusText));
+                OnPropertyChanged(nameof(IsExecutionActive));
+                OnPropertyChanged(nameof(CanRun));
+                OnPropertyChanged(nameof(CanRequestStop));
+                RunCommand.RaiseCanExecuteChanged();
+                StopCommand.RaiseCanExecuteChanged();
+            });
+        }
+
+        private void CodeExecutionService_StopResponseDelayed(
+            object? sender,
+            StopResponseDelayedEventArgs e)
+        {
+            RunOnUiThread(() =>
+            {
+                /* Между background-проверкой diagnostic timer и выполнением UI callback
+                 * сессия могла уже перейти в CleaningUp/Idle. Не печатаем stale warning.
+                 */
+                if (codeExecutionService.State != ExecutionState.StopRequested ||
+                    codeExecutionService.CurrentExecutionId != e.ExecutionId)
+                {
+                    return;
+                }
+
+                AppendConsoleMessage(
+                    localizationService.GetString("Notification_StopResponseDelayed"));
+            });
+        }
+
+        private void ReportExecutionResult(ExecutionResult result)
+        {
+            switch (result.Kind)
+            {
+                case ExecutionResultKind.Completed:
+                    AppendConsoleMessage(localizationService.GetString("Notification_ProgramFinished"));
+                    break;
+                case ExecutionResultKind.Stopped:
+                    AppendConsoleMessage(localizationService.GetString("Notification_ProgramStopped"));
+                    break;
+                case ExecutionResultKind.RuntimeFaulted:
+                    AppendConsoleMessage(localizationService.GetString(
+                        "Error_Execution",
+                        result.ErrorMessage ?? string.Empty));
+                    if (!string.IsNullOrEmpty(result.StackTrace))
+                    {
+                        AppendConsoleMessage(localizationService.GetString(
+                            "Error_StackTrace",
+                            result.StackTrace));
+                    }
+                    break;
+            }
+        }
+
+        private void AppendConsoleMessage(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+                return;
+
+            var current = consoleOutputViewModel.Text;
+            consoleOutputViewModel.Text = string.IsNullOrEmpty(current)
+                ? message + Environment.NewLine
+                : current + (current.EndsWith(Environment.NewLine, StringComparison.Ordinal)
+                    ? string.Empty
+                    : Environment.NewLine) + message + Environment.NewLine;
+        }
+
+        private static void RunOnUiThread(Action action)
+        {
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null || dispatcher.CheckAccess())
+            {
+                action();
+                return;
+            }
+
+            _ = dispatcher.InvokeAsync(action);
         }
 
     }

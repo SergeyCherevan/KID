@@ -1,6 +1,8 @@
 using KID.Services;
 using KID.Services.CodeExecution;
+using KID.Services.CodeExecution.Contexts.Interfaces;
 using KID.Tests.TestDoubles;
+using System.Windows.Threading;
 
 namespace KID.Tests.Execution;
 
@@ -59,16 +61,18 @@ public sealed class CodeExecutionServiceTests
         var service = new CodeExecutionService(
             FakeCodeCompiler.Returning(compilationResult),
             runner);
+        var context = new TrackingCodeExecutionContext();
         service.StateChanged += (_, eventArgs) =>
             observedChanges.Add(eventArgs);
 
-        await service.ExecuteAsync("valid code", _ => new TrackingCodeExecutionContext());
+        await service.ExecuteAsync("valid code", _ => context);
 
         Assert.True(runnerToken.CanBeCanceled);
         Assert.Same(artifact, runnerArtifact);
         Assert.Equal(1, runner.StartCount);
         Assert.Equal(1, runner.CallCount);
         Assert.Equal(1, runner.DisposeCount);
+        Assert.Equal(1, context.BeginCleanupCount);
         Assert.Equal(
             new[]
             {
@@ -83,6 +87,37 @@ public sealed class CodeExecutionServiceTests
         Assert.True(executionId > 0);
         Assert.False(StopManager.CurrentToken.CanBeCanceled);
         Assert.Null(service.CurrentExecutionId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ClosesAdmissionBeforePublishingCleaningUp()
+    {
+        var context = new TrackingCodeExecutionContext();
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(CompilationResult.FromArtifact(CreateArtifact())),
+            new FakeCodeRunner());
+        var contextAdmissionClosed = false;
+        var environmentAdmissionClosed = false;
+        service.StateChanged += (_, eventArgs) =>
+        {
+            if (eventArgs.CurrentState != ExecutionState.CleaningUp)
+                return;
+
+            contextAdmissionClosed = context.BeginCleanupCount == 1;
+            try
+            {
+                _ = ExecutionEnvironmentManager.GetCurrent(eventArgs.ExecutionId);
+            }
+            catch (ObjectDisposedException)
+            {
+                environmentAdmissionClosed = true;
+            }
+        };
+
+        await service.ExecuteAsync("valid code", _ => context);
+
+        Assert.True(contextAdmissionClosed);
+        Assert.True(environmentAdmissionClosed);
     }
 
     [Fact]
@@ -108,6 +143,7 @@ public sealed class CodeExecutionServiceTests
         Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(ExecutionState.Idle, service.State);
         Assert.False(StopManager.CurrentToken.CanBeCanceled);
+        Assert.Null(service.LastResult);
     }
 
     [Fact]
@@ -516,18 +552,138 @@ public sealed class CodeExecutionServiceTests
         Assert.Equal(ExecutionState.Idle, service.State);
     }
 
+    [Fact]
+    public async Task RequestStop_UnresponsiveExecutionStaysStopRequestedAndPublishesDiagnostic()
+    {
+        var runnerStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseRunner = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseWarning = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var warningPublished = new TaskCompletionSource<long>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var runner = new FakeCodeRunner(async (_, _) =>
+        {
+            runnerStarted.TrySetResult();
+            await releaseRunner.Task.WaitAsync(TestContext.Current.CancellationToken);
+        });
+        var context = new TrackingCodeExecutionContext();
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(CompilationResult.FromArtifact(CreateArtifact())),
+            runner,
+            executionId => new ExecutionSession(executionId),
+            static (executionId, cancellationToken) =>
+                ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken),
+            async _ =>
+                await releaseWarning.Task.WaitAsync(TestContext.Current.CancellationToken));
+        service.StopResponseDelayed += (_, eventArgs) =>
+            warningPublished.TrySetResult(eventArgs.ExecutionId);
+
+        var execution = service.ExecuteAsync("code", _ => context);
+        await runnerStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(service.RequestStop());
+        releaseWarning.TrySetResult();
+        var warnedExecutionId = await warningPublished.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        try
+        {
+            Assert.Equal(service.CurrentExecutionId, warnedExecutionId);
+            Assert.Equal(ExecutionState.StopRequested, service.State);
+            Assert.False(execution.IsCompleted);
+            Assert.Equal(0, context.DisposeCount);
+            Assert.Equal(0, runner.DisposeCount);
+
+            var rejected = await service.ExecuteAsync(
+                "second",
+                _ => new TrackingCodeExecutionContext());
+            Assert.Equal(ExecutionResultKind.Rejected, rejected.Kind);
+        }
+        finally
+        {
+            releaseRunner.TrySetResult();
+            await execution.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+        }
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PublishesTerminalResultOnlyAfterCleanupAndIdle()
+    {
+        var cleanupEntered = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseCleanup = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = new DelayedCodeExecutionContext(cleanupEntered, releaseCleanup);
+        var service = new CodeExecutionService(
+            FakeCodeCompiler.Returning(CompilationResult.FromArtifact(CreateArtifact())),
+            new FakeCodeRunner());
+
+        var execution = service.ExecuteAsync("code", _ => context);
+        await cleanupEntered.Task.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+
+        try
+        {
+            Assert.Equal(ExecutionState.CleaningUp, service.State);
+            Assert.Null(service.LastResult);
+            Assert.False(execution.IsCompleted);
+        }
+        finally
+        {
+            releaseCleanup.TrySetResult();
+        }
+
+        var result = await execution.WaitAsync(
+            TimeSpan.FromSeconds(5),
+            TestContext.Current.CancellationToken);
+        Assert.Equal(ExecutionResultKind.Completed, result.Kind);
+        Assert.Same(result, service.LastResult);
+        Assert.Equal(ExecutionState.Idle, service.State);
+    }
+
     private static CompilationArtifact CreateArtifact() => new(new byte[] { 1 });
 
-    private sealed class DelegatingDisposable : IDisposable
+    private sealed class DelayedCodeExecutionContext(
+        TaskCompletionSource cleanupEntered,
+        TaskCompletionSource releaseCleanup) : ICodeExecutionContext
     {
-        private readonly IDisposable inner;
+        public long ExecutionId { get; set; }
+        public IGraphicsContext GraphicsContext { get; set; } = new TrackingGraphicsContext();
+        public IConsoleContext ConsoleContext { get; set; } = new TrackingConsoleContext();
+        public CancellationToken CancellationToken { get; set; }
+        public Dispatcher Dispatcher { get; set; } = Dispatcher.CurrentDispatcher;
+
+        public void Init() { }
+
+        public void BeginCleanup() { }
+
+        public async ValueTask DisposeAsync()
+        {
+            cleanupEntered.TrySetResult();
+            await releaseCleanup.Task.WaitAsync(TestContext.Current.CancellationToken);
+        }
+    }
+
+    private sealed class DelegatingDisposable : IExecutionEnvironmentLease
+    {
+        private readonly IExecutionEnvironmentLease inner;
         private readonly Action afterDispose;
 
-        public DelegatingDisposable(IDisposable inner, Action afterDispose)
+        public DelegatingDisposable(IExecutionEnvironmentLease inner, Action afterDispose)
         {
             this.inner = inner;
             this.afterDispose = afterDispose;
         }
+
+        public void BeginCleanup() => inner.BeginCleanup();
 
         public void Dispose()
         {

@@ -13,9 +13,13 @@ namespace KID.Services.CodeExecution.Interfaces
 
         bool IsExecutionActive { get; }
 
+        ExecutionResult? LastResult { get; }
+
         event EventHandler<ExecutionStateChangedEventArgs>? StateChanged;
 
-        Task ExecuteAsync(
+        event EventHandler<StopResponseDelayedEventArgs>? StopResponseDelayed;
+
+        Task<ExecutionResult> ExecuteAsync(
             string code,
             Func<CancellationToken, ICodeExecutionContext> contextFactory);
 

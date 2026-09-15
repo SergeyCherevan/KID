@@ -12,7 +12,13 @@ namespace KID.Services.CodeExecution.Contexts
         private DispatcherScope? scope;
         private ExecutionEnvironment? environment;
         private bool initialized;
-        private bool disposing;
+        private bool initializationFailed;
+        private bool cleanupStarted;
+        private bool disposeStarted;
+        private long initializedExecutionId;
+        private Dispatcher? initializedDispatcher;
+        private object? initializedTarget;
+        private readonly ExecutionFailureCollector beginCleanupFailures = new();
         private readonly TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private readonly Action<Canvas, ExecutionEnvironment> initializeRuntime;
         public object GraphicsTarget { get; set; }
@@ -43,16 +49,44 @@ namespace KID.Services.CodeExecution.Contexts
         {
             lock (gate)
             {
-                ObjectDisposedException.ThrowIf(disposing, this);
-                if (initialized) throw new InvalidOperationException("Graphics context is already initialized.");
+                ObjectDisposedException.ThrowIf(cleanupStarted || disposeStarted, this);
+                if (initialized)
+                {
+                    if (initializedExecutionId == executionId &&
+                        ReferenceEquals(initializedDispatcher, dispatcher) &&
+                        ReferenceEquals(initializedTarget, GraphicsTarget))
+                    {
+                        return;
+                    }
+
+                    throw new InvalidOperationException(
+                        "Graphics context is already initialized for another session or UI target.");
+                }
+                if (initializationFailed)
+                {
+                    throw new InvalidOperationException(
+                        "Graphics context cannot be initialized after a partial initialization failure.");
+                }
                 if (GraphicsTarget is not Canvas canvas) throw new InvalidOperationException("Graphics target must be a Canvas.");
                 canvas.VerifyAccess();
                 if (canvas.Dispatcher != dispatcher) throw new ArgumentException("Dispatcher must own the Canvas.", nameof(dispatcher));
-                initialized = true;
-                environment = ExecutionEnvironmentManager.GetCurrent(executionId);
-                scope = DispatcherManager.AttachDispatcher(executionId, dispatcher);
-                Graphics.Init(canvas, scope);
-                initializeRuntime(canvas, environment);
+                initializedExecutionId = executionId;
+                initializedDispatcher = dispatcher;
+                initializedTarget = canvas;
+
+                try
+                {
+                    environment = ExecutionEnvironmentManager.GetCurrent(executionId);
+                    scope = DispatcherManager.AttachDispatcher(executionId, dispatcher);
+                    Graphics.Init(canvas, scope);
+                    initializeRuntime(canvas, environment);
+                    initialized = true;
+                }
+                catch
+                {
+                    initializationFailed = true;
+                    throw;
+                }
             }
         }
 
@@ -64,14 +98,37 @@ namespace KID.Services.CodeExecution.Contexts
             if (window != null) Keyboard.Init(window, environment);
         }
 
-        /// <summary>Ожидает принятые UI-команды и сбрасывает bridges до выгрузки пользовательской ALC.</summary>
-        public ValueTask DisposeAsync()
+        public void BeginCleanup()
         {
             lock (gate)
             {
-                if (!disposing)
+                if (cleanupStarted)
+                    return;
+
+                cleanupStarted = true;
+                var ownedEnvironment = environment;
+                if (ownedEnvironment != null)
                 {
-                    disposing = true;
+                    beginCleanupFailures.Capture(() => _ = Keyboard.ShutdownAsync(ownedEnvironment));
+                    beginCleanupFailures.Capture(() => _ = Mouse.ShutdownAsync(ownedEnvironment));
+                    beginCleanupFailures.Capture(() => _ = Music.ShutdownAsync(ownedEnvironment));
+                }
+
+                var ownedScope = scope;
+                if (ownedScope != null)
+                    beginCleanupFailures.Capture(ownedScope.Close);
+            }
+        }
+
+        /// <summary>Ожидает принятые UI-команды и сбрасывает bridges до выгрузки пользовательской ALC.</summary>
+        public ValueTask DisposeAsync()
+        {
+            BeginCleanup();
+            lock (gate)
+            {
+                if (!disposeStarted)
+                {
+                    disposeStarted = true;
                     _ = DisposeCoreAsync();
                 }
             }
@@ -81,16 +138,11 @@ namespace KID.Services.CodeExecution.Contexts
         private async Task DisposeCoreAsync()
         {
             var failures = new ExecutionFailureCollector();
+            beginCleanupFailures.DrainTo(failures);
             var ownedEnvironment = environment;
 
             if (ownedEnvironment != null)
             {
-                // Все runtime-модули синхронно закрывают приём в ShutdownAsync. Запускаем
-                // shutdown до первого await: никакой новый звук или input callback уже не
-                // сможет попасть в завершающуюся execution-сессию.
-                _ = Keyboard.ShutdownAsync(ownedEnvironment);
-                _ = Mouse.ShutdownAsync(ownedEnvironment);
-                _ = Music.ShutdownAsync(ownedEnvironment);
                 await failures.CaptureAsync(() => Keyboard.ShutdownAsync(ownedEnvironment).AsTask());
                 await failures.CaptureAsync(() => Mouse.ShutdownAsync(ownedEnvironment).AsTask());
                 await failures.CaptureAsync(() => Music.ShutdownAsync(ownedEnvironment).AsTask());

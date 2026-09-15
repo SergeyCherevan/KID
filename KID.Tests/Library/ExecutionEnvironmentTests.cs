@@ -8,6 +8,26 @@ namespace KID.Tests.Library;
 public sealed class ExecutionEnvironmentTests
 {
     [Fact]
+    public void BeginCleanup_KeepsIdentityForOwnerButRejectsNewRuntimeWork()
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(
+            17,
+            TestContext.Current.CancellationToken);
+        var environment = Assert.IsType<ExecutionEnvironment>(ExecutionEnvironmentManager.Current);
+
+        lease.BeginCleanup();
+        lease.BeginCleanup();
+
+        Assert.True(ExecutionEnvironmentManager.IsCurrent(environment));
+        Assert.False(ExecutionEnvironmentManager.IsCurrentAndAccepting(environment));
+        Assert.Throws<ObjectDisposedException>(() => ExecutionEnvironmentManager.GetCurrent(17));
+        Assert.Throws<InvalidOperationException>(() =>
+            ExecutionEnvironmentManager.BeginExecution(
+                18,
+                TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public void BeginExecution_PublishesOneIdentityUsedByStopFacade()
     {
         using var cancellationSource = new CancellationTokenSource();

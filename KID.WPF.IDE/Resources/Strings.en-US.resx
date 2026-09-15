@@ -121,6 +121,27 @@
   <data name="Notification_ProgramFinished" xml:space="preserve">
     <value>Program finished execution</value>
   </data>
+  <data name="ExecutionStatus_Ready" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="ExecutionStatus_Compiling" xml:space="preserve">
+    <value>Compiling…</value>
+  </data>
+  <data name="ExecutionStatus_Running" xml:space="preserve">
+    <value>Running…</value>
+  </data>
+  <data name="ExecutionStatus_Stopping" xml:space="preserve">
+    <value>Stopping…</value>
+  </data>
+  <data name="ExecutionStatus_CleaningUp" xml:space="preserve">
+    <value>Cleaning up…</value>
+  </data>
+  <data name="Notification_StopResponseDelayed" xml:space="preserve">
+    <value>The program has not responded to the stop request yet. Waiting continues; forced termination is unavailable for in-process execution.</value>
+  </data>
+  <data name="Error_StopFailed" xml:space="preserve">
+    <value>Failed to request program stop: {0}</value>
+  </data>
   <data name="FileFilter_CSharp" xml:space="preserve">
     <value>C# Files (*.cs)|*.cs|All Files (*.*)|*.*</value>
   </data>

@@ -2,7 +2,6 @@ using KID.Services.CodeExecution.Runtime.Interfaces;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using KID.Services.Localization.Interfaces;
 using Microsoft.VisualStudio.Threading;
 using KID.Services.CodeExecution.Errors;
 
@@ -32,25 +31,19 @@ namespace KID.Services.CodeExecution.Runtime
             Disposed = 3
         }
 
-        private readonly ILocalizationService localizationService;
         private CompilationArtifact? artifact;
         private UserProgramLoadContext? loadContext;
         private WeakReference? loadContextReference;
-        private JoinableTask? completion;
+        private JoinableTask<ExecutionResult>? completion;
         private int lifecycleStateValue = (int)LifecycleState.Ready;
 
         /// <summary>
         /// Создаёт экземпляр, который пока владеет только неизменяемым PE/PDB-артефактом.
         /// </summary>
         /// <param name="artifact">Артефакт успешной компиляции.</param>
-        /// <param name="localizationService">Источник сообщений о результате выполнения.</param>
-        public CollectibleCodeRunningInstance(
-            CompilationArtifact artifact,
-            ILocalizationService localizationService)
+        public CollectibleCodeRunningInstance(CompilationArtifact artifact)
         {
             this.artifact = artifact ?? throw new ArgumentNullException(nameof(artifact));
-            this.localizationService = localizationService ??
-                throw new ArgumentNullException(nameof(localizationService));
         }
 
         /// <summary>
@@ -70,7 +63,7 @@ namespace KID.Services.CodeExecution.Runtime
         /// Runner публикует экземпляр только после Start. Завершение этой задачи позволяет
         /// coordinator начать очистку контекста; сам Dispose и Unload в неё не входят.
         /// </remarks>
-        public JoinableTask Completion => completion ??
+        public JoinableTask<ExecutionResult> Completion => completion ??
             throw new InvalidOperationException("Running instance has not been started.");
 
         /// <summary>
@@ -112,7 +105,7 @@ namespace KID.Services.CodeExecution.Runtime
         /// Загружает и выполняет артефакт вне UI-потока, затем публикует результат выполнения.
         /// </summary>
         /// <param name="cancellationToken">Токен активной execution-сессии.</param>
-        private async Task ExecuteAsync(CancellationToken cancellationToken)
+        private async Task<ExecutionResult> ExecuteAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -124,10 +117,8 @@ namespace KID.Services.CodeExecution.Runtime
                         () => LoadAndInvokeEntryPoint(cancellationToken),
                         cancellationToken)
                     .ConfigureAwait(false);
-                var outcome = await AwaitEntryPointAsync(invocation, cancellationToken)
+                return await AwaitEntryPointAsync(invocation, cancellationToken)
                     .ConfigureAwait(false);
-
-                await ReportOutcomeAsync(outcome).ConfigureAwait(false);
             }
             finally
             {
@@ -233,7 +224,7 @@ namespace KID.Services.CodeExecution.Runtime
                 : executionLoadContext.LoadFromStream(peStream, pdbStream);
             var entryPoint = assembly.EntryPoint;
             if (entryPoint == null)
-                return EntryPointInvocation.FromOutcome(ExecutionOutcome.None);
+                return EntryPointInvocation.FromOutcome(ExecutionResult.NoEntryPoint);
 
             var parameters = entryPoint.GetParameters().Length == 0
                 ? null
@@ -248,8 +239,8 @@ namespace KID.Services.CodeExecution.Runtime
                 var invocationResult = entryPoint.Invoke(null, parameters);
                 return invocationResult switch
                 {
-                    null => EntryPointInvocation.FromOutcome(ExecutionOutcome.Finished),
-                    int => EntryPointInvocation.FromOutcome(ExecutionOutcome.Finished),
+                    null => EntryPointInvocation.FromOutcome(ExecutionResult.Completed),
+                    int => EntryPointInvocation.FromOutcome(ExecutionResult.Completed),
                     Task task => EntryPointInvocation.FromTask(task),
                     _ => throw new InvalidOperationException(
                         $"Unsupported entry point result type: {invocationResult.GetType().FullName}.")
@@ -272,7 +263,7 @@ namespace KID.Services.CodeExecution.Runtime
         /// <param name="invocation">
         /// Результат загрузки и вызова, не содержащий Assembly, Type или MethodInfo.
         /// </param>
-        private static async Task<ExecutionOutcome> AwaitEntryPointAsync(
+        private static async Task<ExecutionResult> AwaitEntryPointAsync(
             EntryPointInvocation invocation,
             CancellationToken cancellationToken)
         {
@@ -286,7 +277,7 @@ namespace KID.Services.CodeExecution.Runtime
                  * пока не публикуется наружу, как и результат синхронного int Main.
                  */
                 await asyncCompletion.ConfigureAwait(false);
-                return ExecutionOutcome.Finished;
+                return ExecutionResult.Completed;
             }
             catch (Exception exception)
             {
@@ -310,92 +301,28 @@ namespace KID.Services.CodeExecution.Runtime
         /// выбросить его без нажатия Stop. Ожидаемой остановкой он становится только после
         /// фактической отмены token, переданного этому running instance.
         /// </remarks>
-        private static ExecutionOutcome ClassifyUserException(
+        private static ExecutionResult ClassifyUserException(
             Exception exception,
             CancellationToken cancellationToken) =>
             ExecutionExceptionClassifier.IsExpectedStop(exception, cancellationToken)
-                ? ExecutionOutcome.Stopped
-                : ExecutionOutcome.FromError(exception.Message, exception.StackTrace);
-
-        /// <summary>
-        /// Выводит host-only результат после выхода worker stack из пользовательской сборки.
-        /// </summary>
-        /// <param name="outcome">Результат, содержащий только строки и host enum.</param>
-        private async Task ReportOutcomeAsync(ExecutionOutcome outcome)
-        {
-            switch (outcome.Kind)
-            {
-                case ExecutionOutcomeKind.None:
-                    return;
-                case ExecutionOutcomeKind.Finished:
-                    System.Console.WriteLine(localizationService.GetString("Notification_ProgramFinished"));
-                    return;
-                case ExecutionOutcomeKind.Stopped:
-                    System.Console.WriteLine(localizationService.GetString("Notification_ProgramStopped"));
-                    return;
-                case ExecutionOutcomeKind.Error:
-                    await System.Console.Error.WriteLineAsync(
-                        localizationService.GetString(
-                            "Error_Execution",
-                            outcome.ErrorMessage ?? string.Empty));
-                    if (!string.IsNullOrEmpty(outcome.StackTrace))
-                    {
-                        await System.Console.Error.WriteLineAsync(
-                            localizationService.GetString("Error_StackTrace", outcome.StackTrace));
-                    }
-                    return;
-                default:
-                    throw new InvalidOperationException("Unknown execution outcome.");
-            }
-        }
+                ? ExecutionResult.Stopped
+                : ExecutionResult.RuntimeFaulted(exception.Message, exception.StackTrace);
 
         /// <summary>
         /// Host-owned описание вызова, временно удерживающее только ожидаемый Task пользователя.
         /// </summary>
         private readonly record struct EntryPointInvocation(
-            ExecutionOutcome ImmediateOutcome,
+            ExecutionResult ImmediateOutcome,
             Task? AsyncCompletion)
         {
             /// <summary>Создаёт уже завершённый результат вызова.</summary>
-            public static EntryPointInvocation FromOutcome(ExecutionOutcome outcome) =>
+            public static EntryPointInvocation FromOutcome(ExecutionResult outcome) =>
                 new(outcome, null);
 
             /// <summary>Создаёт результат, завершение которого ещё требуется дождаться.</summary>
             public static EntryPointInvocation FromTask(Task completion) =>
-                new(default, completion);
+                new(ExecutionResult.NoEntryPoint, completion);
         }
 
-        /// <summary>
-        /// Host-owned описание результата, не удерживающее runtime-объекты user assembly.
-        /// </summary>
-        private readonly record struct ExecutionOutcome(
-            ExecutionOutcomeKind Kind,
-            string? ErrorMessage = null,
-            string? StackTrace = null)
-        {
-            /// <summary>Entry point отсутствует.</summary>
-            public static ExecutionOutcome None { get; } = new(ExecutionOutcomeKind.None);
-
-            /// <summary>Синхронный entry point завершился.</summary>
-            public static ExecutionOutcome Finished { get; } = new(ExecutionOutcomeKind.Finished);
-
-            /// <summary>Entry point завершился ожидаемой отменой.</summary>
-            public static ExecutionOutcome Stopped { get; } = new(ExecutionOutcomeKind.Stopped);
-
-            /// <summary>Создаёт результат пользовательской runtime-ошибки.</summary>
-            public static ExecutionOutcome FromError(string message, string? stackTrace) =>
-                new(ExecutionOutcomeKind.Error, message, stackTrace);
-        }
-
-        /// <summary>
-        /// Варианты результата, которые можно безопасно вынести за пределы collectible context.
-        /// </summary>
-        private enum ExecutionOutcomeKind
-        {
-            None = 0,
-            Finished = 1,
-            Stopped = 2,
-            Error = 3
-        }
     }
 }

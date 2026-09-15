@@ -43,7 +43,7 @@ namespace KID
             {
                 if (_executionScope != null)
                     throw new InvalidOperationException("Mouse is already initialized.");
-                if (!ExecutionEnvironmentManager.IsCurrent(environment))
+                if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(environment))
                     throw new InvalidOperationException("Execution does not own the current environment.");
                 environment.ThrowIfCancellationRequested();
 
@@ -83,7 +83,7 @@ namespace KID
 
         private static bool IsCurrent(MouseExecutionScope scope) =>
             ReferenceEquals(Volatile.Read(ref _executionScope), scope) &&
-            ExecutionEnvironmentManager.IsCurrent(scope.Environment);
+            ExecutionEnvironmentManager.IsCurrentAndAccepting(scope.Environment);
 
         private static Task UnsubscribeAsync(MouseExecutionScope scope)
         {

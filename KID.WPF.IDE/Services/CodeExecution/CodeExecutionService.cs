@@ -37,13 +37,16 @@ namespace KID.Services.CodeExecution
         private readonly ICodeCompiler compiler;
         private readonly ICodeRunner runner;
         private readonly Func<long, ExecutionSession> sessionFactory;
-        private readonly Func<long, CancellationToken, IDisposable> executionEnvironmentLeaseFactory;
+        private readonly Func<long, CancellationToken, IExecutionEnvironmentLease> executionEnvironmentLeaseFactory;
+        private readonly Func<TimeSpan, Task> stopResponseDelayFactory;
+        private static readonly TimeSpan StopResponseWarningDelay = TimeSpan.FromSeconds(2);
 
         // Monitor / Critical Section: этот объект синхронизирует чтение и изменение
         // currentSession, счётчика id и переходов state machine.
         private readonly object sessionLock = new();
         private ExecutionSession? currentSession;
         private long lastExecutionId;
+        private ExecutionResult? lastResult;
 
         /// <summary>
         /// Создаёт execution coordinator с указанными стратегиями компиляции и запуска.
@@ -64,7 +67,8 @@ namespace KID.Services.CodeExecution
                 runner,
                 static executionId => new ExecutionSession(executionId),
                 static (executionId, cancellationToken) =>
-                    ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken))
+                    ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken),
+                static delay => Task.Delay(delay))
         {
         }
 
@@ -75,7 +79,8 @@ namespace KID.Services.CodeExecution
             ICodeCompiler compiler,
             ICodeRunner runner,
             Func<long, ExecutionSession> sessionFactory,
-            Func<long, CancellationToken, IDisposable> executionEnvironmentLeaseFactory)
+            Func<long, CancellationToken, IExecutionEnvironmentLease> executionEnvironmentLeaseFactory,
+            Func<TimeSpan, Task>? stopResponseDelayFactory = null)
         {
             /* Fail fast: Coordinator не может поддерживать lifecycle без обеих обязательных
              * стратегий. Проверка конструктора не позволяет создать частично рабочий сервис.
@@ -86,6 +91,8 @@ namespace KID.Services.CodeExecution
                 throw new ArgumentNullException(nameof(sessionFactory));
             this.executionEnvironmentLeaseFactory = executionEnvironmentLeaseFactory ??
                 throw new ArgumentNullException(nameof(executionEnvironmentLeaseFactory));
+            this.stopResponseDelayFactory = stopResponseDelayFactory ??
+                (static delay => Task.Delay(delay));
         }
 
         /// <summary>
@@ -146,6 +153,20 @@ namespace KID.Services.CodeExecution
         }
 
         /// <summary>
+        /// Последний терминальный результат сессии, cleanup которой полностью подтверждён.
+        /// </summary>
+        public ExecutionResult? LastResult
+        {
+            get
+            {
+                lock (sessionLock)
+                {
+                    return lastResult;
+                }
+            }
+        }
+
+        /// <summary>
         /// Уведомляет наблюдателей о подтверждённом переходе execution state.
         /// </summary>
         /// <remarks>
@@ -154,6 +175,11 @@ namespace KID.Services.CodeExecution
         /// критической секции coordinator.
         /// </remarks>
         public event EventHandler<ExecutionStateChangedEventArgs>? StateChanged;
+
+        /// <summary>
+        /// Уведомляет UI, что код пока не дошёл до точки кооперативной отмены.
+        /// </summary>
+        public event EventHandler<StopResponseDelayedEventArgs>? StopResponseDelayed;
 
         /// <summary>
         /// Атомарно создаёт единственную execution-сессию и запускает полный жизненный цикл
@@ -173,7 +199,7 @@ namespace KID.Services.CodeExecution
         /// </para>
         /// <para>
         /// Новая сессия резервируется под <see cref="sessionLock"/>. Если другая сессия уже активна,
-        /// метод возвращает <see cref="Task.CompletedTask"/>, не вызывает
+        /// метод возвращает завершённый результат <see cref="ExecutionResultKind.Rejected"/>, не вызывает
         /// <paramref name="contextFactory"/> и не создаёт никаких ресурсов второго запуска.
         /// </para>
         /// <para>
@@ -205,7 +231,7 @@ namespace KID.Services.CodeExecution
         /// Счётчик execution id достиг <see cref="long.MaxValue"/> и больше не может быть увеличен
         /// без нарушения уникальности положительных идентификаторов.
         /// </exception>
-        public Task ExecuteAsync(
+        public Task<ExecutionResult> ExecuteAsync(
             string code,
             Func<CancellationToken, ICodeExecutionContext> contextFactory)
         {
@@ -219,7 +245,7 @@ namespace KID.Services.CodeExecution
              * снаружи lock для публикации события и запуска асинхронной orchestration.
              */
             ExecutionSession session;
-            TaskCompletionSource<object?> completionSource;
+            TaskCompletionSource<ExecutionResult> completionSource;
             ExecutionStateChangedEventArgs stateChange;
 
             /* В одной IDE в каждый момент времени допускается только одна execution-сессия.
@@ -233,7 +259,7 @@ namespace KID.Services.CodeExecution
                  * попытка не создаёт Canvas/TextBox contexts, подписки и другие ресурсы.
                  */
                 if (currentSession != null)
-                    return Task.CompletedTask;
+                    return Task.FromResult(ExecutionResult.Rejected);
 
                 /* checked не позволяет счётчику молча переполниться и переиспользовать
                  * отрицательные либо прежние идентификаторы после long.MaxValue.
@@ -250,7 +276,7 @@ namespace KID.Services.CodeExecution
                  * RunContinuationsAsynchronously не позволяет коду после чужого await
                  * синхронно вклиниться в стек cleanup при TrySetResult/TrySetException.
                  */
-                completionSource = new TaskCompletionSource<object?>(
+                completionSource = new TaskCompletionSource<ExecutionResult>(
                     TaskCreationOptions.RunContinuationsAsynchronously);
 
                 /* Прикрепляем lifecycle task до запуска ExecuteSessionAsync: даже если
@@ -346,6 +372,7 @@ namespace KID.Services.CodeExecution
             /* ExecutionSession применяет Idempotent Operation через Interlocked.Exchange:
              * только первый принятый запрос вызывает CancellationTokenSource.Cancel().
              */
+            _ = PublishStopResponseDelayIfNeededAsync(session);
             return session.RequestStop();
         }
 
@@ -396,14 +423,15 @@ namespace KID.Services.CodeExecution
             ExecutionSession session,
             string code,
             Func<CancellationToken, ICodeExecutionContext> contextFactory,
-            TaskCompletionSource<object?> completionSource)
+            TaskCompletionSource<ExecutionResult> completionSource)
         {
             /* Ресурсы создаются поэтапно, поэтому ссылки изначально nullable. Если любой
              * следующий шаг завершится ошибкой, finally освободит только уже созданные части.
              */
             ICodeExecutionContext? context = null;
             ICodeRunningInstance? runningInstance = null;
-            IDisposable? executionEnvironmentLease = null;
+            IExecutionEnvironmentLease? executionEnvironmentLease = null;
+            ExecutionResult executionResult = ExecutionResult.CompilationFailed;
 
             /* Все обычные ошибки откладываются до окончания cleanup. Первая причина остаётся
              * основной, а последующие доступны через AggregateException как диагностика.
@@ -497,7 +525,7 @@ namespace KID.Services.CodeExecution
                      */
                     runningInstance = runner.Start(result.Artifact, session.CancellationToken) ??
                         throw new InvalidOperationException("Running instance is null.");
-                    await runningInstance.Completion;
+                    executionResult = await runningInstance.Completion;
                 }
             }
             catch (OperationCanceledException exception) when (
@@ -507,6 +535,7 @@ namespace KID.Services.CodeExecution
                  * Не записываем её как primary failure: внешний Task завершится успешно только
                  * при успешном cleanup; ошибка очистки всё равно будет передана вызывающему коду.
                  */
+                executionResult = ExecutionResult.Stopped;
             }
             catch (Exception exception)
             {
@@ -518,11 +547,28 @@ namespace KID.Services.CodeExecution
             finally
             {
                 bool cleanupSucceeded = true;
+                var terminalResultAvailable = failures.CreateException(
+                    "Execution failed before cleanup.") == null;
+                ExecutionStateChangedEventArgs? cleanupStateChange = null;
 
                 /* Сессия остаётся currentSession, но Run и повторный Stop уже запрещены.
-                 * Ошибка перехода не отменяет попытки освободить независимые ресурсы.
+                 * Событие публикуется только после синхронного закрытия всех ingress gates.
                  */
-                cleanupSucceeded &= failures.Capture(() => MoveToCleaningUp(session));
+                cleanupSucceeded &= failures.Capture(() =>
+                    cleanupStateChange = MoveToCleaningUp(session));
+
+                /* Session identity остаётся доступной cleanup, но новая runtime-работа больше
+                 * не может получить ambient environment этой сессии.
+                 */
+                cleanupSucceeded &= failures.Capture(() => executionEnvironmentLease?.BeginCleanup());
+
+                /* Console, Keyboard, Mouse, Music и Dispatcher закрывают admission до первого
+                 * await. Само освобождение ресурсов продолжится ниже через DisposeAsync.
+                 */
+                cleanupSucceeded &= failures.Capture(() => context?.BeginCleanup());
+
+                if (cleanupStateChange != null)
+                    PublishStateChanged(session, cleanupStateChange);
 
                 /* Context освобождается первым: ожидаем выход консольных readers и WPF-очистку.
                  * Session token остаётся живым до завершения зависимых ожиданий и отписок.
@@ -547,7 +593,9 @@ namespace KID.Services.CodeExecution
                     /* Новый Run разрешается только после подтверждённого освобождения каждого
                      * lifecycle-ресурса. Ошибка самого перехода оставит сессию активной.
                      */
-                    _ = failures.Capture(() => CompleteSession(session));
+                    _ = failures.Capture(() => CompleteSession(
+                        session,
+                        terminalResultAvailable ? executionResult : null));
                 }
 
                 /* Ошибки внешних observers не влияют на FSM и cleanup, но не теряются:
@@ -561,7 +609,7 @@ namespace KID.Services.CodeExecution
                 var lifecycleException = failures.CreateException(
                     "Multiple errors occurred during the execution lifecycle.");
                 if (lifecycleException == null)
-                    completionSource.TrySetResult(null);
+                    completionSource.TrySetResult(executionResult);
                 else
                     completionSource.TrySetException(lifecycleException);
             }
@@ -620,10 +668,11 @@ namespace KID.Services.CodeExecution
         /// </summary>
         /// <remarks>
         /// Метод предназначен для безусловного finally-path. Он допускает вход после
-        /// Compiling, Running или StopRequested и не публикует повторное событие CleaningUp.
+        /// Compiling, Running или StopRequested. Возвращённое событие caller публикует только
+        /// после синхронного закрытия admission gates environment и context.
         /// </remarks>
         /// <param name="session">Сессия, ресурсы которой начинают освобождаться.</param>
-        private void MoveToCleaningUp(ExecutionSession session)
+        private ExecutionStateChangedEventArgs? MoveToCleaningUp(ExecutionSession session)
         {
             /* null означает, что переход не потребовался или session уже не current. */
             ExecutionStateChangedEventArgs? stateChange = null;
@@ -640,9 +689,7 @@ namespace KID.Services.CodeExecution
                 }
             }
 
-            /* Событие вызывается только для реально выполненного перехода и вне lock. */
-            if (stateChange != null)
-                PublishStateChanged(session, stateChange);
+            return stateChange;
         }
 
         /// <summary>
@@ -654,7 +701,7 @@ namespace KID.Services.CodeExecution
         /// До завершения этого метода новый Run остаётся запрещённым.
         /// </remarks>
         /// <param name="session">Полностью очищенная сессия, которую необходимо снять.</param>
-        private void CompleteSession(ExecutionSession session)
+        private void CompleteSession(ExecutionSession session, ExecutionResult? result)
         {
             /* При несовпадении currentSession метод ничего не меняет: позднее завершение
              * старого execution id не должно сбросить состояние нового запуска.
@@ -667,6 +714,12 @@ namespace KID.Services.CodeExecution
                 {
                     /* FSM проверяет разрешённость CleaningUp → Idle. */
                     stateChange = session.TransitionTo(ExecutionState.Idle);
+
+                    /* Terminal outcome публикуется только после успешного перехода
+                     * в Idle и поэтому никогда не изображает активное состояние.
+                     */
+                    if (result != null)
+                        lastResult = result;
 
                     /* Обнуляем owner внутри той же критической секции, чтобы следующий
                      * ExecuteAsync увидел согласованную пару «нет сессии + Idle».
@@ -701,6 +754,45 @@ namespace KID.Services.CodeExecution
                 try
                 {
                     ((EventHandler<ExecutionStateChangedEventArgs>)subscriber)(this, eventArgs);
+                }
+                catch (Exception exception)
+                {
+                    session.RecordStateNotificationFailure(exception);
+                }
+            }
+        }
+
+        private async Task PublishStopResponseDelayIfNeededAsync(ExecutionSession session)
+        {
+            try
+            {
+                await stopResponseDelayFactory(StopResponseWarningDelay).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                session.RecordStateNotificationFailure(exception);
+                return;
+            }
+
+            lock (sessionLock)
+            {
+                if (!ReferenceEquals(currentSession, session) ||
+                    session.State != ExecutionState.StopRequested)
+                {
+                    return;
+                }
+            }
+
+            var subscribers = StopResponseDelayed;
+            if (subscribers == null)
+                return;
+
+            var eventArgs = new StopResponseDelayedEventArgs(session.ExecutionId);
+            foreach (var subscriber in subscribers.GetInvocationList())
+            {
+                try
+                {
+                    ((EventHandler<StopResponseDelayedEventArgs>)subscriber)(this, eventArgs);
                 }
                 catch (Exception exception)
                 {

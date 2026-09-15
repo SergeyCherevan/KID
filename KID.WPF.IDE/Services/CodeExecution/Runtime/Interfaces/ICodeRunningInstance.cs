@@ -22,6 +22,6 @@ namespace KID.Services.CodeExecution.Runtime.Interfaces
         /// JoinableTask позволяет безопасно ожидать операцию, которая была запущена до чтения
         /// свойства Completion и в ходе выполнения может обращаться к WPF UI-потоку.
         /// </remarks>
-        JoinableTask Completion { get; }
+        JoinableTask<ExecutionResult> Completion { get; }
     }
 }

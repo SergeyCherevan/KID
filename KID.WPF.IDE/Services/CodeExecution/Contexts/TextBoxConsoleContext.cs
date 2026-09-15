@@ -19,8 +19,14 @@ public sealed class TextBoxConsoleContext : IConsoleContext
     private TextWriter? originalConsoleError;
     private TextBoxConsole? textBoxConsole;
     private bool initialized;
+    private bool initializationFailed;
+    private bool cleanupStarted;
+    private readonly ExecutionFailureCollector beginCleanupFailures = new();
     private readonly TaskCompletionSource disposeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private bool disposeStarted;
+    private long initializedExecutionId;
+    private CancellationToken initializedCancellationToken;
+    private object? initializedTarget;
 
     public object ConsoleTarget { get; set; }
 
@@ -42,22 +48,64 @@ public sealed class TextBoxConsoleContext : IConsoleContext
         this.redirectStreams = redirectStreams;
     }
 
-    /// <summary>Однократный Init; исходные потоки доступны cleanup даже при частичной ошибке.</summary>
+    /// <summary>
+    /// Идемпотентный для той же session identity Init; исходные потоки доступны cleanup
+    /// даже при частичной ошибке.
+    /// </summary>
     public void Init(long executionId, CancellationToken cancellationToken)
     {
         lock (lifecycleLock)
         {
-            ObjectDisposedException.ThrowIf(disposeStarted, this);
-            if (initialized) throw new InvalidOperationException("Console context is already initialized.");
+            ObjectDisposedException.ThrowIf(disposeStarted || cleanupStarted, this);
+            if (initialized)
+            {
+                if (initializedExecutionId == executionId &&
+                    initializedCancellationToken == cancellationToken &&
+                    ReferenceEquals(initializedTarget, ConsoleTarget))
+                {
+                    return;
+                }
+
+                throw new InvalidOperationException(
+                    "Console context is already initialized for another session or UI target.");
+            }
+            if (initializationFailed)
+            {
+                throw new InvalidOperationException(
+                    "Console context cannot be initialized after a partial initialization failure.");
+            }
             if (ConsoleTarget is not TextBox textBox)
                 throw new InvalidOperationException("ConsoleTarget must be a TextBox.");
             textBox.Dispatcher.VerifyAccess();
-            initialized = true;
+            initializedExecutionId = executionId;
+            initializedCancellationToken = cancellationToken;
+            initializedTarget = textBox;
             originalConsoleOut = System.Console.Out;
             originalConsoleIn = System.Console.In;
             originalConsoleError = System.Console.Error;
             textBoxConsole = new TextBoxConsole(textBox, executionId, cancellationToken);
-            redirectStreams(textBoxConsole);
+            try
+            {
+                redirectStreams(textBoxConsole);
+                initialized = true;
+            }
+            catch
+            {
+                initializationFailed = true;
+                throw;
+            }
+        }
+    }
+
+    public void BeginCleanup()
+    {
+        lock (lifecycleLock)
+        {
+            if (cleanupStarted)
+                return;
+
+            cleanupStarted = true;
+            beginCleanupFailures.Capture(() => textBoxConsole?.BeginCleanup());
         }
     }
 
@@ -67,6 +115,7 @@ public sealed class TextBoxConsoleContext : IConsoleContext
     /// </summary>
     public ValueTask DisposeAsync()
     {
+        BeginCleanup();
         lock (lifecycleLock)
         {
             if (disposeStarted) return new ValueTask(disposeCompletion.Task);
@@ -80,6 +129,7 @@ public sealed class TextBoxConsoleContext : IConsoleContext
     private async Task DisposeCoreAsync()
     {
         var failures = new ExecutionFailureCollector();
+        beginCleanupFailures.DrainTo(failures);
         await failures.CaptureAsync(
             () => textBoxConsole?.DisposeAsync().AsTask() ?? Task.CompletedTask,
             finallyAction: () =>
