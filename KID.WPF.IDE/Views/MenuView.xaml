@@ -21,8 +21,13 @@
         <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMenuViewModel}" />
     </UserControl.DataContext>
 
-    <StackPanel Orientation="Horizontal" Background="{DynamicResource MenuBrush}">
-        <Menu Margin="0,0,0,5">
+    <Grid Background="{DynamicResource MenuBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Menu Grid.Column="0" Margin="0,0,0,5">
             <MenuItem Header="{localization:Localization Menu_File}">
                 <MenuItem Header="{localization:Localization Menu_New}" InputGestureText="Ctrl+N" Command="{Binding NewFileCommand}" />
                 <MenuItem Header="{localization:Localization Menu_Open}" InputGestureText="Ctrl+O" Command="{Binding OpenFileCommand}" />
@@ -130,9 +135,11 @@
             <MenuItem Header="{localization:Localization Menu_Run}" InputGestureText="Ctrl+F5" Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}" />
             <MenuItem Header="{localization:Localization Menu_Stop}" InputGestureText="Shift+F5" Command="{Binding StopCommand}" IsEnabled="{Binding CanRequestStop}" />
         </Menu>
-        <TextBlock Margin="12,0,0,5"
+        <TextBlock Grid.Column="1"
+                   Margin="12,0,12,5"
+                   HorizontalAlignment="Right"
                    VerticalAlignment="Center"
                    Foreground="{DynamicResource TextBrush}"
                    Text="{Binding ExecutionStatusText}" />
-    </StackPanel>
+    </Grid>
 </UserControl>
