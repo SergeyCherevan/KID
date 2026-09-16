@@ -700,6 +700,7 @@
 **Файл:** `KID.Library/Graphics/Graphics.SimpleFigures.cs`
 
 **Фигуры:**
+- `Plot(x, y)` — точка размером 1×1 DIP
 - `Circle(x, y, radius)` — круг
 - `Ellipse(x, y, radiusX, radiusY)` — эллипс
 - `Rectangle(x, y, width, height)` — прямоугольник

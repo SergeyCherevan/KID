@@ -68,6 +68,33 @@ Graphics.Color = (0, 255, 0);
 
 ## Простые фигуры
 
+### Plot (Точка)
+
+Рисует точку как прямоугольник размером 1×1 DIP, используя текущий `FillColor`.
+
+**Сигнатуры:**
+```csharp
+Rectangle Plot(double x, double y)
+Rectangle Plot(Point point)
+```
+
+**Параметры:**
+- `x, y` — координаты точки
+- `point` — точка с координатами `X` и `Y`
+
+**Примеры:**
+```csharp
+Graphics.FillColor = "Red";
+Graphics.Plot(100, 100);
+
+Point point = new Point(150, 100);
+Graphics.Plot(point);
+```
+
+**Возвращает:** `Rectangle` размером 1×1 DIP для дальнейшей модификации.
+
+**Примечание:** `Plot` использует только `FillColor`; `StrokeColor` к точке не применяется.
+
 ### Circle (Круг)
 
 **Сигнатуры:**
@@ -662,7 +689,7 @@ img3.SetSource("new_icon.png", 120, 120);
   - Все публичные операции выполняются через `DispatcherManager.InvokeOnUI(...)`: внешний вызов проксируется в UI-поток, а `Action/Func<T>` выступают в роли “команд” на выполнение.
 
 - **Simple Factory / Factory Method**
-  - Методы `Circle/Ellipse/Rectangle/Line/Polygon/*Bezier/Image/Text` создают конкретные WPF-объекты, настраивают их и возвращают для дальнейшей модификации.
+  - Методы `Plot/Circle/Ellipse/Rectangle/Line/Polygon/*Bezier/Image/Text` создают конкретные WPF-объекты, настраивают их и возвращают для дальнейшей модификации.
 
 - **Adapter / Value Object для цветов**
   - `ColorType` унифицирует ввод цвета в разных форматах (строка, `(byte,byte,byte)`, `int`, `Brush`) и приводит его к `Brush`.

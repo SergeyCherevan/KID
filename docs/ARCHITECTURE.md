@@ -411,6 +411,7 @@ native/сторонний вызов, неинструментированный
 - Поддержка различных форматов: строки ("Red"), RGB кортежи, целые числа, Brush
 
 **Graphics.SimpleFigures.cs**
+- `Graphics.Plot(x, y)` — точка размером 1×1 DIP
 - `Graphics.Circle(x, y, radius)` — круг
 - `Graphics.Ellipse(x, y, radiusX, radiusY)` — эллипс
 - `Graphics.Rectangle(x, y, width, height)` — прямоугольник
