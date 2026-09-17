@@ -300,6 +300,57 @@ public sealed class TextBoxConsoleSpecifications
     }
 
     [Fact]
+    public async Task RetainedSessionStreamsAndObserver_CannotAffectNextConsole()
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            var oldBox = new TextBox { IsReadOnly = true };
+            var old = new TextBoxConsole(oldBox, 1, CancellationToken.None);
+            var oldWriter = old.Out;
+            var oldReader = old.In;
+            var oldObserverCalls = 0;
+            old.OutputReceived += (_, _) => Interlocked.Increment(ref oldObserverCalls);
+
+            try
+            {
+                old.Write("old");
+                Assert.Equal("old", oldBox.Text);
+                Assert.Equal(1, Volatile.Read(ref oldObserverCalls));
+            }
+            finally
+            {
+                await old.DisposeAsync();
+            }
+
+            var nextBox = new TextBox { IsReadOnly = true };
+            await using var next = new TextBoxConsole(nextBox, 2, CancellationToken.None);
+
+            await oldWriter.WriteAsync("stale");
+            var staleReadError = await Task.Run(
+                () => Record.Exception(() => oldReader.Read()),
+                TestContext.Current.CancellationToken);
+
+            Assert.IsType<ObjectDisposedException>(staleReadError);
+            Assert.Equal("old", oldBox.Text);
+            Assert.Equal("", nextBox.Text);
+            Assert.Equal(1, Volatile.Read(ref oldObserverCalls));
+
+            var nextRead = Task.Run(
+                () => next.In.Read(),
+                TestContext.Current.CancellationToken);
+            await WaitUntilAsync(() => !nextBox.IsReadOnly);
+            Assert.True(SendText(nextBox, "Z").Handled);
+            Assert.Equal('Z', (char)await nextRead.WaitAsync(
+                Timeout,
+                TestContext.Current.CancellationToken));
+            await PumpAsync(nextBox);
+
+            Assert.Equal("Z", nextBox.Text);
+            Assert.Equal(1, Volatile.Read(ref oldObserverCalls));
+        });
+    }
+
+    [Fact]
     public async Task FiftyDisposedConsoles_AreCollectibleWhileTheirTextBoxAndTokensRemainAlive()
     {
         await StaTest.RunAsync(async () =>
