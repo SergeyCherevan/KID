@@ -189,9 +189,10 @@ public sealed class TextBoxConsoleSpecifications
             {
                 using var stop = new CancellationTokenSource();
                 await using var console = new ConsoleSession(box, i, stop.Token);
-                var first = Task.Run(() => Record.Exception(() => console.ReadLine()), TestContext.Current.CancellationToken);
+                var input = console.In;
+                var first = Task.Run(() => Record.Exception(() => input.ReadLine()), TestContext.Current.CancellationToken);
                 await WaitUntilAsync(() => !box.IsReadOnly);
-                var second = Task.Run(() => Record.Exception(() => console.ReadLine()), TestContext.Current.CancellationToken);
+                var second = Task.Run(() => Record.Exception(() => input.ReadLine()), TestContext.Current.CancellationToken);
                 SendText(box, "x");
                 await stop.CancelAsync();
                 ((IDisposable)console).Dispose();
