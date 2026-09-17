@@ -74,7 +74,7 @@ public sealed class ConsoleClearRewriterTests
             rewritten.ToFullString(),
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            "TextBoxConsole.StaticConsole.Clear",
+            "KID.TextBoxConsole.Clear",
             rewritten.ToFullString(),
             StringComparison.Ordinal);
     }
