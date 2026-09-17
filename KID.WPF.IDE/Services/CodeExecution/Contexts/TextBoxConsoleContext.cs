@@ -1,7 +1,6 @@
 using KID.Services.Errors;
 using System.IO;
 using System.Windows.Controls;
-using KID.Services.CodeExecution.Console;
 using KID.Services.CodeExecution.Contexts.Interfaces;
 
 namespace KID.Services.CodeExecution.Contexts;
@@ -13,11 +12,12 @@ namespace KID.Services.CodeExecution.Contexts;
 public sealed class TextBoxConsoleContext : IConsoleContext
 {
     private readonly object lifecycleLock = new();
-    private readonly Action<TextBoxConsole> redirectStreams;
+    private readonly Action<TextWriter, TextReader, TextWriter> redirectStreams;
     private TextWriter? originalConsoleOut;
     private TextReader? originalConsoleIn;
     private TextWriter? originalConsoleError;
-    private TextBoxConsole? textBoxConsole;
+    private ExecutionEnvironment? environment;
+    private ConsoleExecutionScope? consoleScope;
     private bool initialized;
     private bool initializationFailed;
     private bool cleanupStarted;
@@ -30,17 +30,19 @@ public sealed class TextBoxConsoleContext : IConsoleContext
 
     public object ConsoleTarget { get; set; }
 
-    public TextBoxConsoleContext(TextBox textBox) : this(textBox, console =>
+    public TextBoxConsoleContext(TextBox textBox) : this(textBox, (output, input, error) =>
     {
-        System.Console.SetOut(console.Out);
-        System.Console.SetIn(console.In);
-        System.Console.SetError(console.Error);
+        System.Console.SetOut(output);
+        System.Console.SetIn(input);
+        System.Console.SetError(error);
     })
     {
     }
 
     // Тестовая точка ошибки посередине перенаправления без замены глобального Console API.
-    internal TextBoxConsoleContext(TextBox textBox, Action<TextBoxConsole> redirectStreams)
+    internal TextBoxConsoleContext(
+        TextBox textBox,
+        Action<TextWriter, TextReader, TextWriter> redirectStreams)
     {
         ArgumentNullException.ThrowIfNull(textBox);
         ArgumentNullException.ThrowIfNull(redirectStreams);
@@ -83,10 +85,35 @@ public sealed class TextBoxConsoleContext : IConsoleContext
             originalConsoleOut = System.Console.Out;
             originalConsoleIn = System.Console.In;
             originalConsoleError = System.Console.Error;
-            textBoxConsole = new TextBoxConsole(textBox, executionId, cancellationToken);
             try
             {
-                redirectStreams(textBoxConsole);
+                environment = ExecutionEnvironmentManager.GetCurrent(executionId);
+                if (environment.CancellationToken != cancellationToken)
+                    throw new InvalidOperationException(
+                        "Console context cancellation token does not match the current execution.");
+                var scopeBeforeInit = TextBoxConsole.CurrentScope;
+                try
+                {
+                    consoleScope = TextBoxConsole.Init(textBox, environment);
+                }
+                catch
+                {
+                    // Init может опубликовать полностью подготовленный scope и лишь затем
+                    // обнаружить cancellation. Такой partial owner должен быть доступен Dispose,
+                    // но конфликт с уже существующим scope не даёт этому context права его снять.
+                    var publishedScope = TextBoxConsole.CurrentScope;
+                    if (scopeBeforeInit == null &&
+                        publishedScope != null &&
+                        ReferenceEquals(publishedScope.Environment, environment))
+                    {
+                        consoleScope = publishedScope;
+                    }
+                    throw;
+                }
+                redirectStreams(
+                    TextBoxConsole.GetOut(consoleScope),
+                    TextBoxConsole.GetIn(consoleScope),
+                    TextBoxConsole.GetError(consoleScope));
                 initialized = true;
             }
             catch
@@ -105,7 +132,9 @@ public sealed class TextBoxConsoleContext : IConsoleContext
                 return;
 
             cleanupStarted = true;
-            beginCleanupFailures.Capture(() => textBoxConsole?.BeginCleanup());
+            var ownedEnvironment = environment;
+            if (ownedEnvironment != null && consoleScope != null)
+                beginCleanupFailures.Capture(() => TextBoxConsole.BeginCleanup(ownedEnvironment));
         }
     }
 
@@ -130,14 +159,19 @@ public sealed class TextBoxConsoleContext : IConsoleContext
     {
         var failures = new ExecutionFailureCollector();
         beginCleanupFailures.DrainTo(failures);
+        var ownedEnvironment = environment;
+        var ownedScope = consoleScope;
         await failures.CaptureAsync(
-            () => textBoxConsole?.DisposeAsync().AsTask() ?? Task.CompletedTask,
+            () => ownedEnvironment == null || ownedScope == null
+                ? Task.CompletedTask
+                : TextBoxConsole.ShutdownAsync(ownedEnvironment).AsTask(),
             finallyAction: () =>
             {
                 if (originalConsoleOut != null) failures.Capture(() => System.Console.SetOut(originalConsoleOut));
                 if (originalConsoleIn != null) failures.Capture(() => System.Console.SetIn(originalConsoleIn));
                 if (originalConsoleError != null) failures.Capture(() => System.Console.SetError(originalConsoleError));
-                textBoxConsole = null;
+                consoleScope = null;
+                environment = null;
                 originalConsoleOut = null;
                 originalConsoleIn = null;
                 originalConsoleError = null;

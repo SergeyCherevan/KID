@@ -323,9 +323,9 @@ namespace KID.Services.CodeExecution.Compilation
         /// видит тот же набор управляемых библиотек, что и процесс IDE.
         /// </para>
         /// <para>
-        /// Сборки KID.Library, KID.WPF.IDE и NAudio дополнительно закрепляются явными ссылками:
-        /// их типы могут ещё не присутствовать в AppDomain либо требуются коду, автоматически
-        /// добавленному после первоначального разбора.
+        /// Сборки KID.Library и NAudio дополнительно закрепляются явными ссылками: их типы могут
+        /// ещё не присутствовать в AppDomain либо требуются коду, автоматически добавленному
+        /// после первоначального разбора. Сгенерированный код не требует явной ссылки на IDE.
         /// </para>
         /// </remarks>
         /// <param name="cancellationToken">
@@ -366,14 +366,6 @@ namespace KID.Services.CodeExecution.Compilation
             AddReferenceIfMissing(
                 references,
                 typeof(global::KID.StopManager).Assembly.Location);
-
-            /* ConsoleClearRewriter генерирует ссылку на публичный мост StaticConsole,
-             * расположенный в KID.WPF.IDE. typeof(CSharpCompiler) предоставляет путь к той же
-             * сборке KID без строкового знания её имени или выходного каталога.
-             */
-            AddReferenceIfMissing(
-                references,
-                typeof(CSharpCompiler).Assembly.Location);
 
             /* Публичные Music API KID используют PlaybackState в сигнатурах. CLR могла ещё
              * не загрузить NAudio к моменту снимка AppDomain, поэтому ссылка закрепляется

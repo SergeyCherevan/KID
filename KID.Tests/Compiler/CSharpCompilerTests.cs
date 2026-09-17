@@ -6,6 +6,7 @@ using KID.Tests.TestDoubles;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Metadata;
+using System.Reflection.PortableExecutable;
 
 namespace KID.Tests.Compiler;
 
@@ -152,6 +153,28 @@ public sealed class CSharpCompilerTests
         {
             loadContext.Unload();
         }
+    }
+
+    [Fact]
+    public async Task CompileAsync_ConsoleClearReferencesLibraryButNotIdeAssembly()
+    {
+        const string code =
+            "public static class Program { public static void Main() { System.Console.Clear(); } }";
+        var compiler = new CSharpCompiler(new StubLocalizationService());
+
+        var result = await compiler.CompileAsync(code, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        var artifact = Assert.IsType<CompilationArtifact>(result.Artifact);
+        using var stream = new MemoryStream(artifact.PeImage.ToArray(), writable: false);
+        using var peReader = new PEReader(stream);
+        var metadata = peReader.GetMetadataReader();
+        var references = metadata.AssemblyReferences
+            .Select(handle => metadata.GetString(metadata.GetAssemblyReference(handle).Name))
+            .ToArray();
+
+        Assert.Contains("KID.Library", references);
+        Assert.DoesNotContain("KID.WPF.IDE", references);
     }
 
     private static Assembly LoadAssembly(

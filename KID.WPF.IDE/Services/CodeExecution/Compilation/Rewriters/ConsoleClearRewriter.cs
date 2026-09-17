@@ -32,7 +32,7 @@ internal sealed class ConsoleClearRewriter : CSharpSyntaxRewriter
     // Полностью квалифицированная цель исключает зависимость сгенерированного кода от
     // пользовательских директив using и направляет Clear в TextBoxConsole текущей сессии.
     private const string ConsoleClearTarget =
-        "global::KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear";
+        "global::KID.TextBoxConsole.Clear";
 
     // SemanticModel принадлежит ровно тому SyntaxTree, узлы которого передаются посетителю.
     // Токен позволяет остановить обход вместе с текущей сессией выполнения.

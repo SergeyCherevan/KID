@@ -1,5 +1,5 @@
 using KID.Services.CodeExecution.Compilation;
-using KID.Services.CodeExecution.Console;
+using LegacyTextBoxConsole = KID.Services.CodeExecution.Console.TextBoxConsole;
 using KID.Services.CodeExecution.Runtime;
 using System.Runtime.CompilerServices;
 using System.Windows;
@@ -39,7 +39,7 @@ public sealed class TextBoxConsoleSpecifications
             scope.Children.Add(box);
             FocusManager.SetFocusedElement(scope, previousFocus);
             using var stop = new CancellationTokenSource();
-            await using var console = new TextBoxConsole(box, 1, stop.Token);
+            await using var console = new LegacyTextBoxConsole(box, 1, stop.Token);
             if (beforeRead) await stop.CancelAsync();
 
             var read = Task.Run(() => Record.Exception(() => Read(console, line)), TestContext.Current.CancellationToken);
@@ -66,7 +66,7 @@ public sealed class TextBoxConsoleSpecifications
         {
             var box = new TextBox { IsReadOnly = true };
             using var stop = new CancellationTokenSource();
-            await using var console = new TextBoxConsole(box, 1, stop.Token);
+            await using var console = new LegacyTextBoxConsole(box, 1, stop.Token);
             var read = Task.Run(() => Record.Exception(() => Read(console, line)), TestContext.Current.CancellationToken);
             await WaitUntilAsync(() => !box.IsReadOnly);
             ((IDisposable)console).Dispose();
@@ -80,7 +80,7 @@ public sealed class TextBoxConsoleSpecifications
             Assert.False(SendKey(box, Key.Back).Handled);
             await stop.CancelAsync(); // Регистрация уже снята; callback не обращается к закрытому handle.
             console.Write("late");
-            TextBoxConsole.StaticConsole.Clear();
+            LegacyTextBoxConsole.StaticConsole.Clear();
             Assert.Equal("", box.Text);
         });
     }
@@ -92,7 +92,7 @@ public sealed class TextBoxConsoleSpecifications
         {
             var box = new TextBox { IsReadOnly = true };
             using var stop = new CancellationTokenSource();
-            await using var console = new TextBoxConsole(box, 1, stop.Token);
+            await using var console = new LegacyTextBoxConsole(box, 1, stop.Token);
             var read = Task.Run(() => Record.Exception(() => console.ReadLine()), TestContext.Current.CancellationToken);
             await WaitUntilAsync(() => !box.IsReadOnly);
             Assert.True(SendText(box, "Привет").Handled);
@@ -110,7 +110,7 @@ public sealed class TextBoxConsoleSpecifications
         await StaTest.RunAsync(async () =>
         {
             var box = new TextBox { IsReadOnly = true, Text = "prompt>" };
-            await using var console = new TextBoxConsole(box, 1, CancellationToken.None);
+            await using var console = new LegacyTextBoxConsole(box, 1, CancellationToken.None);
             var line = Task.Run(console.ReadLine, TestContext.Current.CancellationToken);
             await WaitUntilAsync(() => !box.IsReadOnly);
             SendKey(box, Key.Back); // Пустой ввод не удаляет prompt.
@@ -139,7 +139,7 @@ public sealed class TextBoxConsoleSpecifications
         await StaTest.RunAsync(async () =>
         {
             var box = new TextBox { IsReadOnly = true };
-            await using var console = new TextBoxConsole(box, 1, CancellationToken.None);
+            await using var console = new LegacyTextBoxConsole(box, 1, CancellationToken.None);
             var read = Task.Run(() => new string(
                 [(char)console.Read(), (char)console.Read(), (char)console.Read()]),
                 TestContext.Current.CancellationToken);
@@ -158,7 +158,7 @@ public sealed class TextBoxConsoleSpecifications
         {
             var box = new TextBox { IsReadOnly = true };
             using var stop = new CancellationTokenSource();
-            await using var console = new TextBoxConsole(box, 1, stop.Token);
+            await using var console = new LegacyTextBoxConsole(box, 1, stop.Token);
             using var exited = new ManualResetEvent(false);
             var read = Task.Run(() =>
             {
@@ -188,7 +188,7 @@ public sealed class TextBoxConsoleSpecifications
             for (var i = 1; i <= 20; i++)
             {
                 using var stop = new CancellationTokenSource();
-                await using var console = new TextBoxConsole(box, i, stop.Token);
+                await using var console = new LegacyTextBoxConsole(box, i, stop.Token);
                 var first = Task.Run(() => Record.Exception(() => console.ReadLine()), TestContext.Current.CancellationToken);
                 await WaitUntilAsync(() => !box.IsReadOnly);
                 var second = Task.Run(() => Record.Exception(() => console.ReadLine()), TestContext.Current.CancellationToken);
@@ -212,7 +212,7 @@ public sealed class TextBoxConsoleSpecifications
             for (var id = 1; id <= 20; id++)
             {
                 using var stop = new CancellationTokenSource();
-                await using var console = new TextBoxConsole(box, id, stop.Token);
+                await using var console = new LegacyTextBoxConsole(box, id, stop.Token);
                 var read = Task.Run(() => Record.Exception(() => console.ReadLine()), TestContext.Current.CancellationToken);
                 await WaitUntilAsync(() => !box.IsReadOnly);
                 var cancellation = Task.Run(async () => await stop.CancelAsync(), TestContext.Current.CancellationToken);
@@ -233,9 +233,9 @@ public sealed class TextBoxConsoleSpecifications
         await StaTest.RunAsync(async () =>
         {
             var box = new TextBox { IsReadOnly = true };
-            await using var old = new TextBoxConsole(box, 1, CancellationToken.None);
+            await using var old = new LegacyTextBoxConsole(box, 1, CancellationToken.None);
             Task? queued = null;
-            TextBoxConsole? next = null;
+            LegacyTextBoxConsole? next = null;
             using var outputQueued = new ManualResetEvent(false);
             await box.Dispatcher.InvokeAsync(() =>
             {
@@ -247,7 +247,7 @@ public sealed class TextBoxConsoleSpecifications
                     outputQueued.Set();
                 }, TestContext.Current.CancellationToken);
                 Assert.True(outputQueued.WaitOne(Timeout));
-                next = new TextBoxConsole(box, 2, CancellationToken.None);
+                next = new LegacyTextBoxConsole(box, 2, CancellationToken.None);
                 box.Text = "new";
                 old.Dispose();
             });
@@ -260,7 +260,7 @@ public sealed class TextBoxConsoleSpecifications
             old.Clear();
             await PumpAsync(box);
             Assert.Equal("new", box.Text);
-            TextBoxConsole.StaticConsole.Clear();
+            LegacyTextBoxConsole.StaticConsole.Clear();
             Assert.Equal("", box.Text);
             current.Write("current");
             Assert.Equal("current", box.Text);
@@ -273,7 +273,7 @@ public sealed class TextBoxConsoleSpecifications
         await StaTest.RunAsync(async () =>
         {
             var box = new TextBox { IsReadOnly = true };
-            await using var console = new TextBoxConsole(box, 1, CancellationToken.None);
+            await using var console = new LegacyTextBoxConsole(box, 1, CancellationToken.None);
             using var outputQueued = new ManualResetEvent(false);
             Task? writer = null;
             await box.Dispatcher.InvokeAsync(() =>
@@ -305,7 +305,7 @@ public sealed class TextBoxConsoleSpecifications
         await StaTest.RunAsync(async () =>
         {
             var oldBox = new TextBox { IsReadOnly = true };
-            var old = new TextBoxConsole(oldBox, 1, CancellationToken.None);
+            var old = new LegacyTextBoxConsole(oldBox, 1, CancellationToken.None);
             var oldWriter = old.Out;
             var oldReader = old.In;
             var oldObserverCalls = 0;
@@ -323,7 +323,7 @@ public sealed class TextBoxConsoleSpecifications
             }
 
             var nextBox = new TextBox { IsReadOnly = true };
-            await using var next = new TextBoxConsole(nextBox, 2, CancellationToken.None);
+            await using var next = new LegacyTextBoxConsole(nextBox, 2, CancellationToken.None);
 
             await oldWriter.WriteAsync("stale");
             var staleReadError = await Task.Run(
@@ -385,30 +385,35 @@ public sealed class TextBoxConsoleSpecifications
             var originalIn = global::System.Console.In;
             var originalError = global::System.Console.Error;
             var box = new TextBox { IsReadOnly = true };
-            var context = new TextBoxConsoleContext(box, console =>
+            var context = new TextBoxConsoleContext(box, (output, input, error) =>
             {
-                if (redirectedStreams >= 1) global::System.Console.SetOut(console.Out);
-                if (redirectedStreams >= 2) global::System.Console.SetIn(console.In);
-                if (redirectedStreams >= 3) global::System.Console.SetError(console.Error);
+                if (redirectedStreams >= 1) global::System.Console.SetOut(output);
+                if (redirectedStreams >= 2) global::System.Console.SetIn(input);
+                if (redirectedStreams >= 3) global::System.Console.SetError(error);
                 throw new InvalidOperationException("partial Init");
             });
+            var firstEnvironment = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
             try
             {
                 Assert.Throws<InvalidOperationException>(() => context.Init(1, CancellationToken.None));
             }
             finally
             {
+                firstEnvironment.BeginCleanup();
                 await context.DisposeAsync();
+                firstEnvironment.Dispose();
             }
             Assert.Same(originalOut, global::System.Console.Out);
             Assert.Same(originalIn, global::System.Console.In);
             Assert.Same(originalError, global::System.Console.Error);
+            using var nextEnvironment = ExecutionEnvironmentManager.BeginExecution(2, CancellationToken.None);
             await using var next = new TextBoxConsoleContext(box);
             next.Init(2, CancellationToken.None);
             var nextOut = global::System.Console.Out;
             await context.DisposeAsync();
             Assert.Same(nextOut, global::System.Console.Out);
             Assert.Throws<ObjectDisposedException>(() => context.Init(3, CancellationToken.None));
+            nextEnvironment.BeginCleanup();
         });
     }
 
@@ -420,6 +425,9 @@ public sealed class TextBoxConsoleSpecifications
             var box = new TextBox { IsReadOnly = true };
             using var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
                 TestContext.Current.CancellationToken);
+            using var environment = ExecutionEnvironmentManager.BeginExecution(
+                17,
+                cancellationSource.Token);
             var context = new TextBoxConsoleContext(box);
             try
             {
@@ -442,6 +450,7 @@ public sealed class TextBoxConsoleSpecifications
             }
             finally
             {
+                environment.BeginCleanup();
                 await context.DisposeAsync();
             }
         });
@@ -629,6 +638,7 @@ public sealed class TextBoxConsoleSpecifications
         {
             var original = global::System.Console.Out;
             var graphics = new FailingGraphicsContext();
+            using var environment = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
             var context = new CodeExecutionContext
             {
                 ExecutionId = 1,
@@ -637,6 +647,8 @@ public sealed class TextBoxConsoleSpecifications
                 Dispatcher = Dispatcher.CurrentDispatcher
             };
             context.Init();
+            environment.BeginCleanup();
+            context.BeginCleanup();
             var errors = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
                 Record.ExceptionAsync(async () => await context.DisposeAsync()).AsTask()));
             Assert.All(errors, error => Assert.Same(graphics.Failure, error));
@@ -646,24 +658,28 @@ public sealed class TextBoxConsoleSpecifications
     }
 
     [Fact]
-    public async Task OutputCallbackFailure_IsReportedByCleanup_AndStreamsAreRestored()
+    public async Task OutputCallbackFailure_DoesNotBlockNextHandlerOrFailCleanup()
     {
         await StaTest.RunAsync(async () =>
         {
             var box = new TextBox { IsReadOnly = true };
             var original = global::System.Console.Out;
-            TextBoxConsole? console = null;
             var failure = new InvalidOperationException("output callback");
-            var context = new TextBoxConsoleContext(box, adapter =>
+            var nextHandlerCalled = new TaskCompletionSource(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            using var environment = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
+            var context = new TextBoxConsoleContext(box, (output, _, _) =>
             {
-                console = adapter;
-                global::System.Console.SetOut(adapter.Out);
-                adapter.OutputReceived += (_, _) => throw failure;
+                global::System.Console.SetOut(output);
             });
             context.Init(1, CancellationToken.None);
-            console!.Write("text");
+            global::KID.TextBoxConsole.OutputReceived += _ => throw failure;
+            global::KID.TextBoxConsole.OutputReceived += _ => nextHandlerCalled.TrySetResult();
+            global::KID.TextBoxConsole.Write("text");
+            await nextHandlerCalled.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            environment.BeginCleanup();
             var error = await Record.ExceptionAsync(async () => await context.DisposeAsync());
-            Assert.Same(failure, error);
+            Assert.Null(error);
             Assert.Same(original, global::System.Console.Out);
             Assert.False(SendText(box, "late").Handled);
         });
@@ -698,14 +714,14 @@ public sealed class TextBoxConsoleSpecifications
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference CreateDisposedConsole(TextBox box, long id, CancellationToken token)
     {
-        var console = new TextBoxConsole(box, id, token);
+        var console = new LegacyTextBoxConsole(box, id, token);
         console.OutputReceived += (_, _) => { };
         var reference = new WeakReference(console);
         ((IDisposable)console).Dispose();
         return reference;
     }
 
-    private static void Read(TextBoxConsole console, bool line)
+    private static void Read(LegacyTextBoxConsole console, bool line)
     {
         if (line) console.ReadLine();
         else console.Read();
