@@ -224,7 +224,7 @@ Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
 `KID.Tests/Library/KeyboardMouseTests.cs` проверяет linked Stop, pulse cancellation, ожидание
 текущего handler, reset очереди/state/shortcuts/events, WPF-отписки, повторные scopes и
 освобождение ALC. Stage 9 soak повторяет полный Run/Stop 50 раз. Эти сценарии входят в результат
-2026-09-15 — 166 passed, 0 skipped, 0 failed.
+ветки 2026-09-17 — 188 passed, 0 skipped, 0 failed.
 
 Cleanup очищает Keyboard только после фактического завершения уже исполняемого handler.
 Произвольный блокирующий пользовательский вызов внутри handler нельзя принудительно оборвать

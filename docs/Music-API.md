@@ -704,7 +704,7 @@ for (int i = 0; i < 100; i++)
 `KID.Tests/Library/MusicLifecycleTests.cs` проверяет Stop для blocking/async playback,
 playback/fade task registry, URL download/write cancellation, временные файлы, stale handles,
 повторный shutdown и ошибки Stop/Dispose. Stage 9 soak подтверждает пустые реестры и однократный
-Dispose каждого output после 50 Run/Stop. Эти сценарии входят в результат 2026-09-15 — 166 passed,
+Dispose каждого output после 50 Run/Stop. Эти сценарии входят в результат ветки 2026-09-17 — 188 passed,
 0 skipped, 0 failed.
 
 Audio tests используют `IMusicRuntime` и не открывают реальное устройство, не выходят в сеть и не

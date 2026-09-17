@@ -17,6 +17,13 @@ token в поддерживающий cancellation API. Нельзя приме�
 
 Для Keyboard/Mouse нельзя добавлять static очередь, CTS или worker task. Новый input scope должен захватывать исходный `ExecutionEnvironment`, использовать отдельный экземпляр `ExecutionEventWorker`, закрывать вход до WPF-отписки и ожидать текущий handler/pulse в host cleanup. Runtime events, shortcuts и polling-state считаются per-run. Ошибка пользовательского handler не должна останавливать остальных подписчиков или превращаться в cleanup failure.
 
+Для Console публичный API статичен, но одна активная сессия представлена
+`ConsoleExecutionScope`. Любой сохраняемый reader/writer, read request, output item и Dispatcher
+callback обязан захватывать exact scope; нельзя повторно разрешать current scope из retained stream.
+`BeginCleanup` синхронно закрывает admission, а `ShutdownAsync` ожидает UI teardown, readers и
+`ExecutionEventWorker` до release. `TextBoxConsoleContext` владеет только process-wide
+`System.Console` streams и восстанавливает каждый из них даже после runtime shutdown failure.
+
 Для Music нельзя создавать static fire-and-forget playback/fade task или второй registry execution identity. Любой звук должен принадлежать `MusicExecutionScope`, каждая async-операция — получать playback/session token и находиться в task registry, а временный файл — регистрироваться до первой отменяемой записи. Host shutdown закрывает регистрацию синхронно, пытается остановить все outputs и только затем отменяет и ожидает задачи; `SoundPlayerOFF()` этот host-контракт не заменяет.
 
 Из корня: `dotnet restore KID.sln`, `dotnet build KID.sln -c Release --no-restore`, затем
@@ -394,8 +401,9 @@ public async Task DoSomethingAsync()
 
 ### Автоматизированные проверки C2/C3
 
-Контрольный прогон 2026-09-15: Release build — 0 warnings/0 errors; полный suite — 166 passed,
-0 skipped, 0 failed. Stage 9 focused-набор ранее повторён 10 раз (10/10 PASS). Проверки разделены
+Контрольный прогон ветки 2026-09-17: Release build — 0 warnings/0 errors; Console — 52/52;
+полный suite — 188 passed, 0 skipped, 0 failed. Stage 9 focused-набор ранее повторён 10 раз
+(10/10 PASS). Проверки разделены
 по слоям:
 
 - compiler tests — instrumentation, BCL rewrites, PE/PDB и диагностика строк;
@@ -409,19 +417,22 @@ Headless runtime smoke подтверждает путь compile → Run → Sto
 
 ### Автоматизированные проверки консоли
 
-`dotnet test KID.Tests/KID.Tests.csproj -c Release --no-restore --filter FullyQualifiedName~TextBoxConsoleSpecifications`
-проверяет отмену Read/ReadLine без клавиатуры, Stop при занятом UI, Dispose с живыми readers,
-Unicode/Backspace/Enter, восстановление потоков после частичного Init и всех execution-исходов,
-stale output/StaticConsole и блокировку нового Run до окончания async cleanup.
-Два сценария компилируют настоящие программы; тест с 50 адаптерами проверяет их сборку GC
-при живом TextBox и CTS. STA helper использует настоящий WPF Dispatcher без видимых окон.
+`dotnet test KID.Tests/KID.Tests.csproj -c Release --no-build --no-restore --filter FullyQualifiedName~KID.Tests.Console`
+проверяет отмену Read/ReadLine без клавиатуры, запрет ввода на UI-потоке, Unicode и клавиши,
+stale scope/read request, FIFO и параллельный output, lifecycle `OutputReceived`, WPF/Dispatcher
+failures и восстановление streams при всех execution-исходах.
+Интеграционные сценарии компилируют настоящие программы для `Clear`, `Read`/`ReadLine` и
+collectible event subscriber. Soak выполняет 50 циклов `Init → Read → Stop → Shutdown` и
+проверяет отписки, readers, worker queue и collectibility scope. STA helper использует настоящий
+WPF Dispatcher без видимых окон.
 Это автоматизированная runtime-проверка, ручная visual acceptance остаётся отдельным шагом.
 
 Для host-кода: IConsoleContext.Init принимает execution id и token явно. IConsoleContext и
 ICodeExecutionContext реализуют IAsyncDisposable; coordinator обязан ожидать DisposeAsync.
-TextBoxConsole.Dispose лишь начинает безопасную очистку без блокировки UI; DisposeAsync
-подтверждает отписки, выход readers и закрытие handles. Ошибка графического Dispose не должна
-пропускать восстановление консольных потоков.
+Внутренний `TextBoxConsole.BeginCleanup` начинает безопасную очистку без блокировки UI, а
+`ShutdownAsync` подтверждает отписки, выход readers, завершение event worker и закрытие handles.
+Ошибка графического или console runtime Dispose не должна пропускать восстановление консольных
+потоков.
 
 ### Ручное тестирование
 

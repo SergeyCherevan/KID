@@ -123,7 +123,7 @@
 **CSharpCompiler** (`Compilation/CSharpCompiler.cs`)
 - Компилирует C# код в PE/PDB-артефакт без загрузки результата в default context
 - Использует Microsoft.CodeAnalysis для парсинга и компиляции
-- Применяет реврайтер для замены `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()`
+- Применяет semantic rewriter для замены настоящего `System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`
 - Применяет `CancellationInstrumentationRewriter`: добавляет Stop-checkpoints в поддержанные циклы, тела функций и безопасные точки `await`/`yield`, а также передаёт session token в поддержанные `Task.Delay`/`Thread.Sleep`
 - Не переписывает пользовательский `finally` и формы, для которых нельзя доказуемо сохранить семантику
 - Обрабатывает ошибки компиляции и возвращает их в локализованном виде
@@ -148,19 +148,19 @@
   - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
   - Передаёт execution id в оба контекста, token — консольному; графический контекст получает token из ambient environment
 - **CanvasGraphicsContext** — инициализирует Graphics API с Canvas
-- **TextBoxConsoleContext** — инициализирует консоль с TextBox
+- **TextBoxConsoleContext** — подключает статический console runtime к TextBox и владеет перенаправлением process-wide `System.Console` streams
 - **CanvasTextBoxContextFabric** — фабрика для создания контекстов
   - Получает `App` из DI контейнера
   - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
-**TextBoxConsole** (`Console/TextBoxConsole.cs`)
-- Реализация IConsole для WPF TextBox
-- Перенаправляет Console.WriteLine/Write в TextBox
-- Поддерживает Console.ReadLine для ввода данных
-- Обрабатывает ввод с клавиатуры (включая кириллицу)
-- Статический класс StaticConsole для замены Console.Clear()
-- Использует Dispatcher своего TextBox с проверкой владельца каждой UI-команды; Stop и Dispose пробуждают Read/ReadLine без клавиатурного ввода
-- DisposeAsync ожидает readers, отписывает UI-события, закрывает регистрацию отмены и wait handles, освобождает StaticConsole только своей сессии
+**TextBoxConsole** (`KID.Library/Console/TextBoxConsole.*.cs`)
+- Публичный статический facade в namespace `KID` для `Read`, `ReadLine`, `Write`, `Clear` и `OutputReceived`
+- `ConsoleExecutionScope` пассивно связывает точные `ExecutionEnvironment`, WPF `TextBox` и `ExecutionEventWorker` одного запуска
+- Scope-bound reader/writer adapters и все отложенные work items захватывают identity исходной сессии
+- Использует Dispatcher принадлежащего scope TextBox; stale streams, callbacks и cleanup не изменяют следующий Run
+- `BeginCleanup` закрывает admission и пробуждает readers, `ShutdownAsync` ожидает UI teardown, worker и readers, затем освобождает registrations/wait handles/static ownership
+- `OutputReceived` последовательно выполняется в фоне; shutdown ждёт running handler, отбрасывает очередь и очищает delegates
+- Instance console, `IConsole` и вложенный `StaticConsole` удалены
 
 #### Trust model и граница Stop
 
@@ -386,7 +386,7 @@ native/сторонний вызов, неинструментированный
 - `InvokeOnUI(Action action)` — выполнение действия в UI потоке
 - `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
 - Не хранит собственный current execution, id или token
-- Используется библиотечными API (Graphics, Music) для работы с UI; TextBoxConsole использует собственный Dispatcher с проверкой execution-owner
+- Используется библиотечными API Graphics для работы с UI; TextBoxConsole использует Dispatcher из собственного `ConsoleExecutionScope`
 
 #### StopManager
 
@@ -541,7 +541,7 @@ Console API → TextBox (UI поток)
 
 - **Static/build:** Release build проходит с 0 warnings/0 errors; компилятор не использует
   `Assembly.Load(byte[])`, а lifecycle Dispose не остаются пустыми.
-- **Automated runtime:** полный suite на 2026-09-15 — 166 passed, 0 skipped, 0 failed; отдельно
+- **Automated runtime:** полный suite ветки на 2026-09-17 — 188 passed, 0 skipped, 0 failed; отдельно
   проверены compiled Stop, async Main, FSM/races, cleanup faults, stale callbacks/resources,
   50 последовательных Run/Stop и collectible ALC.
 - **Runtime smoke:** headless-путь compile → Run → Stop → cleanup → Idle проверен отдельно от UI.
@@ -627,7 +627,7 @@ Save / Discard / Cancel для каждой изменённой вкладки
 - Music API не обращается к UI: playback, fade, HTTP и file I/O привязаны к token и task registry исходной execution
 - Mouse API собирает события в UI-потоке и последовательно доставляет обработчики worker-ом своей execution; cleanup снимает Canvas-подписки и очищает delegates/state
 - Keyboard API делает то же для Window, дополнительно сбрасывая shortcuts и `CapturePolicy`; worker текущего Run никогда не видит очередь следующего
-- TextBoxConsole использует Dispatcher своего TextBox и отбрасывает команды устаревшей консоли; context DisposeAsync завершается до следующего Run
+- Статический TextBoxConsole использует Dispatcher своего scope и отбрасывает stale streams/read requests/work items; `TextBoxConsoleContext.DisposeAsync` восстанавливает все process-wide streams до следующего Run даже при runtime shutdown failure
 - `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
 - `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса
 - Выполнение entry point происходит через `Task.Run`, но остаётся внутри процесса IDE

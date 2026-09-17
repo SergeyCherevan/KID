@@ -150,7 +150,7 @@ Console.WriteLine("Консоль очищена!");
 ```
 
 **Особенности:**
-- Автоматически заменяется компилятором на `TextBoxConsole.StaticConsole.Clear()`
+- Автоматически заменяется компилятором на `global::KID.TextBoxConsole.Clear()`
 - Работает как стандартный `Console.Clear()` в пользовательском коде
 - Полностью очищает содержимое панели консоли
 
@@ -257,7 +257,8 @@ Console.WriteLine("Время вышло!");
 
 ### Автоматическая замена Console.Clear()
 
-Компилятор автоматически заменяет вызовы `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()` для корректной работы в контексте приложения.
+Компилятор автоматически заменяет настоящий безаргументный `System.Console.Clear()` на
+`global::KID.TextBoxConsole.Clear()`. Одноимённые пользовательские типы и методы не переписываются.
 
 ## Ограничения
 
@@ -268,120 +269,82 @@ Console.WriteLine("Время вышло!");
 
 ## Архитектура и паттерны (реализация модуля Console)
 
-Этот раздел описывает, какие паттерны проектирования и архитектурные решения используются в реализации Console API внутри .KID.
+Модуль консоли разделён между библиотечным runtime и host-интеграцией IDE.
 
-### Общая архитектурная идея
+- `KID.TextBoxConsole` — публичный статический facade в `KID.Library` для `Read`, `ReadLine`,
+  `Write`, `Clear` и `OutputReceived`.
+- `ConsoleExecutionScope` — внутренний пассивный паспорт запуска: он хранит точные
+  `ExecutionEnvironment`, WPF `TextBox` и `ExecutionEventWorker`.
+- `TextBoxConsoleContext` остаётся в `KID.WPF.IDE` и один владеет process-wide перенаправлением
+  `System.Console.In/Out/Error` и восстановлением исходных streams.
+- Instance `TextBoxConsole`, `IConsole` и вложенный `StaticConsole` удалены.
 
-Модуль консоли в .KID — это адаптер “`System.Console` → WPF `TextBox`”, встроенный в общий пайплайн выполнения пользовательского кода через **контекст выполнения** и **централизованную синхронизацию UI-потока**.
+### Execution-scoped static runtime
 
-Ключевые узлы:
-- Абстракция консоли через `IConsole` (чтобы реализацию можно было менять/расширять)
-- Контекст `IConsoleContext`, который на время запуска переназначает `Console.Out/In/Error` и затем восстанавливает обратно
-- Консоль использует Dispatcher своего TextBox и очередь команд, принадлежащую одному execution id
-- `Console.Clear()` у пользователя работает благодаря реврайту кода на этапе компиляции (замена вызова на внутренний `TextBoxConsole.StaticConsole.Clear()`)
+В процессе допускается одна активная console-сессия. `Init` публикует только полностью
+подготовленный scope; новый запуск запрещён до полного `ShutdownAsync` предыдущего. Mutable
+очереди и wait handles статические, но все объекты, способные пережить синхронный вызов,
+захватывают identity своего scope:
 
-### Реализованные паттерны проектирования
+- `TextBoxTextWriter` и `TextBoxTextReader` создаются заново для каждого запуска;
+- output work items, Dispatcher callbacks и `ReadRequest` содержат исходный scope;
+- stale writer/read-request/shutdown не могут обратиться к TextBox или состоянию нового запуска.
 
-### 1) Adapter (Адаптер)
+Scope-bound writer предоставляет только `TextWriter` API и не содержит `Clear`. Публичный
+`TextBoxConsole.Clear()` обслуживает активную сессию и используется compiler rewrite.
 
-- `TextBoxConsole` адаптирует WPF `TextBox` под консольный интерфейс, реализуя `IConsole`.
-- Совместимость со стандартным API `System.Console` достигается через адаптеры потоков:
-  - `TextBoxTextWriter : TextWriter` — вывод
-  - `TextBoxTextReader : TextReader` — ввод
+### Input, output и UI
 
-Таким образом, `Console.SetOut(...)`, `Console.SetIn(...)`, `Console.SetError(...)` могут работать с “консолью на базе TextBox” как с обычными потоками.
+`stateLock` защищает input/output queues и lifecycle, а `readLock` сериализует readers.
+`Read`/`ReadLine` запрещены на UI-потоке. `WaitHandle.WaitAny` ожидает ввод, Stop или cleanup;
+Stop имеет приоритет и выбрасывает `OperationCanceledException` с token исходной сессии,
+cleanup без Stop — `ObjectDisposedException`.
 
-### 2) Proxy / UI-thread marshalling (Прокси для UI-потока)
+WPF-события принимают ввод только при совпадении sender, active request, scope и current
+environment. UI-команды выполняются через Dispatcher принадлежащего scope TextBox. Принятые
+`Write`/`Clear` допечатываются FIFO во время штатного cleanup; новая работа после `BeginCleanup`
+отбрасывается.
 
-`TextBoxConsole` публикует команды через Dispatcher своего TextBox. Перед выполнением проверяется владелец; callbacks старой консоли не меняют новую. При обычной очистке принятый вывод допечатывается до освобождения bridge, поэтому последние строки программы сохраняются.
+### OutputReceived
 
-### 3) Observer (Наблюдатель)
+`OutputReceived` — статическое событие текущей сессии. После успешного UI append invocation list
+разбивается на отдельные work items `scope.EventWorker`. Обработчики выполняются последовательно
+в фоне; исключение одного подписчика не блокирует остальных и не превращает успешный resource
+cleanup в ошибку. Shutdown ожидает уже выполняющийся callback, отбрасывает очередь и очищает
+delegates, поэтому подписка compiled user program не удерживает collectible assembly.
 
-`TextBoxConsole` публикует событие `OutputReceived`: на него можно подписаться, чтобы отслеживать вывод (например, для логирования или дополнительной реакции UI).
+### Двухфазный cleanup
 
-### 4) Facade + Service Locator (Фасад + глобальная точка доступа)
+1. `BeginCleanup` синхронно закрывает admission, event worker и пробуждает readers.
+2. `ShutdownAsync` ожидает UI teardown, event worker и readers, закрывает token registration и
+   wait handles, затем освобождает static ownership.
+3. `TextBoxConsoleContext.DisposeAsync` после runtime shutdown пытается восстановить каждый из
+   трёх process-wide streams даже при ошибке WPF/Dispatcher cleanup. Повторные и конкурентные
+   вызовы наблюдают одну completion task и одно итоговое исключение.
 
-`TextBoxConsole.StaticConsole` — статический фасад над “текущим” экземпляром `TextBoxConsole`, чтобы иметь возможность вызывать `Clear()` без передачи ссылки на объект.
+Ошибки WPF action сохраняются в cleanup diagnostics. Даже недоступный Dispatcher не пропускает
+освобождение worker, registrations и не-WPF ресурсов; после завершения cleanup разрешён следующий
+Run.
 
-Это также похоже на Service Locator (хранение текущей реализации в статическом поле) — осознанный компромисс ради прозрачной поддержки `Console.Clear()` в пользовательском коде.
+### Compiler rewrite и зависимости
 
-### 5) Context + RAII/Dispose (Контекст выполнения и управление жизненным циклом)
+`ConsoleClearRewriter` семантически заменяет только настоящий безаргументный
+`System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`. Сгенерированная программа
+ссылается на `KID.Library`; Console bridge больше не создаёт обязательную runtime dependency на
+`KID.WPF.IDE`.
 
-`TextBoxConsoleContext` реализует паттерн “контекст выполнения”:
-- при `Init(executionId, token)` сохраняет оригинальные `Console.Out/In/Error`
-- подменяет их на потоки `TextBoxConsole`
-- при `DisposeAsync()` ожидает очистку адаптера и восстанавливает каждый исходный поток, включая частичный Init и ошибку cleanup
+### Проверки ветки
 
-Это обеспечивает предсказуемый жизненный цикл и отсутствие “утечек” переназначенных потоков между запусками.
+Console-набор содержит 52 сценария, включая параллельный output, stale scope/read state,
+ошибки WPF action и Dispatcher teardown, восстановление streams, конкурентный Dispose,
+collectible subscriber и 50 циклов `Init → Read → Stop → Shutdown`. Итог ветки:
 
-### 6) Compiler rewriting / “AOP-like” (сквозная функциональность на этапе компиляции)
+- Console tests — 52/52;
+- полный Release suite — 188/188;
+- Release build — 0 warnings, 0 errors.
 
-В `CSharpCompiler` используется `ConsoleClearRewriter` (на базе Roslyn `CSharpSyntaxRewriter`), который заменяет:
-- `Console.Clear()`
-- `System.Console.Clear()`
-
-на вызов:
-- `KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear()`
-
-Именно поэтому `Console.Clear()` корректно очищает панель консоли приложения, даже если пользовательский код использует стандартный API.
-
-### Архитектурные особенности реализации
-
-- **Слои и разделение ответственности**
-  - Реализация консоли живёт в слое сервисов: `KID.WPF.IDE/Services/CodeExecution/*` (`TextBoxConsole`, `TextBoxConsoleContext`)
-  - Консоль владеет своими UI-командами; библиотечный `DispatcherManager` остаётся отдельным механизмом Graphics, а Music не обращается к WPF UI
-
-- **Потоковая модель и потокобезопасность**
-  - Пользовательское чтение выполняется в фоне, UI-команды проходят через Dispatcher своего TextBox
-  - `readLock` сериализует чтения, `stateLock` защищает очередь символов и lifecycle; `WaitAny` ожидает ввод, Stop либо Dispose
-
-- **Event-driven ввод**
-  - Символы приходят из WPF событий `PreviewKeyDown/PreviewTextInput`, а поток выполнения ждёт пользовательский ввод через событие синхронизации
-
-- **Расширяемость**
-  - Можно добавить альтернативную консоль (например, `RichTextBox`/отдельное окно/сетевую), реализовав `IConsole` и/или `IConsoleContext`, не ломая общий пайплайн выполнения.
-
-### Алгоритм чтения и очистки
-
-1. Host создаёт консоль с неизменяемым execution id и токеном сессии. Конструктор работает на UI-потоке.
-2. Каждый reader учитывается до захвата `readLock`. Это включает чтения, ожидающие своей очереди.
-3. Активное чтение публикует запрос подготовки UI: сохраняет `IsReadOnly`, клавиатурный и логический фокус, затем устанавливает фокус на консоль. Отменённый/устаревший запрос пропускается.
-4. События `PreviewTextInput` и `PreviewKeyDown` помещают символы в очередь. В отличие от прежнего слота `lastReadChar`, очередь сохраняет все UTF-16 символы одного события. `Read()` возвращает один из них; остальные доступны следующему чтению.
-5. Если очередь пуста, `WaitHandle.WaitAny` ожидает input, Stop или Dispose. Регистрация session token сигнализирует отдельный event без обращения к WPF.
-6. Stop выбрасывает `OperationCanceledException` с исходным session token. Dispose без Stop приводит к `ObjectDisposedException`. При одновременных сигналах отмена проверяется первой.
-7. В `finally` снимается активный запрос, при Stop/Dispose очищается ввод, публикуется восстановление UI и уменьшается число readers. Восстановление не использует отменённый token и не перехватывает фокус, если пользователь уже перевёл его на другой контрол.
-
-`ReadLine()` собирает строку до Enter, возвращая её без перевода строки. Backspace удаляет один
-UTF-16 символ введённой строки; при пустом вводе prompt не удаляется. Редактирование в середине
-строки не поддерживается. При параллельном выводе во время ввода Backspace всё ещё действует
-на конец TextBox; полноценный редактор строки в этот этап не входит.
-
-### Контракт Dispose
-
-`TextBoxConsole.Dispose()` идемпотентно запрещает новые операции и сигнализирует Dispose-event.
-Он не блокирует UI-поток ожиданием reader. Host использует `await DisposeAsync()`, чтобы дождаться
-единственной полной очистки, включая конкурентные вызовы:
-
-- отписать оба WPF-события, завершить публикацию принятого вывода и восстановить UI;
-- очистить `OutputReceived` и снять `StaticConsole` только при совпадении id и экземпляра;
-- дождаться выхода всех зарегистрированных readers;
-- дождаться завершения token callback, закрыть регистрацию и только затем собственные wait handles.
-
-`TextBoxConsoleContext.DisposeAsync()` после этого восстанавливает `Console.Out/In/Error`
-независимыми шагами и удаляет сохранённые ссылки. Ошибки UI/callback/cleanup передаются
-coordinator; они не должны оставлять публичную lifecycle task незавершённой.
-`CodeExecutionContext.DisposeAsync()` пытается очистить консоль даже при ошибке графического
-Dispose. Сервис ожидает этот путь до выгрузки ALC, освобождения session CTS и разрешения нового Run.
-
-### Проверки
-
-`KID.Tests/Console/TextBoxConsoleSpecifications.cs` проверяет Stop до/во время чтения,
-частичную строку, занятый UI, конкурентный Dispose, Unicode и специальные клавиши, stale output,
-восстановление потоков при четырёх исходах и частичном Init, ошибки cleanup, сборку 50 адаптеров
-при живом TextBox/token и скомпилированные программы с настоящими Console.Read/ReadLine.
-Это STA/runtime-проверки без видимых окон. Они входят в полный результат 2026-09-15 — 166 passed,
-0 skipped, 0 failed. Headless runtime smoke и ручная проверка внешнего вида учитываются отдельно;
-успех Console-тестов не является доказательством sandbox или абсолютной остановки всего C#-кода.
+Это headless STA/runtime evidence без видимых окон. Оно не доказывает security sandbox или
+возможность принудительно завершить произвольный in-process код.
 
 ## См. также
 

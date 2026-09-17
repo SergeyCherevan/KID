@@ -741,7 +741,7 @@ img3.SetSource("new_icon.png", 120, 120);
 
 `KID.Tests/Library/DispatcherGraphicsTests.cs` и lifecycle tests проверяют Stop до/после постановки
 команд, занятый UI, normal drain, stale Dispatcher callbacks/Sprite, ошибки cleanup, повторные scopes
-и освобождение пользовательской ALC. Они входят в полный результат 2026-09-15 — 166 passed,
+и освобождение пользовательской ALC. Они входят в полный результат ветки 2026-09-17 — 188 passed,
 0 skipped, 0 failed.
 
 Это headless STA/runtime evidence. Внешний вид Canvas подтверждается отдельной visual acceptance.

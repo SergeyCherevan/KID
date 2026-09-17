@@ -19,6 +19,19 @@ cleanup, отмену fade/download/write, idempotent shutdown, ошибки Sto
 фоновых задач после завершения. Execution tests отдельно проверяют FSM, terminal outcomes,
 агрегацию ошибок финализации и запрет нового Run во время `CleaningUp`.
 
+## TextBoxConsole execution scope
+
+`Console/` содержит 52 сценария для статического `KID.TextBoxConsole` и
+`ConsoleExecutionScope`: input/Stop/Dispose races, Unicode и focus, FIFO и parallel output,
+stale streams/read requests/shutdown, `OutputReceived` worker lifecycle, WPF action и Dispatcher
+teardown failures, восстановление process-wide streams и запрет следующего Run до cleanup.
+
+Интеграционные тесты компилируют настоящие программы для `System.Console.Clear()`,
+`Read`/`ReadLine` и подписки на `OutputReceived`. Последний сценарий подтверждает, что static event
+не удерживает collectible assembly после cleanup. Отдельный soak выполняет 50 циклов
+`Init → Read → Stop → Shutdown` и проверяет отписки, завершение readers/worker, пустую очередь и
+collectibility scope.
+
 ## Итоговая надёжность: этап 9
 
 `Lifecycle/Stage9ReliabilityTests.cs` выполняет скомпилированные программы с поддержанными
@@ -26,8 +39,9 @@ cleanup, отмену fade/download/write, idempotent shutdown, ошибки Sto
 Console/Canvas/Keyboard/Mouse adapters и тестовым Music output. Проверяются workers, очереди,
 WPF-подписки, static events/shortcuts/scopes, Console streams, audio tasks/resources и stale callbacks.
 
-Контрольный полный прогон 2026-09-15: **166 passed, 0 skipped, 0 failed**. Focused-набор Этапа 9
-ранее повторён 10 раз: **10/10 PASS**.
+Контрольный полный прогон ветки 2026-09-17: **188 passed, 0 skipped, 0 failed**; Console:
+**52/52**, Release build: **0 warnings, 0 errors**. Focused-набор Этапа 9 ранее повторён 10 раз:
+**10/10 PASS**.
 
 ## Запуск и структура
 
@@ -40,7 +54,10 @@ dotnet test KID.Tests/KID.Tests.csproj -c Release --no-build
 
 Структура production-кода описана в [CodeExecution](../docs/CodeExecution.md). Тестовые каталоги группируют сценарии: `Compiler/`, `Execution/`, `Console/` и `Lifecycle/`. Импорты используют пространства имён соответствующих частей и их подпапок `Interfaces/`.
 
-`CompiledProgram_ConsoleClear_UsesConsoleContextBridge` проверяет полный путь от компиляции `System.Console.Clear()` до очистки WPF TextBox и вывода следующего текста. Эта проверка защищает строковое полное имя консольного bridge от ошибок при переносе классов.
+`CompiledProgram_ConsoleClear_UsesConsoleContextBridge` проверяет полный путь от компиляции
+`System.Console.Clear()` до `global::KID.TextBoxConsole.Clear()`, очистки WPF TextBox и вывода
+следующего текста. `CompileAsync_ConsoleClearReferencesLibraryButNotIdeAssembly` дополнительно
+проверяет metadata emitted artifact: bridge требует `KID.Library`, но не `KID.WPF.IDE`.
 
 ## Условия выполнения
 

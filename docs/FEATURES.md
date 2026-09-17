@@ -71,7 +71,8 @@
   - Подробная информация об ошибках
 
 - **Специальная обработка Console.Clear()**
-  - Автоматическая замена на TextBoxConsole.StaticConsole.Clear()
+  - Semantic rewrite в `global::KID.TextBoxConsole.Clear()`
+  - Пользовательские одноимённые `Console`/`Clear` не переписываются
   - Прозрачная для пользователя
 
 - **Кооперативное инструментирование Stop**
@@ -115,7 +116,7 @@
 ### Подтверждение надёжности
 
 - Release build: 0 warnings/0 errors.
-- Automated runtime: 166 passed, 0 skipped, 0 failed; focused Stage 9 repeat — 10/10.
+- Automated runtime ветки: 188 passed, 0 skipped, 0 failed; Console — 52/52; focused Stage 9 repeat — 10/10.
 - Headless runtime smoke и ручная visual acceptance ведутся как разные доказательные слои.
 - Эти проверки подтверждают поддержанный кооперативный scope, но не превращают in-process модель в security boundary.
 
@@ -303,7 +304,7 @@
 
 - **Очистка консоли**
   - `Console.Clear()` очищает TextBox
-  - Автоматическая замена на TextBoxConsole.StaticConsole.Clear()
+  - Автоматическая замена на статический `KID.TextBoxConsole.Clear()` из `KID.Library`
 
 ### Ввод
 

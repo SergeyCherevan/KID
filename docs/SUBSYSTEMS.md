@@ -62,8 +62,8 @@
 
 **ConsoleClearRewriter:**
 - Отдельный компонент, наследующий `CSharpSyntaxRewriter`
-- Заменяет `Console.Clear()` и `System.Console.Clear()` на `KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear()`
-- Работает с обоими вариантами: с `using System;` и без него
+- Семантически заменяет настоящий безаргументный `System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`
+- Не переписывает пользовательские одноимённые типы и не добавляет generated assembly зависимость на `KID.WPF.IDE`
 
 #### 1.3. DefaultCodeRunner
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/Runtime/DefaultCodeRunner.cs`
@@ -109,7 +109,9 @@
 - Host cleanup не использует отменённый session token для WPF-отписок
 
 **TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
-- Инициализирует консоль с TextBox
+- Подключает статический `KID.TextBoxConsole` к TextBox и captured `ExecutionEnvironment`
+- Один владеет process-wide перенаправлением и восстановлением `System.Console.In/Out/Error`
+- Ожидает runtime shutdown до восстановления streams; ошибка shutdown не пропускает ни один restore-шаг
 - Реализует `IConsoleContext`
 
 **CanvasTextBoxContextFabric** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasTextBoxContextFabric.cs`)
@@ -119,12 +121,12 @@
 - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
 #### 1.5. TextBoxConsole
-**Файл:** `KID.WPF.IDE/Services/CodeExecution/Console/TextBoxConsole.cs`
+**Файлы:** `KID.Library/Console/TextBoxConsole.*.cs`, `ConsoleExecutionScope.cs`
 
 **Ответственность:**
-- Реализация IConsole для WPF TextBox
-- Перенаправление Console.WriteLine/Write в TextBox
-- Поддержка Console.ReadLine для ввода
+- Публичный статический console facade в namespace `KID`
+- Перенаправление `System.Console` streams в WPF TextBox через per-run adapters
+- Ввод, FIFO-вывод, очистка и фоновые пользовательские callbacks в рамках одного execution scope
 
 **Основные компоненты:**
 
@@ -141,13 +143,9 @@
 - Поддерживает кириллицу и Unicode
 
 **Потоки:**
-- `TextBoxTextWriter` — TextWriter для вывода
-- `TextBoxTextReader` — TextReader для ввода
-
-**StaticConsole:**
-- Статический класс для замены `Console.Clear()`
-- Инициализируется при создании TextBoxConsole
-- Используется компилятором для замены вызовов
+- `TextBoxTextWriter` и `TextBoxTextReader` создаются для каждого `Init` и захватывают exact scope
+- Retained stream старого запуска не разрешает current scope повторно и не обращается к новому TextBox
+- `ConsoleExecutionScope` содержит только `ExecutionEnvironment`, `TextBox` и `ExecutionEventWorker`
 
 ### Подтверждённый lifecycle и ограничения
 
@@ -157,7 +155,7 @@
 - Console, Dispatcher/Graphics, Keyboard, Mouse и Music очищают per-run ресурсы до выгрузки ALC.
 - Ошибка одного cleanup-шага не отменяет попытки остальных; незавершённая очистка оставляет
   сервис в `CleaningUp` и блокирует новый Run.
-- Release build и 166 automated runtime tests подтверждают поддержанный scope; headless smoke и
+- Release build и 188 automated runtime tests подтверждают поддержанный scope; headless smoke и
   сообщённая пользователем visual acceptance учитываются отдельными evidence layers.
 - Произвольный native/сторонний вызов или неинструментированный пользовательский поток нельзя
   принудительно завершить безопасно внутри процесса.
@@ -170,10 +168,10 @@
 ### Компоненты
 
 #### 2.1. TextBoxConsole
-**Файл:** `KID.WPF.IDE/Services/CodeExecution/Console/TextBoxConsole.cs`
+**Файлы:** `KID.Library/Console/TextBoxConsole.*.cs`, `ConsoleExecutionScope.cs`
 
 **Ответственность:**
-- Реализация интерфейса IConsole для WPF TextBox
+- Статический facade `KID.TextBoxConsole` для WPF TextBox текущей execution-сессии
 - Перенаправление стандартного вывода (Console.WriteLine/Write) в TextBox
 - Поддержка ввода данных через Console.ReadLine/Read
 - Обработка ввода с клавиатуры, включая кириллицу и Unicode
@@ -194,32 +192,32 @@
 - Поддерживает кириллицу и Unicode символы
 - `TextBoxTextReader` — реализация TextReader для ввода
 
-**StaticConsole:**
-- Статический класс для замены `Console.Clear()` в пользовательском коде
-- Инициализируется при создании TextBoxConsole
-- Используется компилятором для замены вызовов `Console.Clear()` на `TextBoxConsole.StaticConsole.Clear()`
+**Scope и compiler bridge:**
+- `ConsoleExecutionScope` связывает environment, TextBox и последовательный event worker
+- `ConsoleClearRewriter` направляет `System.Console.Clear()` прямо в `global::KID.TextBoxConsole.Clear()`
+- Instance console, `IConsole` и вложенный `StaticConsole` больше не используются
 
 **Особенности:**
 - Dispatcher своего TextBox и проверка владельца защищают от запоздалых команд старой консоли
 - Обработка событий клавиатуры (PreviewKeyDown, PreviewTextInput)
-- Событие `OutputReceived` для отслеживания вывода
+- `OutputReceived` выполняется последовательно в фоне через per-run `ExecutionEventWorker`
 - Блокирующий ввод вне UI-потока; Stop/Dispose освобождают его без клавиатуры
-- Dispose начинает очистку; DisposeAsync ожидает readers, отписки, закрытие token registration и wait handles
-- Cleanup восстанавливает IsReadOnly/фокус, очищает OutputReceived и снимает только собственный StaticConsole
+- `BeginCleanup` закрывает admission; `ShutdownAsync` ожидает readers, running handler и UI teardown
+- Cleanup восстанавливает IsReadOnly/фокус, очищает `OutputReceived`, registration, wait handles и static ownership только exact scope
 
 #### 2.2. TextBoxConsoleContext
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
 
 **Ответственность:**
-- Инициализация TextBoxConsole с TextBox из ViewModel
+- Инициализация статического TextBoxConsole с TextBox из ViewModel и current environment
 - Реализация интерфейса IConsoleContext
-- Управление жизненным циклом консоли
+- Владение process-wide `System.Console` streams
 
 **Особенности:**
 - Получает TextBox из ConsoleOutputViewModel
-- Создаёт и инициализирует TextBoxConsole
-- Устанавливает TextBoxConsole в качестве стандартного вывода/ввода
-- Init получает execution id/token явно; DisposeAsync восстанавливает каждый поток даже после частичной инициализации и ошибки адаптера
+- Создаёт `ConsoleExecutionScope` через статический runtime и получает его scope-bound streams
+- Устанавливает эти streams в качестве стандартных `System.Console.Out/In/Error`
+- Init получает execution id/token явно; DisposeAsync восстанавливает каждый поток даже после частичной инициализации и runtime shutdown failure
 - IConsoleContext и ICodeExecutionContext реализуют IAsyncDisposable; coordinator ожидает консольную очистку до выгрузки ALC и нового Run
 
 ## 3. Подсистема работы с файлами (Files)
@@ -930,7 +928,7 @@
 
 2. **Консольный ввод/вывод:**
    - Пользовательский код → Console.WriteLine/ReadLine → TextBoxConsole → TextBox
-   - TextBoxConsole использует Dispatcher своего TextBox и проверяет владельца отложенных команд
+   - TextBoxConsole использует Dispatcher captured scope, а `OutputReceived` доставляется per-run event worker
 
 3. **Работа с файлами:**
    - MenuViewModel → CodeEditorsViewModel → CodeFileService → FileDialogService → FileService

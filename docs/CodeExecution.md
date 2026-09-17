@@ -7,20 +7,27 @@ process kill. Worker-процесс и OS-level containment потребуют �
 
 Оба контекста получают execution id, консольный также получает token напрямую, а графический получает его из текущего `ExecutionEnvironment`. Контексты реализуют асинхронное освобождение. CanvasGraphicsContext владеет Dispatcher scope: закрывает приём команд, дожидается принятых операций и сбрасывает Graphics. CodeExecutionContext затем освобождает консоль даже после ошибки графики. Coordinator ожидает обе очистки до выгрузки ALC, освобождения session CTS и перехода в Idle. Ошибка очистки не маскируется успешным завершением.
 
-Подсистема находится в `KID.WPF.IDE/Services/CodeExecution/`. Она разделена по обязанностям внутри одного модуля. Пространства имён соответствуют папкам; интерфейсы каждой части находятся в её подпапке `Interfaces/`.
+Host-координация находится в `KID.WPF.IDE/Services/CodeExecution/`, а доступный пользовательскому
+коду console runtime — в `KID.Library/Console/`. Поэтому скомпилированная программа использует
+только `KID.Library` и не получает Console-зависимость на IDE assembly.
 
 ```text
-CodeExecution/
+KID.Library/
+├── Console/
+│   ├── ConsoleExecutionScope.cs
+│   ├── TextBoxConsole.System.cs
+│   ├── TextBoxConsole.Input.cs
+│   ├── TextBoxConsole.Output.cs
+│   ├── TextBoxConsole.Streams.cs
+│   └── TextBoxConsole.Events.cs
+└── ExecutionEnvironment/
+    └── ExecutionEventWorker.cs
+
+KID.WPF.IDE/Services/CodeExecution/
 ├── CodeExecutionService.cs
 ├── ExecutionSession.cs
-├── ExecutionState.cs
-├── ExecutionStateChangedEventArgs.cs
-├── Interfaces/
-│   └── ICodeExecutionService.cs
 ├── Compilation/
 │   ├── CSharpCompiler.cs
-│   ├── Interfaces/
-│   │   └── ICodeCompiler.cs
 │   └── Rewriters/
 │       ├── CancellationInstrumentationRewriter.cs
 │       ├── ConsoleClearRewriter.cs
@@ -28,28 +35,12 @@ CodeExecution/
 ├── Runtime/
 │   ├── DefaultCodeRunner.cs
 │   ├── CollectibleCodeRunningInstance.cs
-│   ├── UserProgramLoadContext.cs
-│   └── Interfaces/
-│       ├── ICodeRunner.cs
-│       └── ICodeRunningInstance.cs
-├── Console/
-│   ├── TextBoxConsole.cs
-│   ├── TextBoxConsole.Input.cs
-│   ├── TextBoxConsole.Lifecycle.cs
-│   ├── TextBoxConsole.Output.cs
-│   ├── TextBoxConsole.StaticConsole.cs
-│   ├── TextBoxConsole.Streams.cs
-│   └── Interfaces/
-│       └── IConsole.cs
+│   └── UserProgramLoadContext.cs
 ├── Contexts/
 │   ├── CodeExecutionContext.cs
-│   ├── CanvasTextBoxContextFabric.cs
 │   ├── CanvasGraphicsContext.cs
-│   ├── TextBoxConsoleContext.cs
-│   └── Interfaces/
-│       ├── ICodeExecutionContext.cs
-│       ├── IGraphicsContext.cs
-│       └── IConsoleContext.cs
+│   ├── CanvasTextBoxContextFabric.cs
+│   └── TextBoxConsoleContext.cs
 └── Errors/
     └── ExecutionExceptionClassifier.cs
 ```
@@ -59,8 +50,13 @@ CodeExecution/
 - **Корень:** `CodeExecutionService` координирует запуск, `ExecutionSession` хранит состояние одной сессии. Контракт сервиса и события доступны вызывающему коду без зависимости от конкретного компилятора или runner.
 - **Compilation:** компилятор преобразует исходный код с помощью Roslyn и возвращает PE/PDB-артефакт. `Rewriters` принадлежит этой стадии. Общие модели `CompilationArtifact` и `CompilationResult` остаются в `KID.WPF.IDE/Models/` и пространстве имён `KID.Services`.
 - **Runtime:** runner создаёт и запускает экземпляр выполнения. Экземпляр владеет загруженной сборкой и `UserProgramLoadContext`, предоставляет `Completion` и инициирует выгрузку при `Dispose`.
-- **Console:** `TextBoxConsole` адаптирует WPF TextBox к интерфейсу `IConsole`: реализует ввод, очередь вывода, очистку и остановку чтения. Статический мост используется переписанным пользовательским `System.Console.Clear()`.
-- **Contexts:** фабрика собирает окружение запуска, общий контекст инициализирует графику и консоль и освобождает их. `TextBoxConsoleContext` создаёт адаптер из `Console/`, перенаправляет стандартные потоки и восстанавливает их после очистки адаптера. Контексты и их интерфейсы находятся вместе независимо от вида UI-ресурса.
+- **Console runtime:** публичный статический `KID.TextBoxConsole` в `KID.Library` реализует ввод,
+  FIFO-вывод, очистку и `OutputReceived`. Внутренний `ConsoleExecutionScope` связывает runtime с
+  точными `ExecutionEnvironment`, `TextBox` и `ExecutionEventWorker`; instance console,
+  `IConsole` и `StaticConsole` удалены.
+- **Contexts:** фабрика собирает окружение запуска, общий контекст инициализирует графику и
+  консоль и освобождает их. `TextBoxConsoleContext` не реализует runtime: он сохраняет,
+  перенаправляет на scope-bound adapters и восстанавливает process-wide `System.Console` streams.
 - **Errors:** `ExecutionExceptionClassifier` определяет ожидаемую остановку для координатора и runtime; это правило относится к выполнению пользовательского кода.
 - **Общая обработка ошибок:** `ExecutionFailureCollector` находится вне подсистемы, в `Services/Errors/ExecutionFailureCollector.cs` (пространство имён `KID.Services.Errors`). Он собирает исключения независимых шагов и используется координатором, сессией и контекстами. Правило ожидаемой остановки остаётся в `CodeExecution/Errors/ExecutionExceptionClassifier.cs`.
 
@@ -86,7 +82,11 @@ Instrumentation покрывает поддержанные циклы, тела
 
 Регистрация конкретных `CSharpCompiler` и `DefaultCodeRunner` находится в `Services/DI/ServiceCollectionExtensions.cs`. Координатор использует интерфейсы из `Compilation/Interfaces/` и `Runtime/Interfaces/`.
 
-`ConsoleClearRewriter` генерирует вызов `global::KID.Services.CodeExecution.Console.TextBoxConsole.StaticConsole.Clear()`. Полное имя хранится строкой: при следующем переносе консоли нужно обновить его и тесты. `Compilation` также является именем типа Roslyn, поэтому `RuntimeTypeSymbolResolver` явно указывает `Microsoft.CodeAnalysis.Compilation`. Пространство имён `CodeExecution.Console` пересекается с именем стандартного типа: в коде подсистемы, `typeof`, `nameof` и XML-ссылках используется явное `System.Console`.
+`ConsoleClearRewriter` генерирует вызов `global::KID.TextBoxConsole.Clear()`. Semantic rewrite
+обрабатывает только настоящий безаргументный `System.Console.Clear()`, а emitted-artifact test
+проверяет ссылку на `KID.Library` и отсутствие обязательной ссылки на `KID.WPF.IDE` из-за Console
+bridge. `Compilation` также является именем типа Roslyn, поэтому `RuntimeTypeSymbolResolver` явно
+указывает `Microsoft.CodeAnalysis.Compilation`.
 
 ## Проверки
 
@@ -97,9 +97,14 @@ dotnet build KID.sln -c Release
 dotnet test KID.Tests/KID.Tests.csproj -c Release --no-build
 ```
 
-Тесты `Compiler/` проверяют компиляцию и переписывание кода; `Execution/` — координатор, runner и обработку ошибок; `Console/` — ввод, вывод и очистку консоли; `Lifecycle/` — жизненный цикл. Тест `CompiledProgram_ConsoleClear_UsesConsoleContextBridge` компилирует и выполняет программу через настоящий компилятор, runner и WPF-консоль, проверяя удаление прежнего текста и вывод после `Clear`.
+Тесты `Compiler/` проверяют компиляцию, semantic rewrite и metadata dependencies;
+`Execution/` — координатор, runner и обработку ошибок; `Console/` — ввод, вывод, stale-scope
+изоляцию, event worker, WPF/Dispatcher failures и collectible subscriber; `Lifecycle/` — полный
+жизненный цикл. `CompiledProgram_ConsoleClear_UsesConsoleContextBridge` выполняет настоящий
+переписанный `System.Console.Clear()`, а `CompiledOutputSubscriber_DoesNotRetainCollectibleAssemblyAfterCleanup`
+проверяет удаление static event-root после cleanup.
 
-Контрольный прогон 2026-09-15: Release build — 0 warnings/0 errors; полный suite — 166 passed,
-0 skipped, 0 failed; Stage 9 focused repeat — 10/10. Static/build, automated runtime, headless smoke
-и сообщённая пользователем visual acceptance являются разными evidence layers. Ни один из них не
+Контрольный прогон ветки 2026-09-17: Release build — 0 warnings/0 errors; Console — 52/52;
+полный suite — 188 passed, 0 skipped, 0 failed. Static/build, automated runtime, headless smoke и
+сообщённая пользователем visual acceptance являются разными evidence layers. Ни один из них не
 доказывает security isolation или возможность принудительно завершить произвольный in-process код.

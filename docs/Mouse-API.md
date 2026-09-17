@@ -226,8 +226,8 @@ while (true)
 
 `KID.Tests/Library/KeyboardMouseTests.cs` проверяет linked Stop, pulse cancellation, ожидание
 текущего handler, сброс очереди/state/events, WPF-отписки, повторные scopes и освобождение ALC.
-Stage 9 soak повторяет полный Run/Stop 50 раз. Эти сценарии входят в результат 2026-09-15 —
-166 passed, 0 skipped, 0 failed.
+Stage 9 soak повторяет полный Run/Stop 50 раз. Эти сценарии входят в результат ветки
+2026-09-17 — 188 passed, 0 skipped, 0 failed.
 
 Cleanup гарантирует отсутствие ресурсов Mouse первого Run в следующем только после фактического
 завершения уже выполняющегося handler. Произвольный блокирующий пользовательский код внутри такого
