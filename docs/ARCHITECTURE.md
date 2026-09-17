@@ -27,8 +27,8 @@
                     ↕
 ┌─────────────────────────────────────────┐
 │        KIDLibrary Layer                 │
-│  (Graphics, Music API и другие          │
-│   API для пользовательского кода)       │
+│  (Console, Graphics, Sprite, Music,     │
+│   Mouse, Keyboard и execution runtime)  │
 └─────────────────────────────────────────┘
 ```
 
@@ -107,7 +107,7 @@
 
 **Расположение:** `KID.WPF.IDE/Services/CodeExecution/`
 
-Подсистема разделена на `Compilation/` (включая `Rewriters/`), `Runtime/`, `Console/`, `Contexts/` и `Errors/`. Координатор и состояние сессии остаются в корне; интерфейсы размещены в `Interfaces/` соответствующей части. Полное дерево файлов и границы ответственности описаны в [структуре подсистемы выполнения кода](CodeExecution.md).
+Подсистема разделена на `Compilation/` (включая `Rewriters/`), `Runtime/`, `Contexts/` и `Errors/`. Координатор и состояние сессии остаются в корне; интерфейсы размещены в `Interfaces/` соответствующей части. Console runtime находится в `KID.Library/Console/`, а IDE-слой содержит только владеющий process-wide streams `TextBoxConsoleContext`. Полное дерево файлов и границы ответственности описаны в [структуре подсистемы выполнения кода](CodeExecution.md).
 
 **CodeExecutionService** (`CodeExecutionService.cs`)
 - Координирует процесс выполнения кода
@@ -152,15 +152,6 @@
 - **CanvasTextBoxContextFabric** — фабрика для создания контекстов
   - Получает `App` из DI контейнера
   - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
-
-**TextBoxConsole** (`KID.Library/Console/TextBoxConsole.*.cs`)
-- Публичный статический facade в namespace `KID` для `Read`, `ReadLine`, `Write`, `Clear` и `OutputReceived`
-- `ConsoleExecutionScope` пассивно связывает точные `ExecutionEnvironment`, WPF `TextBox` и `ExecutionEventWorker` одного запуска
-- Scope-bound reader/writer adapters и все отложенные work items захватывают identity исходной сессии
-- Использует Dispatcher принадлежащего scope TextBox; stale streams, callbacks и cleanup не изменяют следующий Run
-- `BeginCleanup` закрывает admission и пробуждает readers, `ShutdownAsync` ожидает UI teardown, worker и readers, затем освобождает registrations/wait handles/static ownership
-- `OutputReceived` последовательно выполняется в фоне; shutdown ждёт running handler, отбрасывает очередь и очищает delegates
-- Instance console, `IConsole` и вложенный `StaticConsole` удалены
 
 #### Trust model и граница Stop
 
@@ -361,7 +352,11 @@ native/сторонний вызов, неинструментированный
 
 Этот слой предоставляет API, доступный в пользовательском коде.
 
-#### ExecutionEnvironment
+#### 5.1. Execution infrastructure (Инфраструктура выполнения)
+
+Общие lifecycle-компоненты, на которых построены пользовательские API библиотеки.
+
+##### ExecutionEnvironment
 
 **ExecutionEnvironment/ExecutionEnvironment.cs / ExecutionEnvironmentManager.cs**
 - Единственный ambient registry execution identity в KID.Library
@@ -370,15 +365,15 @@ native/сторонний вызов, неинструментированный
 - Lease использует reference compare: поздний Dispose старого запуска не очищает новый environment
 - Полным lifecycle и FSM по-прежнему владеют `CodeExecutionService` и `ExecutionSession`
 
-#### ExecutionEventWorker
+##### ExecutionEventWorker
 
 **ExecutionEnvironment/ExecutionEventWorker.cs**
-- Общий внутренний тип доставки событий для Keyboard и Mouse; это не singleton и не второй ambient registry
-- Каждый `KeyboardExecutionScope`/`MouseExecutionScope` создаёт собственные очередь, семафор, linked token, worker task и набор pulse-задач
+- Общий внутренний тип доставки событий для Keyboard, Mouse и TextBoxConsole; это не singleton и не второй ambient registry
+- Каждый `KeyboardExecutionScope`, `MouseExecutionScope` и `ConsoleExecutionScope` создаёт собственные очередь, семафор, linked token и worker task; Keyboard и Mouse дополнительно регистрируют pulse-задачи
 - `ShutdownAsync` идемпотентно закрывает вход, выполняет WPF-отписку, отменяет и ожидает фоновые задачи, затем освобождает per-run state
 - Ошибка одного пользовательского handler наблюдается отдельно и не препятствует другим подписчикам или обязательному cleanup
 
-#### DispatcherManager
+##### DispatcherManager
 
 **ExecutionEnvironment/DispatcherManager.cs / DispatcherScope.cs**
 - Статический класс для централизованного управления Dispatcher
@@ -386,9 +381,9 @@ native/сторонний вызов, неинструментированный
 - `InvokeOnUI(Action action)` — выполнение действия в UI потоке
 - `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
 - Не хранит собственный current execution, id или token
-- Используется библиотечными API Graphics для работы с UI; TextBoxConsole использует Dispatcher из собственного `ConsoleExecutionScope`
+- Используется библиотечными API Graphics и Sprite для работы с UI; TextBoxConsole использует Dispatcher из собственного `ConsoleExecutionScope`
 
-#### StopManager
+##### StopManager
 
 **ExecutionEnvironment/StopManager.cs**
 - Статический класс для управления остановкой выполнения программы
@@ -397,7 +392,21 @@ native/сторонний вызов, неинструментированный
 - Используется API (Music и другими) для проверки отмены выполнения
 - Является публичным facade над текущим `ExecutionEnvironment`; собственного registry и блокировки не имеет
 
-#### Graphics API
+#### 5.2. Console API
+
+**Расположение:** `KID.Library/Console/`
+
+- Публичный статический facade в namespace `KID` для `Read`, `ReadLine`, `Write`, `Clear` и `OutputReceived`
+- `ConsoleExecutionScope` пассивно связывает точные `ExecutionEnvironment`, WPF `TextBox` и `ExecutionEventWorker` одного запуска
+- Scope-bound reader/writer adapters и все отложенные work items захватывают identity исходной сессии
+- Использует Dispatcher принадлежащего scope TextBox; stale streams, callbacks и cleanup не изменяют следующий Run
+- `BeginCleanup` закрывает admission и пробуждает readers, `ShutdownAsync` ожидает UI teardown, worker и readers, затем освобождает registrations/wait handles/static ownership
+- `OutputReceived` последовательно выполняется в фоне; shutdown ждёт running handler, отбрасывает очередь и очищает delegates
+- Instance console, `IConsole` и вложенный `StaticConsole` удалены
+
+#### 5.3. Graphics API
+
+**Расположение:** `KID.Library/Graphics/`
 
 **Graphics.System.cs**
 - Внутренний `Graphics.Init(Canvas, scope)` — инициализация Canvas в execution scope
@@ -437,7 +446,17 @@ native/сторонний вызов, неинструментированный
   - `AddToCanvas()`, `RemoveFromCanvas()` — управление на холсте (для UIElement)
   - `SetStrokeColor()`, `SetFillColor()`, `SetColor()` — цвета (только для Shape)
 
-#### Music API
+#### 5.4. Sprite API
+
+**Расположение:** `KID.Library/Sprite/`
+
+- `Sprite` объединяет несколько графических `UIElement` вокруг общей anchor-позиции
+- Поддерживает перемещение, абсолютное позиционирование, видимость и поиск столкновений
+- При создании захватывает `DispatcherScope` исходного запуска; старый Sprite не получает доступ к Canvas следующей execution-сессии
+- Обход элементов проверяет cancellation исходного `ExecutionEnvironment`, а UI-операции выполняются через `DispatcherManager`
+- Публичный контракт и примеры описаны в [Sprite API](Sprite-API.md)
+
+#### 5.5. Music API
 
 **Расположение:** `KID.Library/Music/`
 
@@ -487,7 +506,7 @@ native/сторонний вызов, неинструментированный
   - `SoundSeek()`, `SoundFade()` — дополнительные возможности
   - `SoundPlayerOFF()` — остановка всех текущих звуков без закрытия сессии; обязательный host cleanup выполняется отдельно
 
-#### Mouse API
+#### 5.6. Mouse API
 
 **Расположение:** `KID.Library/Mouse/`
 
@@ -506,6 +525,17 @@ native/сторонний вызов, неинструментированный
 - `Mouse.MousePressButtonEvent` — событие изменения нажатых кнопок
 - `Mouse.MouseClickEvent` — событие клика по Canvas
 - Пользовательские delegates очищаются при завершении execution, чтобы не удерживать collectible ALC
+
+#### 5.7. Keyboard API
+
+**Расположение:** `KID.Library/Keyboard/`
+
+- Статический facade предоставляет polling состояния, edge/consume-проверки, текстовый буфер, события и shortcuts
+- `KeyboardExecutionScope` связывает точные `ExecutionEnvironment`, WPF `Window` и собственный `ExecutionEventWorker`
+- WPF-события собираются в UI-потоке, а пользовательские handlers последовательно выполняются worker-ом в фоне
+- `CapturePolicy` управляет реакцией Keyboard на ввод внутри TextBox/PasswordBox; по умолчанию используется `CaptureAlways`
+- Shutdown закрывает приём событий, снимает Window-подписки, ожидает handler/pulse-задачи и очищает state, shortcuts и delegates
+- Публичный контракт и примеры описаны в [Keyboard API](Keyboard-API.md)
 
 ## Потоки данных
 
