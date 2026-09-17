@@ -1,7 +1,7 @@
 # План: статический TextBoxConsole и execution-scoped lifecycle
 
 - **Дата:** 2026-09-17
-- **Статус:** implemented — три прохода завершены, итоговая автоматическая проверка зелёная
+- **Статус:** completed — все пункты плана реализованы и подтверждены автоматическими проверками
 - **Область:** `KID.Library`, `KID.WPF.IDE`, `KID.Tests`
 - **Основные компоненты:** `TextBoxConsole`, `ConsoleExecutionScope`, `TextBoxConsoleContext`, `ConsoleClearRewriter`, `CSharpCompiler`
 
@@ -33,17 +33,17 @@
 - Поиск после миграции не находит production/test-ссылок на старый namespace, `StaticConsole`, `LegacyTextBoxConsole` или `IConsole`.
 - Существующая unrelated/untracked `.claude/` не изменялась и не включалась в коммиты.
 
-### Остаточные пробелы доказательной базы
+### Завершающий hardening-проход. Закрытие остаточных пунктов
 
-Незакрытые пункты ниже оставлены намеренно: реализация трёх проходов завершена, но для них нет отдельного теста или достаточно явной XML-документации.
+- XML-docs дополнены контрактами одной активной сессии, captured-scope streams, двухфазного BeginCleanup/Shutdown и host ownership process-wide streams.
+- Добавлены прямые тесты запрета Read/ReadLine на UI-потоке, stale ReadRequest, параллельных Write и структурного отсутствия Clear у scope-bound writer.
+- Fault-injection покрывает ошибку WPF output action и остановленный Dispatcher: diagnostics сохраняются, worker/handles/token registration освобождаются, следующий запуск разрешается.
+- Подтверждено, что runtime shutdown failure не мешает восстановлению всех трёх System.Console streams, а конкурентные Dispose наблюдают одну task и то же исключение.
+- Реальный compiled subscriber OutputReceived вызывается из collectible assembly и не удерживает её после cleanup.
+- Soak усилен до 50 последовательных циклов Init → Read → Stop → Shutdown с проверкой отписок, readers, worker queue и collectibility scope.
+- Итоговая проверка: новые/изменённые targeted tests — 9/9; Console — 52/52; полный набор — 188/188; Release build — 0 warnings/errors; git diff --check — clean.
 
-- XML-docs пока не формулируют отдельно ограничение одной активной console-сессии, captured-scope контракт stream adapters и полную Stop/Dispose semantics.
-- Нет отдельных тестов для stale `ReadRequest`, меняющего focus нового чтения, и для параллельных `Write` из нескольких потоков.
-- Не добавлена fault-injection проверка ошибки конкретной WPF output action и Dispatcher teardown именно для Console.
-- Проверена collectibility target подписчика `OutputReceived`, но не отдельный сценарий подписки к event из compiled collectible assembly.
-- Stress покрывает 50 последовательных init/shutdown и collectibility, но не полный 50–100-кратный цикл именно Run/Stop/Shutdown.
-
-В чек-листах `[x]` означает фактически реализованный и проверенный пункт, `[ ]` — явно оставшийся пробел доказательной базы.
+Все ранее открытые пункты доказательной базы закрыты. В чек-листах [x] означает реализованный и проверенный контракт.
 
 ## 🎯 Результат
 
@@ -527,11 +527,11 @@ WPF event не ставится в `ExecutionEventWorker`.
 - [x] Поискать все остаточные ссылки на старый namespace и instance API.
 - [x] Удалить старые IDE console partials только после прохождения новых тестов.
 - [x] Удалить `IConsole`, так как consumers отсутствуют.
-- [ ] Обновить XML-docs полностью:
+- [x] Обновить XML-docs полностью:
   - [x] статический facade;
-  - [ ] одна активная session;
-  - [ ] captured scope streams;
-  - [ ] Stop/Dispose semantics;
+  - [x] одна активная session;
+  - [x] captured scope streams;
+  - [x] Stop/Dispose semantics;
   - [x] OutputReceived background semantics;
   - [x] host ownership process-wide streams.
 - [x] Обновить релевантные architecture/subsystem документы только по фактически реализованным изменениям.
@@ -554,15 +554,15 @@ WPF event не ставится в `ExecutionEventWorker`.
 ### Streams и stale работа
 
 - [x] Старый writer после нового Run не пишет в новый `TextBox`.
-- [ ] Старый writer не выполняет `Clear` для нового Run.
+- [x] Scope-bound writer не предоставляет `Clear`, а stale captured writer не может очистить новый Run.
 - [x] Старый reader после нового Run не получает новый input.
-- [ ] Старый `ReadRequest` не меняет `IsReadOnly` и focus нового чтения.
+- [x] Старый `ReadRequest` не меняет `IsReadOnly` и focus нового чтения.
 - [x] Stale Dispatcher drain не выполняет action на новом `TextBox`.
 - [x] Stale cleanup не очищает новые buffers, streams и delegates.
 
 ### Input
 
-- [ ] `Read` и `ReadLine` запрещены на UI-потоке.
+- [x] `Read` и `ReadLine` запрещены на UI-потоке.
 - [x] Unicode и surrogate pairs сохраняются.
 - [x] Space, Backspace и Enter сохраняют текущую semantics.
 - [x] Backspace не удаляет prompt до начала текущего read.
@@ -575,12 +575,12 @@ WPF event не ставится в `ExecutionEventWorker`.
 
 ### Output
 
-- [ ] Parallel Write сохраняет сериализованный UI drain.
+- [x] Parallel Write сохраняет сериализованный UI drain.
 - [x] Write/Clear имеют FIFO-порядок.
 - [x] Dispose допечатывает принятый output до completion.
 - [x] Output после закрытия admission отбрасывается.
-- [ ] Ошибка WPF action сохраняется в cleanup diagnostics, но не пропускает остальные cleanup-шаги.
-- [ ] Ошибка Dispatcher teardown не пропускает освобождение не-WPF ресурсов.
+- [x] Ошибка WPF action сохраняется в cleanup diagnostics, но не пропускает остальные cleanup-шаги.
+- [x] Ошибка Dispatcher teardown не пропускает освобождение не-WPF ресурсов.
 
 ### Events и collectible ALC
 
@@ -590,7 +590,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 - [x] Shutdown ждёт выполняющийся handler.
 - [x] Queued handlers отбрасываются после Close.
 - [x] Static event очищается между запусками.
-- [ ] Подписка compiled user program не удерживает collectible assembly после cleanup.
+- [x] Подписка compiled user program не удерживает collectible assembly после cleanup.
 
 ### Context и System.Console
 
@@ -599,8 +599,8 @@ WPF event не ставится в `ExecutionEventWorker`.
 - [x] Streams восстанавливаются после runtime fault.
 - [x] Streams восстанавливаются после Stop во время Read/ReadLine.
 - [x] Streams восстанавливаются после partial redirect failure на каждом из трёх шагов.
-- [ ] Ошибка runtime shutdown не пропускает попытку восстановить каждый stream.
-- [ ] Repeated/concurrent Dispose наблюдает одну completion task и тот же failure.
+- [x] Ошибка runtime shutdown не пропускает попытку восстановить каждый stream.
+- [x] Repeated/concurrent Dispose наблюдает одну completion task и тот же failure.
 
 ### Compiler dependency
 
@@ -612,7 +612,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 
 ### Stress и lifecycle
 
-- [ ] 50–100 последовательных Init/Run/Stop/Shutdown не оставляют WPF handlers.
+- [x] 50–100 последовательных Init/Run/Stop/Shutdown не оставляют WPF handlers.
 - [x] Ни один старый TextBox не принимает события после shutdown.
 - [x] Все event workers завершены и их очереди пусты.
 - [x] Все readers завершены до следующего execution.
@@ -679,9 +679,9 @@ GUI/visual acceptance не запускается автоматически: д
 - [x] Stop и cleanup немедленно пробуждают Console reads.
 - [x] Shutdown ожидает readers, running event callback и UI teardown.
 - [x] Принятый output допечатывается, новая работа после BeginCleanup отклоняется.
-- [x] `TextBoxConsoleContext` восстанавливает process-wide streams при всех проверенных исходах.
+- [x] `TextBoxConsoleContext` восстанавливает process-wide streams при всех предусмотренных исходах, включая runtime shutdown failure.
 - [x] `System.Console.Clear()` переписывается в `global::KID.TextBoxConsole.Clear()`.
 - [x] Пользовательская программа не получает обязательную runtime dependency на `KID.WPF.IDE` из-за Console bridge.
-- [ ] User delegates не удерживают collectible assembly после cleanup.
+- [x] User delegates не удерживают collectible assembly после cleanup.
 - [x] Все targeted и full Release tests проходят без warnings/errors.
 - [x] Unrelated файлы и исторические документы не изменены.

@@ -108,6 +108,10 @@ public sealed class StaticTextBoxConsoleSpecifications
             var oldWriter = TextBoxConsole.GetOut(oldScope);
             var oldReader = TextBoxConsole.GetIn(oldScope);
 
+            Assert.DoesNotContain(
+                oldWriter.GetType().GetMethods(),
+                method => method.Name == nameof(TextBoxConsole.Clear));
+
             await oldWriter.WriteAsync("old");
             Assert.Equal("old", oldBox.Text);
             oldLease.BeginCleanup();

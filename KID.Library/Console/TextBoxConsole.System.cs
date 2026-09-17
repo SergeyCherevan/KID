@@ -8,6 +8,14 @@ namespace KID;
 /// <summary>
 /// Предоставляет консольный API текущей execution-сессии поверх принадлежащего ей WPF TextBox.
 /// </summary>
+/// <remarks>
+/// В процессе может существовать только одна активная console-сессия. <see cref="Init"/>
+/// публикует полностью подготовленный <see cref="ConsoleExecutionScope"/>, а повторная
+/// инициализация разрешается только после завершения <see cref="ShutdownAsync"/> предыдущего
+/// запуска. Сохраняемые reader/writer adapters захватывают точный scope своего запуска и не
+/// разрешают текущее статическое состояние повторно, поэтому stale stream не может обратиться
+/// к ресурсам следующей execution-сессии.
+/// </remarks>
 public static partial class TextBoxConsole
 {
     private static readonly object initLock = new();
@@ -119,7 +127,10 @@ public static partial class TextBoxConsole
         }
     }
 
-    /// <summary>Синхронно закрывает приём новой работы для указанного environment.</summary>
+    /// <summary>
+    /// Синхронно закрывает приём новой работы для указанного environment, закрывает event worker
+    /// и пробуждает все заблокированные Console reads. Метод идемпотентен и не освобождает handles.
+    /// </summary>
     internal static void BeginCleanup(ExecutionEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(environment);
@@ -136,7 +147,11 @@ public static partial class TextBoxConsole
         }
     }
 
-    /// <summary>Полностью освобождает runtime только указанного environment.</summary>
+    /// <summary>
+    /// Ожидает UI teardown, выполняющийся пользовательский callback и всех readers, затем
+    /// освобождает wait handles, token registration, streams и static ownership указанного
+    /// environment. Повторные вызовы наблюдают одну completion task; stale environment является no-op.
+    /// </summary>
     internal static ValueTask ShutdownAsync(ExecutionEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(environment);

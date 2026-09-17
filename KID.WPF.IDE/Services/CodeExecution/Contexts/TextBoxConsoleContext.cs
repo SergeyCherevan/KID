@@ -6,9 +6,16 @@ using KID.Services.CodeExecution.Contexts.Interfaces;
 namespace KID.Services.CodeExecution.Contexts;
 
 /// <summary>
-/// Владеет перенаправлением System.Console одной сессии. Cleanup ожидает readers,
-/// отписки и публикацию принятого вывода, затем восстанавливает исходные потоки.
+/// Host-владелец process-wide перенаправления System.Console одной execution-сессии.
+/// Runtime, WPF-подписки и per-run streams принадлежат статическому TextBoxConsole и его
+/// ConsoleExecutionScope; context только сохраняет исходные In/Out/Error, подключает
+/// scope-bound adapters и восстанавливает каждый исходный поток после runtime shutdown.
 /// </summary>
+/// <remarks>
+/// <see cref="BeginCleanup"/> синхронно закрывает console admission и пробуждает readers.
+/// <see cref="DisposeAsync"/> возвращает одну общую completion task, ожидает полный shutdown
+/// и пытается восстановить все три process-wide stream даже при ошибке runtime cleanup.
+/// </remarks>
 public sealed class TextBoxConsoleContext : IConsoleContext
 {
     private readonly object lifecycleLock = new();

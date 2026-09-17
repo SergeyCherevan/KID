@@ -352,15 +352,14 @@ public sealed class TextBoxConsoleSpecifications
     }
 
     [Fact]
-    public async Task FiftyDisposedConsoleSessions_AreCollectibleWhileTextBoxAndTokenRemainAlive()
+    public async Task FiftyInitReadStopShutdownSessions_ReleaseAllPerRunResources()
     {
         await StaTest.RunAsync(async () =>
         {
             var box = new TextBox { IsReadOnly = true };
-            using var stop = new CancellationTokenSource();
             var references = new List<WeakReference>();
             foreach (var id in Enumerable.Range(1, 50))
-                references.Add(await CreateDisposedConsoleAsync(box, id, stop.Token));
+                references.Add(await RunStoppedConsoleAsync(box, id));
             for (var i = 0; i < 10 && references.Any(r => r.IsAlive); i++)
             {
                 GC.Collect();
@@ -370,7 +369,7 @@ public sealed class TextBoxConsoleSpecifications
             Assert.All(references, reference => Assert.False(reference.IsAlive));
             Assert.False(SendText(box, "late").Handled);
             Assert.False(SendKey(box, Key.Enter).Handled);
-            await stop.CancelAsync();
+            Assert.Null(TextBoxConsole.CurrentScope);
             GC.KeepAlive(box);
         });
     }
@@ -715,15 +714,28 @@ public sealed class TextBoxConsoleSpecifications
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static async Task<WeakReference> CreateDisposedConsoleAsync(
+    private static async Task<WeakReference> RunStoppedConsoleAsync(
         TextBox box,
-        long id,
-        CancellationToken token)
+        long id)
     {
-        var console = new ConsoleSession(box, id, token);
+        using var stop = new CancellationTokenSource();
+        var console = new ConsoleSession(box, id, stop.Token);
         console.OutputReceived += _ => { };
-        var reference = new WeakReference(console);
+        var reference = new WeakReference(console.Scope);
+        var read = Task.Run(
+            () => Record.Exception(() => console.ReadLine()),
+            TestContext.Current.CancellationToken);
+        await WaitUntilAsync(() => !box.IsReadOnly);
+        await stop.CancelAsync();
+        var error = await read.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+        Assert.IsType<OperationCanceledException>(error);
         await console.DisposeAsync();
+        Assert.True(box.IsReadOnly);
+        Assert.False(SendText(box, "late").Handled);
+        Assert.False(SendKey(box, Key.Enter).Handled);
+        Assert.True(console.Scope.EventWorker.Completion.IsCompletedSuccessfully);
+        Assert.Equal(0, console.Scope.EventWorker.QueuedCount);
+        console = null!;
         return reference;
     }
 
