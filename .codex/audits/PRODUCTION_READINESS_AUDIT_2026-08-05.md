@@ -8,38 +8,45 @@
 - **Для распространения среди учеников и запуска полученных извне `.cs`-файлов:** примерно **3/10**, небезопасно.
 - **Общая production-readiness:** около **40–45%**.
 
-Пересчитанная оценка от 2026-09-16 после завершения `feature/FixC2C3`:
+Актуализированная оценка от 2026-09-18 после завершения execution-scoped миграции
+`TextBoxConsole` и ветки `feature/CompilationProfile`:
 
-- **Для локального использования автором с доверенным кодом:** примерно **8/10**, стабильная beta.
-- **Для распространения среди учеников при условии запуска собственного или иного доверенного кода:** примерно **7/10**, beta.
+- **Для локального использования автором с доверенным кодом:** примерно **8,5/10**, стабильная beta.
+- **Для распространения среди учеников при условии запуска собственного или иного доверенного кода:** примерно **7,5/10**, beta.
 - **Для запуска полученных извне недоверенных `.cs`-файлов:** примерно **3/10**, по-прежнему небезопасно.
-- **Общая production-readiness в принятом trusted-code scope:** около **60–65%**.
+- **Общая production-readiness в принятом trusted-code scope:** около **65–70%**.
 
-Рост оценки обеспечили подтверждённые автоматическими и ручными проверками Stop/lifecycle,
-изоляция ресурсов между запусками, корректная обработка async entry point, cleanup и 166/166
-автоматических тестов. Балл для недоверенного кода не вырос: `feature/FixC2C3` сознательно
-сохраняет in-process trust model и не добавляет security sandbox. Верхнюю границу общей оценки
-по-прежнему ограничивают отсутствие CI, структурного журналирования и crash reporting,
-неатомарное сохранение обычных файлов и настроек, зависимость конфигурации от working directory,
-незавершённый release engineering и неподтверждённая accessibility.
+Дополнительный рост оценки по сравнению с пересчётом от 2026-09-16 обеспечили два закрытых
+reliability-риска: Console перенесена в `KID.Library` как execution-scoped static runtime с защитой
+от stale-потоков, readers и callbacks, а редактор и compiler теперь используют один детерминированный
+compilation profile вместо зависимого от порядка загрузки сборок сканирования `AppDomain`.
+Последняя зафиксированная автоматическая проверка ветки — **219/219** тестов; отдельно подтверждена
+одинаковая работа standalone `.exe` и Visual Studio F5. Балл для недоверенного кода не вырос:
+оба изменения сознательно сохраняют in-process trust model и не добавляют security sandbox.
+Верхнюю границу общей оценки по-прежнему ограничивают отсутствие CI, структурного журналирования
+и crash reporting, неатомарное сохранение обычных файлов и настроек, зависимость конфигурации от
+working directory, незавершённый release engineering и неподтверждённая accessibility.
 
 За 5 августа устранены startup-deadlock, warning-сборка и риск молчаливой потери несохранённого кода. На ветке `feature/FixC2C3` C2 принят как осознанная in-process trust model для доверенного учебного кода, а согласованный кооперативный scope C3 реализован и подтверждён. Общий `No-Go` для широкого production-релиза сохраняется из-за остальных пунктов аудита, а не из-за требования обязательно вынести выполнение в sandbox/worker.
 
 ## 🔬 Что проверено
 
-- 133 C#-файла, около 13 265 строк C#.
+- В текущем checkout: 178 production C#-файлов и около 14 588 строк production C#; отдельно 30 test C#-файлов и около 6 992 строк тестового кода.
 - Два production-проекта: `KID.WPF.IDE` и `KID.Library`.
 - На момент исходного аудита было **0 тестовых проектов**; сейчас в решение добавлен `KID.Tests`.
-- Проверены все восемь коммитов за 5 августа во всех локальных ветках; все сегодняшние изменения production-кода включены в текущий `develop` (`02be930`).
-- Контрольная Release-сборка текущего `develop`: **0 ошибок, 0 предупреждений**; в обоих production-проектах включён `TreatWarningsAsErrors`.
+- В исходном аудите проверены восемь коммитов за 5 августа; на тот момент изменения production-кода были включены в `develop` (`02be930`).
+- Текущий checkout — `feature/CompilationProfile` на `6ad3342`; тот же commit находится в локальном `develop` и `origin/feature/CompilationProfile`. После пересчёта от 2026-09-16 (`ed2ba3c`) ветка содержит 12 целевых commit-ов Console migration/hardening, документации и compilation profile.
+- В обоих production-проектах включён `TreatWarningsAsErrors`; последняя зафиксированная Release-сборка текущей ветки завершилась с **0 ошибок и 0 предупреждений**.
 - Контрольная проверка C2/C3 на `feature/FixC2C3` от 2026-09-15: `dotnet restore KID.sln` и Release build успешны; `dotnet test KID.sln -c Release --no-restore` — **166 passed, 0 skipped, 0 failed**; focused-набор Этапа 9 ранее повторён 10 раз — **10/10 PASS**.
+- На ветке `feature/TextBoxConsoleExecutionScope` после переноса Console зафиксированы: targeted hardening **9/9**, Console **52/52**, полный набор **188 passed, 0 skipped, 0 failed**, Release build без warnings/errors.
+- На текущей `feature/CompilationProfile` (`6ad3342`) зафиксированы: Release build — **0 warnings, 0 errors**; полный набор — **219 passed, 0 skipped, 0 failed**; `git diff --cached --check` прошёл.
 - NuGet vulnerability scan: известных уязвимых пакетов по текущим источникам не найдено.
 - Framework-dependent publish текущего `develop` успешно создан: 54 файла и 35,74 МБ в корне publish-каталога; 214 файлов и 51,19 МБ с учётом вложенных runtime- и localization-каталогов.
 - Publish требует установленный .NET 8 Desktop Runtime, имеет версию `1.0.0.0` и **не подписан**.
 - Все три локализации содержат одинаковые 50 ключей.
 - Светлая и тёмная темы содержат одинаковые 54 ресурсных ключа.
-- В исходном аудите GUI не запускался. Для C2/C3 отдельно выполнен headless runtime smoke, а пользователь подтвердил manual GUI/visual checklist 2026-09-15; это разные доказательные слои.
-- При актуализации Этапа 10 production-исходники не изменялись: менялись план, этот аудит и связанная Markdown-документация. Существующие untracked-каталоги не затрагивались.
+- В исходном аудите GUI не запускался. Для C2/C3 отдельно выполнен headless runtime smoke, а пользователь подтвердил manual GUI/visual checklist 2026-09-15. Для compilation profile 2026-09-18 пользователь отдельно подтвердил одинаковые completion, diagnostics и Run result в standalone `.exe` и Visual Studio F5.
+- Текущая актуализация аудита не перезапускала build/tests/publish/vulnerability scan: выше указаны разделённые ранее зафиксированные доказательства; в этом проходе изменяется только этот Markdown-файл.
 
 ## 🚨 Критичные проблемы исходного аудита — C2/C3 повторно оценены
 
@@ -58,16 +65,31 @@
 
 ### ✅ C2. In-process trust model — принятое продуктовое решение
 
-Компилятор предоставляет пользовательской программе ссылки на загруженные сборки и возвращает
-PE/PDB-артефакт. `DefaultCodeRunner` создаёт отдельный
-`CollectibleCodeRunningInstance`, который загружает его в одноразовый collectible
-`UserProgramLoadContext` и запускает entry point через reflection внутри процесса IDE:
+Compiler больше не строит references из случайного текущего состава `AppDomain`.
+`KIDCompilationProfileProvider` один раз создаёт immutable-профиль из полного текущего
+`Microsoft.NETCore.App`, полного `Microsoft.WindowsDesktop.App`, `KID.Library` и совместимого
+`NAudio.Core`. Один singleton-профиль с одинаковыми references/imports используют и
+`RoslynHostService`, и `CSharpCompiler`:
 
+- [KIDCompilationProfileProvider.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CompilationProfile/KIDCompilationProfileProvider.cs>)
+- [RoslynHostService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs>)
 - [CSharpCompiler.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Compilation/CSharpCompiler.cs>)
+
+Пути нормализуются, проверяются, дедуплицируются и стабильно сортируются; конфликтующие assembly
+identity и некорректные imports приводят к fail-fast. Прямые compile-time references на
+`KID.WPF.IDE`, RoslynPad, Microsoft.CodeAnalysis, AvalonEdit, DI, VisualStudio.Threading и остальные
+NAudio assemblies не добавляются. Это устраняет расхождение IntelliSense/diagnostics/emit между
+standalone `.exe` и F5 и уменьшает случайно доступную compile-time поверхность.
+
+Затем `DefaultCodeRunner` загружает PE/PDB в одноразовый collectible `UserProgramLoadContext` и
+запускает entry point через reflection внутри процесса IDE:
+
 - [CollectibleCodeRunningInstance.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Runtime/CollectibleCodeRunningInstance.cs>)
 - [UserProgramLoadContext.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Runtime/UserProgramLoadContext.cs>)
 
-Такой код получает права пользователя KID и может:
+Детерминированный allowlist является reliability/API-контрактом, но не security sandbox. Полные
+framework packs по-прежнему дают файловую систему, сеть, процессы, threading, reflection, P/Invoke
+и dynamic loading. Пользовательский код получает права пользователя KID и может:
 
 - удалять или изменять файлы;
 - запускать процессы;
@@ -77,7 +99,7 @@ PE/PDB-артефакт. `DefaultCodeRunner` создаёт отдельный
 
 Это осознанная модель для доверенного учебного кода с правами текущего Windows-пользователя,
 аналогичная запуску собственного проекта из Visual Studio. Collectible ALC управляет временем жизни
-загруженной сборки, но не является security sandbox и не ограничивает права.
+загруженной сборки, но не ограничивает права.
 
 Restricted token/AppContainer, запреты файловой системы/сети и worker-процесс не являются
 обязательным исправлением C2 в согласованном scope. Если продукт должен будет запускать недоверенные
@@ -94,11 +116,14 @@ Restricted token/AppContainer, запреты файловой системы/с
   `StopManager.StopIfButtonPressed()` в поддержанные циклы, тела функций и безопасные точки
   `await`/`yield`; поддержанные `Task.Delay` и `Thread.Sleep` получают session token:
   [CancellationInstrumentationRewriter.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Compilation/Rewriters/CancellationInstrumentationRewriter.cs>).
-- **Console cancellation:** `Console.Read()`/`ReadLine()` ожидают ввод, Stop или Dispose;
-  Stop пробуждает reader без клавиши/Enter, а cleanup снимает WPF-подписки, завершает readers и
-  восстанавливает `Console.Out/In/Error`:
-  [TextBoxConsole.Input.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Console/TextBoxConsole.Input.cs>),
-  [TextBoxConsole.Lifecycle.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Console/TextBoxConsole.Lifecycle.cs>).
+- **Console cancellation и ownership:** статический runtime в `KID.Library` захватывает точный
+  `ConsoleExecutionScope`; `Read()`/`ReadLine()` ожидают ввод, Stop или Dispose, а stale streams,
+  readers, output work items и callbacks старой сессии не изменяют новый Run. `BeginCleanup` закрывает
+  admission и пробуждает readers, `ShutdownAsync` ожидает UI teardown, worker и readers, очищает
+  delegates/state, а IDE-контекст восстанавливает `Console.Out/In/Error` даже после ошибки runtime cleanup:
+  [TextBoxConsole.System.cs](</D:/Visual Studio Projects/KID/KID.Library/Console/TextBoxConsole.System.cs>),
+  [TextBoxConsole.Input.cs](</D:/Visual Studio Projects/KID/KID.Library/Console/TextBoxConsole.Input.cs>),
+  [TextBoxConsoleContext.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs>).
 - **Async Main:** ожидаются все восемь вариантов `void`/`int`/`Task`/`Task<int>` Main
   без параметров либо с `string[]`; cleanup не начинается раньше фактического завершения entry point.
 - **State synchronization:** FSM различает `Idle`, `Compiling`, `Running`,
@@ -124,10 +149,11 @@ Restricted token/AppContainer, запреты файловой системы/с
 Если выполнение не дошло до точки отмены, состояние остаётся `StopRequested`, новый Run
 запрещён, а IDE не сообщает об успешной остановке.
 
-Доказательства разделены: Release build — 0 warnings/0 errors; automated runtime suite —
-166/166; headless runtime smoke проверяет lifecycle без визуальных утверждений; manual
-GUI/visual acceptance подтверждена пользователем отдельно. Это подтверждает C3, но не превращает
-in-process модель в security sandbox.
+Доказательства разделены: исходный C2/C3 runtime suite — 166/166; после Console migration/hardening —
+targeted 9/9, Console 52/52 и полный набор 188/188; последний полный набор текущей ветки — 219/219.
+Console soak выполняет 50 последовательных циклов Init → Read → Stop → Shutdown с проверкой отписок,
+readers, worker queue и collectibility scope. Headless runtime smoke и manual GUI/visual acceptance
+учитываются отдельно. Это подтверждает C3, но не превращает in-process модель в security sandbox.
 
 ---
 
@@ -146,8 +172,8 @@ Release-сборка текущего `develop` проходит без ошиб
 
 ## ⚠️ Проблемы средней серьёзности
 
-1. **✅ Автоматизированные C2/C3-тесты добавлены; CI по-прежнему отсутствует.**
-   `KID.Tests` содержит compiler, execution, Console, library и lifecycle regression-сценарии; контрольный полный прогон — 166/166. Автоматический CI gate и полное покрытие startup, файлов, настроек и локализации остаются отдельной задачей.
+1. **✅ Автоматизированные execution/Console/compilation-profile тесты добавлены; CI по-прежнему отсутствует.**
+   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library и lifecycle regression-сценарии; последний зафиксированный полный прогон — 219/219. Автоматический CI gate и полное покрытие startup, файлов, настроек и локализации остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `develop`.**
    Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка завершается с **0 ошибок и 0 предупреждений**.
@@ -170,9 +196,8 @@ Release-сборка текущего `develop` проходит без ошиб
 8. **Нет полноценного release-процесса.**  
    Отсутствуют CI, installer/MSIX, code signing, SBOM, third-party notices, корневой README, LICENSE, SECURITY, CHANGELOG и управляемое версионирование.
 
-9. **✅ Расхождение документации с кодом — устранено в `feature/FixUnsavedCodeLoss`, включено в `develop`.**
-   `ARCHITECTURE.md`, `SUBSYSTEMS.md`, `FEATURES.md`, `DEVELOPMENT.md` и `docs/README.md` актуализированы: используются `OpenedFileTabs`, `CurrentFileTab`, `CreateAndAddFileTabAsync()` и фактические зависимости редактора; добавлено описание безопасного закрытия, autosave и восстановления сессии.
-   На Этапе 10 документация выполнения и API Console/Graphics/Keyboard/Mouse/Music дополнительно синхронизированы с реализованными C2/C3 lifecycle и его in-process ограничениями.
+9. **✅ Основная архитектурная документация синхронизирована с кодом.**
+   `ARCHITECTURE.md`, `SUBSYSTEMS.md`, `FEATURES.md`, `DEVELOPMENT.md` и API-документы описывают безопасное закрытие/autosave, C2/C3 lifecycle, статический execution-scoped Console runtime в `KID.Library`, process-wide stream ownership в IDE и единый compilation profile редактора/compiler. Независимая проверка документации при будущих изменениях всё ещё не автоматизирована.
 
 10. **Accessibility не оформлена как требование.**  
     Горячие клавиши есть, но практически отсутствуют `AutomationProperties`, нет подтверждённой работы screen reader, High Contrast, масштабирования и custom window chrome.
@@ -184,6 +209,8 @@ Release-сборка текущего `develop` проходит без ошиб
 - `ThemeService` очищает все merged dictionaries, что сломает будущие общие ресурсы: [ThemeService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Themes/ThemeService.cs:80>).
 - В каталоге проекта лежат старые ignored `*wpftmp.csproj` с абсолютными локальными путями — они не попадают в Git, но загрязняют поиск и диагностику.
 - `Music` теперь переиспользует один `HttpClient`, передаёт cancellation token и детерминированно удаляет временные файлы, но URL-ответ всё ещё материализуется целиком в память без отдельного ограничения размера: [MusicRuntime.cs](</D:/Visual Studio Projects/KID/KID.Library/Music/MusicRuntime.cs>).
+- Compilation profile детерминирован, но вся публичная поверхность `KID.Library` compile-visible; вместе с учебным API доступны runtime-support типы `StopManager`, `TextBoxConsole` и `DispatcherManager`.
+- Из-за публичного `NAudio.Wave.PlaybackState` в API KID профиль вынужден напрямую открывать всю публичную поверхность `NAudio.Core`; сужение границы потребует собственного KID enum и совместимой API-миграции.
 - В коде и документации остаётся значительное количество подавленных исключений и комментариев, описывающих будущие исправления вместо формализованных задач.
 
 ## ✅ Сильные стороны
@@ -195,8 +222,10 @@ Release-сборка текущего `develop` проходит без ошиб
 - Инициализация Roslyn-редактора асинхронна end-to-end, без UI-thread `.GetResult()`.
 - `CodeExecutionService` корректно освобождает execution context даже при ошибке компиляции: [CodeExecutionService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CodeExecutionService.cs:62>).
 - Реализованы единая execution-сессия/FSM, cooperative Stop instrumentation, token-aware Console input и ожидание async Main.
+- Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
-- `KID.Tests` подтверждает C2/C3 runtime-контракт: 166 passed, 0 skipped, 0 failed.
+- Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
+- `KID.Tests` подтверждает execution, Console и compilation-profile контракты: 219 passed, 0 skipped, 0 failed в последнем зафиксированном полном прогоне.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Темы и локализации структурно синхронизированы.
 - Release build и базовый publish проходят.
@@ -221,11 +250,13 @@ Release-сборка текущего `develop` проходит без ошиб
 - ✅ Реализованы PE/PDB, started-running-instance и collectible `AssemblyLoadContext`.
 - ✅ Реализованы cooperative Stop, единая FSM и запрет нового Run до окончания cleanup.
 - ✅ События, звук, Console, Dispatcher/Graphics и прочие per-run ресурсы очищаются после каждого запуска.
+- ✅ `TextBoxConsole` перенесён в `KID.Library` как execution-scoped static runtime; legacy IDE-console удалена, а emitted user assembly больше не получает reference на `KID.WPF.IDE` ради `Console.Clear()`.
 - Если появится требование запускать недоверенный код, отдельно определить sandbox/threat model для файлов, сети и process boundary.
 
 ### Неделя 4 — quality gates
 
 - ✅ Создан `KID.Tests` с unit-, integration-, STA- и lifecycle-сценариями C2/C3.
+- ✅ Добавлены allowlist/denylist, semantic, late-load, editor integration и shared-identity тесты единого compilation profile.
 - CI: restore → build → test → vulnerable scan → publish.
 - ✅ Убрать предупреждения и включить `TreatWarningsAsErrors` — выполнено в `feature/FixBuildWarnings` и включено в `develop`.
 - Добавить тесты локализаций, тем и настроек.
@@ -254,26 +285,17 @@ Release-сборка текущего `develop` проходит без ошиб
 3. **P0 — выполнено:** Stop, token-aware `ReadLine`, async entry point, FSM и cleanup реализованы в `feature/FixC2C3`.
 4. **Продуктовое решение — выполнено для текущего scope:** сохранить in-process выполнение доверенного учебного кода; отдельный процесс не обязателен.
 5. **Условная задача:** определить новую sandbox/threat model только если продукт должен запускать недоверенный код.
-6. **P1 — выполнено для C2/C3:** добавлены критические compiler/execution/Console/library/lifecycle tests; покрытие остальных подсистем оценивается отдельно.
-7. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`; создать CI.
-8. **P1:** атомарные настройки и пользовательские файлы; autosave/recovery редактора выполнены в `feature/FixUnsavedCodeLoss`.
-9. **P1:** миграция на .NET 10 и согласованный пакетный стек.
-10. **P1:** подписанный и версионированный дистрибутив.
+6. **P1 — выполнено:** завершить execution-scoped миграцию и hardening `TextBoxConsole`.
+7. **P1 — выполнено:** заменить AppDomain-зависимые references единым детерминированным compilation profile редактора/compiler.
+8. **P1 — выполнено для execution scope:** добавлены критические compiler/editor/compilation-profile/Console/library/lifecycle tests; покрытие startup, файлов, настроек и локализации оценивается отдельно.
+9. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`; создать CI.
+10. **P1:** атомарные настройки и пользовательские файлы; autosave/recovery редактора выполнены в `feature/FixUnsavedCodeLoss`.
+11. **P1:** миграция на .NET 10 и согласованный пакетный стек.
+12. **P1:** подписанный и версионированный дистрибутив.
 
 ## 🔁 Четыре возможных follow-up’а
 
-1. 🧪 Добавить CI gate для существующего restore/build/test набора.
-2. 🔬 Повторно проверить остальные пункты production-readiness аудита вне C2/C3.
+1. 🧪 Добавить CI gate для существующего restore/build/test/vulnerability-scan/publish набора.
+2. 🧾 Закрыть структурное логирование, crash reporting и атомарное сохранение обычных файлов/настроек.
 3. 📦 Подготовить release engineering: installer, signing, SBOM и versioning.
-4. 🔐 Если trust model изменится, отдельно оформить ADR/threat model для недоверенного кода.
-
-<oai-mem-citation>
-<citation_entries>
-MEMORY.md:133-150|note=[used prior architecture startup deadlock and validation context]
-MEMORY.md:123-125|note=[used GUI validation boundary and audit depth preference]
-</citation_entries>
-<rollout_ids>
-019fae34-7fbc-75e2-afd6-2ab7d0707fab
-019fae50-5a5b-7472-b0a5-267b9ff9c0ef
-</rollout_ids>
-</oai-mem-citation>
+4. 🔐 Сузить публичную API-границу KID/NAudio либо, если trust model изменится, отдельно оформить threat model для недоверенного кода.
