@@ -120,9 +120,17 @@
 - Публикует `StateChanged` каждому observer независимо; ошибка подписчика доставляется через lifecycle task, но не отменяет уже подтверждённый переход FSM
 - Возвращается в `Idle` только после подтверждённой очистки всех lifecycle-ресурсов; ошибка Dispose оставляет `CleaningUp` и запрещает новый Run
 
+**KIDCompilationProfile** (`Services/CompilationProfile/`)
+- Immutable compile-time контракт, общий для редактора и фактической компиляции
+- Строится singleton-провайдером один раз из managed assemblies текущих `Microsoft.NETCore.App` и `Microsoft.WindowsDesktop.App`, а также явных `KID.Library` и `NAudio.Core`
+- Нормализует, устраняет дубликаты и сортирует абсолютные пути; отклоняет отсутствующие обязательные references и конфликтующие assembly identities
+- Не использует состояние загруженных assembly и не расширяется после поздней загрузки DLL
+- Не является sandbox: framework references включают файловую систему, сеть, reflection, P/Invoke, WPF и WinForms текущего runtime
+
 **CSharpCompiler** (`Compilation/CSharpCompiler.cs`)
 - Компилирует C# код в PE/PDB-артефакт без загрузки результата в default context
 - Использует Microsoft.CodeAnalysis для парсинга и компиляции
+- Получает `MetadataReferences` и явные global imports из единого `KIDCompilationProfile`; не сканирует process AppDomain при каждом Run
 - Применяет semantic rewriter для замены настоящего `System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`
 - Применяет `CancellationInstrumentationRewriter`: добавляет Stop-checkpoints в поддержанные циклы, тела функций и безопасные точки `await`/`yield`, а также передаёт session token в поддержанные `Task.Delay`/`Thread.Sleep`
 - Не переписывает пользовательский `finally` и формы, для которых нельзя доказуемо сохранить семантику
@@ -264,7 +272,8 @@ native/сторонний вызов, неинструментированный
 **ICodeEditorFactory** / **RoslynCodeEditorFactory** (`RoslynCodeEditorFactory.cs`)
 - Создание экземпляров RoslynCodeEditor (RoslynPad, наследник AvalonEdit TextEditor) с IntelliSense и подсветкой через Roslyn
 - Метод `CreateAsync(content, programmingLanguage)` — получает `RoslynHost` и активную палитру через `IRoslynHostService`/`IClassificationHighlightColorsProvider`, затем ожидает `RoslynCodeEditor.InitializeAsync(...)`
-- **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; набор сборок и импортов получает от **IRoslynReferenceProvider** (KidIdeRoslynReferenceProvider: рефлексия над AppDomain, тот же источник, что и при выполнении кода)
+- **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; получает тот же `KIDCompilationProfile`, что и `CSharpCompiler`, и создаёт `RoslynHostReferences.Empty.With(references:, imports:)` без скрытых RoslynPad defaults
+- RoslynPad assemblies в `additionalAssemblies` обслуживают MEF редактора, но не становятся references пользовательского документа
 - **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — `ClassificationHighlightColors` из RoslynPad
 - `ClassificationHighlightColorsProvider` получает готовый `IClassificationHighlightColors` из ресурсов активной XAML-темы по ключу `CodeEditorClassificationColors` и не зависит от строкового ключа темы
 

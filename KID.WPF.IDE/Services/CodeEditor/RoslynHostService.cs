@@ -1,42 +1,49 @@
 using System;
 using System.Reflection;
 using KID.Services.CodeEditor.Interfaces;
+using KID.Services.CompilationProfile.Interfaces;
 using RoslynPad.Roslyn;
 
 namespace KID.Services.CodeEditor
 {
     /// <summary>
-    /// Реализация сервиса RoslynHost: создаёт и кэширует хост с набором ссылок и импортов из <see cref="IRoslynReferenceProvider"/>.
+    /// Создаёт один RoslynHost с тем же immutable compilation profile, который использует compiler.
     /// </summary>
-    public class RoslynHostService : IRoslynHostService
+    internal sealed class RoslynHostService : IRoslynHostService
     {
-        private readonly IRoslynReferenceProvider _referenceProvider;
-        private RoslynHost? _host;
+        private readonly IKIDCompilationProfileProvider compilationProfileProvider;
+        private readonly Lazy<RoslynHost> host;
 
         /// <summary>
         /// Создаёт экземпляр сервиса.
         /// </summary>
-        /// <param name="referenceProvider">Провайдер сборок и типов для импортов (тот же источник, что и при выполнении кода в IDE).</param>
-        public RoslynHostService(IRoslynReferenceProvider referenceProvider)
+        /// <param name="compilationProfileProvider">
+        /// Singleton-провайдер детерминированных references и явных imports.
+        /// </param>
+        public RoslynHostService(IKIDCompilationProfileProvider compilationProfileProvider)
         {
-            _referenceProvider = referenceProvider ?? throw new ArgumentNullException(nameof(referenceProvider));
+            this.compilationProfileProvider = compilationProfileProvider ??
+                throw new ArgumentNullException(nameof(compilationProfileProvider));
+            host = new Lazy<RoslynHost>(
+                CreateHost,
+                LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         /// <inheritdoc />
-        public RoslynHost GetHost()
+        public RoslynHost GetHost() => host.Value;
+
+        private RoslynHost CreateHost()
         {
-            if (_host != null)
-                return _host;
+            var profile = compilationProfileProvider.GetProfile();
 
-            var assemblies = _referenceProvider.GetAssemblies();
-            var typeNamespaceImports = _referenceProvider.GetTypeNamespaceImports();
-
-            var references = RoslynHostReferences.NamespaceDefault.With(
-                assemblyReferences: assemblies,
-                typeNamespaceImports: typeNamespaceImports);
+            // Empty исключает скрытые RoslynPad defaults. Editor получает только явные данные
+            // профиля и потому не принимает код, который CSharpCompiler затем отвергнет.
+            var references = RoslynHostReferences.Empty.With(
+                references: profile.MetadataReferences,
+                imports: profile.GlobalImports);
 
             // additionalAssemblies — только для MEF редактора (RoslynPad). Не добавлять typeof(RoslynHost).Assembly — дублирование даёт CompositionFailedException (два экспорта DocumentationProviderService).
-            _host = new RoslynHost(
+            return new RoslynHost(
                 additionalAssemblies: new[]
                 {
                     Assembly.Load("RoslynPad.Roslyn.Windows"),
@@ -44,7 +51,6 @@ namespace KID.Services.CodeEditor
                 },
                 references: references);
 
-            return _host;
         }
     }
 }

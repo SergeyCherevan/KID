@@ -37,7 +37,7 @@ public sealed class DefaultCodeRunnerTests
                 }
             }
             """;
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
         var result = await compiler.CompileAsync(code, TestContext.Current.CancellationToken);
         var artifact = Assert.IsType<CompilationArtifact>(result.Artifact);
         var runner = new DefaultCodeRunner(
@@ -148,7 +148,7 @@ public sealed class DefaultCodeRunnerTests
                 }
             }
             """;
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
         var compilationResult = await compiler.CompileAsync(
             code,
             TestContext.Current.CancellationToken);
@@ -207,7 +207,7 @@ public sealed class DefaultCodeRunnerTests
             }
             """;
         var localizationService = new StubLocalizationService();
-        var compiler = new CSharpCompiler(localizationService);
+        var compiler = CompilerFactory.Create(localizationService);
         var compilationResult = await compiler.CompileAsync(
             code,
             TestContext.Current.CancellationToken);
@@ -267,7 +267,7 @@ public sealed class DefaultCodeRunnerTests
             }
             """;
         var localizationService = new StubLocalizationService();
-        var compiler = new CSharpCompiler(localizationService);
+        var compiler = CompilerFactory.Create(localizationService);
         var compilationResult = await compiler.CompileAsync(
             code,
             TestContext.Current.CancellationToken);
@@ -359,7 +359,7 @@ public sealed class DefaultCodeRunnerTests
             startedKey,
             releaseKey);
         var localizationService = new StubLocalizationService();
-        var compiler = new CSharpCompiler(localizationService);
+        var compiler = CompilerFactory.Create(localizationService);
         var compilationResult = await compiler.CompileAsync(
             code,
             TestContext.Current.CancellationToken);

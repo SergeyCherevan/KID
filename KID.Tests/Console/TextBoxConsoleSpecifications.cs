@@ -566,7 +566,7 @@ public sealed class TextBoxConsoleSpecifications
         {
             var box = new TextBox { IsReadOnly = true, Text = "before-clear" };
             var localization = new StubLocalizationService();
-            var service = new CodeExecutionService(new CSharpCompiler(localization),
+            var service = new CodeExecutionService(CompilerFactory.Create(localization),
                 new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory));
             const string code = """
                 class Program
@@ -603,7 +603,7 @@ public sealed class TextBoxConsoleSpecifications
         {
             var box = new TextBox { IsReadOnly = true };
             var localization = new StubLocalizationService();
-            var service = new CodeExecutionService(new CSharpCompiler(localization),
+            var service = new CodeExecutionService(CompilerFactory.Create(localization),
                 new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory));
             var code = "class Program { static void Main() { System.Console.Write(\"ready\"); System.Console." +
                 (line ? "ReadLine" : "Read") + "(); } }";

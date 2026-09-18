@@ -5,6 +5,8 @@ using KID.Services.CodeExecution.Compilation.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using KID.Services.CodeEditor;
 using KID.Services.CodeEditor.Interfaces;
+using KID.Services.CompilationProfile;
+using KID.Services.CompilationProfile.Interfaces;
 using KID.Services.Initialize;
 using KID.Services.Initialize.Interfaces;
 using KID.ViewModels;
@@ -40,6 +42,8 @@ namespace KID.Services.DI
             services.AddSingleton<JoinableTaskContext>();
             services.AddSingleton(
                 serviceProvider => serviceProvider.GetRequiredService<JoinableTaskContext>().Factory);
+            // Один immutable profile одновременно принадлежит editor diagnostics и compiler emit.
+            services.AddSingleton<IKIDCompilationProfileProvider, KIDCompilationProfileProvider>();
             services.AddSingleton<ICodeCompiler, CSharpCompiler>();
             services.AddSingleton<ICodeRunner, DefaultCodeRunner>();
             services.AddSingleton<ICodeExecutionService, CodeExecutionService>();
@@ -57,8 +61,6 @@ namespace KID.Services.DI
             services.AddSingleton<IWindowInitializationService, WindowInitializationService>();
             services.AddSingleton<IMainWindowWinAPIInteropService, MainWindowWinAPIInteropService>();
 
-            // Провайдер ссылок для Roslyn (сборки и импорты из рефлексии над доменом — тот же источник, что и при выполнении кода)
-            services.AddSingleton<IRoslynReferenceProvider, KidIdeRoslynReferenceProvider>();
             // Roslyn host для редактора (IntelliSense)
             services.AddSingleton<IRoslynHostService, RoslynHostService>();
             // Палитра подсветки редактора в зависимости от темы (светлая/тёмная)

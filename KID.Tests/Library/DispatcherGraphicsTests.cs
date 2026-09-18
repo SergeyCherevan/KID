@@ -370,7 +370,7 @@ public sealed class DispatcherGraphicsTests
             var canvas = new Canvas();
             var box = new TextBox { IsReadOnly = true };
             var localization = new StubLocalizationService();
-            var service = new CodeExecutionService(new CSharpCompiler(localization),
+            var service = new CodeExecutionService(CompilerFactory.Create(localization),
                 new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory));
             var ending = outcome switch
             {
@@ -560,7 +560,7 @@ public sealed class DispatcherGraphicsTests
     {
         var canvas = new Canvas();
         var localization = new StubLocalizationService();
-        var artifact = (await new CSharpCompiler(localization).CompileAsync(
+        var artifact = (await CompilerFactory.Create(localization).CompileAsync(
             "KID.DispatcherManager.InvokeOnUI(() => { KID.Graphics.Circle(10,10,5); });",
             TestContext.Current.CancellationToken)).Artifact!;
         using var environment = ExecutionEnvironmentManager.BeginExecution(
@@ -621,7 +621,7 @@ public sealed class DispatcherGraphicsTests
             AppContext.SetData(key + ".proceed", proceed);
             AppContext.SetData(key + ".exited", exited);
             var localization = new StubLocalizationService();
-            var service = new CodeExecutionService(new CSharpCompiler(localization),
+            var service = new CodeExecutionService(CompilerFactory.Create(localization),
                 new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory));
             var code = $$"""
                 ((System.Threading.Tasks.TaskCompletionSource)System.AppContext.GetData("{{key}}.ready")).SetResult();

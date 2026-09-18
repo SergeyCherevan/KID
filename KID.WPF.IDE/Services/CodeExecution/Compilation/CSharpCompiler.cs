@@ -1,10 +1,10 @@
 using KID.Services.CodeExecution.Compilation.Interfaces;
 using KID.Services.CodeExecution.Compilation.Rewriters;
+using KID.Services.CompilationProfile.Interfaces;
 using KID.Services.Localization.Interfaces;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
-using NAudio.Wave;
 using System.IO;
 using System.Text;
 
@@ -13,7 +13,8 @@ namespace KID.Services.CodeExecution.Compilation
     /// <summary>
     /// Компилирует исходный C#-код пользовательской программы, предварительно применяя
     /// семантически проверенные Roslyn-преобразования для кооперативной остановки
-    /// и работы с консолью WPF.
+    /// и работы с консолью WPF. Разрешение типов и imports задаёт общий immutable
+    /// <see cref="CompilationProfile.KIDCompilationProfile"/>.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -33,7 +34,7 @@ namespace KID.Services.CodeExecution.Compilation
     /// </para>
     /// <para>
     /// Все поддерживающие отмену стадии используют один токен сессии: перенос работы с UI-потока,
-    /// синтаксический разбор, обход дерева, разрешение ссылок на метаданные и генерация сборки.
+    /// получение общего профиля, синтаксический разбор, обход дерева и генерация сборки.
     /// Это реализация <b>Cooperative Cancellation (Кооперативная отмена)</b>: компилятор регулярно
     /// наблюдает токен, но не пытается насильственно завершать поток CLR.
     /// </para>
@@ -45,30 +46,40 @@ namespace KID.Services.CodeExecution.Compilation
     /// подэтапу архитектуры выполнения и будет принадлежать execution scope.
     /// </para>
     /// </remarks>
-    public class CSharpCompiler : ICodeCompiler
+    internal sealed class CSharpCompiler : ICodeCompiler
     {
         // Сервис локализует только диагностические сообщения пользовательского кода.
         // Неожиданные исключения самой KID не превращаются здесь в строки: координатор получает
         // их как аварийное завершение компиляции.
         private readonly ILocalizationService _localizationService;
+        // Один provider связывает фактическую компиляцию с тем же immutable profile,
+        // который RoslynHost использует для диагностики и IntelliSense.
+        private readonly IKIDCompilationProfileProvider _compilationProfileProvider;
 
         /// <summary>
-        /// Создаёт стратегию компиляции с сервисом локализации диагностических сообщений.
+        /// Создаёт стратегию компиляции с локализацией и единым compilation profile.
         /// </summary>
         /// <param name="localizationService">
         /// Сервис, формирующий локализованное сообщение об ошибке по исходной строке и тексту
         /// диагностического сообщения Roslyn.
         /// </param>
+        /// <param name="compilationProfileProvider">
+        /// Singleton-провайдер детерминированных references и явных global imports.
+        /// </param>
         /// <exception cref="ArgumentNullException">
-        /// <paramref name="localizationService"/> имеет значение <see langword="null"/>.
+        /// Одна из обязательных зависимостей имеет значение <see langword="null"/>.
         /// </exception>
-        public CSharpCompiler(ILocalizationService localizationService)
+        public CSharpCompiler(
+            ILocalizationService localizationService,
+            IKIDCompilationProfileProvider compilationProfileProvider)
         {
             /* Fail Fast (немедленный отказ): без локализации компилятор не может выполнить
              * публичный контракт для ошибочного пользовательского кода. Проверка конструктора
              * не позволяет создать частично работоспособный объект.
              */
             _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            _compilationProfileProvider = compilationProfileProvider ??
+                throw new ArgumentNullException(nameof(compilationProfileProvider));
         }
 
         /// <summary>
@@ -149,9 +160,16 @@ namespace KID.Services.CodeExecution.Compilation
         /// </exception>
         private CompilationResult Compile(string code, CancellationToken cancellationToken)
         {
-            /* Отсекаем отменённую сессию до создания синтаксического дерева, списка ссылок
+            /* Отсекаем отменённую сессию до получения профиля, создания синтаксического дерева
              * и потоков данных. Это первая явная точка отмены уже запущенного рабочего делегата.
              */
+            cancellationToken.ThrowIfCancellationRequested();
+
+            /* Получаем уже полностью построенный immutable profile. Проверки токена с обеих
+             * сторон границы не позволяют отменённой сессии продолжить к parsing/emit даже если
+             * Stop совпал по времени с первым обращением к singleton provider.
+             */
+            var profile = _compilationProfileProvider.GetProfile();
             cancellationToken.ThrowIfCancellationRequested();
 
             /* ParseText строит исходное неизменяемое дерево SyntaxTree и сам принимает токен
@@ -164,21 +182,17 @@ namespace KID.Services.CodeExecution.Compilation
                 encoding: Encoding.UTF8,
                 cancellationToken: cancellationToken);
 
-            /* Ссылки на метаданные формируют среду разрешения типов пользовательской программы
-             * и обоих преобразователей. Список создаётся заново для каждого Compile, поэтому
-             * отражает сборки, загруженные к этому моменту в текущий процесс.
-             */
-            var references = CreateMetadataReferences(cancellationToken);
-
-            /* Начальная Compilation связывает исходное дерево со ссылками на загруженные сборки.
+            /* Начальная Compilation связывает исходное дерево с тем же неизменяемым набором
+             * references и imports, который использует RoslynHost редактора.
              * Имя сборки стабильно внутри текущей реализации, а ConsoleApplication заставляет Roslyn найти
              * допустимую точку входа и сформировать PE-образ.
              */
             var compilation = CSharpCompilation.Create(
                 "UserProgram",
                 [syntaxTree],
-                references,
-                new CSharpCompilationOptions(OutputKind.ConsoleApplication));
+                profile.MetadataReferences,
+                new CSharpCompilationOptions(OutputKind.ConsoleApplication)
+                    .WithUsings(profile.GlobalImports));
 
             /* Первый проход работает с SemanticModel исходного дерева. Контрольные точки Stop
              * добавляются по типам синтаксических узлов, а Thread.Sleep/Task.Delay изменяются
@@ -312,112 +326,5 @@ namespace KID.Services.CodeExecution.Compilation
             return CompilationResult.FromArtifact(artifact);
         }
 
-        /// <summary>
-        /// Создаёт набор ссылок на метаданные для Roslyn и явно добавляет сборки, необходимые
-        /// сгенерированному преобразователями коду и публичному API KID.
-        /// </summary>
-        /// <remarks>
-        /// <para>
-        /// Основой служат все уже загруженные нединамические сборки текущего
-        /// <see cref="AppDomain"/> с доступным физическим путём. Поэтому пользовательская программа
-        /// видит тот же набор управляемых библиотек, что и процесс IDE.
-        /// </para>
-        /// <para>
-        /// Сборки KID.Library и NAudio дополнительно закрепляются явными ссылками: их типы могут
-        /// ещё не присутствовать в AppDomain либо требуются коду, автоматически добавленному
-        /// после первоначального разбора. Сгенерированный код не требует явной ссылки на IDE.
-        /// </para>
-        /// </remarks>
-        /// <param name="cancellationToken">
-        /// Токен сессии, проверяемый между сборками, чтобы Stop не ждал завершения
-        /// большого обхода текущего AppDomain.
-        /// </param>
-        /// <returns>Новый изменяемый список ссылок, принадлежащий одному вызову Compile.</returns>
-        /// <exception cref="OperationCanceledException">
-        /// Отмена запрошена во время обхода загруженных сборок.
-        /// </exception>
-        private static List<MetadataReference> CreateMetadataReferences(
-            CancellationToken cancellationToken)
-        {
-            /* Список не кэшируется глобально: состав AppDomain может изменяться между Run,
-             * а отдельный список на каждый вызов исключает конкурентное изменение
-             * общей коллекции.
-             */
-            var references = new List<MetadataReference>();
-
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                /* Проверка выполняется до анализа каждой Assembly и создания файловой ссылки,
-                 * поэтому отмена ограничивает объём оставшейся работы одним элементом обхода.
-                 */
-                cancellationToken.ThrowIfCancellationRequested();
-
-                /* Динамическая сборка не имеет стабильного PE-файла для CreateFromFile.
-                 * Пустой Location также означает, что файловую ссылку создать невозможно.
-                 */
-                if (!assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))
-                    references.Add(MetadataReference.CreateFromFile(assembly.Location));
-            }
-
-            /* Инструментированный код всегда вызывает StopManager, даже если исходная программа
-             * не содержала using KID и не обращалась ни к одному API библиотеки. Явная ссылка
-             * позволяет разрешить полностью квалифицированный вызов независимо от порядка загрузки.
-             */
-            AddReferenceIfMissing(
-                references,
-                typeof(global::KID.StopManager).Assembly.Location);
-
-            /* Публичные Music API KID используют PlaybackState в сигнатурах. CLR могла ещё
-             * не загрузить NAudio к моменту снимка AppDomain, поэтому ссылка закрепляется
-             * через тип PlaybackState.
-             */
-            var naudioPath = typeof(PlaybackState).Assembly.Location;
-            if (!string.IsNullOrEmpty(naudioPath))
-                AddReferenceIfMissing(references, naudioPath);
-
-            /* Вызывающая сторона получает готовый снимок ссылок и больше не изменяет его после
-             * передачи в CSharpCompilation.Create.
-             */
-            return references;
-        }
-
-        /// <summary>
-        /// Добавляет файловую ссылку на метаданные, если непустой путь ещё не представлен
-        /// в коллекции. Пути сравниваются без учёта регистра, как принято в Windows.
-        /// </summary>
-        /// <remarks>
-        /// Метод реализует локальную идемпотентную операцию: повторное закрепление обязательной
-        /// сборки среды выполнения не создаёт второй <see cref="PortableExecutableReference"/>.
-        /// Пустой путь означает, что для сборки без файла ничего делать не нужно.
-        /// </remarks>
-        /// <param name="references">Коллекция ссылок текущего вызова Compile.</param>
-        /// <param name="assemblyPath">Физический путь к управляемой PE-сборке.</param>
-        private static void AddReferenceIfMissing(
-            ICollection<MetadataReference> references,
-            string assemblyPath)
-        {
-            /* Некоторые сборки могут не иметь физического пути. Такой аргумент нельзя передать
-             * MetadataReference.CreateFromFile, поэтому метод безопасно ничего не меняет.
-             */
-            if (string.IsNullOrEmpty(assemblyPath))
-                return;
-
-            /* Сравниваются только файловые PortableExecutableReference. Остальные реализации
-             * MetadataReference не предоставляют сопоставимый FilePath и не могут доказать,
-             * что конкретная сборка уже присутствует.
-             */
-            bool alreadyAdded = references
-                .OfType<PortableExecutableReference>()
-                .Any(reference => string.Equals(
-                    reference.FilePath,
-                    assemblyPath,
-                    StringComparison.OrdinalIgnoreCase));
-
-            /* Ссылка создаётся только после проверки на дубликат, чтобы без необходимости
-             * не открывать и не анализировать один PE-файл повторно.
-             */
-            if (!alreadyAdded)
-                references.Add(MetadataReference.CreateFromFile(assemblyPath));
-        }
     }
 }

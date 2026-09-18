@@ -51,7 +51,7 @@ public sealed class Stage9ReliabilityTests
             }
             """;
         var localization = new StubLocalizationService();
-        var compilation = await new CSharpCompiler(localization).CompileAsync(
+        var compilation = await CompilerFactory.Create(localization).CompileAsync(
             code,
             TestContext.Current.CancellationToken);
         Assert.True(compilation.Success, string.Join(Environment.NewLine, compilation.Errors));
@@ -98,7 +98,7 @@ public sealed class Stage9ReliabilityTests
             var callbackKey = $"KID.Tests.Stage9.Soak.Callback.{Guid.NewGuid():N}";
             var code = CreateSoakProgram(startedKey, callbackKey);
             var localization = new StubLocalizationService();
-            var compilation = await new CSharpCompiler(localization).CompileAsync(
+            var compilation = await CompilerFactory.Create(localization).CompileAsync(
                 code,
                 TestContext.Current.CancellationToken);
             Assert.True(compilation.Success, string.Join(Environment.NewLine, compilation.Errors));

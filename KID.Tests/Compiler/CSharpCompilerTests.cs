@@ -17,7 +17,7 @@ public sealed class CSharpCompilerTests
     public async Task CompileAsync_ValidProgram_ReturnsPeAndPortablePdbArtifact()
     {
         const string code = "public static class Program { public static void Main() { } }";
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
 
         var result = await compiler.CompileAsync(
             code,
@@ -46,10 +46,79 @@ public sealed class CSharpCompilerTests
     }
 
     [Fact]
+    public async Task CompileAsync_ConsoleWriteLine_SucceedsWithSharedProfile()
+    {
+        const string code = """
+            using System;
+
+            public static class Program
+            {
+                public static void Main() => Console.WriteLine("ok");
+            }
+            """;
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
+
+        var result = await compiler.CompileAsync(
+            code,
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Artifact);
+    }
+
+    [Fact]
+    public async Task CompileAsync_KidAndNAudioPublicTypes_SucceedsWithSharedProfile()
+    {
+        const string code = """
+            using KID;
+            using NAudio.Wave;
+
+            public static class Program
+            {
+                public static void Main()
+                {
+                    Graphics.Circle(10, 10, 5);
+                    PlaybackState state = PlaybackState.Stopped;
+                }
+            }
+            """;
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
+
+        var result = await compiler.CompileAsync(
+            code,
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Artifact);
+    }
+
+    [Fact]
+    public async Task CompileAsync_RepeatedAndParallelCallsReuseOneProfileIdentity()
+    {
+        const string code = "public static class Program { public static void Main() { } }";
+        var provider = TestCompilationProfileProvider.Instance;
+        var profile = provider.GetProfile();
+        var compiler = new CSharpCompiler(new StubLocalizationService(), provider);
+
+        var first = await compiler.CompileAsync(
+            code,
+            TestContext.Current.CancellationToken);
+        var parallelResults = await Task.WhenAll(
+            Enumerable.Range(0, 4)
+                .Select(_ => compiler.CompileAsync(
+                    code,
+                    TestContext.Current.CancellationToken)));
+
+        Assert.True(first.Success);
+        Assert.All(parallelResults, result => Assert.True(result.Success));
+        Assert.Same(profile, provider.GetProfile());
+    }
+
+    [Fact]
     public async Task CompileAsync_InvalidProgram_ReturnsLocalizedCompilationError()
     {
         const string code = "public static class Program { public static void Main( { } }";
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
 
         var result = await compiler.CompileAsync(
             code,
@@ -65,7 +134,7 @@ public sealed class CSharpCompilerTests
     public async Task CompileAsync_PreCancelledToken_CancelsCompilation()
     {
         const string code = "public static class Program { public static void Main() { } }";
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
         using var cancellationSource = new CancellationTokenSource();
         await cancellationSource.CancelAsync();
 
@@ -92,7 +161,7 @@ public sealed class CSharpCompilerTests
             .Select((line, index) => (line, index))
             .Single(item => item.line.Contains("MissingSymbol", StringComparison.Ordinal))
             .index + 1;
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
 
         var result = await compiler.CompileAsync(
             code,
@@ -119,7 +188,7 @@ public sealed class CSharpCompilerTests
                 }
             }
             """;
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
         var result = await compiler.CompileAsync(
             code,
             TestContext.Current.CancellationToken);
@@ -160,7 +229,7 @@ public sealed class CSharpCompilerTests
     {
         const string code =
             "public static class Program { public static void Main() { System.Console.Clear(); } }";
-        var compiler = new CSharpCompiler(new StubLocalizationService());
+        var compiler = CompilerFactory.Create(new StubLocalizationService());
 
         var result = await compiler.CompileAsync(code, TestContext.Current.CancellationToken);
 

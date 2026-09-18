@@ -80,7 +80,7 @@ Instrumentation покрывает поддержанные циклы, тела
 
 ## Зависимости, важные при изменении пространств имён
 
-Регистрация конкретных `CSharpCompiler` и `DefaultCodeRunner` находится в `Services/DI/ServiceCollectionExtensions.cs`. Координатор использует интерфейсы из `Compilation/Interfaces/` и `Runtime/Interfaces/`.
+Регистрация конкретных `CSharpCompiler` и `DefaultCodeRunner` находится в `Services/DI/ServiceCollectionExtensions.cs`. Координатор использует интерфейсы из `Compilation/Interfaces/` и `Runtime/Interfaces/`. `CSharpCompiler` получает immutable `KIDCompilationProfile` из общей инфраструктуры `Services/CompilationProfile/`; тот же экземпляр профиля использует `RoslynHostService`, поэтому editor diagnostics и emit работают с одним набором references/imports.
 
 `ConsoleClearRewriter` генерирует вызов `global::KID.TextBoxConsole.Clear()`. Semantic rewrite
 обрабатывает только настоящий безаргументный `System.Console.Clear()`, а emitted-artifact test

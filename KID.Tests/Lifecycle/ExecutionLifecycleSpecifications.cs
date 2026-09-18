@@ -25,7 +25,7 @@ public sealed class ExecutionLifecycleSpecifications
         var release = new TaskCompletionSource<bool>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var localizationService = new StubLocalizationService();
-        var compiler = new CSharpCompiler(localizationService);
+        var compiler = CompilerFactory.Create(localizationService);
         var runner = new DefaultCodeRunner(
             localizationService,
             TestThreading.JoinableTaskFactory);
@@ -105,7 +105,7 @@ public sealed class ExecutionLifecycleSpecifications
             _ => throw new ArgumentOutOfRangeException(nameof(returnType))
         };
         var localizationService = new StubLocalizationService();
-        var compiler = new CSharpCompiler(localizationService);
+        var compiler = CompilerFactory.Create(localizationService);
         var compilationResult = await compiler.CompileAsync(
             code,
             TestContext.Current.CancellationToken);
@@ -172,7 +172,7 @@ public sealed class ExecutionLifecycleSpecifications
             }
             """;
         var localizationService = new StubLocalizationService();
-        var compiler = new CSharpCompiler(localizationService);
+        var compiler = CompilerFactory.Create(localizationService);
         var compilationResult = await compiler.CompileAsync(
             code,
             TestContext.Current.CancellationToken);

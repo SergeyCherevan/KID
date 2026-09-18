@@ -295,7 +295,7 @@ public sealed class TextBoxConsoleCompletionTests
         var box = new TextBox();
         var localization = new StubLocalizationService();
         var service = new CodeExecutionService(
-            new CSharpCompiler(localization),
+            CompilerFactory.Create(localization),
             new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory));
         var code = $$"""
             public static class Program

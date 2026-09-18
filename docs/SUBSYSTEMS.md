@@ -38,7 +38,29 @@
 - Инициализирует контекст перед выполнением
 - Освобождает контекст после выполнения
 
-#### 1.2. CSharpCompiler
+#### 1.2. KIDCompilationProfile
+**Файлы:** `KID.WPF.IDE/Services/CompilationProfile/`
+
+**Ответственность:**
+- Единый immutable compile-time контракт для RoslynHost редактора и CSharpCompiler
+- Детерминированное разрешение managed references без зависимости от порядка загрузки CLR
+- Явное владение global imports
+
+**Состав allowlist:**
+- Все managed assemblies текущих `Microsoft.NETCore.App` и `Microsoft.WindowsDesktop.App`
+- `KID.Library`
+- `NAudio.Core` как compatibility exception для публичного `NAudio.Wave.PlaybackState` в KID API
+
+**Особенности:**
+- `KIDCompilationProfileProvider` строит профиль один раз и всегда возвращает ту же identity
+- Framework paths берутся из `TRUSTED_PLATFORM_ASSEMBLIES`, но фильтруются по каталогам текущих двух framework packs
+- Пути абсолютны, уникальны без учёта регистра и отсортированы через `StringComparer.OrdinalIgnoreCase`
+- App-local IDE, RoslynPad, CodeAnalysis, AvalonEdit, DI, VisualStudio.Threading и остальные NAudio assemblies автоматически не добавляются
+- `GlobalImports` изначально пуст: пространства имён становятся доступны только через явные `using` пользовательского документа
+- Ошибка построения приводит к fail-fast; fallback к загруженным assembly отсутствует
+- Allowlist не является security boundary: KID остаётся trusted in-process executor
+
+#### 1.3. CSharpCompiler
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/Compilation/CSharpCompiler.cs`
 
 **Ответственность:**
@@ -57,7 +79,8 @@
 - Передаёт один session token в parsing, semantic analysis и emit
 - Не вставляет синтетическую отмену в пользовательский `finally` и не переписывает
   неподдержанную форму ценой изменения семантики
-- Собирает все ссылки на сборки из текущего домена приложения
+- Использует одну коллекцию `MetadataReference` и один список global imports из `KIDCompilationProfile`
+- Не дополняет профиль assembly, найденными локально во время Run
 - Возвращает локализованные ошибки компиляции
 
 **ConsoleClearRewriter:**
@@ -65,7 +88,7 @@
 - Семантически заменяет настоящий безаргументный `System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`
 - Не переписывает пользовательские одноимённые типы и не добавляет generated assembly зависимость на `KID.WPF.IDE`
 
-#### 1.3. DefaultCodeRunner
+#### 1.4. DefaultCodeRunner
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/Runtime/DefaultCodeRunner.cs`
 
 **Ответственность:**
@@ -90,7 +113,7 @@
 - `Dispose()` экземпляра вызывает cooperative `AssemblyLoadContext.Unload()`, но не обещает немедленную или гарантированную сборку ALC; живой пользовательский поток и другие strong references могут отложить её
 - Unload-тесты используют только `WeakReference` и bounded GC-циклы: обычные sync/async запуски обязаны освобождаться, а диагностический background-thread сценарий удерживает ALC до фактического выхода пользовательского потока
 
-#### 1.4. Контексты выполнения
+#### 1.5. Контексты выполнения
 
 **CodeExecutionContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CodeExecutionContext.cs`)
 - Объединяет графический и консольный контексты
@@ -120,7 +143,7 @@
 - Получает `App` из DI контейнера через конструктор
 - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
-#### 1.5. TextBoxConsole
+#### 1.6. TextBoxConsole
 **Файлы:** `KID.Library/Console/TextBoxConsole.*.cs`, `ConsoleExecutionScope.cs`
 
 **Ответственность:**
@@ -525,25 +548,24 @@
 - `TemplateCode` — шаблонный код
 - `TemplateName` — путь к файлу шаблона
 
-#### 6.2. Редактор кода (RoslynCodeEditor, RoslynHostService, провайдер ссылок, фабрика)
+#### 6.2. Редактор кода (RoslynCodeEditor, RoslynHostService, compilation profile, фабрика)
 
 **Файлы:**
 - `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
 - `KID.WPF.IDE/Services/CodeEditor/DarkClassificationHighlightColors.cs` — палитра синтаксической подсветки для тёмной темы (фон #1E1E1E, в духе VS Dark)
-- `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — создание и кэширование RoslynHost; набор ссылок и импортов берёт из IRoslynReferenceProvider
+- `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — ленивое потокобезопасное создание и кэширование RoslynHost; references/imports берёт из общего `IKIDCompilationProfileProvider`
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
-- `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynReferenceProvider.cs` — интерфейс провайдера сборок и типов для импортов
-- `KID.WPF.IDE/Services/CodeEditor/KidIdeRoslynReferenceProvider.cs` — реализация: GetAssemblies() и GetTypeNamespaceImports() через рефлексию (AppDomain.CurrentDomain.GetAssemblies() с тем же фильтром, что и CSharpCompiler; типы для usings — по одному на пространство имён из этих сборок, фильтр System/KID/NAudio)
+- `KID.WPF.IDE/Services/CompilationProfile/` — общая immutable-инфраструктура references/imports для editor и compiler
 - `KID.WPF.IDE/Services/CodeEditor/AvalonTextEditorFactory.cs` — запасная фабрика на AvalonEdit (не регистрируется в DI по умолчанию)
 
 **Ответственность:**
-- **IRoslynReferenceProvider / KidIdeRoslynReferenceProvider:** формирует список сборок и типов для глобальных usings через рефлексию над загруженным доменом — тот же источник, что и при компиляции кода (CSharpCompiler).
-- **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost; получает сборки и типы от провайдера, передаёт в RoslynHostReferences, создаёт хост с additionalAssemblies для RoslynPad (MEF).
+- **IKIDCompilationProfileProvider / KIDCompilationProfileProvider:** один раз формирует детерминированный allowlist framework/KID/NAudio.Core и публикует одну identity профиля обоим consumers.
+- **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost; передаёт `MetadataReference` и imports профиля в `RoslynHostReferences.Empty`, а additionalAssemblies RoslynPad использует только для MEF.
 - **ICodeEditorFactory / RoslynCodeEditorFactory:** получает `RoslynHost` и `IClassificationHighlightColors` через сервисы, создаёт `RoslynCodeEditor`, ожидает `InitializeAsync(...)`, включает ShowLineNumbers и WordWrap.
 - **Темы редактора:** XAML-тема предоставляет `IClassificationHighlightColors` по ключу `CodeEditorClassificationColors`; `ClassificationHighlightColorsProvider` читает активный ресурс и использует светлую палитру как fallback. `CodeEditorsViewModel` подписан на `IThemeService.ThemeChanged` и обновляет палитру всех открытых `RoslynCodeEditor`.
 
 **Связи:**
-- RoslynHostService зависит от IRoslynReferenceProvider
+- RoslynHostService и CSharpCompiler зависят от одного singleton `IKIDCompilationProfileProvider`
 - RoslynCodeEditorFactory зависит от `IRoslynHostService` и `IClassificationHighlightColorsProvider`
 - Используется в `CodeEditorsViewModel.CreateAndAddFileTabAsync()` при асинхронном создании вкладок
 - Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize, ClassificationHighlightColors)
@@ -870,6 +892,7 @@
 - Все ViewModels регистрируются как Singleton
 - `IEditorSessionService` → `EditorSessionService`
 - `IUnsavedChangesDialogService` → `UnsavedChangesDialogService`
+- `IKIDCompilationProfileProvider` → `KIDCompilationProfileProvider` как Singleton; его профиль совместно используют RoslynHostService и CSharpCompiler
 - MainWindow регистрируется как Transient (специальный случай)
 
 #### 11.2. ServiceProviderExtension
@@ -903,13 +926,13 @@
            │              ├──→ EditorSessionService ──→ editor-session.json
            │              ├──→ UnsavedChangesDialogService ──→ MessageBox
            │              ├──→ ICodeEditorFactory (RoslynCodeEditorFactory) ──→ IRoslynHostService, IWindowConfigurationService
-           │              │         IRoslynHostService ──→ IRoslynReferenceProvider
+           │              │         IRoslynHostService ──→ IKIDCompilationProfileProvider
            │              │
            │              └──→ IWindowConfigurationService (FontSettingsChanged)
            │
            ├──→ CodeExecutionService
            │         │
-           │         ├──→ CSharpCompiler
+           │         ├──→ CSharpCompiler ──→ IKIDCompilationProfileProvider
            │         └──→ DefaultCodeRunner
            │
            ├──→ LocalizationService
@@ -921,6 +944,7 @@
 
 1. **Выполнение кода:**
    - MenuViewModel → CodeExecutionService → CSharpCompiler → DefaultCodeRunner
+   - KIDCompilationProfileProvider → один immutable profile → CSharpCompiler и RoslynHostService
    - DefaultCodeRunner → Graphics API → Canvas
    - DefaultCodeRunner → Mouse API → Canvas
    - DefaultCodeRunner → TextBoxConsole → TextBox (консольный ввод/вывод)

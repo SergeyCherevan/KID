@@ -322,7 +322,7 @@ public sealed class MusicLifecycleTests
         await StaTest.RunAsync(async () =>
         {
             var localization = new StubLocalizationService();
-            var compilation = await new CSharpCompiler(localization).CompileAsync(
+            var compilation = await CompilerFactory.Create(localization).CompileAsync(
                 """
                 public static class Program
                 {

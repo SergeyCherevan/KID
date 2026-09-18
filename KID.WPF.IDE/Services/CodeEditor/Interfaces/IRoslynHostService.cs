@@ -8,7 +8,8 @@ namespace KID.Services.CodeEditor.Interfaces
     public interface IRoslynHostService
     {
         /// <summary>
-        /// Возвращает единственный экземпляр RoslynHost с подключёнными ссылками на KID.Library, NAudio и стандартными импортами.
+        /// Возвращает единственный RoslynHost с детерминированными references и явными imports
+        /// общего compilation profile.
         /// </summary>
         RoslynHost GetHost();
     }

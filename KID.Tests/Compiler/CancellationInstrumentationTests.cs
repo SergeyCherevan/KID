@@ -1,4 +1,5 @@
 using KID.Services.CodeExecution.Compilation.Rewriters;
+using KID.Tests.TestDoubles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -548,18 +549,13 @@ public sealed class CancellationInstrumentationTests
     internal static (SyntaxTree Tree, SemanticModel SemanticModel) CreateSemanticModel(string code)
     {
         var tree = CSharpSyntaxTree.ParseText(code);
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
-            .Append(typeof(StopManager).Assembly)
-            .Append(typeof(CancellationInstrumentationRewriter).Assembly)
-            .Where(assembly => !assembly.IsDynamic && !string.IsNullOrEmpty(assembly.Location))
-            .DistinctBy(assembly => assembly.Location, StringComparer.OrdinalIgnoreCase);
-        var references = assemblies
-            .Select(assembly => MetadataReference.CreateFromFile(assembly.Location));
+        var profile = TestCompilationProfileProvider.Instance.GetProfile();
         var compilation = CSharpCompilation.Create(
             $"RewriterTests_{Guid.NewGuid():N}",
             [tree],
-            references,
-            new CSharpCompilationOptions(OutputKind.ConsoleApplication));
+            profile.MetadataReferences,
+            new CSharpCompilationOptions(OutputKind.ConsoleApplication)
+                .WithUsings(profile.GlobalImports));
 
         return (tree, compilation.GetSemanticModel(tree, ignoreAccessibility: true));
     }
