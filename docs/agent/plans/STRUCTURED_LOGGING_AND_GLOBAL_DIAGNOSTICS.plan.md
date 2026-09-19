@@ -1,12 +1,12 @@
 # План устранения отсутствия журналирования и глобальной диагностики
 
-Статус: реализовано в текущем рабочем дереве; автоматическая проверка выполнена, GUI/standalone smoke требует ручного release-gate.
+Статус: реализовано и проверено; автоматические проверки и ручной Release/standalone smoke завершены.
 
 Дата анализа: 2026-09-19.
 
 Дата реализации и проверки: 2026-09-20.
 
-Проверенный checkout: ветка `develop`, commit `8edd15d`.
+Проверенный checkout: ветка `feature/StructuredLoggingAndGlobalDiagnostics`, commit `d9f4665`; рабочее дерево чистое.
 
 Связанный пункт аудита: `docs/agent/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md`, пункт 3.
 
@@ -296,6 +296,19 @@ WPF направляет сюда ошибки dispatcher-потока, но н�
 - добавлены автоматические тесты;
 - выполнены Release build/test и standalone smoke.
 
+Фактическое состояние по результатам проверки 2026-09-20:
+
+- `dotnet build .\KID.sln -c Release --no-restore` завершился успешно;
+- `dotnet test .\KID.Tests\KID.Tests.csproj -c Release --no-build --no-restore`: 237 тестов пройдено, 0 ошибок, 0 пропущено;
+- `git diff --check` завершился без замечаний;
+- standalone Release smoke пройден: приложение запускается, вкладка создаётся, пользовательский код выполняется, вывод отображается, Stop и изменение настроек/локализации доступны;
+- ручной `DispatcherUnhandledException` smoke пройден: показан безопасный диалог с `CrashId`, создан crash report, приложение завершилось контролируемо;
+- crash report проверен по полям `CrashId`, `timestampUtc`, `source`, `applicationVersion`, `framework`, `os`, `processId`, `managedThreadId`, `applicationState`, `logFilePattern` и `exception`;
+- JSONL-журнал проверен в `%LOCALAPPDATA%\KID\Logs\kid-YYYYMMDD.jsonl` по событиям запуска, завершения и структурированным полям;
+- временный тестовый блок `KID_MANUAL_CRASH_TEST` удалён;
+- временный каталог `.codex-build` удалён, `Test-Path` вернул `False`;
+- `git status --short` пустой после очистки.
+
 ## 14. Рекомендуемое разбиение на локальные коммиты
 
 1. `feat(diagnostics): add structured logging and crash report foundation`
@@ -306,7 +319,11 @@ WPF направляет сюда ошибки dispatcher-потока, но н�
 
 Каждый коммит должен содержать только относящиеся к нему пути; push не выполнять без отдельного запроса.
 
-## 15. Что не делать
+## 15. Результат ручной проверки
+
+Ручная проверка закрыла последний release-gate для пункта аудита. В ходе теста использовался временный dispatcher-trigger только для воспроизведения необработанного исключения; после проверки он удалён из `App.xaml.cs`. Crash report был создан в локальном каталоге KID Logs и успешно разобран PowerShell-командой `ConvertFrom-Json`. Данные пользовательского кода в журнал и crash report не добавлялись.
+
+## 16. Что не делать
 
 - Не добавлять случайные `File.AppendAllText` в десятки мест.
 - Не логировать весь `Exception.ToString()` в UI вместо структурного события.
