@@ -363,7 +363,11 @@ namespace KID.ViewModels
 
             var cultureCode = localizationService.GetCultureCodeByLanguageKey(languageKey);
             if (!string.IsNullOrWhiteSpace(cultureCode))
-                localizationService.SetCulture(cultureCode);
+            {
+                _ = asyncOperationErrorHandler.ExecuteAsync(
+                    () => localizationService.SetCultureAsync(cultureCode),
+                    "Error_SettingsSaveFailed");
+            }
         }
 
         private void ChangeTheme(ThemeDefinition? theme)
@@ -379,7 +383,9 @@ namespace KID.ViewModels
             if (string.IsNullOrEmpty(fontFamilyName) || windowConfigurationService?.Settings == null)
                 return;
 
-            windowConfigurationService.SetFont(fontFamilyName, null);
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                () => windowConfigurationService.SetFontAsync(fontFamilyName, null),
+                "Error_SettingsSaveFailed");
         }
 
         private void ChangeFontSize(double fontSize)
@@ -387,7 +393,9 @@ namespace KID.ViewModels
             if (fontSize <= 0 || windowConfigurationService?.Settings == null)
                 return;
 
-            windowConfigurationService.SetFont(null, fontSize);
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                () => windowConfigurationService.SetFontAsync(null, fontSize),
+                "Error_SettingsSaveFailed");
         }
 
 

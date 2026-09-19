@@ -4,7 +4,7 @@ namespace KID.Services.Localization.Interfaces
     {
         string GetString(string key);
         string GetString(string key, params object[] args);
-        void SetCulture(string cultureCode);
+        Task SetCultureAsync(string cultureCode);
         string CurrentCulture { get; }
         event EventHandler? CultureChanged;
         IEnumerable<string> GetAvailableLanguages();

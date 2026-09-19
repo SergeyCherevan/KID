@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 using System.Windows;
 using KID.Models;
 using KID.Services.Errors.Interfaces;
@@ -81,7 +80,9 @@ public sealed class ThemeService : IThemeService
             app.Resources.MergedDictionaries.Add(themeDictionary);
 
             CurrentTheme = theme;
-            windowConfigurationService.SetColorTheme(theme.LocalizationKey);
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                () => windowConfigurationService.SetColorThemeAsync(theme.LocalizationKey),
+                "Error_SettingsSaveFailed");
             ThemeChanged?.Invoke(this, EventArgs.Empty);
 
             error = null;

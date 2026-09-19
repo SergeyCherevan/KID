@@ -53,14 +53,14 @@ namespace KID.Services.Initialize
 
         public async Task InitializeAsync()
         {
-            windowConfigurationService.SetConfigurationFromFile();
-            windowConfigurationService.SetDefaultCode();
+            await windowConfigurationService.SetConfigurationFromFileAsync();
+            await windowConfigurationService.SetDefaultCodeAsync();
 
             // Применяем тему из настроек
             InitializeTheme();
             
             // Применяем язык интерфейса из настроек
-            InitializeLanguage();
+            await InitializeLanguageAsync();
             
             await InitializeCodeEditorAsync();
             InitializeConsole();
@@ -73,12 +73,12 @@ namespace KID.Services.Initialize
             themeService.ApplyTheme(windowConfigurationService.Settings.ColorTheme);
         }
 
-        private void InitializeLanguage()
+        private async Task InitializeLanguageAsync()
         {
             // Устанавливаем язык интерфейса из настроек
             if (!string.IsNullOrEmpty(windowConfigurationService.Settings.UILanguage))
             {
-                localizationService.SetCulture(windowConfigurationService.Settings.UILanguage);
+                await localizationService.SetCultureAsync(windowConfigurationService.Settings.UILanguage);
             }
         }
 

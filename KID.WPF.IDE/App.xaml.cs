@@ -2,6 +2,7 @@ using System.Configuration;
 using System.Data;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.Threading;
 using KID.Services.DI;
 using KID.Services.Initialize.Interfaces;
 
@@ -25,11 +26,12 @@ namespace KID
 
         protected override void OnExit(ExitEventArgs e)
         {
-            // Сохраняем настройки перед выходом (FontFamily/FontSize обновляются через SetFont при смене шрифта)
+            // Сохраняем настройки перед выходом (FontFamily/FontSize обновляются через SetFontAsync при смене шрифта)
             try
             {
                 var settingsService = ServiceProvider.GetRequiredService<IWindowConfigurationService>();
-                settingsService.SaveSettings();
+                ServiceProvider.GetRequiredService<JoinableTaskFactory>().Run(
+                    () => settingsService.SaveSettingsAsync());
             }
             catch
             {

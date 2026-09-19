@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using KID.Models;
@@ -14,34 +13,33 @@ namespace KID.Services.Files
     /// </summary>
     public sealed class EditorSessionService : IEditorSessionService
     {
-        private readonly string sessionDirectory;
+        private readonly IFileService fileService;
         private readonly string sessionPath;
         private readonly SemaphoreSlim fileLock = new(1, 1);
-        private readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
 
-        public EditorSessionService()
+        public EditorSessionService(IFileService fileService)
+            : this(
+                fileService,
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "KID"))
         {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            sessionDirectory = Path.Combine(appDataPath, "KID");
+        }
+
+        internal EditorSessionService(IFileService fileService, string sessionDirectory)
+        {
+            this.fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+            ArgumentException.ThrowIfNullOrWhiteSpace(sessionDirectory);
+
             sessionPath = Path.Combine(sessionDirectory, "editor-session.json");
         }
 
         public async Task<EditorSessionData?> LoadAsync()
         {
-            if (!File.Exists(sessionPath))
-                return null;
-
             await fileLock.WaitAsync();
             try
             {
-                await using var stream = new FileStream(
-                    sessionPath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.Read,
-                    bufferSize: 4096,
-                    useAsync: true);
-                var session = await JsonSerializer.DeserializeAsync<EditorSessionData>(stream, jsonOptions);
+                var session = await fileService.ReadJsonAsync<EditorSessionData>(sessionPath);
                 if (session != null && session.Version != EditorSessionData.CurrentVersion)
                 {
                     throw new InvalidDataException(
@@ -49,6 +47,14 @@ namespace KID.Services.Files
                 }
 
                 return session;
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return null;
             }
             finally
             {
@@ -60,39 +66,14 @@ namespace KID.Services.Files
         {
             ArgumentNullException.ThrowIfNull(session);
 
-            Directory.CreateDirectory(sessionDirectory);
-            var temporaryPath = Path.Combine(
-                sessionDirectory,
-                $"editor-session-{Guid.NewGuid():N}.tmp");
-
             await fileLock.WaitAsync();
             try
             {
-                await using (var stream = new FileStream(
-                    temporaryPath,
-                    FileMode.CreateNew,
-                    FileAccess.Write,
-                    FileShare.None,
-                    bufferSize: 4096,
-                    useAsync: true))
-                {
-                    await JsonSerializer.SerializeAsync(stream, session, jsonOptions);
-                    await stream.FlushAsync();
-                }
-
-                File.Move(temporaryPath, sessionPath, overwrite: true);
+                await fileService.WriteJsonAsync(sessionPath, session);
             }
             finally
             {
-                try
-                {
-                    if (File.Exists(temporaryPath))
-                        File.Delete(temporaryPath);
-                }
-                finally
-                {
-                    fileLock.Release();
-                }
+                fileLock.Release();
             }
         }
     }

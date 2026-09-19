@@ -31,8 +31,6 @@ namespace KID.Services.Files
                 return null;
 
             var code = await fileService.ReadFileAsync(filePath);
-            if (code == null)
-                return null;
 
             return new OpenFileResult(code, filePath);
         }
@@ -47,10 +45,8 @@ namespace KID.Services.Files
         }
 
         /// <inheritdoc />
-        public Task<string?> ReadFromPathAsync(string filePath)
-        {
-            return fileService.ReadFileAsync(filePath);
-        }
+        public Task<string> ReadFromPathAsync(string filePath) =>
+            fileService.ReadFileAsync(filePath);
 
         /// <inheritdoc />
         public async Task<string?> SaveCodeFileAsync(string code, string fileFilter, string defaultFileName)

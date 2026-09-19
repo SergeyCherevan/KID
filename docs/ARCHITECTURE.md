@@ -192,11 +192,18 @@ native/сторонний вызов, неинструментированный
 - Использует FileDialogService для диалогов
 - Использует FileService для чтения/записи
 
+**FileService** (`FileService.cs`)
+- Централизует проверку существования, текстовое и JSON-чтение/запись файлов IDE
+- `WriteFileAsync()` создаёт отсутствующий родительский каталог и атомарно публикует содержимое через временный файл
+- `ReadFileAsync()` возвращает непустой контракт `Task<string>`; отсутствие файла, запрет доступа и ошибки ввода-вывода передаются вызывающему сервису для контекстной обработки
+- Неудачная замена сохраняет прежний целевой файл, а оставшийся временный файл удаляется best effort
+
 **EditorSessionService** (`EditorSessionService.cs`)
 - Реализует `IEditorSessionService` с операциями `LoadAsync()` и `SaveAsync(EditorSessionData)`
 - Хранит recovery-снимок в `%APPDATA%/KID/editor-session.json`
-- Сериализует полный снимок во временный файл и только после завершения записи заменяет основной JSON
+- Делегирует JSON-чтение и атомарную публикацию снимка `IFileService`
 - Использует `SemaphoreSlim` для последовательных чтений и записей внутри одного процесса
+- Преобразует отсутствие recovery-файла или каталога в `null`, но не скрывает повреждённый JSON
 - Проверяет `EditorSessionData.Version`; неизвестная версия считается ошибкой восстановления
 
 **UnsavedChangesDialogService** (`UnsavedChangesDialogService.cs`)
@@ -235,7 +242,7 @@ native/сторонний вызов, неинструментированный
 - Поддержка множественных языков (ru-RU, en-US, uk-UA)
 - Возвращает список доступных языков как ключи локализации (`Language_*`)
 - Событие CultureChanged для обновления UI
-- При `SetCulture` обновляет `IWindowConfigurationService` через API `SetUILanguage(...)`
+- `SetCultureAsync()` сразу применяет культуру и уведомляет UI, затем ожидает сохранение через `IWindowConfigurationService.SetUILanguageAsync()`
 
 **LocalizationMarkupExtension** (`LocalizationMarkupExtension.cs`)
 - XAML расширение для привязки локализованных строк
@@ -253,7 +260,7 @@ native/сторонний вызов, неинструментированный
 **ThemeService** (`ThemeService.cs`)
 - Применяет выбранный `ThemeDefinition`, загружая его `ResourceDictionary`
 - Хранит только успешно применённую тему в `CurrentTheme`
-- После успешного применения сохраняет `LocalizationKey` через `SetColorTheme(...)` и публикует `ThemeChanged`
+- После успешного применения запускает сохранение `LocalizationKey` через `SetColorThemeAsync(...)` под контролем `IAsyncOperationErrorHandler` и публикует `ThemeChanged`, не блокируя UI на дисковой записи
 - Использует безопасную Light-тему как fallback
 
 **ThemeProviderService** (`ThemeProviderService.cs`)
@@ -286,9 +293,12 @@ native/сторонний вызов, неинструментированный
 - Хранение настроек в JSON файле в AppData
 - Управление шаблонным кодом
 - Настройки: язык, тема, шрифт, размер окна
-- `SetFont(fontFamilyName, fontSize)` — установка шрифта и уведомление подписчиков
-- `SetUILanguage(cultureCode)` — установка языка UI, сохранение и уведомление подписчиков
-- `SetColorTheme(themeKey)` — сохранение ключа успешно применённой темы
+- `SetFontAsync(fontFamilyName, fontSize)` — установка шрифта, сохранение и уведомление подписчиков
+- `SetUILanguageAsync(cultureCode)` — установка языка UI, сохранение и уведомление подписчиков
+- `SetColorThemeAsync(themeKey)` — сохранение ключа успешно применённой темы
+- Асинхронные сохранения ставятся в последовательную очередь, чтобы более старый снимок не мог перезаписать новый
+- Все JSON-операции делегируются `IFileService`, поэтому `settings.json` публикуется атомарно
+- `App.OnExit` синхронно дожидается завершающего `SaveSettingsAsync()` через общий `JoinableTaskFactory`
 - События: `FontSettingsChanged`, `UILanguageSettingsChanged`; успешную смену темы сообщает `IThemeService.ThemeChanged`
 
 **WindowInitializationService** (`WindowInitializationService.cs`)
@@ -623,10 +633,10 @@ EditorSessionData (FilePath + Content + SavedContent)
          ↓
 EditorSessionService.SaveAsync()
          ↓
-временный JSON → %APPDATA%/KID/editor-session.json
+FileService.WriteJsonAsync() → временный JSON → %APPDATA%/KID/editor-session.json
 ```
 
-Recovery-файл не заменяет явный `Save`: autosave не перезаписывает пользовательские `.cs`-файлы. При восстановлении чистая дисковая вкладка перечитывается из исходного файла, а вкладка с `Content != SavedContent` восстанавливает несохранённый текст из снимка.
+Recovery-файл не заменяет явный `Save`: autosave не перезаписывает пользовательские `.cs`-файлы. При восстановлении чистая дисковая вкладка перечитывается из исходного файла, а вкладка с `Content != SavedContent` восстанавливает несохранённый текст из снимка. Если чистый файл отсутствует или недоступен, `IAsyncOperationErrorHandler` показывает локализованную ошибку, вкладка сохраняет текст из recovery-снимка, а цикл продолжает восстанавливать остальные вкладки.
 
 ### Безопасное закрытие
 
@@ -669,6 +679,7 @@ Save / Discard / Cancel для каждой изменённой вкладки
 - Статический TextBoxConsole использует Dispatcher своего scope и отбрасывает stale streams/read requests/work items; `TextBoxConsoleContext.DisposeAsync` восстанавливает все process-wide streams до следующего Run даже при runtime shutdown failure
 - `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
 - `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса
+- `WindowConfigurationService` сериализует конкурентные сохранения настроек собственной FIFO-очередью; физическая публикация каждого снимка атомарна благодаря `FileService`
 - Выполнение entry point происходит через `Task.Run`, но остаётся внутри процесса IDE
 - CancellationToken обеспечивает кооперативную отмену только там, где код достигает поддержанной точки Stop
 

@@ -31,7 +31,7 @@ namespace KID.Services.Files.Interfaces
         /// <summary>
         /// Читает код из указанного файла без показа диалога.
         /// </summary>
-        Task<string?> ReadFromPathAsync(string filePath);
+        Task<string> ReadFromPathAsync(string filePath);
 
         /// <summary>
         /// Сохраняет код через диалог выбора пути (Сохранить как).

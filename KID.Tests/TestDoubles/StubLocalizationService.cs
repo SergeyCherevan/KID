@@ -17,9 +17,7 @@ internal sealed class StubLocalizationService : ILocalizationService
     public string GetString(string key, params object[] args) =>
         args.Length == 0 ? key : $"{key}:{string.Join('|', args)}";
 
-    public void SetCulture(string cultureCode)
-    {
-    }
+    public Task SetCultureAsync(string cultureCode) => Task.CompletedTask;
 
     public IEnumerable<string> GetAvailableLanguages() => ["English"];
 

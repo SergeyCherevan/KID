@@ -298,12 +298,20 @@
 
 **Ответственность:**
 - Чтение файлов
-- Запись файлов
+- Проверка существования файлов
+- Атомарная запись файлов с созданием отсутствующего родительского каталога
+- Чтение и запись JSON
 - Асинхронные операции
 
 **Основные методы:**
-- `ReadFileAsync(string filePath)` — читает файл и возвращает `null`, если файл отсутствует или недоступен
-- `WriteFileAsync(string filePath, string content)` — записывает строку, включая пустую, и отклоняет только некорректный путь или `null`
+- `FileExists(string filePath)` — проверяет существование файла
+- `ReadFileAsync(string filePath)` — возвращает `Task<string>`; ошибки доступа, отсутствия файла и ввода-вывода передаются вызывающему коду, а не преобразуются в `null`
+- `WriteFileAsync(string filePath, string content)` — создаёт родительский каталог при необходимости и атомарно записывает строку через временный файл
+- `ReadJsonAsync<T>(string filePath)` / `WriteJsonAsync<T>(string filePath, T data)` — читают и записывают JSON через общие текстовые операции
+
+**Гарантии записи:**
+- Временный файл создаётся в каталоге назначения, поэтому финальная замена не пересекает файловые тома
+- При неудачной замене существующий файл остаётся прежним; временный файл удаляется best effort
 
 ### 3.5. Подсистема редактора кода (Code Editors)
 
@@ -342,8 +350,10 @@
 - `EditorSessionTabData` содержит `FilePath`, `Content` и `SavedContent`; это позволяет восстановить `IsModified`
 - `IEditorSessionService` предоставляет `LoadAsync()` и `SaveAsync(EditorSessionData)`
 - Снимок хранится в `%APPDATA%/KID/editor-session.json` отдельно от пользовательских `.cs`-файлов
-- Сначала сериализуется уникальный временный файл, затем он перемещается поверх основного JSON; `SemaphoreSlim` упорядочивает операции внутри процесса
+- `EditorSessionService` упорядочивает операции через `SemaphoreSlim`, а JSON-чтение и атомарную публикацию файла делегирует `IFileService`
+- Отсутствие recovery-файла или каталога считается отсутствием сессии (`null`); повреждённый JSON не скрывается
 - При загрузке поддерживается только `EditorSessionData.CurrentVersion`; неизвестная версия приводит к локализованной ошибке восстановления
+- Если чтение чистой дисковой вкладки завершается ошибкой, `CodeEditorsViewModel` показывает `Error_FileOpenFailed`, сохраняет recovery-текст этой вкладки и продолжает цикл
 
 #### 3.5.3. UnsavedChangesDialogService и закрытие окна
 
@@ -401,13 +411,13 @@
 **Основные методы:**
 - `GetString(string key)` — получает локализованную строку
 - `GetString(string key, params object[] args)` — получает форматированную строку
-- `SetCulture(string cultureCode)` — устанавливает язык
+- `SetCultureAsync(string cultureCode)` — сразу применяет язык и ожидает сохранение настройки
 - `GetAvailableLanguages()` — получает список языков
 
 **Особенности:**
 - Использует ResourceManager для загрузки строк
 - Кэширует список доступных языков
-- Генерирует событие CultureChanged при смене языка
+- Генерирует `CultureChanged` сразу после применения культуры, до завершения асинхронной записи настройки
 - Fallback на английский язык, если строка не найдена
 - Возвращает `[key]` если строка не найдена
 
@@ -526,18 +536,23 @@
 - Централизованное управление настройками шрифта (редактор и консоль)
 
 **Основные методы:**
-- `SetConfigurationFromFile()` — загружает настройки
-- `SetDefaultCode()` — загружает шаблонный код
-- `SaveSettings()` — сохраняет настройки
-- `SetFont(string fontFamilyName, double fontSize)` — устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков через событие `FontSettingsChanged`
+- `SetConfigurationFromFileAsync()` — загружает настройки
+- `SetDefaultCodeAsync()` — загружает шаблонный код
+- `SaveSettingsAsync()` — сохраняет настройки
+- `SetFontAsync(string? fontFamilyName, double? fontSize)` — устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков через событие `FontSettingsChanged`
+- `SetUILanguageAsync(string cultureCode)` — сохраняет язык UI и уведомляет `UILanguageSettingsChanged`
+- `SetColorThemeAsync(string themeKey)` — сохраняет ключ успешно применённой темы
 
 **События:**
-- `FontSettingsChanged` — вызывается при изменении шрифта (из SetFont). Подписчики: MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel
+- `FontSettingsChanged` — вызывается при изменении шрифта (из `SetFontAsync`). Подписчики: MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel
 
 **Особенности:**
 - Хранит настройки в JSON файле в `AppData/KID/settings.json`
 - Использует `DefaultWindowConfiguration.json` как fallback
-- Сохраняет настройки при выходе из приложения
+- Делегирует проверку существования, чтение и запись файлов `IFileService`
+- Ставит асинхронные сохранения в последовательную FIFO-очередь и продолжает её после ошибки отдельной записи
+- Благодаря `IFileService` атомарно публикует `settings.json` через временный файл
+- При выходе `App.OnExit` дожидается завершающего сохранения через `JoinableTaskFactory`
 
 **Настройки:**
 - `ProgrammingLanguage` — язык подсветки синтаксиса
@@ -923,7 +938,7 @@
            │              │                      ├──→ FileDialogService
            │              │                      └──→ FileService
            │              │
-           │              ├──→ EditorSessionService ──→ editor-session.json
+           │              ├──→ EditorSessionService ──→ FileService ──→ editor-session.json
            │              ├──→ UnsavedChangesDialogService ──→ MessageBox
            │              ├──→ ICodeEditorFactory (RoslynCodeEditorFactory) ──→ IRoslynHostService, IWindowConfigurationService
            │              │         IRoslynHostService ──→ IKIDCompilationProfileProvider
@@ -960,7 +975,7 @@
 
 4. **Autosave и восстановление сессии:**
    - События редактора/вкладок → `ScheduleSessionSave()` → debounce 750 мс или maximum interval 5 секунд
-   - `CodeEditorsViewModel` → `EditorSessionData` → `EditorSessionService` → `%APPDATA%/KID/editor-session.json`
+   - `CodeEditorsViewModel` → `EditorSessionData` → `EditorSessionService` → `FileService` → `%APPDATA%/KID/editor-session.json`
    - `WindowInitializationService` → `RestoreSessionAsync()` → `EditorSessionService.LoadAsync()` → асинхронное создание вкладок
    - Autosave не записывает пользовательские `.cs`-файлы; они изменяются только явными Save/Save As
 
@@ -976,7 +991,7 @@
    - ThemeService → ResourceDictionary → XAML файлы тем
 
 8. **Инициализация:**
-   - WindowInitializationService → WindowConfigurationService → settings.json
+   - WindowInitializationService → WindowConfigurationService → FileService → settings.json
    - WindowInitializationService → ThemeService → Применение темы
    - WindowInitializationService → LocalizationService → Применение языка
 

@@ -82,7 +82,7 @@ namespace KID.Services.Localization
             }
         }
 
-        public void SetCulture(string cultureCode)
+        public async Task SetCultureAsync(string cultureCode)
         {
             if (string.IsNullOrEmpty(cultureCode))
                 return;
@@ -100,8 +100,11 @@ namespace KID.Services.Localization
                     CurrentCulture = newCulture.Name;
 
                     var windowConfigurationService = _serviceProvider.GetService<IWindowConfigurationService>();
-                    windowConfigurationService?.SetUILanguage(newCulture.Name);
+                    var saveSettingsTask = windowConfigurationService?.SetUILanguageAsync(newCulture.Name);
                     CultureChanged?.Invoke(this, EventArgs.Empty);
+
+                    if (saveSettingsTask != null)
+                        await saveSettingsTask;
                 }
             }
             catch

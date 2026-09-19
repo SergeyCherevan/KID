@@ -379,7 +379,7 @@ namespace KID.ViewModels
 
             windowConfigurationService.Settings.TemplateCode = content;
             windowConfigurationService.Settings.TemplateName = tab.FilePath;
-            windowConfigurationService.SaveSettings();
+            await windowConfigurationService.SaveSettingsAsync();
             RaiseTabCommandsCanExecute();
             ScheduleSessionSave();
         }
@@ -469,7 +469,10 @@ namespace KID.ViewModels
 
                     if (!codeFileService.IsNewFilePath(path) && content == savedContent)
                     {
-                        var diskContent = await codeFileService.ReadFromPathAsync(path);
+                        string? diskContent = null;
+                        await asyncOperationErrorHandler.ExecuteAsync(
+                            async () => diskContent = await codeFileService.ReadFromPathAsync(path),
+                            "Error_FileOpenFailed");
                         if (diskContent != null)
                         {
                             content = diskContent;
