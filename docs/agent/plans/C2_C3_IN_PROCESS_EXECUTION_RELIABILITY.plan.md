@@ -416,7 +416,7 @@ Release build — 0 warnings/0 errors. Полный `dotnet test KID.sln -c Rele
 
 ## 📝 Этап 10. Документация и повторная оценка аудита
 
-- [x] Обновить `.codex/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md` только после подтверждения реализации тестами.
+- [x] Обновить `docs/agent/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md` только после подтверждения реализации тестами.
 - [x] Переформулировать C2 как осознанную in-process trust model, а не обязательную security sandbox.
 - [x] Удалить из обязательного исправления C2 restricted token/AppContainer, файловые/сетевые запреты и worker-процесс.
 - [x] Не объявлять абсолютную принудительную остановку произвольного C# внутри одного процесса.

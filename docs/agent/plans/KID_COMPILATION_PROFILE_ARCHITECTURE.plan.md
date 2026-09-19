@@ -1,7 +1,7 @@
 # План: единый детерминированный `KIDCompilationProfile`
 
 - **Дата:** 2026-09-18
-- **Статус:** proposed — спроектировано, реализация не начата
+- **Статус:** completed — реализация полностью выполнена и подтверждена тестами
 - **Область:** `KID.WPF.IDE`, `KID.Tests`, `docs`
 - **Основные компоненты:** `KIDCompilationProfile`, `IKIDCompilationProfileProvider`, `KIDCompilationProfileProvider`, `RoslynHostService`, `CSharpCompiler`
 
