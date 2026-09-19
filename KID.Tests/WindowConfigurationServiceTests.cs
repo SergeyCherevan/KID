@@ -1,7 +1,7 @@
 using KID.Models;
-using KID.Services.Errors.Interfaces;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize;
+using System.IO;
 using System.Threading.Channels;
 
 namespace KID.Tests.Initialize;
@@ -21,7 +21,7 @@ public sealed class WindowConfigurationServiceTests
                 return expectedSettings;
             }
         };
-        var service = new WindowConfigurationService(new RethrowingErrorHandler(), fileService);
+        var service = new WindowConfigurationService(fileService);
 
         await service.SetConfigurationFromFileAsync();
 
@@ -40,7 +40,7 @@ public sealed class WindowConfigurationServiceTests
             FileExistsImplementation = path => path == templatePath,
             ReadFileResult = templateCode
         };
-        var service = new WindowConfigurationService(new RethrowingErrorHandler(), fileService);
+        var service = new WindowConfigurationService(fileService);
         service.Settings.TemplateName = templatePath;
 
         await service.SetDefaultCodeAsync();
@@ -54,7 +54,7 @@ public sealed class WindowConfigurationServiceTests
     public async Task SaveSettingsAsync_QueuesConcurrentWritesAndPersistsLatestState()
     {
         var fileService = new BlockingWriteFileService();
-        var service = new WindowConfigurationService(new RethrowingErrorHandler(), fileService);
+        var service = new WindowConfigurationService(fileService);
 
         var fontChange = service.SetFontAsync("Fira Code", null);
         await fileService.FirstWriteStarted.Task.WaitAsync(
@@ -82,7 +82,15 @@ public sealed class WindowConfigurationServiceTests
             {
                 Assert.Equal("Fira Code", second.FontFamily);
                 Assert.Equal("Theme_Dark", second.ColorTheme);
-            });
+        });
+    }
+
+    [Fact]
+    public async Task SaveSettingsAsync_PropagatesWriteFailureInsteadOfReportingSuccess()
+    {
+        var service = new WindowConfigurationService(new FailingWriteFileService());
+
+        await Assert.ThrowsAsync<IOException>(() => service.SaveSettingsAsync());
     }
 
     private sealed class RecordingFileService : IFileService
@@ -119,13 +127,6 @@ public sealed class WindowConfigurationServiceTests
 
         public Task WriteJsonAsync<T>(string filePath, T data) =>
             throw new NotSupportedException();
-    }
-
-    private sealed class RethrowingErrorHandler : IAsyncOperationErrorHandler
-    {
-        public void Execute(Action action, string errorMessageKey) => action();
-
-        public Task ExecuteAsync(Func<Task> asyncAction, string errorMessageKey) => asyncAction();
     }
 
     private sealed class BlockingWriteFileService : IFileService
@@ -215,5 +216,15 @@ public sealed class WindowConfigurationServiceTests
                     activeWrites--;
             }
         }
+    }
+
+    private sealed class FailingWriteFileService : IFileService
+    {
+        public bool FileExists(string filePath) => false;
+        public Task<string> ReadFileAsync(string filePath) => throw new NotSupportedException();
+        public Task WriteFileAsync(string filePath, string content) => throw new NotSupportedException();
+        public Task<T?> ReadJsonAsync<T>(string filePath) => throw new NotSupportedException();
+        public Task WriteJsonAsync<T>(string filePath, T data) =>
+            Task.FromException(new IOException("settings write failed"));
     }
 }

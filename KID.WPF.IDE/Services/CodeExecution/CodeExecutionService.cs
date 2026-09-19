@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using KID.Services.CodeExecution.Contexts.Interfaces;
 using KID.Services.CodeExecution.Interfaces;
+using KID.Services.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace KID.Services.CodeExecution
 {
@@ -39,6 +41,7 @@ namespace KID.Services.CodeExecution
         private readonly Func<long, ExecutionSession> sessionFactory;
         private readonly Func<long, CancellationToken, IExecutionEnvironmentLease> executionEnvironmentLeaseFactory;
         private readonly Func<TimeSpan, Task> stopResponseDelayFactory;
+        private readonly ILogger<CodeExecutionService>? logger;
         private static readonly TimeSpan StopResponseWarningDelay = TimeSpan.FromSeconds(2);
 
         // Monitor / Critical Section: этот объект синхронизирует чтение и изменение
@@ -61,14 +64,27 @@ namespace KID.Services.CodeExecution
         /// <paramref name="compiler"/> или <paramref name="runner"/> имеют значение
         /// <see langword="null"/>.
         /// </exception>
-        public CodeExecutionService(ICodeCompiler compiler, ICodeRunner runner)
+        public CodeExecutionService(
+            ICodeCompiler compiler,
+            ICodeRunner runner,
+            ILogger<CodeExecutionService>? logger = null)
             : this(
                 compiler,
                 runner,
                 static executionId => new ExecutionSession(executionId),
-                static (executionId, cancellationToken) =>
-                    ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken),
-                static delay => Task.Delay(delay))
+                (executionId, cancellationToken) =>
+                    ExecutionEnvironmentManager.BeginExecution(
+                        executionId,
+                        cancellationToken,
+                        diagnostic => logger?.LogError(
+                            DiagnosticEventIds.ExecutionEventHandlerFailed,
+                            diagnostic.Exception,
+                            "Execution event callback failed. ExecutionId={ExecutionId} Component={Component} Operation={Operation}",
+                            diagnostic.ExecutionId,
+                            diagnostic.Component,
+                            diagnostic.Operation)),
+                static delay => Task.Delay(delay),
+                logger)
         {
         }
 
@@ -80,7 +96,8 @@ namespace KID.Services.CodeExecution
             ICodeRunner runner,
             Func<long, ExecutionSession> sessionFactory,
             Func<long, CancellationToken, IExecutionEnvironmentLease> executionEnvironmentLeaseFactory,
-            Func<TimeSpan, Task>? stopResponseDelayFactory = null)
+            Func<TimeSpan, Task>? stopResponseDelayFactory = null,
+            ILogger<CodeExecutionService>? logger = null)
         {
             /* Fail fast: Coordinator не может поддерживать lifecycle без обеих обязательных
              * стратегий. Проверка конструктора не позволяет создать частично рабочий сервис.
@@ -93,6 +110,7 @@ namespace KID.Services.CodeExecution
                 throw new ArgumentNullException(nameof(executionEnvironmentLeaseFactory));
             this.stopResponseDelayFactory = stopResponseDelayFactory ??
                 (static delay => Task.Delay(delay));
+            this.logger = logger;
         }
 
         /// <summary>
@@ -608,6 +626,23 @@ namespace KID.Services.CodeExecution
                  */
                 var lifecycleException = failures.CreateException(
                     "Multiple errors occurred during the execution lifecycle.");
+                if (lifecycleException != null)
+                {
+                    logger?.LogError(
+                        DiagnosticEventIds.ExecutionLifecycleFailed,
+                        lifecycleException,
+                        "Execution lifecycle failed. ExecutionId={ExecutionId}",
+                        session.ExecutionId);
+                }
+                else if (executionResult.Kind == ExecutionResultKind.RuntimeFaulted)
+                {
+                    logger?.LogWarning(
+                        DiagnosticEventIds.UserExecutionFailed,
+                        "User execution completed with a runtime fault. ExecutionId={ExecutionId} Message={Message}",
+                        session.ExecutionId,
+                        executionResult.ErrorMessage);
+                }
+
                 if (lifecycleException == null)
                     completionSource.TrySetResult(executionResult);
                 else

@@ -9,7 +9,7 @@ internal sealed class KeyboardExecutionScope
     {
         Environment = environment ?? throw new ArgumentNullException(nameof(environment));
         Window = window ?? throw new ArgumentNullException(nameof(window));
-        EventWorker = new ExecutionEventWorker(environment);
+        EventWorker = new ExecutionEventWorker(environment, "Keyboard");
     }
 
     internal ExecutionEnvironment Environment { get; }

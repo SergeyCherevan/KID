@@ -1,4 +1,5 @@
 using System.Windows.Threading;
+using System.Diagnostics;
 
 namespace KID;
 
@@ -13,12 +14,18 @@ internal sealed class ExecutionEnvironment
     private DispatcherScope? dispatcherScope;
     private int cleanupStarted;
 
-    internal ExecutionEnvironment(long executionId, CancellationToken cancellationToken)
+    internal ExecutionEnvironment(
+        long executionId,
+        CancellationToken cancellationToken,
+        Action<ExecutionDiagnostic>? diagnosticSink = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(executionId);
         ExecutionId = executionId;
         CancellationToken = cancellationToken;
+        this.diagnosticSink = diagnosticSink;
     }
+
+    private readonly Action<ExecutionDiagnostic>? diagnosticSink;
 
     internal long ExecutionId { get; }
     internal CancellationToken CancellationToken { get; }
@@ -28,6 +35,27 @@ internal sealed class ExecutionEnvironment
 
     /// <summary>Единственная реализация проверки Stop для состояния execution.</summary>
     internal void ThrowIfCancellationRequested() => CancellationToken.ThrowIfCancellationRequested();
+
+    internal void ReportDiagnostic(string component, string operation, Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(component);
+        ArgumentNullException.ThrowIfNull(operation);
+        ArgumentNullException.ThrowIfNull(exception);
+
+        try
+        {
+            diagnosticSink?.Invoke(new ExecutionDiagnostic(ExecutionId, component, operation, exception));
+        }
+        catch (Exception sinkException)
+        {
+            Trace.TraceError(
+                "Execution diagnostic sink failed. ExecutionId={0}; Component={1}; Operation={2}; Exception={3}",
+                ExecutionId,
+                component,
+                operation,
+                sinkException);
+        }
+    }
 
     internal DispatcherScope AttachDispatcher(Dispatcher dispatcher)
     {

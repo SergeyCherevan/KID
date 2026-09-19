@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace KID;
 
@@ -16,12 +15,14 @@ internal sealed class ExecutionEventWorker : IAsyncDisposable
     private readonly Task workerTask;
     private readonly HashSet<Task> delayedTasks = [];
     private readonly TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly string component;
     private bool closing;
     private bool shutdownStarted;
 
-    internal ExecutionEventWorker(ExecutionEnvironment environment)
+    internal ExecutionEventWorker(ExecutionEnvironment environment, string component = "ExecutionEventWorker")
     {
         Environment = environment ?? throw new ArgumentNullException(nameof(environment));
+        this.component = string.IsNullOrWhiteSpace(component) ? "ExecutionEventWorker" : component;
         lifetimeSource = CancellationTokenSource.CreateLinkedTokenSource(environment.CancellationToken);
         workerTask = Task.Run(WorkerLoopAsync);
     }
@@ -143,7 +144,7 @@ internal sealed class ExecutionEventWorker : IAsyncDisposable
                     {
                         // Ошибка одного пользовательского handler наблюдается, но не убивает
                         // worker и не превращает успешный resource cleanup в cleanup failure.
-                        Trace.TraceError(exception.ToString());
+                        Environment.ReportDiagnostic(component, "EventHandler", exception);
                     }
                 }
             }
@@ -171,7 +172,7 @@ internal sealed class ExecutionEventWorker : IAsyncDisposable
         }
         catch (Exception exception)
         {
-            Trace.TraceError(exception.ToString());
+            Environment.ReportDiagnostic(component, "DelayedEvent", exception);
         }
     }
 

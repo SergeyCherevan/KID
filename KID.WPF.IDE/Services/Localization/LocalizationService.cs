@@ -5,9 +5,11 @@ using System.Globalization;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using KID.Resources;
+using KID.Services.Diagnostics;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KID.Services.Localization
 {
@@ -16,6 +18,7 @@ namespace KID.Services.Localization
         private readonly ResourceManager _resourceManager;
         private readonly ResourceManager _availableLanguageResourceManager;
         private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<LocalizationService>? _logger;
         private CultureInfo _currentCulture;
         private List<string>? _cachedAvailableLanguageKeys;
         private Dictionary<string, string>? _languageKeyToCultureCode;
@@ -38,9 +41,12 @@ namespace KID.Services.Localization
         public event EventHandler? CultureChanged;
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public LocalizationService(IServiceProvider serviceProvider)
+        public LocalizationService(
+            IServiceProvider serviceProvider,
+            ILogger<LocalizationService>? logger = null)
         {
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            _logger = logger;
             _resourceManager = new ResourceManager("KID.Resources.Strings", typeof(Strings).Assembly);
             _availableLanguageResourceManager = new ResourceManager("KID.Resources.AvailableLanguage", typeof(Strings).Assembly);
             _currentCulture = CultureInfo.CurrentUICulture;
@@ -58,8 +64,14 @@ namespace KID.Services.Localization
                     ?? _resourceManager.GetString(key, new CultureInfo("en-US"))
                     ?? $"[{key}]";
             }
-            catch
+            catch (Exception exception)
             {
+                _logger?.LogWarning(
+                    DiagnosticEventIds.LocalizationFallback,
+                    exception,
+                    "Localization lookup failed. Key={Key} Culture={Culture}",
+                    key,
+                    _currentCulture.Name);
                 return $"[{key}]";
             }
         }
@@ -76,8 +88,14 @@ namespace KID.Services.Localization
                     ? string.Format(format, args) 
                     : format;
             }
-            catch
+            catch (Exception exception)
             {
+                _logger?.LogWarning(
+                    DiagnosticEventIds.LocalizationFallback,
+                    exception,
+                    "Localized formatting failed. Key={Key} Culture={Culture}",
+                    key,
+                    _currentCulture.Name);
                 return $"[{key}]";
             }
         }
@@ -87,29 +105,22 @@ namespace KID.Services.Localization
             if (string.IsNullOrEmpty(cultureCode))
                 return;
 
-            try
+            var newCulture = CultureInfo.GetCultureInfo(cultureCode);
+            if (_currentCulture.Name != newCulture.Name)
             {
-                var newCulture = CultureInfo.GetCultureInfo(cultureCode);
-                if (_currentCulture.Name != newCulture.Name)
-                {
-                    _currentCulture = newCulture;
-                    CultureInfo.CurrentUICulture = newCulture;
-                    CultureInfo.CurrentCulture = newCulture;
-                    
-                    // Обновляем свойство CurrentCulture и вызываем PropertyChanged
-                    CurrentCulture = newCulture.Name;
+                _currentCulture = newCulture;
+                CultureInfo.CurrentUICulture = newCulture;
+                CultureInfo.CurrentCulture = newCulture;
 
-                    var windowConfigurationService = _serviceProvider.GetService<IWindowConfigurationService>();
-                    var saveSettingsTask = windowConfigurationService?.SetUILanguageAsync(newCulture.Name);
-                    CultureChanged?.Invoke(this, EventArgs.Empty);
+                // Обновляем свойство CurrentCulture и вызываем PropertyChanged
+                CurrentCulture = newCulture.Name;
 
-                    if (saveSettingsTask != null)
-                        await saveSettingsTask;
-                }
-            }
-            catch
-            {
-                // Игнорируем ошибки при установке культуры
+                var windowConfigurationService = _serviceProvider.GetService<IWindowConfigurationService>();
+                var saveSettingsTask = windowConfigurationService?.SetUILanguageAsync(newCulture.Name);
+                CultureChanged?.Invoke(this, EventArgs.Empty);
+
+                if (saveSettingsTask != null)
+                    await saveSettingsTask;
             }
         }
 
@@ -187,9 +198,12 @@ namespace KID.Services.Localization
                     cultureToKey[cultureCode] = key;
                 }
             }
-            catch
+            catch (Exception exception)
             {
-                // В случае ошибки оставляем пустые коллекции.
+                _logger?.LogWarning(
+                    DiagnosticEventIds.LocalizationFallback,
+                    exception,
+                    "Available language mapping could not be loaded.");
             }
 
             _cachedAvailableLanguageKeys = languageKeys;

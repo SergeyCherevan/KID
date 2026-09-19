@@ -1,5 +1,7 @@
 using KID.Services.Files.Interfaces;
+using KID.Services.Diagnostics;
 using KID.Services.Localization.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Text.Json;
@@ -10,10 +12,14 @@ namespace KID.Services.Files
     public class FileService : IFileService
     {
         private readonly ILocalizationService _localizationService;
+        private readonly ILogger<FileService>? _logger;
 
-        public FileService(ILocalizationService localizationService)
+        public FileService(
+            ILocalizationService localizationService,
+            ILogger<FileService>? logger = null)
         {
             _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            _logger = logger;
         }
 
         public bool FileExists(string filePath) => File.Exists(filePath);
@@ -22,22 +28,7 @@ namespace KID.Services.Files
         {
             ArgumentException.ThrowIfNullOrEmpty(filePath, nameof(filePath));
 
-            try
-            {
-                return await File.ReadAllTextAsync(filePath);
-            }
-            catch (FileNotFoundException)
-            {
-                throw;
-            }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
-            catch (IOException)
-            {
-                throw;
-            }
+            return await File.ReadAllTextAsync(filePath);
         }
 
         public async Task WriteFileAsync(string filePath, string content)
@@ -63,14 +54,6 @@ namespace KID.Services.Files
                 await File.WriteAllTextAsync(temporaryPath, content);
                 File.Move(temporaryPath, fullPath, overwrite: true);
             }
-            catch (UnauthorizedAccessException)
-            {
-                throw;
-            }
-            catch (IOException)
-            {
-                throw;
-            }
             finally
             {
                 try
@@ -78,13 +61,23 @@ namespace KID.Services.Files
                     if (File.Exists(temporaryPath))
                         File.Delete(temporaryPath);
                 }
-                catch (IOException)
+                catch (IOException exception)
                 {
-                    // Log the exception or handle it as needed, but do not throw it to avoid masking the original exception.
+                    _logger?.LogWarning(
+                        DiagnosticEventIds.TemporaryFileCleanupFailed,
+                        exception,
+                        "Temporary file cleanup failed. Operation={Operation} TemporaryPath={TemporaryPath}",
+                        "WriteFileAsync",
+                        temporaryPath);
                 }
-                catch (UnauthorizedAccessException)
+                catch (UnauthorizedAccessException exception)
                 {
-                    // Log the exception or handle it as needed, but do not throw it to avoid masking the original exception.
+                    _logger?.LogWarning(
+                        DiagnosticEventIds.TemporaryFileCleanupFailed,
+                        exception,
+                        "Temporary file cleanup failed. Operation={Operation} TemporaryPath={TemporaryPath}",
+                        "WriteFileAsync",
+                        temporaryPath);
                 }
             }
         }

@@ -393,6 +393,26 @@
 
 Собирает ошибки независимых шагов через `Capture` и `CaptureAsync`, сохраняя порядок причин. Используется координатором выполнения, сессией и контекстами. Классификация ожидаемой остановки остаётся в `KID.WPF.IDE/Services/CodeExecution/Errors/ExecutionExceptionClassifier.cs`.
 
+#### 3.6.3. Structured diagnostics and crash reporting
+
+**Файлы:** `KID.WPF.IDE/Services/Diagnostics/`
+
+- `LoggingConfiguration` создаёт bootstrap Serilog provider до DI и пишет compact JSONL в
+  `%LOCALAPPDATA%\KID\Logs\kid-YYYYMMDD.jsonl`; rolling — ежедневно, лимит файла — 10 МБ,
+  retention — 14 файлов.
+- `DiagnosticEventIds` фиксирует стабильные категории для startup, async operations,
+  settings/localization fallback, execution lifecycle и global exception hooks.
+- `CrashReportWriter` атомарно создаёт `crash-<CrashId>.json` с exception chain, версиями
+  приложения/.NET/OS, process/thread id, log pattern и optional `ExecutionId`.
+- `App` регистрирует dispatcher/AppDomain/unobserved-task hooks до построения DI; fatal
+  dispatcher failure показывает безопасный диалог с CrashId и завершает процесс.
+- `KID.Library` сообщает ошибки event handlers через `ExecutionDiagnostic`; библиотека не
+  зависит от WPF и Serilog.
+
+Не логируются пользовательский исходный код, редактор, console input, токены и environment
+variables. Ограничения `StackOverflowException`, `FailFast`, native crash и внезапного
+завершения процесса остаются явными.
+
 ## 4. Подсистема локализации (Localization)
 
 ### Назначение

@@ -1,4 +1,5 @@
 using KID.Services.Files.Interfaces;
+using KID.Services.Diagnostics;
 using KID.Services.Errors.Interfaces;
 using KID.Services.Initialize.Interfaces;
 using KID.Services.Localization.Interfaces;
@@ -12,6 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Extensions.Logging;
 
 namespace KID.Services.Initialize
 {
@@ -25,6 +27,7 @@ namespace KID.Services.Initialize
         private readonly IConsoleOutputViewModel consoleOutputViewModel;
         private readonly ICodeFileService codeFileService;
         private readonly IAsyncOperationErrorHandler asyncOperationErrorHandler;
+        private readonly ILogger<WindowInitializationService>? logger;
 
         private readonly MainWindow mainWindow;
 
@@ -36,7 +39,8 @@ namespace KID.Services.Initialize
             IConsoleOutputViewModel consoleOutputViewModel,
             ICodeFileService codeFileService,
             IAsyncOperationErrorHandler asyncOperationErrorHandler,
-            MainWindow mainWindow
+            MainWindow mainWindow,
+            ILogger<WindowInitializationService>? logger = null
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
@@ -47,6 +51,7 @@ namespace KID.Services.Initialize
             this.consoleOutputViewModel = consoleOutputViewModel ?? throw new ArgumentNullException(nameof(consoleOutputViewModel));
             this.codeFileService = codeFileService ?? throw new ArgumentNullException(nameof(codeFileService));
             this.asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
+            this.logger = logger;
 
             this.mainWindow = mainWindow ?? throw new ArgumentNullException(nameof(mainWindow));
         }
@@ -66,6 +71,9 @@ namespace KID.Services.Initialize
             InitializeConsole();
 
             mainWindow.UpdateLayout();
+            logger?.LogInformation(
+                DiagnosticEventIds.StartupCompleted,
+                "Window initialization completed.");
         }
 
         private void InitializeTheme()

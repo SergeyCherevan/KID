@@ -5,6 +5,8 @@ using System.Resources;
 using KID.Models;
 using KID.Resources;
 using KID.Services.Themes.Interfaces;
+using KID.Services.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace KID.Services.Themes;
 
@@ -20,10 +22,9 @@ public sealed class ThemeProviderService : IThemeProviderService
         new("KID.Resources.AvailableThemes", typeof(Strings).Assembly);
 
     private readonly IReadOnlyList<ThemeDefinition> availableThemes;
-
-    public ThemeProviderService()
+    public ThemeProviderService(ILogger<ThemeProviderService>? logger = null)
     {
-        availableThemes = LoadAvailableThemes();
+        availableThemes = LoadAvailableThemes(logger);
     }
 
     /// <inheritdoc />
@@ -57,7 +58,7 @@ public sealed class ThemeProviderService : IThemeProviderService
         return false;
     }
 
-    private static IReadOnlyList<ThemeDefinition> LoadAvailableThemes()
+    private static IReadOnlyList<ThemeDefinition> LoadAvailableThemes(ILogger<ThemeProviderService>? logger)
     {
         try
         {
@@ -84,8 +85,12 @@ public sealed class ThemeProviderService : IThemeProviderService
 
             return result.Count > 0 ? result : [BuiltInDefaultTheme];
         }
-        catch
+        catch (Exception exception)
         {
+            logger?.LogWarning(
+                DiagnosticEventIds.SettingsFallback,
+                exception,
+                "Built-in theme catalog could not be loaded; using the default theme.");
             return [BuiltInDefaultTheme];
         }
     }

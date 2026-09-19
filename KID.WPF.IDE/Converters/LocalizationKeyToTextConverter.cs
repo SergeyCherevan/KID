@@ -2,7 +2,9 @@ using System;
 using System.Globalization;
 using System.Windows.Data;
 using KID.Services.Localization.Interfaces;
+using KID.Services.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KID.Converters
 {
@@ -22,8 +24,13 @@ namespace KID.Converters
                 var service = App.ServiceProvider?.GetRequiredService<ILocalizationService>();
                 return service?.GetString(key) ?? $"[{key}]";
             }
-            catch
+            catch (Exception exception)
             {
+                App.ServiceProvider?.GetService<ILogger<LocalizationKeyToTextConverter>>()?.LogWarning(
+                    DiagnosticEventIds.LocalizationFallback,
+                    exception,
+                    "Localization multivalue converter failed. Key={Key}",
+                    key);
                 return $"[{key}]";
             }
         }

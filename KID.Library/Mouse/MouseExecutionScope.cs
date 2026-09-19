@@ -9,7 +9,7 @@ internal sealed class MouseExecutionScope
     {
         Environment = environment ?? throw new ArgumentNullException(nameof(environment));
         Canvas = canvas ?? throw new ArgumentNullException(nameof(canvas));
-        EventWorker = new ExecutionEventWorker(environment);
+        EventWorker = new ExecutionEventWorker(environment, "Mouse");
     }
 
     internal ExecutionEnvironment Environment { get; }

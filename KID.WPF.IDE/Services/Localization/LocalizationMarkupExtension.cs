@@ -2,7 +2,9 @@ using System;
 using System.Windows.Data;
 using System.Windows.Markup;
 using KID.Services.Localization.Interfaces;
+using KID.Services.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KID.Services.Localization
 {
@@ -38,8 +40,13 @@ namespace KID.Services.Localization
 
                 return binding.ProvideValue(serviceProvider);
             }
-            catch
+            catch (Exception exception)
             {
+                App.ServiceProvider?.GetService<ILogger<LocalizationExtension>>()?.LogWarning(
+                    DiagnosticEventIds.LocalizationFallback,
+                    exception,
+                    "Localization markup extension failed. Key={Key}",
+                    Key);
                 return $"[{Key}]";
             }
         }

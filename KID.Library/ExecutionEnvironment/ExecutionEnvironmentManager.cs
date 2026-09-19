@@ -11,7 +11,10 @@ internal static class ExecutionEnvironmentManager
 
     internal static ExecutionEnvironment? Current => Volatile.Read(ref current);
 
-    internal static IExecutionEnvironmentLease BeginExecution(long executionId, CancellationToken cancellationToken)
+    internal static IExecutionEnvironmentLease BeginExecution(
+        long executionId,
+        CancellationToken cancellationToken,
+        Action<ExecutionDiagnostic>? diagnosticSink = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(executionId);
         lock (gate)
@@ -19,7 +22,7 @@ internal static class ExecutionEnvironmentManager
             if (current != null)
                 throw new InvalidOperationException("An execution is already active.");
 
-            var environment = new ExecutionEnvironment(executionId, cancellationToken);
+            var environment = new ExecutionEnvironment(executionId, cancellationToken, diagnosticSink);
             Volatile.Write(ref current, environment);
             return new ExecutionEnvironmentLease(environment);
         }

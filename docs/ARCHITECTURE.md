@@ -391,6 +391,21 @@ native/сторонний вызов, неинструментированный
 - Каждый `KeyboardExecutionScope`, `MouseExecutionScope` и `ConsoleExecutionScope` создаёт собственные очередь, семафор, linked token и worker task; Keyboard и Mouse дополнительно регистрируют pulse-задачи
 - `ShutdownAsync` идемпотентно закрывает вход, выполняет WPF-отписку, отменяет и ожидает фоновые задачи, затем освобождает per-run state
 - Ошибка одного пользовательского handler наблюдается отдельно и не препятствует другим подписчикам или обязательному cleanup
+- Ошибка handler передаётся как `ExecutionDiagnostic` в host-provided sink; WPF связывает
+  запись с `ExecutionId`, компонентом и типом события, не добавляя logging-зависимость в library
+
+#### 5.1.1. Structured diagnostics boundary
+
+`KID.WPF.IDE/Services/Diagnostics/` содержит bootstrap Serilog logger, стабильные
+`DiagnosticEventIds`, `GlobalExceptionHandler` и `CrashReportWriter`. Logger создаётся до DI,
+пишет compact JSONL в `%LOCALAPPDATA%\KID\Logs`, ограничивает размер/retention и безопасно
+деградирует до no-op/Trace при проблеме самого provider.
+
+`App` регистрирует три last-chance hooks: dispatcher-ошибка получает controlled shutdown и
+локальный crash report, AppDomain-ошибка синхронно фиксируется без попытки UI, а unobserved
+task фиксируется и помечается `Observed`. Ошибки пользовательского кода остаются отдельным
+`UserExecution` результатом; ошибки lifecycle/cleanup журналируются на границе
+`CodeExecutionService` после агрегации, поэтому вторичные ошибки не маскируют primary.
 
 ##### DispatcherManager
 

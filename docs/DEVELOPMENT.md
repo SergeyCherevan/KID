@@ -506,7 +506,23 @@ ICodeExecutionContext реализуют IAsyncDisposable; coordinator обяз�
 
 ### Логирование
 
-Для отладки можно использовать `Console.WriteLine()` или `System.Diagnostics.Debug.WriteLine()`.
+Production-диагностика идёт через `ILogger` и Serilog provider, подключённый в
+`KID.WPF.IDE/App.xaml.cs`. JSONL-журналы находятся в
+`%LOCALAPPDATA%\KID\Logs\kid-YYYYMMDD.jsonl`, crash reports — в том же каталоге как
+`crash-<CrashId>.json`. Файлы ограничены rolling по дню, размером 10 МБ и retention 14
+файлов; provider не должен получать исходный код пользователя, содержимое редактора,
+ввод консоли, токены или переменные окружения.
+
+Для новых событий выбирайте стабильный `DiagnosticEventIds`, записывайте operation/origin
+и `ExecutionId`, когда ошибка относится к запуску. Ожидаемую отмену не логируйте как Error;
+fallback — Warning; неожиданный отказ операции — Error; необработанный отказ приложения —
+fatal + crash report. Внутренние runtime-типы `KID.Library` не зависят от WPF/Serilog:
+`ExecutionEventWorker` передаёт `ExecutionDiagnostic` через host-neutral sink.
+
+`DispatcherUnhandledException`, `AppDomain.UnhandledException` и
+`TaskScheduler.UnobservedTaskException` подключаются в `App`. Crash reporting не может
+гарантировать обработку `StackOverflowException`, `FailFast`, native crash или внезапного
+отключения процесса; удалённая telemetry не используется.
 
 ## Документация
 

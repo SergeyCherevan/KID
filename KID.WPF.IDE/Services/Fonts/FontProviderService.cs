@@ -1,5 +1,7 @@
 using KID.Resources;
+using KID.Services.Diagnostics;
 using KID.Services.Fonts.Interfaces;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -15,6 +17,12 @@ namespace KID.Services.Fonts
     {
         private static readonly ResourceManager _resourceManager =
             new ResourceManager("KID.Resources.AvailableFontsAndSizes", typeof(Strings).Assembly);
+        private readonly ILogger<FontProviderService>? _logger;
+
+        public FontProviderService(ILogger<FontProviderService>? logger = null)
+        {
+            _logger = logger;
+        }
 
         /// <inheritdoc />
         public IEnumerable<string> GetAvailableFonts()
@@ -46,8 +54,12 @@ namespace KID.Services.Fonts
                 if (result.Count == 0)
                     result.Add("Consolas");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger?.LogWarning(
+                    DiagnosticEventIds.SettingsFallback,
+                    exception,
+                    "Available font list could not be loaded; using the default font.");
                 return GetDefaultFonts();
             }
 
@@ -72,8 +84,12 @@ namespace KID.Services.Fonts
                         result.Add(size);
                 }
             }
-            catch
+            catch (Exception exception)
             {
+                _logger?.LogWarning(
+                    DiagnosticEventIds.SettingsFallback,
+                    exception,
+                    "Available font size list could not be loaded; using defaults.");
                 return GetDefaultFontSizes();
             }
 

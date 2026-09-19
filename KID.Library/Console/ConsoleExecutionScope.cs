@@ -12,7 +12,7 @@ internal sealed class ConsoleExecutionScope
     {
         Environment = environment ?? throw new ArgumentNullException(nameof(environment));
         TextBox = textBox ?? throw new ArgumentNullException(nameof(textBox));
-        EventWorker = new ExecutionEventWorker(environment);
+        EventWorker = new ExecutionEventWorker(environment, "Console");
     }
 
     internal ExecutionEnvironment Environment { get; }

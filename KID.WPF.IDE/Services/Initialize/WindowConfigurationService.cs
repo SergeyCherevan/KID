@@ -1,7 +1,8 @@
 using KID.Models;
-using KID.Services.Errors.Interfaces;
+using KID.Services.Diagnostics;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,8 +13,8 @@ namespace KID.Services.Initialize
 {
     public class WindowConfigurationService : IWindowConfigurationService
     {
-        private readonly IAsyncOperationErrorHandler _asyncOperationErrorHandler;
         private readonly IFileService _fileService;
+        private readonly ILogger<WindowConfigurationService>? _logger;
         private readonly string _settingsPath;
         private readonly object _settingsSaveQueueLock = new();
         private readonly Queue<SettingsSaveRequest> _settingsSaveQueue = new();
@@ -26,10 +27,12 @@ namespace KID.Services.Initialize
         /// <inheritdoc />
         public event EventHandler? UILanguageSettingsChanged;
 
-        public WindowConfigurationService(IAsyncOperationErrorHandler asyncOperationErrorHandler, IFileService fileService)
+        public WindowConfigurationService(
+            IFileService fileService,
+            ILogger<WindowConfigurationService>? logger = null)
         {
-            _asyncOperationErrorHandler = asyncOperationErrorHandler ?? throw new ArgumentNullException(nameof(asyncOperationErrorHandler));
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+            _logger = logger;
 
             // Путь к файлу настроек в AppData
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -39,40 +42,46 @@ namespace KID.Services.Initialize
 
         public async Task SetConfigurationFromFileAsync()
         {
-            try
+            if (_fileService.FileExists(_settingsPath))
             {
-                if (_fileService.FileExists(_settingsPath))
+                try
                 {
                     // Загружаем пользовательские настройки
                     Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>(_settingsPath)
                         ?? new WindowConfigurationData();
                 }
-                else
+                catch (Exception exception)
                 {
-                    // Если файла нет, пробуем загрузить из DefaultWindowConfiguration.json
-                    // как fallback, затем сохраняем в AppData
-                    try
-                    {
-                        Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>("DefaultWindowConfiguration.json")
-                            ?? new WindowConfigurationData();
-                    }
-                    catch
-                    {
-                        // Если и дефолтного файла нет - используем значения по умолчанию
-                        Settings = new WindowConfigurationData();
-                    }
-                    
-                    // Сохраняем настройки в AppData для следующего запуска
-                    await SaveSettingsAsync();
+                    _logger?.LogWarning(
+                        DiagnosticEventIds.SettingsFallback,
+                        exception,
+                        "User settings could not be loaded. Path={Path}; defaults will be used.",
+                        _settingsPath);
+                    Settings = new WindowConfigurationData();
                 }
+                return;
             }
-            catch (Exception ex)
+
+            // Если файла нет, пробуем загрузить из DefaultWindowConfiguration.json
+            // как fallback, затем сохраняем в AppData. Ошибка этой записи должна дойти
+            // до вызывающего startup/error boundary, а не превратиться в ложный успех.
+            try
             {
-                ExecuteWithErrorHandling(
-                    () => throw new InvalidOperationException(ex.Message, ex),
-                    "Error_ConfigLoadFailed");
+                Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>("DefaultWindowConfiguration.json")
+                    ?? new WindowConfigurationData();
+            }
+            catch (Exception exception)
+            {
+                _logger?.LogWarning(
+                    DiagnosticEventIds.SettingsFallback,
+                    exception,
+                    "Default settings file could not be loaded. Path={Path}",
+                    "DefaultWindowConfiguration.json");
                 Settings = new WindowConfigurationData();
             }
+
+            // Сохраняем настройки в AppData для следующего запуска.
+            await SaveSettingsAsync();
         }
 
         public async Task SetDefaultCodeAsync()
@@ -90,11 +99,13 @@ namespace KID.Services.Initialize
                     Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
                 }
             }
-            catch (Exception ex)
+            catch (Exception exception)
             {
-                ExecuteWithErrorHandling(
-                    () => throw new InvalidOperationException(ex.Message, ex),
-                    "Error_TemplateLoadFailed");
+                _logger?.LogWarning(
+                    DiagnosticEventIds.SettingsFallback,
+                    exception,
+                    "Template code could not be loaded. TemplateName={TemplateName}; default template will be used.",
+                    Settings.TemplateName);
                 Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
             }
         }
@@ -141,19 +152,15 @@ namespace KID.Services.Initialize
                     await _fileService.WriteJsonAsync(_settingsPath, Settings).ConfigureAwait(false);
                     request.Completion.TrySetResult();
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    try
-                    {
-                        ExecuteWithErrorHandling(
-                            () => throw new InvalidOperationException(ex.Message, ex),
-                            "Error_SettingsSaveFailed");
-                        request.Completion.TrySetResult();
-                    }
-                    catch (Exception handlerException)
-                    {
-                        request.Completion.TrySetException(handlerException);
-                    }
+                    _logger?.LogError(
+                        DiagnosticEventIds.AsyncOperationFailed,
+                        exception,
+                        "Settings save failed. Operation={Operation} Path={Path}",
+                        "SaveSettings",
+                        _settingsPath);
+                    request.Completion.TrySetException(exception);
                 }
             }
         }
@@ -202,9 +209,5 @@ namespace KID.Services.Initialize
             await SaveSettingsAsync();
         }
 
-        private void ExecuteWithErrorHandling(Action action, string errorMessageKey)
-        {
-            _asyncOperationErrorHandler.Execute(action, errorMessageKey);
-        }
     }
 }
