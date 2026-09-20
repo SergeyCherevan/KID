@@ -13,9 +13,15 @@ namespace KID.Services.Initialize
 {
     public class WindowConfigurationService : IWindowConfigurationService
     {
+        private const string DefaultConfigurationFileName = "DefaultWindowConfiguration.json";
+        private const string DefaultTemplateFileName = "HelloWorld.cs";
+        private const string LegacyTemplateName = "ProjectTemplates/ru-RU/HelloWorld.cs";
+
         private readonly IFileService _fileService;
         private readonly ILogger<WindowConfigurationService>? _logger;
+        private readonly string _appDataDirectory;
         private readonly string _settingsPath;
+        private readonly string _defaultConfigurationPath;
         private readonly object _settingsSaveQueueLock = new();
         private readonly Queue<SettingsSaveRequest> _settingsSaveQueue = new();
         private bool _isProcessingSettingsSaveQueue;
@@ -34,10 +40,12 @@ namespace KID.Services.Initialize
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
             _logger = logger;
 
-            // Путь к файлу настроек в AppData
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var appFolder = Path.Combine(appDataPath, "KID");
-            _settingsPath = Path.Combine(appFolder, "settings.json");
+            _appDataDirectory = Path.Combine(appDataPath, "KID");
+            _settingsPath = Path.Combine(_appDataDirectory, "settings.json");
+            _defaultConfigurationPath = Path.Combine(
+                AppContext.BaseDirectory,
+                DefaultConfigurationFileName);
         }
 
         public async Task SetConfigurationFromFileAsync()
@@ -49,6 +57,7 @@ namespace KID.Services.Initialize
                     // Загружаем пользовательские настройки
                     Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>(_settingsPath)
                         ?? new WindowConfigurationData();
+                    NormalizeTemplateName();
                 }
                 catch (Exception exception)
                 {
@@ -67,8 +76,9 @@ namespace KID.Services.Initialize
             // до вызывающего startup/error boundary, а не превратиться в ложный успех.
             try
             {
-                Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>("DefaultWindowConfiguration.json")
+                Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>(_defaultConfigurationPath)
                     ?? new WindowConfigurationData();
+                NormalizeTemplateName();
             }
             catch (Exception exception)
             {
@@ -76,7 +86,7 @@ namespace KID.Services.Initialize
                     DiagnosticEventIds.SettingsFallback,
                     exception,
                     "Default settings file could not be loaded. Path={Path}",
-                    "DefaultWindowConfiguration.json");
+                    _defaultConfigurationPath);
                 Settings = new WindowConfigurationData();
             }
 
@@ -86,12 +96,32 @@ namespace KID.Services.Initialize
 
         public async Task SetDefaultCodeAsync()
         {
+            string? resolvedTemplatePath = null;
+
             try
             {
-                // Если TemplateName содержит путь к файлу, загружаем его
-                if (!string.IsNullOrEmpty(Settings.TemplateName) && _fileService.FileExists(Settings.TemplateName))
+                NormalizeTemplateName();
+
+                if (string.IsNullOrWhiteSpace(Settings.TemplateName))
                 {
-                    Settings.TemplateCode = await _fileService.ReadFileAsync(Settings.TemplateName);
+                    Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
+                    return;
+                }
+
+                resolvedTemplatePath = ResolveTemplatePath(Settings.TemplateName);
+                var templateExists = _fileService.FileExists(resolvedTemplatePath);
+
+                if (!templateExists && IsDefaultTemplateName(Settings.TemplateName))
+                {
+                    await _fileService.WriteFileAsync(
+                        resolvedTemplatePath,
+                        new WindowConfigurationData().TemplateCode);
+                    templateExists = true;
+                }
+
+                if (templateExists)
+                {
+                    Settings.TemplateCode = await _fileService.ReadFileAsync(resolvedTemplatePath);
                 }
                 else
                 {
@@ -104,11 +134,34 @@ namespace KID.Services.Initialize
                 _logger?.LogWarning(
                     DiagnosticEventIds.SettingsFallback,
                     exception,
-                    "Template code could not be loaded. TemplateName={TemplateName}; default template will be used.",
-                    Settings.TemplateName);
+                    "Template code could not be loaded. TemplateName={TemplateName}; ResolvedPath={ResolvedPath}; default template will be used.",
+                    Settings.TemplateName,
+                    resolvedTemplatePath);
                 Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
             }
         }
+
+        private void NormalizeTemplateName()
+        {
+            if (string.Equals(
+                    Settings.TemplateName,
+                    LegacyTemplateName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                Settings.TemplateName = DefaultTemplateFileName;
+            }
+        }
+
+        private string ResolveTemplatePath(string templateName) =>
+            Path.IsPathRooted(templateName)
+                ? templateName
+                : Path.Combine(_appDataDirectory, templateName);
+
+        private static bool IsDefaultTemplateName(string templateName) =>
+            string.Equals(
+                templateName,
+                DefaultTemplateFileName,
+                StringComparison.OrdinalIgnoreCase);
 
         public async Task SaveSettingsAsync()
         {

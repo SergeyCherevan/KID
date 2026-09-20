@@ -190,8 +190,8 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 4. **✅ Атомарная публикация пользовательских файлов и настроек реализована; схема настроек по-прежнему не версионирована.**
    `FileService.WriteFileAsync()` записывает уникальный временный файл в каталоге назначения и только затем заменяет цель; этим путём пользуются `.cs`-файлы, recovery и `settings.json`. `WindowConfigurationService` сериализует конкурентные сохранения FIFO-очередью, чтобы старый запрос не завершился после нового. Для настроек всё ещё нет версии схемы, миграции и строгой валидации: [FileService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/FileService.cs:43>), [WindowConfigurationService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs:102>).
 
-5. **Конфигурация зависит от current working directory.**  
-   `DefaultWindowConfiguration.json` читается по относительному пути вместо `AppContext.BaseDirectory`: [WindowConfigurationService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs:51>).
+5. **✅ Конфигурация и default-шаблон больше не зависят от current working directory.**
+   `DefaultWindowConfiguration.json` читается через `AppContext.BaseDirectory`. Относительный `TemplateName` разрешается относительно `%APPDATA%\KID`; при отсутствии `HelloWorld.cs` файл создаётся из встроенного `WindowConfigurationData.TemplateCode`, а существующий пользовательский файл не перезаписывается. Старое значение `ProjectTemplates/ru-RU/HelloWorld.cs` нормализуется. Focused и полный набор тестов прошли: **9/9** и **242/242**.
 
 6. **Платформа близка к окончанию поддержки.**  
    Проекты используют `net8.0-windows`; .NET 8 уже находится в maintenance и завершает поддержку **10 ноября 2026 года**, тогда как .NET 10 LTS поддерживается до ноября 2028 года. Для нового production-релиза разумно планировать переход на .NET 10. [Официальный lifecycle .NET](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)

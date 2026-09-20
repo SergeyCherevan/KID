@@ -3,5 +3,5 @@
   "ColorTheme": "Theme_Light",
   "FontFamily": "Consolas",
   "FontSize": 14,
-  "TemplateName": "ProjectTemplates/ru-RU/HelloWorld.cs"
+  "TemplateName": "HelloWorld.cs"
 }
