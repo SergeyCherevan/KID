@@ -5,6 +5,7 @@ using KID.Services.Diagnostics;
 using KID.Services.Errors.Interfaces;
 using KID.Services.Localization.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Threading;
 
 namespace KID.Services.Errors
 {
@@ -14,15 +15,18 @@ namespace KID.Services.Errors
     public class AsyncOperationErrorHandler : IAsyncOperationErrorHandler
     {
         private readonly ILocalizationService localizationService;
+        private readonly JoinableTaskFactory joinableTaskFactory;
         private readonly ILogger<AsyncOperationErrorHandler>? logger;
         private readonly Action<Exception, string>? errorDialog;
 
         public AsyncOperationErrorHandler(
             ILocalizationService localizationService,
+            JoinableTaskFactory joinableTaskFactory,
             ILogger<AsyncOperationErrorHandler>? logger = null,
             Action<Exception, string>? errorDialog = null)
         {
             this.localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
+            this.joinableTaskFactory = joinableTaskFactory ?? throw new ArgumentNullException(nameof(joinableTaskFactory));
             this.logger = logger;
             this.errorDialog = errorDialog;
         }
@@ -44,7 +48,7 @@ namespace KID.Services.Errors
                     ex,
                     "Synchronous operation failed. ErrorMessageKey={ErrorMessageKey}",
                     errorMessageKey);
-                ShowError(ex, errorMessageKey);
+                joinableTaskFactory.Run(() => ShowErrorAsync(ex, errorMessageKey));
             }
         }
 
@@ -65,11 +69,11 @@ namespace KID.Services.Errors
                     ex,
                     "Asynchronous operation failed. ErrorMessageKey={ErrorMessageKey}",
                     errorMessageKey);
-                ShowError(ex, errorMessageKey);
+                await ShowErrorAsync(ex, errorMessageKey).ConfigureAwait(false);
             }
         }
 
-        private void ShowError(Exception exception, string errorMessageKey)
+        private async Task ShowErrorAsync(Exception exception, string errorMessageKey)
         {
             if (errorDialog != null)
             {
@@ -90,11 +94,12 @@ namespace KID.Services.Errors
 
             try
             {
-                Application.Current.Dispatcher.Invoke(() => MessageBox.Show(
+                await joinableTaskFactory.SwitchToMainThreadAsync();
+                MessageBox.Show(
                     string.Format(localizationService.GetString(errorMessageKey) ?? errorMessageKey, exception.Message),
                     localizationService.GetString("Error_Title") ?? "Error",
                     MessageBoxButton.OK,
-                    MessageBoxImage.Error));
+                    MessageBoxImage.Error);
             }
             catch (Exception dialogException)
             {

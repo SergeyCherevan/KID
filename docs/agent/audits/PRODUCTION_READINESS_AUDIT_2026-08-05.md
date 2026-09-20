@@ -197,8 +197,9 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 
    Все три проекта (`KID.WPF.IDE`, `KID.Library`, `KID.Tests`) переведены с `net8.0-windows` на `net10.0-windows`; добавлен корневой `global.json`, который фиксирует стабильную ветку .NET 10 SDK. 20 сентября 2026 года пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242/242** тестов и успешный ручной прогон программы на разных сценариях. .NET 10 — активный LTS до **14 ноября 2028 года**; прежняя проблема поддержки .NET 8 закрыта на уровне исходных проектов. Отдельно остаются актуальный framework-dependent publish, проверка на чистой Windows-машине с .NET 10 Desktop Runtime и release engineering (подпись, installer/versioning). [Официальный lifecycle .NET](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)
 
-7. **Часть зависимостей заметно отстаёт.**  
-   RoslynPad `4.12.1` имеет стабильную ветку `5.0.0`, Roslyn `4.12.0` — `5.6.0`, NAudio `2.2.1` — `2.3.0`; DI `9.0.10` отстаёт даже внутри своей major-линии. Обновлять Roslyn и RoslynPad нужно совместно, через compatibility spike, а не механически. [RoslynPad](https://www.nuget.org/packages/RoslynPad.Editor.Windows/4.12.1), [Roslyn](https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp), [NAudio](https://www.nuget.org/packages/NAudio/2.2.1), [DI](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection/9.0.10)
+7. **✅ Основной пакетный стек обновлён; остаточный риск RoslynPad WPF задокументирован.**
+   На 20 сентября 2026 года IDE использует RoslynPad `5.0.0` (три пакета), Roslyn `5.9.0` с единым pinned family (CodeAnalysis/CSharp/Features/Scripting/Workspaces), NAudio `3.1.0`, DI/Logging `10.0.12`, Serilog.Extensions.Logging `10.0.0`; тестовый проект — xUnit `4.0.1` через Microsoft Testing Platform. Compatibility spike `RoslynPad 5.0.0 + Roslyn 5.3.0 → Roslyn 5.9.0` прошёл: Release build `0 warnings/0 errors`, `242/242` тестов. Publish `.exe` сформирован; deps.json подтверждает итоговые версии. Vulnerability scans не нашли известных уязвимостей; outdated scans не нашли обновлений. Deprecated scan показывает только транзитивный `System.Reactive.Linq 6.1.0 (Legacy)`, принесённый RoslynPad 5; устранение требует upstream/fork либо замены редактора.
+   RoslynPad upstream объявил завершение WPF-линии в пользу нового редактора; это отдельная архитектурная задача, не часть текущего package alignment. [RoslynPad](https://www.nuget.org/packages/RoslynPad.Editor.Windows/), [Roslyn](https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp), [NAudio](https://www.nuget.org/packages/NAudio), [DI](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection)
 
 8. **Нет полноценного release-процесса.**  
    Отсутствуют CI, installer/MSIX, code signing, SBOM, third-party notices, корневой README, LICENSE, SECURITY, CHANGELOG и управляемое версионирование.
@@ -232,7 +233,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
-- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics и базовые persistence-контракты: 237 passed, 0 skipped, 0 failed в текущем полном прогоне.
+- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics и базовые persistence-контракты: 242 passed, 0 skipped, 0 failed в финальном полном прогоне.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.
@@ -272,8 +273,8 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 
 ### Неделя 5 — платформа и устойчивость
 
-- ✅ Compatibility spike и переход production/test-проектов на .NET 10 выполнены; обновление RoslynPad 5 и Roslyn 5 остаётся отдельным compatibility spike.
-- Обновить NAudio и DI.
+- ✅ Compatibility spike RoslynPad 5.0.0/Roslyn 5.3.0 → Roslyn 5.9.0 выполнен; production/test package stack aligned and validated.
+- ✅ Обновлены NAudio 3.1.0, DI/Logging 10.0.12 и Serilog.Extensions.Logging 10.0.0; package scans completed.
 - ✅ Атомарное сохранение файлов и настроек реализовано через общий `FileService`.
 - Версионирование схемы настроек и восстановление повреждённого JSON.
 - ✅ Структурные логи и crash-report bundle без персональных данных реализованы и проверены вручную.
@@ -298,7 +299,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 8. **P1 — частично выполнено:** добавлены критические compiler/editor/compilation-profile/Console/library/lifecycle и базовые file/session/settings/localization tests; startup, themes и расширенные failure-сценарии оцениваются отдельно.
 9. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`; создать CI.
 10. **P1 — выполнено в текущем worktree:** пользовательские файлы, настройки и autosave/recovery публикуются атомарно; сохранения настроек упорядочены.
-11. **P1 — частично выполнено:** все три проекта переведены на .NET 10 и добавлен `global.json`; согласованный пакетный стек (RoslynPad/Roslyn/NAudio/DI) остаётся отдельной задачей.
+11. **P1 — выполнено для текущего package scope:** production/test stack aligned and validated; remaining residuals are legacy `System.Reactive.Linq` transitively from RoslynPad and upstream WPF-line support risk.
 12. **P1:** подписанный и версионированный дистрибутив.
 
 ## 🔁 Четыре возможных follow-up’а

@@ -1,5 +1,6 @@
 using KID.Services.Errors;
 using KID.Services.Localization.Interfaces;
+using KID.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
 
 namespace KID.Tests.Diagnostics;
@@ -14,6 +15,7 @@ public sealed class AsyncOperationErrorHandlerTests
         string? shownKey = null;
         var handler = new AsyncOperationErrorHandler(
             new TestLocalizationService(),
+            TestThreading.JoinableTaskFactory,
             logger,
             (exception, key) =>
             {

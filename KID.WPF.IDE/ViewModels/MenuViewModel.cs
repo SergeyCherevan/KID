@@ -14,8 +14,8 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
+using Microsoft.VisualStudio.Threading;
 
 namespace KID.ViewModels
 {
@@ -33,6 +33,7 @@ namespace KID.ViewModels
         private readonly IThemeService themeService;
         private readonly IThemeProviderService themeProviderService;
         private readonly IFontProviderService fontProviderService;
+        private readonly JoinableTaskFactory joinableTaskFactory;
 
 
 
@@ -96,7 +97,8 @@ namespace KID.ViewModels
             ILocalizationService localizationService,
             IThemeService themeService,
             IThemeProviderService themeProviderService,
-            IFontProviderService fontProviderService
+            IFontProviderService fontProviderService,
+            JoinableTaskFactory joinableTaskFactory
         )
         {
             this.windowConfigurationService = windowConfigurationService ?? throw new ArgumentNullException(nameof(windowConfigurationService));
@@ -112,6 +114,7 @@ namespace KID.ViewModels
             this.themeService = themeService ?? throw new ArgumentNullException(nameof(themeService));
             this.themeProviderService = themeProviderService ?? throw new ArgumentNullException(nameof(themeProviderService));
             this.fontProviderService = fontProviderService ?? throw new ArgumentNullException(nameof(fontProviderService));
+            this.joinableTaskFactory = joinableTaskFactory ?? throw new ArgumentNullException(nameof(joinableTaskFactory));
 
             // Инициализируем список доступных шрифтов и размеров
             var fonts = fontProviderService.GetAvailableFonts();
@@ -504,16 +507,15 @@ namespace KID.ViewModels
                     : Environment.NewLine) + message + Environment.NewLine;
         }
 
-        private static void RunOnUiThread(Action action)
+        private void RunOnUiThread(Action action)
         {
-            var dispatcher = Application.Current?.Dispatcher;
-            if (dispatcher == null || dispatcher.CheckAccess())
-            {
-                action();
-                return;
-            }
-
-            _ = dispatcher.InvokeAsync(action);
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                async () =>
+                {
+                    await joinableTaskFactory.SwitchToMainThreadAsync();
+                    action();
+                },
+                "Error_RunFailed");
         }
 
     }

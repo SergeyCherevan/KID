@@ -90,7 +90,8 @@ namespace KID
                 if (await _codeEditorsViewModel.PrepareForApplicationCloseAsync())
                 {
                     _isCloseApproved = true;
-                    _ = Dispatcher.BeginInvoke(new Action(Close));
+                    await Task.Yield();
+                    Close();
                 }
             }
             catch (Exception ex)
