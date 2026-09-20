@@ -82,7 +82,7 @@ internal sealed class DefaultMusicRuntime : IMusicRuntime
 
 internal sealed class NAudioMusicOutput : IMusicOutput
 {
-    private readonly WaveOutEvent output = new();
+    private readonly WaveOut output = new();
 
     public PlaybackState PlaybackState => output.PlaybackState;
 

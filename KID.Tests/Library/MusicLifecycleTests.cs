@@ -522,7 +522,7 @@ public sealed class MusicLifecycleTests
 
             var buffer = new float[257];
             int read;
-            while ((read = sampleProvider.Read(buffer, 0, buffer.Length)) > 0)
+            while ((read = sampleProvider.Read(buffer.AsSpan())) > 0)
                 CapturedSamples.AddRange(buffer.Take(read));
         }
 
