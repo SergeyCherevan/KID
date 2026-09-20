@@ -8,8 +8,9 @@
 - **Для распространения среди учеников и запуска полученных извне `.cs`-файлов:** примерно **3/10**, небезопасно.
 - **Общая production-readiness:** около **40–45%**.
 
-Актуализированная оценка от 2026-09-19 после завершения execution-scoped миграции
-`TextBoxConsole`, единого compilation profile и текущего worktree с атомарным файловым хранилищем:
+Актуализированная оценка от 2026-09-20 после завершения execution-scoped миграции
+`TextBoxConsole`, единого compilation profile, structured logging/global diagnostics и текущего
+worktree с атомарным файловым хранилищем:
 
 - **Для локального использования автором с доверенным кодом:** примерно **8,5/10**, стабильная beta.
 - **Для распространения среди учеников при условии запуска собственного или иного доверенного кода:** примерно **7,5/10**, beta.
@@ -21,12 +22,12 @@ reliability-риски: Console перенесена в `KID.Library` как exe
 от stale-потоков, readers и callbacks, редактор и compiler используют один детерминированный
 compilation profile, а обычные файлы, recovery и настройки теперь публикуются одним атомарным
 механизмом. Сохранения настроек дополнительно упорядочены очередью. Полный Release-прогон текущего
-worktree — **232/232** теста; отдельно ранее подтверждена одинаковая работа standalone `.exe` и
-Visual Studio F5. Балл для недоверенного кода не вырос: изменения сознательно сохраняют in-process
+worktree — **237/237** тестов; ручной standalone `.exe` smoke и dispatcher crash smoke также
+подтверждены. Балл для недоверенного кода не вырос: изменения сознательно сохраняют in-process
 trust model и не добавляют security sandbox.
-Верхнюю границу общей оценки по-прежнему ограничивают отсутствие CI, структурного журналирования
-и crash reporting, отсутствие версии/миграции схемы настроек, зависимость конфигурации от working
-directory, незавершённый release engineering и неподтверждённая accessibility.
+Верхнюю границу общей оценки по-прежнему ограничивают отсутствие CI, отсутствие версии/миграции
+схемы настроек, зависимость конфигурации от working directory, незавершённый release engineering
+и неподтверждённая accessibility.
 
 За 5 августа устранены startup-deadlock, warning-сборка и риск молчаливой потери несохранённого кода. На ветке `feature/FixC2C3` C2 принят как осознанная in-process trust model для доверенного учебного кода, а согласованный кооперативный scope C3 реализован и подтверждён. Общий `No-Go` для широкого production-релиза сохраняется из-за остальных пунктов аудита, а не из-за требования обязательно вынести выполнение в sandbox/worker.
 
@@ -36,19 +37,20 @@ directory, незавершённый release engineering и неподтвер�
 - Два production-проекта: `KID.WPF.IDE` и `KID.Library`.
 - На момент исходного аудита было **0 тестовых проектов**; сейчас в решение добавлен `KID.Tests`.
 - В исходном аудите проверены восемь коммитов за 5 августа; на тот момент изменения production-кода были включены в `task/AtomicFilePersistence` (`02be930`).
-- Текущий checkout — `task/AtomicFilePersistence` на `c0b5b40` с незакоммиченными изменениями файловой подсистемы, настроек, локализации и их тестов. Историческая проверка compilation profile относилась к `feature/CompilationProfile` на `6ad3342`.
+- Предыдущий аудитный checkout — `task/AtomicFilePersistence` на `c0b5b40` с изменениями файловой подсистемы, настроек, локализации и их тестов. Историческая проверка compilation profile относилась к `feature/CompilationProfile` на `6ad3342`.
+- Текущий checkout для structured diagnostics — `feature/StructuredLoggingAndGlobalDiagnostics` на `31f3b20`; после ручной проверки рабочее дерево чистое.
 - В обоих production-проектах включён `TreatWarningsAsErrors`; последняя зафиксированная Release-сборка текущей ветки завершилась с **0 ошибок и 0 предупреждений**.
 - Контрольная проверка C2/C3 на `feature/FixC2C3` от 2026-09-15: `dotnet restore KID.sln` и Release build успешны; `dotnet test KID.sln -c Release --no-restore` — **166 passed, 0 skipped, 0 failed**; focused-набор Этапа 9 ранее повторён 10 раз — **10/10 PASS**.
 - На ветке `feature/TextBoxConsoleExecutionScope` после переноса Console зафиксированы: targeted hardening **9/9**, Console **52/52**, полный набор **188 passed, 0 skipped, 0 failed**, Release build без warnings/errors.
 - На `feature/CompilationProfile` (`6ad3342`) исторически зафиксированы: Release build — **0 warnings, 0 errors**; полный набор — **219 passed, 0 skipped, 0 failed**; `git diff --cached --check` прошёл.
-- На текущем `task/AtomicFilePersistence` (`c0b5b40` + worktree) выполнен `dotnet test KID.sln -c Release --no-restore`: **232 passed, 0 skipped, 0 failed**; сборка трёх проектов завершилась без предупреждений и ошибок.
+- На предыдущем `task/AtomicFilePersistence` (`c0b5b40` + worktree) выполнен `dotnet test KID.sln -c Release --no-restore`: **232 passed, 0 skipped, 0 failed**; сборка трёх проектов завершилась без предупреждений и ошибок.
 - NuGet vulnerability scan: известных уязвимых пакетов по текущим источникам не найдено.
 - Framework-dependent publish текущего `task/AtomicFilePersistence` успешно создан: 54 файла и 35,74 МБ в корне publish-каталога; 214 файлов и 51,19 МБ с учётом вложенных runtime- и localization-каталогов.
 - Publish требует установленный .NET 8 Desktop Runtime, имеет версию `1.0.0.0` и **не подписан**.
 - Все три локализации содержат одинаковые 50 ключей.
 - Светлая и тёмная темы содержат одинаковые 54 ресурсных ключа.
 - В исходном аудите GUI не запускался. Для C2/C3 отдельно выполнен headless runtime smoke, а пользователь подтвердил manual GUI/visual checklist 2026-09-15. Для compilation profile 2026-09-18 пользователь отдельно подтвердил одинаковые completion, diagnostics и Run result в standalone `.exe` и Visual Studio F5.
-- Текущая актуализация перезапустила полный Release test suite без restore. Publish, vulnerability scan, standalone/F5 и manual GUI в этом проходе не повторялись; для них выше сохранены ранее зафиксированные доказательства.
+- Актуализация 2026-09-20 повторила Release build и полный Release test suite без restore: **237 passed, 0 skipped, 0 failed**. Дополнительно выполнены standalone Release smoke и ручная проверка `DispatcherUnhandledException` с созданием crash report; временный `.codex-build` после проверки удалён.
 
 ## 🚨 Критичные проблемы исходного аудита — C2/C3 повторно оценены
 
@@ -177,13 +179,13 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 ## ⚠️ Проблемы средней серьёзности
 
 1. **✅ Автоматизированные execution/Console/compilation-profile и базовые persistence-тесты добавлены; CI по-прежнему отсутствует.**
-   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; текущий полный прогон — 232/232. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
+   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; текущий полный прогон — 237/237. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
    Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка завершается с **0 ошибок и 0 предупреждений**.
 
-3. **✅ Структурное журналирование и глобальная диагностика реализованы.**
-   `LoggingConfiguration` подключает Serilog через `ILogger` и пишет ограниченные compact-JSONL файлы в `%LOCALAPPDATA%\KID\Logs`; `CrashReportWriter` создаёт атомарный `crash-<CrashId>.json`. `App` регистрирует `DispatcherUnhandledException`, `AppDomain.UnhandledException` и `TaskScheduler.UnobservedTaskException`; fatal dispatcher startup получает controlled shutdown и безопасный диалог с идентификатором отчёта. `AsyncOperationErrorHandler`, настройки, локализация, fallback theme/font и cleanup временных файлов сохраняют структурированный контекст. `ExecutionEventWorker` передаёт ошибки через host-neutral `ExecutionDiagnostic`, а lifecycle/cleanup ошибки журналируются одной записью на границе `CodeExecutionService`. Добавлены regression-тесты для crash report, async handler, event worker и settings/localization. Автоматически проверены build и targeted tests; отдельный интерактивный WPF crash/standalone `.exe` smoke остаётся ручным release-gate.
+3. **✅ Структурное журналирование и глобальная диагностика реализованы и проверены.**
+   `LoggingConfiguration` подключает Serilog через `ILogger` и пишет ограниченные compact-JSONL файлы в `%LOCALAPPDATA%\KID\Logs`; `CrashReportWriter` создаёт атомарный `crash-<CrashId>.json`. `App` регистрирует `DispatcherUnhandledException`, `AppDomain.UnhandledException` и `TaskScheduler.UnobservedTaskException`; fatal dispatcher startup получает controlled shutdown и безопасный диалог с идентификатором отчёта. `AsyncOperationErrorHandler`, настройки, локализация, fallback theme/font и cleanup временных файлов сохраняют структурированный контекст. `ExecutionEventWorker` передаёт ошибки через host-neutral `ExecutionDiagnostic`, а lifecycle/cleanup ошибки журналируются одной записью на границе `CodeExecutionService`. Добавлены regression-тесты для crash report, async handler, event worker и settings/localization. Release build и полный набор из **237 тестов** прошли успешно; standalone `.exe` smoke и ручной `DispatcherUnhandledException` smoke подтверждены, crash report разобран по JSON-полям, временный тестовый trigger удалён.
 
 4. **✅ Атомарная публикация пользовательских файлов и настроек реализована; схема настроек по-прежнему не версионирована.**
    `FileService.WriteFileAsync()` записывает уникальный временный файл в каталоге назначения и только затем заменяет цель; этим путём пользуются `.cs`-файлы, recovery и `settings.json`. `WindowConfigurationService` сериализует конкурентные сохранения FIFO-очередью, чтобы старый запрос не завершился после нового. Для настроек всё ещё нет версии схемы, миграции и строгой валидации: [FileService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/FileService.cs:43>), [WindowConfigurationService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs:102>).
@@ -229,7 +231,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
-- `KID.Tests` подтверждает execution, Console, compilation-profile и базовые persistence-контракты: 232 passed, 0 skipped, 0 failed в текущем полном прогоне.
+- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics и базовые persistence-контракты: 237 passed, 0 skipped, 0 failed в текущем полном прогоне.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.
@@ -264,7 +266,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - ✅ Добавлены allowlist/denylist, semantic, late-load, editor integration и shared-identity тесты единого compilation profile.
 - CI: restore → build → test → vulnerable scan → publish.
 - ✅ Убрать предупреждения и включить `TreatWarningsAsErrors` — выполнено в `feature/FixBuildWarnings` и включено в `task/AtomicFilePersistence`.
-- ✅ Добавлены базовые тесты локализации и настроек; тесты тем, startup и расширенные error-path сценарии остаются.
+- ✅ Добавлены базовые тесты локализации и настроек, а также regression-тесты startup, global exception и расширенных error-path сценариев.
 - ✅ Run/Stop проверяется автоматизированно, headless smoke и отдельной manual visual acceptance; cold start остаётся частью общего release smoke.
 
 ### Неделя 5 — платформа и устойчивость
@@ -273,7 +275,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - Обновить NAudio и DI.
 - ✅ Атомарное сохранение файлов и настроек реализовано через общий `FileService`.
 - Версионирование схемы настроек и восстановление повреждённого JSON.
-- Структурные логи и crash-report bundle без персональных данных.
+- ✅ Структурные логи и crash-report bundle без персональных данных реализованы и проверены вручную.
 
 ### Неделя 6 — релизная упаковка
 
@@ -301,6 +303,6 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 ## 🔁 Четыре возможных follow-up’а
 
 1. 🧪 Добавить CI gate для существующего restore/build/test/vulnerability-scan/publish набора.
-2. 🧾 Закрыть структурное логирование, crash reporting, версионирование и миграцию схемы настроек.
+2. 🧾 Закрыть версионирование и миграцию схемы настроек.
 3. 📦 Подготовить release engineering: installer, signing, SBOM и versioning.
 4. 🔐 Сузить публичную API-границу KID/NAudio либо, если trust model изменится, отдельно оформить threat model для недоверенного кода.
