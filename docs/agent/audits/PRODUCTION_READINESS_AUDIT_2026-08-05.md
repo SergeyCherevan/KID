@@ -22,7 +22,7 @@ reliability-риски: Console перенесена в `KID.Library` как exe
 от stale-потоков, readers и callbacks, редактор и compiler используют один детерминированный
 compilation profile, а обычные файлы, recovery и настройки теперь публикуются одним атомарным
 механизмом. Сохранения настроек дополнительно упорядочены очередью. Полный Release-прогон текущего
-worktree — **237/237** тестов; ручной standalone `.exe` smoke и dispatcher crash smoke также
+worktree — **242/242** теста; ручной standalone `.exe` smoke и dispatcher crash smoke также
 подтверждены. Балл для недоверенного кода не вырос: изменения сознательно сохраняют in-process
 trust model и не добавляют security sandbox.
 Верхнюю границу общей оценки по-прежнему ограничивают отсутствие CI, отсутствие версии/миграции
@@ -46,11 +46,11 @@ trust model и не добавляют security sandbox.
 - На предыдущем `task/AtomicFilePersistence` (`c0b5b40` + worktree) выполнен `dotnet test KID.sln -c Release --no-restore`: **232 passed, 0 skipped, 0 failed**; сборка трёх проектов завершилась без предупреждений и ошибок.
 - NuGet vulnerability scan: известных уязвимых пакетов по текущим источникам не найдено.
 - Framework-dependent publish текущего `task/AtomicFilePersistence` успешно создан: 54 файла и 35,74 МБ в корне publish-каталога; 214 файлов и 51,19 МБ с учётом вложенных runtime- и localization-каталогов.
-- Publish требует установленный .NET 8 Desktop Runtime, имеет версию `1.0.0.0` и **не подписан**.
+- Исторический publish этого worktree требовал установленный .NET 8 Desktop Runtime, имел версию `1.0.0.0` и **не был подписан**; после retargeting на .NET 10 актуальный publish и smoke на чистой машине нужно отдельно подтвердить под .NET 10 Desktop Runtime.
 - Все три локализации содержат одинаковые 50 ключей.
 - Светлая и тёмная темы содержат одинаковые 54 ресурсных ключа.
 - В исходном аудите GUI не запускался. Для C2/C3 отдельно выполнен headless runtime smoke, а пользователь подтвердил manual GUI/visual checklist 2026-09-15. Для compilation profile 2026-09-18 пользователь отдельно подтвердил одинаковые completion, diagnostics и Run result в standalone `.exe` и Visual Studio F5.
-- Актуализация 2026-09-20 повторила Release build и полный Release test suite без restore: **237 passed, 0 skipped, 0 failed**. Дополнительно выполнены standalone Release smoke и ручная проверка `DispatcherUnhandledException` с созданием crash report; временный `.codex-build` после проверки удалён.
+- Актуализация 2026-09-20: все три проекта переведены на `net10.0-windows`, добавлен корневой `global.json` для стабильного .NET 10 SDK; пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242 passed, 0 skipped, 0 failed** и успешный прогон программы на разных сценариях. Скриншот Visual Studio фиксирует 242/242 теста и build 0/0. Отдельная проверка актуального publish на чистой машине в эту запись не включена.
 
 ## 🚨 Критичные проблемы исходного аудита — C2/C3 повторно оценены
 
@@ -179,7 +179,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 ## ⚠️ Проблемы средней серьёзности
 
 1. **✅ Автоматизированные execution/Console/compilation-profile и базовые persistence-тесты добавлены; CI по-прежнему отсутствует.**
-   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; текущий полный прогон — 237/237. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
+   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; текущий полный прогон — 242/242. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
    Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка завершается с **0 ошибок и 0 предупреждений**.
@@ -193,8 +193,9 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 5. **✅ Конфигурация и default-шаблон больше не зависят от current working directory.**
    `DefaultWindowConfiguration.json` читается через `AppContext.BaseDirectory`. Относительный `TemplateName` разрешается относительно `%APPDATA%\KID`; при отсутствии `HelloWorld.cs` файл создаётся из встроенного `WindowConfigurationData.TemplateCode`, а существующий пользовательский файл не перезаписывается. Старое значение `ProjectTemplates/ru-RU/HelloWorld.cs` нормализуется. Focused и полный набор тестов прошли: **9/9** и **242/242**.
 
-6. **Платформа близка к окончанию поддержки.**  
-   Проекты используют `net8.0-windows`; .NET 8 уже находится в maintenance и завершает поддержку **10 ноября 2026 года**, тогда как .NET 10 LTS поддерживается до ноября 2028 года. Для нового production-релиза разумно планировать переход на .NET 10. [Официальный lifecycle .NET](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)
+6. **✅ Переход на поддерживаемую платформу выполнен; release-проверки продолжаются.**
+
+   Все три проекта (`KID.WPF.IDE`, `KID.Library`, `KID.Tests`) переведены с `net8.0-windows` на `net10.0-windows`; добавлен корневой `global.json`, который фиксирует стабильную ветку .NET 10 SDK. 20 сентября 2026 года пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242/242** тестов и успешный ручной прогон программы на разных сценариях. .NET 10 — активный LTS до **14 ноября 2028 года**; прежняя проблема поддержки .NET 8 закрыта на уровне исходных проектов. Отдельно остаются актуальный framework-dependent publish, проверка на чистой Windows-машине с .NET 10 Desktop Runtime и release engineering (подпись, installer/versioning). [Официальный lifecycle .NET](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)
 
 7. **Часть зависимостей заметно отстаёт.**  
    RoslynPad `4.12.1` имеет стабильную ветку `5.0.0`, Roslyn `4.12.0` — `5.6.0`, NAudio `2.2.1` — `2.3.0`; DI `9.0.10` отстаёт даже внутри своей major-линии. Обновлять Roslyn и RoslynPad нужно совместно, через compatibility spike, а не механически. [RoslynPad](https://www.nuget.org/packages/RoslynPad.Editor.Windows/4.12.1), [Roslyn](https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp), [NAudio](https://www.nuget.org/packages/NAudio/2.2.1), [DI](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection/9.0.10)
@@ -271,7 +272,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 
 ### Неделя 5 — платформа и устойчивость
 
-- Compatibility spike для .NET 10 + RoslynPad 5 + Roslyn 5.
+- ✅ Compatibility spike и переход production/test-проектов на .NET 10 выполнены; обновление RoslynPad 5 и Roslyn 5 остаётся отдельным compatibility spike.
 - Обновить NAudio и DI.
 - ✅ Атомарное сохранение файлов и настроек реализовано через общий `FileService`.
 - Версионирование схемы настроек и восстановление повреждённого JSON.
@@ -297,7 +298,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 8. **P1 — частично выполнено:** добавлены критические compiler/editor/compilation-profile/Console/library/lifecycle и базовые file/session/settings/localization tests; startup, themes и расширенные failure-сценарии оцениваются отдельно.
 9. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`; создать CI.
 10. **P1 — выполнено в текущем worktree:** пользовательские файлы, настройки и autosave/recovery публикуются атомарно; сохранения настроек упорядочены.
-11. **P1:** миграция на .NET 10 и согласованный пакетный стек.
+11. **P1 — частично выполнено:** все три проекта переведены на .NET 10 и добавлен `global.json`; согласованный пакетный стек (RoslynPad/Roslyn/NAudio/DI) остаётся отдельной задачей.
 12. **P1:** подписанный и версионированный дистрибутив.
 
 ## 🔁 Четыре возможных follow-up’а
