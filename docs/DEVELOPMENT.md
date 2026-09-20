@@ -54,9 +54,9 @@ STA/audio lifecycle-тесты не открывают видимые окна, 
 Проект использует следующие NuGet пакеты:
 
 - **AvalonEdit** (6.3.1.120) — редактор кода
-- **Microsoft.CodeAnalysis** (4.13.0) — компиляция C#
-- **Microsoft.CodeAnalysis.CSharp** (4.13.0) — парсинг C#
-- **Microsoft.Extensions.DependencyInjection** (9.0.10) — DI контейнер
+- **Microsoft.CodeAnalysis** (5.9.0) — компиляция C#
+- **Microsoft.CodeAnalysis.CSharp** (5.9.0) — парсинг C#
+- **Microsoft.Extensions.DependencyInjection** (10.0.12) — DI контейнер
 
 ## Структура проекта
 
