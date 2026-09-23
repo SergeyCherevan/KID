@@ -3,7 +3,7 @@ using System.Text;
 
 namespace KID;
 
-public static partial class TextBoxConsole
+public static partial class KIDConsole
 {
     /// <summary>
     /// Поток вывода одного запуска. Захваченный scope передаётся каждому Write напрямую:
@@ -12,8 +12,8 @@ public static partial class TextBoxConsole
     private sealed class TextBoxTextWriter(ConsoleExecutionScope scope) : TextWriter
     {
         public override Encoding Encoding => Encoding.UTF8;
-        public override void Write(char value) => TextBoxConsole.Write(scope, value.ToString());
-        public override void Write(string? value) => TextBoxConsole.Write(scope, value);
+        public override void Write(char value) => KIDConsole.Write(scope, value.ToString());
+        public override void Write(string? value) => KIDConsole.Write(scope, value);
     }
 
     /// <summary>
@@ -22,7 +22,7 @@ public static partial class TextBoxConsole
     /// </summary>
     private sealed class TextBoxTextReader(ConsoleExecutionScope scope) : TextReader
     {
-        public override int Read() => TextBoxConsole.Read(scope);
-        public override string ReadLine() => TextBoxConsole.ReadLine(scope);
+        public override int Read() => KIDConsole.Read(scope);
+        public override string ReadLine() => KIDConsole.ReadLine(scope);
     }
 }

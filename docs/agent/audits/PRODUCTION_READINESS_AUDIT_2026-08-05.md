@@ -9,7 +9,7 @@
 - **Общая production-readiness:** около **40–45%**.
 
 Актуализированная оценка от 2026-09-20 после завершения execution-scoped миграции
-`TextBoxConsole`, единого compilation profile, structured logging/global diagnostics и текущего
+`KIDConsole`, единого compilation profile, structured logging/global diagnostics и текущего
 worktree с атомарным файловым хранилищем:
 
 - **Для локального использования автором с доверенным кодом:** примерно **8,5/10**, стабильная beta.
@@ -125,8 +125,8 @@ Restricted token/AppContainer, запреты файловой системы/с
   readers, output work items и callbacks старой сессии не изменяют новый Run. `BeginCleanup` закрывает
   admission и пробуждает readers, `ShutdownAsync` ожидает UI teardown, worker и readers, очищает
   delegates/state, а IDE-контекст восстанавливает `Console.Out/In/Error` даже после ошибки runtime cleanup:
-  [TextBoxConsole.System.cs](</D:/Visual Studio Projects/KID/KID.Library/Console/TextBoxConsole.System.cs>),
-  [TextBoxConsole.Input.cs](</D:/Visual Studio Projects/KID/KID.Library/Console/TextBoxConsole.Input.cs>),
+  [KIDConsole.System.cs](</D:/Visual Studio Projects/KID/KID.Library/Console/KIDConsole.System.cs>),
+  [KIDConsole.Input.cs](</D:/Visual Studio Projects/KID/KID.Library/Console/KIDConsole.Input.cs>),
   [TextBoxConsoleContext.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs>).
 - **Async Main:** ожидаются все восемь вариантов `void`/`int`/`Task`/`Task<int>` Main
   без параметров либо с `string[]`; cleanup не начинается раньше фактического завершения entry point.
@@ -217,7 +217,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - `ThemeService` очищает все merged dictionaries, что сломает будущие общие ресурсы: [ThemeService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Themes/ThemeService.cs:80>).
 - В каталоге проекта лежат старые ignored `*wpftmp.csproj` с абсолютными локальными путями — они не попадают в Git, но загрязняют поиск и диагностику.
 - `Music` теперь переиспользует один `HttpClient`, передаёт cancellation token и детерминированно удаляет временные файлы, но URL-ответ всё ещё материализуется целиком в память без отдельного ограничения размера: [MusicRuntime.cs](</D:/Visual Studio Projects/KID/KID.Library/Music/MusicRuntime.cs>).
-- Compilation profile детерминирован, но вся публичная поверхность `KID.Library` compile-visible; вместе с учебным API доступны runtime-support типы `StopManager`, `TextBoxConsole` и `DispatcherManager`.
+- Compilation profile детерминирован, но вся публичная поверхность `KID.Library` compile-visible; вместе с учебным API доступны runtime-support типы `StopManager`, `KIDConsole` и `DispatcherManager`.
 - Из-за публичного `NAudio.Wave.PlaybackState` в API KID профиль вынужден напрямую открывать всю публичную поверхность `NAudio.Core`; сужение границы потребует собственного KID enum и совместимой API-миграции.
 - В коде и документации остаётся значительное количество подавленных исключений и комментариев, описывающих будущие исправления вместо формализованных задач.
 
@@ -230,7 +230,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - Инициализация Roslyn-редактора асинхронна end-to-end, без UI-thread `.GetResult()`.
 - `CodeExecutionService` корректно освобождает execution context даже при ошибке компиляции: [CodeExecutionService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CodeExecutionService.cs:62>).
 - Реализованы единая execution-сессия/FSM, cooperative Stop instrumentation, token-aware Console input и ожидание async Main.
-- Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
+- Статический `KIDConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
 - `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics и базовые persistence-контракты: 242 passed, 0 skipped, 0 failed в финальном полном прогоне.
@@ -259,7 +259,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - ✅ Реализованы PE/PDB, started-running-instance и collectible `AssemblyLoadContext`.
 - ✅ Реализованы cooperative Stop, единая FSM и запрет нового Run до окончания cleanup.
 - ✅ События, звук, Console, Dispatcher/Graphics и прочие per-run ресурсы очищаются после каждого запуска.
-- ✅ `TextBoxConsole` перенесён в `KID.Library` как execution-scoped static runtime; legacy IDE-console удалена, а emitted user assembly больше не получает reference на `KID.WPF.IDE` ради `Console.Clear()`.
+- ✅ `TextBoxConsole` перенесён в `KID.Library` и переименован в `KIDConsole` как execution-scoped static runtime; legacy IDE-console удалена, а emitted user assembly больше не получает reference на `KID.WPF.IDE` ради `Console.Clear()`.
 - Если появится требование запускать недоверенный код, отдельно определить sandbox/threat model для файлов, сети и process boundary.
 
 ### Неделя 4 — quality gates
@@ -294,7 +294,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 3. **P0 — выполнено:** Stop, token-aware `ReadLine`, async entry point, FSM и cleanup реализованы в `feature/FixC2C3`.
 4. **Продуктовое решение — выполнено для текущего scope:** сохранить in-process выполнение доверенного учебного кода; отдельный процесс не обязателен.
 5. **Условная задача:** определить новую sandbox/threat model только если продукт должен запускать недоверенный код.
-6. **P1 — выполнено:** завершить execution-scoped миграцию и hardening `TextBoxConsole`.
+6. **P1 — выполнено:** завершить execution-scoped миграцию и hardening `KIDConsole`.
 7. **P1 — выполнено:** заменить AppDomain-зависимые references единым детерминированным compilation profile редактора/compiler.
 8. **P1 — частично выполнено:** добавлены критические compiler/editor/compilation-profile/Console/library/lifecycle и базовые file/session/settings/localization tests; startup, themes и расширенные failure-сценарии оцениваются отдельно.
 9. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`; создать CI.

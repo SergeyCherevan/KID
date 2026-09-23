@@ -28,7 +28,7 @@ callback обязан захватывать exact scope; нельзя повт�
 
 Из корня: `dotnet restore KID.sln`, `dotnet build KID.sln -c Release --no-restore`, затем
 `dotnet test KID.sln -c Release --no-restore`. Для локальной диагностики используйте focused-наборы
-`TextBoxConsoleSpecifications`, `DispatcherGraphicsTests`, `KeyboardMouseTests`,
+`KIDConsoleSpecifications`, `DispatcherGraphicsTests`, `KeyboardMouseTests`,
 `MusicLifecycleTests`, `Stage9ReliabilityTests` и execution lifecycle/error tests.
 
 STA/audio lifecycle-тесты не открывают видимые окна, не используют звуковое устройство и не выходят в сеть: `IMusicRuntime` подменяет NAudio/HTTP/filesystem. Набор проверяет Stop/Dispose races, normal drain, cleanup faults, input WPF-отписки, stale audio handle, отмену URL-записи, повторные scopes и освобождение пользовательских ALC. Это не заменяет ручную проверку реального аудиоустройства и кодеков ОС.
@@ -439,7 +439,7 @@ WPF Dispatcher без видимых окон.
 
 Для host-кода: IConsoleContext.Init принимает execution id и token явно. IConsoleContext и
 ICodeExecutionContext реализуют IAsyncDisposable; coordinator обязан ожидать DisposeAsync.
-Внутренний `TextBoxConsole.BeginCleanup` начинает безопасную очистку без блокировки UI, а
+Внутренний `KIDConsole.BeginCleanup` начинает безопасную очистку без блокировки UI, а
 `ShutdownAsync` подтверждает отписки, выход readers, завершение event worker и закрытие handles.
 Ошибка графического или console runtime Dispose не должна пропускать восстановление консольных
 потоков.

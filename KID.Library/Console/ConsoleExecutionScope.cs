@@ -3,7 +3,7 @@ using System.Windows.Controls;
 namespace KID;
 
 /// <summary>
-/// Связывает TextBoxConsole runtime одного запуска с его environment, WPF TextBox
+/// Связывает KIDConsole runtime одного запуска с его environment, WPF TextBox
 /// и последовательным worker пользовательских событий.
 /// </summary>
 internal sealed class ConsoleExecutionScope

@@ -225,7 +225,7 @@ WPF направляет сюда ошибки dispatcher-потока, но н�
 
 Для Music сохранить существующую агрегацию cleanup. Итоговая ошибка должна журналироваться один раз на границе execution lifecycle, а не в каждом внутреннем `catch`.
 
-Аналогично проверить `DispatcherScope`, `TextBoxConsole` и observer notification failures: они должны либо попасть в итоговый lifecycle log, либо иметь отдельную осознанную запись.
+Аналогично проверить `DispatcherScope`, `KIDConsole` и observer notification failures: они должны либо попасть в итоговый lifecycle log, либо иметь отдельную осознанную запись.
 
 ## 10. Этап 7 — crash report и пользовательский UX
 

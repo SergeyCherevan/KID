@@ -19,9 +19,9 @@ cleanup, отмену fade/download/write, idempotent shutdown, ошибки Sto
 фоновых задач после завершения. Execution tests отдельно проверяют FSM, terminal outcomes,
 агрегацию ошибок финализации и запрет нового Run во время `CleaningUp`.
 
-## TextBoxConsole execution scope
+## KIDConsole execution scope
 
-`Console/` содержит 52 сценария для статического `KID.TextBoxConsole` и
+`Console/` содержит 52 сценария для статического `KID.KIDConsole` и
 `ConsoleExecutionScope`: input/Stop/Dispose races, Unicode и focus, FIFO и parallel output,
 stale streams/read requests/shutdown, `OutputReceived` worker lifecycle, WPF action и Dispatcher
 teardown failures, восстановление process-wide streams и запрет следующего Run до cleanup.
@@ -55,7 +55,7 @@ dotnet test KID.Tests/KID.Tests.csproj -c Release --no-build
 Структура production-кода описана в [CodeExecution](../docs/CodeExecution.md). Тестовые каталоги группируют сценарии: `Compiler/`, `Execution/`, `Console/` и `Lifecycle/`. Импорты используют пространства имён соответствующих частей и их подпапок `Interfaces/`.
 
 `CompiledProgram_ConsoleClear_UsesConsoleContextBridge` проверяет полный путь от компиляции
-`System.Console.Clear()` до `global::KID.TextBoxConsole.Clear()`, очистки WPF TextBox и вывода
+`System.Console.Clear()` до `global::KID.KIDConsole.Clear()`, очистки WPF TextBox и вывода
 следующего текста. `CompileAsync_ConsoleClearReferencesLibraryButNotIdeAssembly` дополнительно
 проверяет metadata emitted artifact: bridge требует `KID.Library`, но не `KID.WPF.IDE`.
 

@@ -21,7 +21,7 @@ public sealed class ConsoleClearRewriterTests
             rewritten.DescendantNodes().OfType<InvocationExpressionSyntax>());
 
         Assert.Equal(
-            "global::KID.TextBoxConsole.Clear()",
+            "global::KID.KIDConsole.Clear()",
             invocation.ToString());
     }
 
@@ -74,7 +74,7 @@ public sealed class ConsoleClearRewriterTests
             rewritten.ToFullString(),
             StringComparison.Ordinal);
         Assert.DoesNotContain(
-            "KID.TextBoxConsole.Clear",
+            "KID.KIDConsole.Clear",
             rewritten.ToFullString(),
             StringComparison.Ordinal);
     }

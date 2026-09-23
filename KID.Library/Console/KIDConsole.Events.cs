@@ -1,6 +1,6 @@
 namespace KID;
 
-public static partial class TextBoxConsole
+public static partial class KIDConsole
 {
     /// <summary>
     /// Последовательно сообщает в фоне о фрагментах, уже опубликованных в консольном TextBox.

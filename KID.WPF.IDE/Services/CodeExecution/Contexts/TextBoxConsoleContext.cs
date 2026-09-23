@@ -7,7 +7,7 @@ namespace KID.Services.CodeExecution.Contexts;
 
 /// <summary>
 /// Host-владелец process-wide перенаправления System.Console одной execution-сессии.
-/// Runtime, WPF-подписки и per-run streams принадлежат статическому TextBoxConsole и его
+/// Runtime, WPF-подписки и per-run streams принадлежат статическому KIDConsole и его
 /// ConsoleExecutionScope; context только сохраняет исходные In/Out/Error, подключает
 /// scope-bound adapters и восстанавливает каждый исходный поток после runtime shutdown.
 /// </summary>
@@ -98,17 +98,17 @@ public sealed class TextBoxConsoleContext : IConsoleContext
                 if (environment.CancellationToken != cancellationToken)
                     throw new InvalidOperationException(
                         "Console context cancellation token does not match the current execution.");
-                var scopeBeforeInit = TextBoxConsole.CurrentScope;
+                var scopeBeforeInit = KIDConsole.CurrentScope;
                 try
                 {
-                    consoleScope = TextBoxConsole.Init(textBox, environment);
+                    consoleScope = KIDConsole.Init(textBox, environment);
                 }
                 catch
                 {
                     // Init может опубликовать полностью подготовленный scope и лишь затем
                     // обнаружить cancellation. Такой partial owner должен быть доступен Dispose,
                     // но конфликт с уже существующим scope не даёт этому context права его снять.
-                    var publishedScope = TextBoxConsole.CurrentScope;
+                    var publishedScope = KIDConsole.CurrentScope;
                     if (scopeBeforeInit == null &&
                         publishedScope != null &&
                         ReferenceEquals(publishedScope.Environment, environment))
@@ -118,9 +118,9 @@ public sealed class TextBoxConsoleContext : IConsoleContext
                     throw;
                 }
                 redirectStreams(
-                    TextBoxConsole.GetOut(consoleScope),
-                    TextBoxConsole.GetIn(consoleScope),
-                    TextBoxConsole.GetError(consoleScope));
+                    KIDConsole.GetOut(consoleScope),
+                    KIDConsole.GetIn(consoleScope),
+                    KIDConsole.GetError(consoleScope));
                 initialized = true;
             }
             catch
@@ -141,7 +141,7 @@ public sealed class TextBoxConsoleContext : IConsoleContext
             cleanupStarted = true;
             var ownedEnvironment = environment;
             if (ownedEnvironment != null && consoleScope != null)
-                beginCleanupFailures.Capture(() => TextBoxConsole.BeginCleanup(ownedEnvironment));
+                beginCleanupFailures.Capture(() => KIDConsole.BeginCleanup(ownedEnvironment));
         }
     }
 
@@ -171,7 +171,7 @@ public sealed class TextBoxConsoleContext : IConsoleContext
         await failures.CaptureAsync(
             () => ownedEnvironment == null || ownedScope == null
                 ? Task.CompletedTask
-                : TextBoxConsole.ShutdownAsync(ownedEnvironment).AsTask(),
+                : KIDConsole.ShutdownAsync(ownedEnvironment).AsTask(),
             finallyAction: () =>
             {
                 if (originalConsoleOut != null) failures.Capture(() => System.Console.SetOut(originalConsoleOut));

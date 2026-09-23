@@ -71,7 +71,7 @@
   - Подробная информация об ошибках
 
 - **Специальная обработка Console.Clear()**
-  - Semantic rewrite в `global::KID.TextBoxConsole.Clear()`
+  - Semantic rewrite в `global::KID.KIDConsole.Clear()`
   - Пользовательские одноимённые `Console`/`Clear` не переписываются
   - Прозрачная для пользователя
 
@@ -304,7 +304,7 @@
 
 - **Очистка консоли**
   - `Console.Clear()` очищает TextBox
-  - Автоматическая замена на статический `KID.TextBoxConsole.Clear()` из `KID.Library`
+  - Автоматическая замена на статический `KID.KIDConsole.Clear()` из `KID.Library`
 
 ### Ввод
 

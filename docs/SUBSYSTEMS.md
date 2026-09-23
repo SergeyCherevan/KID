@@ -85,7 +85,7 @@
 
 **ConsoleClearRewriter:**
 - Отдельный компонент, наследующий `CSharpSyntaxRewriter`
-- Семантически заменяет настоящий безаргументный `System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`
+- Семантически заменяет настоящий безаргументный `System.Console.Clear()` на `global::KID.KIDConsole.Clear()`
 - Не переписывает пользовательские одноимённые типы и не добавляет generated assembly зависимость на `KID.WPF.IDE`
 
 #### 1.4. DefaultCodeRunner
@@ -132,7 +132,7 @@
 - Host cleanup не использует отменённый session token для WPF-отписок
 
 **TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
-- Подключает статический `KID.TextBoxConsole` к TextBox и captured `ExecutionEnvironment`
+- Подключает статический `KID.KIDConsole` к TextBox и captured `ExecutionEnvironment`
 - Один владеет process-wide перенаправлением и восстановлением `System.Console.In/Out/Error`
 - Ожидает runtime shutdown до восстановления streams; ошибка shutdown не пропускает ни один restore-шаг
 - Реализует `IConsoleContext`
@@ -143,8 +143,8 @@
 - Получает `App` из DI контейнера через конструктор
 - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
 
-#### 1.6. TextBoxConsole
-**Файлы:** `KID.Library/Console/TextBoxConsole.*.cs`, `ConsoleExecutionScope.cs`
+#### 1.6. KIDConsole
+**Файлы:** `KID.Library/Console/KIDConsole.*.cs`, `ConsoleExecutionScope.cs`
 
 **Ответственность:**
 - Публичный статический console facade в namespace `KID`
@@ -190,11 +190,11 @@
 
 ### Компоненты
 
-#### 2.1. TextBoxConsole
-**Файлы:** `KID.Library/Console/TextBoxConsole.*.cs`, `ConsoleExecutionScope.cs`
+#### 2.1. KIDConsole
+**Файлы:** `KID.Library/Console/KIDConsole.*.cs`, `ConsoleExecutionScope.cs`
 
 **Ответственность:**
-- Статический facade `KID.TextBoxConsole` для WPF TextBox текущей execution-сессии
+- Статический facade `KID.KIDConsole` для WPF TextBox текущей execution-сессии
 - Перенаправление стандартного вывода (Console.WriteLine/Write) в TextBox
 - Поддержка ввода данных через Console.ReadLine/Read
 - Обработка ввода с клавиатуры, включая кириллицу и Unicode
@@ -217,7 +217,7 @@
 
 **Scope и compiler bridge:**
 - `ConsoleExecutionScope` связывает environment, TextBox и последовательный event worker
-- `ConsoleClearRewriter` направляет `System.Console.Clear()` прямо в `global::KID.TextBoxConsole.Clear()`
+- `ConsoleClearRewriter` направляет `System.Console.Clear()` прямо в `global::KID.KIDConsole.Clear()`
 - Instance console, `IConsole` и вложенный `StaticConsole` больше не используются
 
 **Особенности:**
@@ -232,7 +232,7 @@
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
 
 **Ответственность:**
-- Инициализация статического TextBoxConsole с TextBox из ViewModel и current environment
+- Инициализация статического KIDConsole с TextBox из ViewModel и current environment
 - Реализация интерфейса IConsoleContext
 - Владение process-wide `System.Console` streams
 
@@ -982,12 +982,12 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
    - KIDCompilationProfileProvider → один immutable profile → CSharpCompiler и RoslynHostService
    - DefaultCodeRunner → Graphics API → Canvas
    - DefaultCodeRunner → Mouse API → Canvas
-   - DefaultCodeRunner → TextBoxConsole → TextBox (консольный ввод/вывод)
+   - DefaultCodeRunner → KIDConsole → TextBox (консольный ввод/вывод)
    - DefaultCodeRunner → Music API → NAudio → Звуковая карта
 
 2. **Консольный ввод/вывод:**
-   - Пользовательский код → Console.WriteLine/ReadLine → TextBoxConsole → TextBox
-   - TextBoxConsole использует Dispatcher captured scope, а `OutputReceived` доставляется per-run event worker
+   - Пользовательский код → Console.WriteLine/ReadLine → KIDConsole → TextBox
+   - KIDConsole использует Dispatcher captured scope, а `OutputReceived` доставляется per-run event worker
 
 3. **Работа с файлами:**
    - MenuViewModel → CodeEditorsViewModel → CodeFileService → FileDialogService → FileService

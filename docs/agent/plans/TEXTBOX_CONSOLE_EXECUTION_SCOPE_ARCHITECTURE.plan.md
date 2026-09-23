@@ -1,9 +1,9 @@
-# План: статический TextBoxConsole и execution-scoped lifecycle
+# План: статический KIDConsole и execution-scoped lifecycle
 
 - **Дата:** 2026-09-17
 - **Статус:** completed — все пункты плана реализованы и подтверждены автоматическими проверками
 - **Область:** `KID.Library`, `KID.WPF.IDE`, `KID.Tests`
-- **Основные компоненты:** `TextBoxConsole`, `ConsoleExecutionScope`, `TextBoxConsoleContext`, `ConsoleClearRewriter`, `CSharpCompiler`
+- **Основные компоненты:** `KIDConsole`, `ConsoleExecutionScope`, `TextBoxConsoleContext`, `ConsoleClearRewriter`, `CSharpCompiler`
 
 ## ✅ Фактический результат трёх проходов
 
@@ -17,15 +17,15 @@
 ### Проход 2. Execution-scoped статический runtime
 
 - **Коммит:** `2099701 feat(console): add execution-scoped static runtime`.
-- В `KID.Library` добавлены статический `KID.TextBoxConsole`, пассивный `ConsoleExecutionScope`, scope-bound streams, input/output FIFO и `OutputReceived` через `ExecutionEventWorker`.
+- В `KID.Library` добавлены статический `KID.KIDConsole`, пассивный `ConsoleExecutionScope`, scope-bound streams, input/output FIFO и `OutputReceived` через `ExecutionEventWorker`.
 - `TextBoxConsoleContext` переведён на captured environment/scope и оставлен владельцем только process-wide streams.
-- `ConsoleClearRewriter` переведён на `global::KID.TextBoxConsole.Clear`; явная compiler-reference на `KID.WPF.IDE` удалена и проверена по metadata emitted assembly.
+- `ConsoleClearRewriter` переведён на `global::KID.KIDConsole.Clear`; явная compiler-reference на `KID.WPF.IDE` удалена и проверена по metadata emitted assembly.
 - Проверка прохода: Release build — 0 warnings/errors; Console — 40/40; полный набор — 176/176.
 
 ### Проход 3. Удаление legacy и event hardening
 
 - **Cleanup-коммит:** `60b6fe0 chore(console): remove legacy textbox console bridge`.
-- Удалены instance `TextBoxConsole`, все IDE partials, вложенный `StaticConsole` и `IConsole`; characterization-тесты переведены на новый runtime.
+- Удалены instance `KIDConsole`, все IDE partials, вложенный `StaticConsole` и `IConsole`; characterization-тесты переведены на новый runtime.
 - При первоначальной targeted-проверке cleanup-коммита один раз проявился transient failure `StopInputDispose_Race_ReleasesAllReaders`; изолированный повтор прошёл 1/1, а последующие полные прогоны ошибку не воспроизвели.
 - **Hardening-коммит:** `902546d test(console): harden output event lifecycle`.
 - Добавлены пять отдельных тестов: background/serial delivery, fault isolation, ожидание running handler, сброс queued handler, cleanup-drain без нового callback, очистка subscribers и collectibility target.
@@ -49,12 +49,12 @@
 
 Перенести runtime WPF-консоли из `KID.WPF.IDE` в `KID.Library` и привести её к той же модели владения execution-сессией, которая используется `Mouse`, `Keyboard`, `Graphics` и `Music`:
 
-- `TextBoxConsole` становится публичным статическим facade в namespace `KID`;
+- `KIDConsole` становится публичным статическим facade в namespace `KID`;
 - `ConsoleExecutionScope` связывает одну execution-сессию с её `TextBox` и `ExecutionEventWorker`;
 - статическое состояние консоли разрешено только при гарантии одной активной execution-сессии и полного cleanup до следующего `Init`;
 - каждый сохраняемый stream, read-request, output work item и Dispatcher callback захватывает точную ссылку на свой `ConsoleExecutionScope`;
 - stale работа предыдущего запуска не может читать ввод, писать текст, очищать UI, восстанавливать focus либо освобождать ресурсы нового запуска;
-- вложенный `TextBoxConsole.StaticConsole` удаляется, а его роль принимает сам статический `TextBoxConsole`;
+- вложенный `KIDConsole.StaticConsole` удаляется, а его роль принимает сам статический `KIDConsole`;
 - переписанный `System.Console.Clear()` ссылается только на `KID.Library`, а не на `KID.WPF.IDE`;
 - `TextBoxConsoleContext` остаётся host-компонентом IDE и владеет только перенаправлением process-wide `System.Console.In/Out/Error` и восстановлением исходных streams.
 
@@ -62,7 +62,7 @@
 
 ### 1. Статическим становится API и текущее состояние, scope остаётся identity
 
-`TextBoxConsole` допускается хранить input/output buffers, read state, output scheduling state и wait handles в статических полях, потому что `CodeExecutionService` не разрешает следующий Run до полного cleanup текущего контекста.
+`KIDConsole` допускается хранить input/output buffers, read state, output scheduling state и wait handles в статических полях, потому что `CodeExecutionService` не разрешает следующий Run до полного cleanup текущего контекста.
 
 Безопасность обеспечивается не запретом статических полей, а следующими условиями:
 
@@ -127,11 +127,11 @@ private sealed class TextBoxTextWriter(
     ConsoleExecutionScope scope) : TextWriter
 {
     public override void Write(string? value) =>
-        TextBoxConsole.Write(scope, value);
+        KIDConsole.Write(scope, value);
 }
 ```
 
-Запрещён вариант, в котором старый stream вызывает только публичный `TextBoxConsole.Write(value)` и тем самым повторно разрешает текущий scope. Сохранённый writer/reader предыдущей сессии должен обратиться к overload с captured scope и быть отклонён.
+Запрещён вариант, в котором старый stream вызывает только публичный `KIDConsole.Write(value)` и тем самым повторно разрешает текущий scope. Сохранённый writer/reader предыдущей сессии должен обратиться к overload с captured scope и быть отклонён.
 
 ### 5. Разделяются ownership и admission
 
@@ -179,7 +179,7 @@ public static event Action<string>? OutputReceived;
 - сохранением и восстановлением исходных streams;
 - lifecycle identity самого execution context.
 
-Он не должен владеть реализацией ввода, вывода, WPF-подписками либо отдельным экземпляром `TextBoxConsole`.
+Он не должен владеть реализацией ввода, вывода, WPF-подписками либо отдельным экземпляром `KIDConsole`.
 
 ### 8. Перенос не является reference sandbox
 
@@ -200,13 +200,13 @@ CodeExecutionService
             │    └─ MusicExecutionScope → Music
             └─ TextBoxConsoleContext                 [KID.WPF.IDE]
                  ├─ сохраняет System.Console streams
-                 ├─ TextBoxConsole.Init(...)
+                 ├─ KIDConsole.Init(...)
                  ├─ перенаправляет streams scope
-                 ├─ TextBoxConsole.BeginCleanup(...)
-                 ├─ await TextBoxConsole.ShutdownAsync(...)
+                 ├─ KIDConsole.BeginCleanup(...)
+                 ├─ await KIDConsole.ShutdownAsync(...)
                  └─ восстанавливает System.Console streams
 
-TextBoxConsole                                      [KID.Library]
+KIDConsole                                      [KID.Library]
   ├─ static current state и input/output buffers
   ├─ ConsoleExecutionScope
   │    ├─ ExecutionEnvironment
@@ -219,14 +219,14 @@ TextBoxConsole                                      [KID.Library]
 
 ## 📐 Публичный и internal API
 
-### TextBoxConsole
+### KIDConsole
 
 Целевой публичный facade:
 
 ```csharp
 namespace KID;
 
-public static partial class TextBoxConsole
+public static partial class KIDConsole
 {
     public static event Action<string>? OutputReceived;
 
@@ -270,7 +270,7 @@ internal static TextWriter GetError(ConsoleExecutionScope scope);
 
 - Публичный пользовательский `Init(TextBox)` не добавляется: console target и process-wide streams являются ответственностью host.
 - `TextBoxConsoleContext` вызывает только internal overload с явно захваченным `ExecutionEnvironment`.
-- Повторный `TextBoxConsole.Init` при опубликованном scope выбрасывает `InvalidOperationException` по модели Mouse/Keyboard.
+- Повторный `KIDConsole.Init` при опубликованном scope выбрасывает `InvalidOperationException` по модели Mouse/Keyboard.
 - Идемпотентность same-identity сохраняется на уровне `TextBoxConsoleContext.Init`, который не вызывает runtime `Init` повторно.
 
 ## 🔄 Lifecycle одной сессии
@@ -281,7 +281,7 @@ internal static TextWriter GetError(ConsoleExecutionScope scope);
 2. Контекст проверяет target и UI-thread ownership.
 3. Контекст получает `ExecutionEnvironmentManager.GetCurrent(executionId)` и сохраняет точную ссылку.
 4. Контекст сохраняет исходные `System.Console.In/Out/Error` до первой мутации.
-5. `TextBoxConsole.Init(textBox, environment)` под `initLock`:
+5. `KIDConsole.Init(textBox, environment)` под `initLock`:
    - отклоняет существующий scope;
    - проверяет current + accepting environment;
    - проверяет session cancellation;
@@ -334,9 +334,9 @@ WPF event не ставится в `ExecutionEventWorker`.
 
 `CodeExecutionService` сначала вызывает `ExecutionEnvironment.BeginCleanup`, затем `CodeExecutionContext.BeginCleanup`.
 
-`TextBoxConsoleContext.BeginCleanup` вызывает `TextBoxConsole.BeginCleanup(ownedEnvironment)`.
+`TextBoxConsoleContext.BeginCleanup` вызывает `KIDConsole.BeginCleanup(ownedEnvironment)`.
 
-`TextBoxConsole.BeginCleanup` синхронно и идемпотентно:
+`KIDConsole.BeginCleanup` синхронно и идемпотентно:
 
 - находит scope по exact `ExecutionEnvironment`, не требуя `IsCurrentAndAccepting`;
 - устанавливает `closing`;
@@ -347,7 +347,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 
 ### ShutdownAsync
 
-`TextBoxConsole.ShutdownAsync(environment)`:
+`KIDConsole.ShutdownAsync(environment)`:
 
 1. Возвращает completed task для отсутствующего либо чужого environment.
 2. Для owning scope атомарно запускает ровно один `ShutdownCoreAsync`; повторные вызовы получают одну completion task.
@@ -379,7 +379,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 - `KID.Library/Console/ConsoleExecutionScope.cs`
   - только `Environment`, `TextBox`, `EventWorker`;
   - без input/output алгоритмов.
-- `KID.Library/Console/TextBoxConsole.System.cs`
+- `KID.Library/Console/KIDConsole.System.cs`
   - static scope registry;
   - lifecycle fields;
   - `Init`, `BeginCleanup`, `ShutdownAsync`;
@@ -387,18 +387,18 @@ WPF event не ставится в `ExecutionEventWorker`.
   - WPF subscribe/unsubscribe;
   - state allocation/reset/release;
   - UI posting и failure aggregation.
-- `KID.Library/Console/TextBoxConsole.Input.cs`
+- `KID.Library/Console/KIDConsole.Input.cs`
   - `Read`, `ReadLine`, `ReadCore`;
   - `ReadRequest`;
   - WPF input handlers;
   - focus/read-only snapshot и restore.
-- `KID.Library/Console/TextBoxConsole.Output.cs`
+- `KID.Library/Console/KIDConsole.Output.cs`
   - `Write`, `Clear`;
   - output FIFO;
   - Dispatcher scheduling и drain.
-- `KID.Library/Console/TextBoxConsole.Streams.cs`
+- `KID.Library/Console/KIDConsole.Streams.cs`
   - reader/writer adapters с captured scope.
-- `KID.Library/Console/TextBoxConsole.Events.cs`
+- `KID.Library/Console/KIDConsole.Events.cs`
   - `OutputReceived`;
   - отдельная постановка каждого subscriber в `ExecutionEventWorker`;
   - очистка delegates.
@@ -406,25 +406,25 @@ WPF event не ставится в `ExecutionEventWorker`.
 ### Изменяемые файлы в KID.WPF.IDE
 
 - `Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
-  - убрать instance `TextBoxConsole`;
+  - убрать instance `KIDConsole`;
   - хранить captured `ExecutionEnvironment` и `ConsoleExecutionScope`;
   - redirect streams получать из статического runtime;
   - делегировать BeginCleanup/Shutdown;
   - сохранить same-identity и partial-init contracts.
 - `Services/CodeExecution/Compilation/Rewriters/ConsoleClearRewriter.cs`
-  - заменить target на `global::KID.TextBoxConsole.Clear`.
+  - заменить target на `global::KID.KIDConsole.Clear`.
 - `Services/CodeExecution/Compilation/CSharpCompiler.cs`
   - удалить явную metadata reference на `KID.WPF.IDE`, добавленную только для старого Clear bridge;
   - сохранить явную reference на `KID.Library` для сгенерированного кода.
 
 ### Удаляемые файлы после успешной миграции
 
-- `KID.WPF.IDE/Services/CodeExecution/Console/TextBoxConsole.cs`;
-- `TextBoxConsole.Input.cs`;
-- `TextBoxConsole.Output.cs`;
-- `TextBoxConsole.Lifecycle.cs`;
-- `TextBoxConsole.Streams.cs`;
-- `TextBoxConsole.StaticConsole.cs`;
+- `KID.WPF.IDE/Services/CodeExecution/Console/KIDConsole.cs`;
+- `KIDConsole.Input.cs`;
+- `KIDConsole.Output.cs`;
+- `KIDConsole.Lifecycle.cs`;
+- `KIDConsole.Streams.cs`;
+- `KIDConsole.StaticConsole.cs`;
 - `Console/Interfaces/IConsole.cs`, если финальный поиск подтвердит отсутствие других consumers.
 
 Удаление выполняется только после переноса поведения, компиляции и проверки отсутствия ссылок на старый namespace.
@@ -437,7 +437,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 - [x] Выполнить текущие Console, Keyboard/Mouse, Dispatcher/Graphics и lifecycle tests; записать baseline pass/fail.
 - [x] Выполнить Release build решения.
 - [x] Зафиксировать текущие публичные сигнатуры Console и все ссылки на:
-  - [x] `TextBoxConsole`;
+  - [x] `KIDConsole`;
   - [x] `StaticConsole`;
   - [x] `IConsole`;
   - [x] старый namespace `KID.Services.CodeExecution.Console`;
@@ -450,7 +450,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 
 - [x] Создать `ConsoleExecutionScope` в namespace `KID` по модели Mouse/Keyboard.
 - [x] Перенести console partials в `KID.Library/Console` и сменить namespace на `KID`.
-- [x] Превратить класс в `public static partial class TextBoxConsole`.
+- [x] Превратить класс в `public static partial class KIDConsole`.
 - [x] Перенести instance state в единый static lifecycle текущей сессии.
 - [x] Реализовать `Owns(scope)`, `IsActive(scope)` и environment-specific lookup для cleanup.
 - [x] Реализовать allocation/reset static resources на каждом `Init`.
@@ -499,7 +499,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 
 - [x] Заменить поле instance console на captured environment/scope.
 - [x] Сохранить оригинальные streams до первой мутации.
-- [x] Изменить test redirect hook так, чтобы он принимал конкретные `TextWriter/TextReader/TextWriter`, а не instance `TextBoxConsole`.
+- [x] Изменить test redirect hook так, чтобы он принимал конкретные `TextWriter/TextReader/TextWriter`, а не instance `KIDConsole`.
 - [x] Сохранить same-identity `Init` как no-op.
 - [x] Сохранить конфликтующий `Init` как `InvalidOperationException`.
 - [x] Сохранить запрет повторной инициализации после partial-init failure.
@@ -509,11 +509,11 @@ WPF event не ставится в `ExecutionEventWorker`.
 - [x] Сохранить одну completion task для конкурентных и повторных Dispose.
 - [x] Не обнулять ownership до окончания всех обязательных cleanup-попыток.
 
-**Критерий этапа:** IDE context больше не создаёт instance `TextBoxConsole`, а отвечает только за host integration.
+**Критерий этапа:** IDE context больше не создаёт instance `KIDConsole`, а отвечает только за host integration.
 
 ### Этап 5. Удаление StaticConsole и IDE runtime dependency
 
-- [x] Изменить `ConsoleClearRewriter` target на `global::KID.TextBoxConsole.Clear`.
+- [x] Изменить `ConsoleClearRewriter` target на `global::KID.KIDConsole.Clear`.
 - [x] Обновить semantic rewrite tests, включая trivia и пользовательские одноимённые типы.
 - [x] Удалить nested `StaticConsole`.
 - [x] Удалить явную compiler metadata reference на `KID.WPF.IDE`, так как итоговый поиск подтвердил, что она больше не нужна генерируемому коду.
@@ -606,7 +606,7 @@ WPF event не ставится в `ExecutionEventWorker`.
 
 - [x] Переписывается только настоящий безаргументный `System.Console.Clear()`.
 - [x] Пользовательские одноимённые `Console` и `Clear` не переписываются.
-- [x] Target равен `global::KID.TextBoxConsole.Clear`.
+- [x] Target равен `global::KID.KIDConsole.Clear`.
 - [x] Emitted artifact выполняет Clear через новый runtime.
 - [x] Assembly metadata подтверждает отсутствие обязательной ссылки на `KID.WPF.IDE` из-за Clear bridge.
 
@@ -660,7 +660,7 @@ GUI/visual acceptance не запускается автоматически: д
 
 Остановить реализацию и отдельно согласовать решение, если обнаружится хотя бы одно из условий:
 
-- существует production consumer instance `TextBoxConsole` или `IConsole`, который нельзя безопасно перевести на static API;
+- существует production consumer instance `KIDConsole` или `IConsole`, который нельзя безопасно перевести на static API;
 - `KID.WPF.IDE` reference требуется сгенерированному коду не только для старого Clear bridge;
 - следующий execution реально может начать `Init` до completion предыдущего context cleanup;
 - Dispatcher callback может остаться ненаблюдаемым после успешного shutdown;
@@ -671,7 +671,7 @@ GUI/visual acceptance не запускается автоматически: д
 
 ## 🏁 Итоговые критерии готовности
 
-- [x] `TextBoxConsole` является единственным публичным статическим console facade в `KID.Library`.
+- [x] `KIDConsole` является единственным публичным статическим console facade в `KID.Library`.
 - [x] `ConsoleExecutionScope` содержит `ExecutionEnvironment`, `TextBox` и `ExecutionEventWorker` и не реализует runtime-алгоритмы.
 - [x] `StaticConsole` и instance console удалены.
 - [x] Все сохраняемые streams/callbacks/work items используют captured scope identity.
@@ -680,7 +680,7 @@ GUI/visual acceptance не запускается автоматически: д
 - [x] Shutdown ожидает readers, running event callback и UI teardown.
 - [x] Принятый output допечатывается, новая работа после BeginCleanup отклоняется.
 - [x] `TextBoxConsoleContext` восстанавливает process-wide streams при всех предусмотренных исходах, включая runtime shutdown failure.
-- [x] `System.Console.Clear()` переписывается в `global::KID.TextBoxConsole.Clear()`.
+- [x] `System.Console.Clear()` переписывается в `global::KID.KIDConsole.Clear()`.
 - [x] Пользовательская программа не получает обязательную runtime dependency на `KID.WPF.IDE` из-за Console bridge.
 - [x] User delegates не удерживают collectible assembly после cleanup.
 - [x] Все targeted и full Release tests проходят без warnings/errors.

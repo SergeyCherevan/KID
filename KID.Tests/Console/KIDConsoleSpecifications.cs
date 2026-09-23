@@ -18,7 +18,7 @@ using KID.Tests.TestDoubles;
 namespace KID.Tests.Console;
 
 [Collection(ExecutionLifecycleCollection.Name)]
-public sealed class TextBoxConsoleSpecifications
+public sealed class KIDConsoleSpecifications
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
 
@@ -80,7 +80,7 @@ public sealed class TextBoxConsoleSpecifications
             Assert.False(SendKey(box, Key.Back).Handled);
             await stop.CancelAsync(); // Регистрация уже снята; callback не обращается к закрытому handle.
             console.Write("late");
-            TextBoxConsole.Clear();
+            KIDConsole.Clear();
             Assert.Equal("", box.Text);
         });
     }
@@ -261,7 +261,7 @@ public sealed class TextBoxConsoleSpecifications
             await oldWriter.WriteAsync("late");
             await PumpAsync(box);
             Assert.Equal("new", box.Text);
-            TextBoxConsole.Clear();
+            KIDConsole.Clear();
             Assert.Equal("", box.Text);
             current.Write("current");
             Assert.Equal("current", box.Text);
@@ -370,7 +370,7 @@ public sealed class TextBoxConsoleSpecifications
             Assert.All(references, reference => Assert.False(reference.IsAlive));
             Assert.False(SendText(box, "late").Handled);
             Assert.False(SendKey(box, Key.Enter).Handled);
-            Assert.Null(TextBoxConsole.CurrentScope);
+            Assert.Null(KIDConsole.CurrentScope);
             GC.KeepAlive(box);
         });
     }
@@ -676,9 +676,9 @@ public sealed class TextBoxConsoleSpecifications
                 global::System.Console.SetOut(output);
             });
             context.Init(1, CancellationToken.None);
-            global::KID.TextBoxConsole.OutputReceived += _ => throw failure;
-            global::KID.TextBoxConsole.OutputReceived += _ => nextHandlerCalled.TrySetResult();
-            global::KID.TextBoxConsole.Write("text");
+            global::KID.KIDConsole.OutputReceived += _ => throw failure;
+            global::KID.KIDConsole.OutputReceived += _ => nextHandlerCalled.TrySetResult();
+            global::KID.KIDConsole.Write("text");
             await nextHandlerCalled.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
             environment.BeginCleanup();
             var error = await Record.ExceptionAsync(async () => await context.DisposeAsync());
@@ -754,7 +754,7 @@ public sealed class TextBoxConsoleSpecifications
             try
             {
                 environment = ExecutionEnvironmentManager.GetCurrent(executionId);
-                Scope = TextBoxConsole.Init(box, environment);
+                Scope = KIDConsole.Init(box, environment);
             }
             catch
             {
@@ -764,19 +764,19 @@ public sealed class TextBoxConsoleSpecifications
         }
 
         internal ConsoleExecutionScope Scope { get; }
-        internal TextWriter Out => TextBoxConsole.GetOut(Scope);
-        internal TextReader In => TextBoxConsole.GetIn(Scope);
+        internal TextWriter Out => KIDConsole.GetOut(Scope);
+        internal TextReader In => KIDConsole.GetIn(Scope);
 
         internal event Action<string>? OutputReceived
         {
-            add => TextBoxConsole.OutputReceived += value;
-            remove => TextBoxConsole.OutputReceived -= value;
+            add => KIDConsole.OutputReceived += value;
+            remove => KIDConsole.OutputReceived -= value;
         }
 
-        internal void Write(string? value) => TextBoxConsole.Write(value);
+        internal void Write(string? value) => KIDConsole.Write(value);
         internal int Read() => In.Read();
         internal string ReadLine() => In.ReadLine()!;
-        internal void Clear() => TextBoxConsole.Clear();
+        internal void Clear() => KIDConsole.Clear();
 
         internal void BeginCleanup()
         {
@@ -785,14 +785,14 @@ public sealed class TextBoxConsoleSpecifications
                 if (cleanupStarted) return;
                 cleanupStarted = true;
                 environmentLease.BeginCleanup();
-                TextBoxConsole.BeginCleanup(environment);
+                KIDConsole.BeginCleanup(environment);
             }
         }
 
         public void Dispose()
         {
             BeginCleanup();
-            _ = TextBoxConsole.ShutdownAsync(environment);
+            _ = KIDConsole.ShutdownAsync(environment);
         }
 
         public ValueTask DisposeAsync()
@@ -809,7 +809,7 @@ public sealed class TextBoxConsoleSpecifications
             BeginCleanup();
             try
             {
-                await TextBoxConsole.ShutdownAsync(environment);
+                await KIDConsole.ShutdownAsync(environment);
             }
             finally
             {

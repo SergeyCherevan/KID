@@ -15,11 +15,11 @@ Host-координация находится в `KID.WPF.IDE/Services/CodeExec
 KID.Library/
 ├── Console/
 │   ├── ConsoleExecutionScope.cs
-│   ├── TextBoxConsole.System.cs
-│   ├── TextBoxConsole.Input.cs
-│   ├── TextBoxConsole.Output.cs
-│   ├── TextBoxConsole.Streams.cs
-│   └── TextBoxConsole.Events.cs
+│   ├── KIDConsole.System.cs
+│   ├── KIDConsole.Input.cs
+│   ├── KIDConsole.Output.cs
+│   ├── KIDConsole.Streams.cs
+│   └── KIDConsole.Events.cs
 └── ExecutionEnvironment/
     └── ExecutionEventWorker.cs
 
@@ -50,7 +50,7 @@ KID.WPF.IDE/Services/CodeExecution/
 - **Корень:** `CodeExecutionService` координирует запуск, `ExecutionSession` хранит состояние одной сессии. Контракт сервиса и события доступны вызывающему коду без зависимости от конкретного компилятора или runner.
 - **Compilation:** компилятор преобразует исходный код с помощью Roslyn и возвращает PE/PDB-артефакт. `Rewriters` принадлежит этой стадии. Общие модели `CompilationArtifact` и `CompilationResult` остаются в `KID.WPF.IDE/Models/` и пространстве имён `KID.Services`.
 - **Runtime:** runner создаёт и запускает экземпляр выполнения. Экземпляр владеет загруженной сборкой и `UserProgramLoadContext`, предоставляет `Completion` и инициирует выгрузку при `Dispose`.
-- **Console runtime:** публичный статический `KID.TextBoxConsole` в `KID.Library` реализует ввод,
+- **Console runtime:** публичный статический `KID.KIDConsole` в `KID.Library` реализует ввод,
   FIFO-вывод, очистку и `OutputReceived`. Внутренний `ConsoleExecutionScope` связывает runtime с
   точными `ExecutionEnvironment`, `TextBox` и `ExecutionEventWorker`; instance console,
   `IConsole` и `StaticConsole` удалены.
@@ -82,7 +82,7 @@ Instrumentation покрывает поддержанные циклы, тела
 
 Регистрация конкретных `CSharpCompiler` и `DefaultCodeRunner` находится в `Services/DI/ServiceCollectionExtensions.cs`. Координатор использует интерфейсы из `Compilation/Interfaces/` и `Runtime/Interfaces/`. `CSharpCompiler` получает immutable `KIDCompilationProfile` из общей инфраструктуры `Services/CompilationProfile/`; тот же экземпляр профиля использует `RoslynHostService`, поэтому editor diagnostics и emit работают с одним набором references/imports.
 
-`ConsoleClearRewriter` генерирует вызов `global::KID.TextBoxConsole.Clear()`. Semantic rewrite
+`ConsoleClearRewriter` генерирует вызов `global::KID.KIDConsole.Clear()`. Semantic rewrite
 обрабатывает только настоящий безаргументный `System.Console.Clear()`, а emitted-artifact test
 проверяет ссылку на `KID.Library` и отсутствие обязательной ссылки на `KID.WPF.IDE` из-за Console
 bridge. `Compilation` также является именем типа Roslyn, поэтому `RuntimeTypeSymbolResolver` явно

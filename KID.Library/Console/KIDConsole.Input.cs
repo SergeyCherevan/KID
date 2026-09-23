@@ -4,7 +4,7 @@ using System.Windows.Input;
 
 namespace KID;
 
-public static partial class TextBoxConsole
+public static partial class KIDConsole
 {
     /// <summary>Синхронно ожидает один UTF-16 code unit текущей execution-сессии.</summary>
     public static int Read()
@@ -109,7 +109,7 @@ public static partial class TextBoxConsole
             {
                 ThrowIfStopped(scope);
                 if (input.TryDequeue(out var symbol)) return symbol;
-                signals = readSignals ?? throw new ObjectDisposedException(nameof(TextBoxConsole));
+                signals = readSignals ?? throw new ObjectDisposedException(nameof(KIDConsole));
             }
 
             WaitHandle.WaitAny(signals);
@@ -119,7 +119,7 @@ public static partial class TextBoxConsole
     private static void ThrowIfStopped(ConsoleExecutionScope scope)
     {
         scope.Environment.ThrowIfCancellationRequested();
-        ObjectDisposedException.ThrowIf(!IsActive(scope), nameof(TextBoxConsole));
+        ObjectDisposedException.ThrowIf(!IsActive(scope), nameof(KIDConsole));
     }
 
     private static bool ReceiveInput(ConsoleExecutionScope scope, object sender, string text)

@@ -131,7 +131,7 @@
 - Компилирует C# код в PE/PDB-артефакт без загрузки результата в default context
 - Использует Microsoft.CodeAnalysis для парсинга и компиляции
 - Получает `MetadataReferences` и явные global imports из единого `KIDCompilationProfile`; не сканирует process AppDomain при каждом Run
-- Применяет semantic rewriter для замены настоящего `System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`
+- Применяет semantic rewriter для замены настоящего `System.Console.Clear()` на `global::KID.KIDConsole.Clear()`
 - Применяет `CancellationInstrumentationRewriter`: добавляет Stop-checkpoints в поддержанные циклы, тела функций и безопасные точки `await`/`yield`, а также передаёт session token в поддержанные `Task.Delay`/`Thread.Sleep`
 - Не переписывает пользовательский `finally` и формы, для которых нельзя доказуемо сохранить семантику
 - Обрабатывает ошибки компиляции и возвращает их в локализованном виде
@@ -387,7 +387,7 @@ native/сторонний вызов, неинструментированный
 ##### ExecutionEventWorker
 
 **ExecutionEnvironment/ExecutionEventWorker.cs**
-- Общий внутренний тип доставки событий для Keyboard, Mouse и TextBoxConsole; это не singleton и не второй ambient registry
+- Общий внутренний тип доставки событий для Keyboard, Mouse и KIDConsole; это не singleton и не второй ambient registry
 - Каждый `KeyboardExecutionScope`, `MouseExecutionScope` и `ConsoleExecutionScope` создаёт собственные очередь, семафор, linked token и worker task; Keyboard и Mouse дополнительно регистрируют pulse-задачи
 - `ShutdownAsync` идемпотентно закрывает вход, выполняет WPF-отписку, отменяет и ожидает фоновые задачи, затем освобождает per-run state
 - Ошибка одного пользовательского handler наблюдается отдельно и не препятствует другим подписчикам или обязательному cleanup
@@ -415,7 +415,7 @@ task фиксируется и помечается `Observed`. Ошибки п�
 - `InvokeOnUI(Action action)` — выполнение действия в UI потоке
 - `InvokeOnUI<T>(Func<T> func)` — выполнение функции в UI потоке с возвратом значения
 - Не хранит собственный current execution, id или token
-- Используется библиотечными API Graphics и Sprite для работы с UI; TextBoxConsole использует Dispatcher из собственного `ConsoleExecutionScope`
+- Используется библиотечными API Graphics и Sprite для работы с UI; KIDConsole использует Dispatcher из собственного `ConsoleExecutionScope`
 
 ##### StopManager
 
@@ -691,7 +691,7 @@ Save / Discard / Cancel для каждой изменённой вкладки
 - Music API не обращается к UI: playback, fade, HTTP и file I/O привязаны к token и task registry исходной execution
 - Mouse API собирает события в UI-потоке и последовательно доставляет обработчики worker-ом своей execution; cleanup снимает Canvas-подписки и очищает delegates/state
 - Keyboard API делает то же для Window, дополнительно сбрасывая shortcuts и `CapturePolicy`; worker текущего Run никогда не видит очередь следующего
-- Статический TextBoxConsole использует Dispatcher своего scope и отбрасывает stale streams/read requests/work items; `TextBoxConsoleContext.DisposeAsync` восстанавливает все process-wide streams до следующего Run даже при runtime shutdown failure
+- Статический KIDConsole использует Dispatcher своего scope и отбрасывает stale streams/read requests/work items; `TextBoxConsoleContext.DisposeAsync` восстанавливает все process-wide streams до следующего Run даже при runtime shutdown failure
 - `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
 - `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса
 - `WindowConfigurationService` сериализует конкурентные сохранения настроек собственной FIFO-очередью; физическая публикация каждого снимка атомарна благодаря `FileService`

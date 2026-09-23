@@ -6,7 +6,7 @@ using System.Windows.Threading;
 namespace KID;
 
 /// <summary>
-/// Предоставляет консольный API текущей execution-сессии поверх принадлежащего ей WPF TextBox.
+/// Предоставляет статический консольный API активной execution-сессии.
 /// </summary>
 /// <remarks>
 /// В процессе может существовать только одна активная console-сессия. <see cref="Init"/>
@@ -16,7 +16,7 @@ namespace KID;
 /// разрешают текущее статическое состояние повторно, поэтому stale stream не может обратиться
 /// к ресурсам следующей execution-сессии.
 /// </remarks>
-public static partial class TextBoxConsole
+public static partial class KIDConsole
 {
     private static readonly object initLock = new();
     private static readonly object stateLock = new();
@@ -58,7 +58,7 @@ public static partial class TextBoxConsole
         lock (initLock)
         {
             if (Volatile.Read(ref executionScope) != null)
-                throw new InvalidOperationException("TextBoxConsole is already initialized.");
+                throw new InvalidOperationException("KIDConsole is already initialized.");
             if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(environment))
                 throw new InvalidOperationException("Execution does not own the current environment.");
 
@@ -183,7 +183,7 @@ public static partial class TextBoxConsole
         ArgumentNullException.ThrowIfNull(scope);
         lock (stateLock)
         {
-            ObjectDisposedException.ThrowIf(!Owns(scope) || textReader == null, nameof(TextBoxConsole));
+            ObjectDisposedException.ThrowIf(!Owns(scope) || textReader == null, nameof(KIDConsole));
             return textReader;
         }
     }
@@ -195,7 +195,7 @@ public static partial class TextBoxConsole
         ArgumentNullException.ThrowIfNull(scope);
         lock (stateLock)
         {
-            ObjectDisposedException.ThrowIf(!Owns(scope) || textWriter == null, nameof(TextBoxConsole));
+            ObjectDisposedException.ThrowIf(!Owns(scope) || textWriter == null, nameof(KIDConsole));
             return textWriter;
         }
     }

@@ -18,17 +18,17 @@ using System.Windows.Threading;
 namespace KID.Tests.Console;
 
 [Collection(ExecutionLifecycleCollection.Name)]
-public sealed class TextBoxConsoleCompletionTests
+public sealed class KIDConsoleCompletionTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
-    private static readonly FieldInfo UiReadField = typeof(TextBoxConsole).GetField(
+    private static readonly FieldInfo UiReadField = typeof(KIDConsole).GetField(
         "uiRead",
         BindingFlags.NonPublic | BindingFlags.Static) ??
-        throw new InvalidOperationException("TextBoxConsole.uiRead was not found.");
-    private static readonly MethodInfo RestoreReadUiMethod = typeof(TextBoxConsole).GetMethod(
+        throw new InvalidOperationException("KIDConsole.uiRead was not found.");
+    private static readonly MethodInfo RestoreReadUiMethod = typeof(KIDConsole).GetMethod(
         "RestoreReadUi",
         BindingFlags.NonPublic | BindingFlags.Static) ??
-        throw new InvalidOperationException("TextBoxConsole.RestoreReadUi was not found.");
+        throw new InvalidOperationException("KIDConsole.RestoreReadUi was not found.");
 
     [Theory]
     [InlineData(false)]
@@ -49,7 +49,7 @@ public sealed class TextBoxConsoleCompletionTests
             Assert.Equal("Console input must run outside the UI thread.", error.Message);
             Assert.True(box.IsReadOnly);
             Assert.Null(UiReadField.GetValue(null));
-            Assert.Same(session.Scope, TextBoxConsole.CurrentScope);
+            Assert.Same(session.Scope, KIDConsole.CurrentScope);
         });
     }
 
@@ -149,7 +149,7 @@ public sealed class TextBoxConsoleCompletionTests
             try
             {
                 context.Init(1, stop.Token);
-                var scope = Assert.IsType<ConsoleExecutionScope>(TextBoxConsole.CurrentScope);
+                var scope = Assert.IsType<ConsoleExecutionScope>(KIDConsole.CurrentScope);
                 global::System.Console.Write("trigger");
                 environmentLease.BeginCleanup();
                 context.BeginCleanup();
@@ -170,7 +170,7 @@ public sealed class TextBoxConsoleCompletionTests
                 Assert.Same(originalOut, global::System.Console.Out);
                 Assert.Same(originalIn, global::System.Console.In);
                 Assert.Same(originalError, global::System.Console.Error);
-                Assert.Null(TextBoxConsole.CurrentScope);
+                Assert.Null(KIDConsole.CurrentScope);
                 Assert.True(scope.EventWorker.Completion.IsCompletedSuccessfully);
                 Assert.Equal(0, scope.EventWorker.QueuedCount);
                 Assert.False(SendText(box, "late").Handled);
@@ -179,12 +179,12 @@ public sealed class TextBoxConsoleCompletionTests
             finally
             {
                 box.TextChanged -= throwingHandler;
-                if (TextBoxConsole.CurrentScope != null)
+                if (KIDConsole.CurrentScope != null)
                 {
                     environmentLease.BeginCleanup();
-                    TextBoxConsole.BeginCleanup(environment);
+                    KIDConsole.BeginCleanup(environment);
                     _ = await Record.ExceptionAsync(
-                        () => TextBoxConsole.ShutdownAsync(environment).AsTask());
+                        () => KIDConsole.ShutdownAsync(environment).AsTask());
                 }
                 environmentLease.Dispose();
                 global::System.Console.SetOut(originalOut);
@@ -218,7 +218,7 @@ public sealed class TextBoxConsoleCompletionTests
                 Timeout,
                 TestContext.Current.CancellationToken);
             environmentLease.BeginCleanup();
-            TextBoxConsole.BeginCleanup(environment);
+            KIDConsole.BeginCleanup(environment);
             await dispatcher.InvokeAsync(
                 () => dispatcher.BeginInvokeShutdown(DispatcherPriority.Send),
                 DispatcherPriority.Send,
@@ -228,10 +228,10 @@ public sealed class TextBoxConsoleCompletionTests
             Assert.True(thread.Join(Timeout), "Console Dispatcher did not stop.");
 
             var error = await Record.ExceptionAsync(() =>
-                TextBoxConsole.ShutdownAsync(environment).AsTask());
+                KIDConsole.ShutdownAsync(environment).AsTask());
 
             Assert.NotNull(error);
-            Assert.Null(TextBoxConsole.CurrentScope);
+            Assert.Null(KIDConsole.CurrentScope);
             Assert.True(scope.EventWorker.Completion.IsCompletedSuccessfully);
             Assert.Equal(0, scope.EventWorker.QueuedCount);
             await stop.CancelAsync();
@@ -245,12 +245,12 @@ public sealed class TextBoxConsoleCompletionTests
                     DispatcherPriority.Send);
             }
             if (thread.IsAlive) _ = thread.Join(Timeout);
-            if (TextBoxConsole.CurrentScope != null)
+            if (KIDConsole.CurrentScope != null)
             {
                 environmentLease.BeginCleanup();
-                TextBoxConsole.BeginCleanup(environment);
+                KIDConsole.BeginCleanup(environment);
                 _ = await Record.ExceptionAsync(
-                    () => TextBoxConsole.ShutdownAsync(environment).AsTask());
+                    () => KIDConsole.ShutdownAsync(environment).AsTask());
             }
             environmentLease.Dispose();
         }
@@ -261,7 +261,7 @@ public sealed class TextBoxConsoleCompletionTests
                 new TextBox(),
                 2,
                 CancellationToken.None);
-            Assert.Same(next.Scope, TextBoxConsole.CurrentScope);
+            Assert.Same(next.Scope, KIDConsole.CurrentScope);
         });
     }
 
@@ -309,7 +309,7 @@ public sealed class TextBoxConsoleCompletionTests
                     System.AppContext.SetData(
                         "{{referenceKey}}",
                         new System.WeakReference(loadContext));
-                    KID.TextBoxConsole.OutputReceived += OnOutput;
+                    KID.KIDConsole.OutputReceived += OnOutput;
                     System.Console.Write("compiled-event");
                     if (!Delivered.Wait(System.TimeSpan.FromSeconds(5)))
                         throw new System.TimeoutException("OutputReceived was not delivered.");
@@ -329,7 +329,7 @@ public sealed class TextBoxConsoleCompletionTests
 
         Assert.Equal(ExecutionState.Idle, service.State);
         Assert.Contains("compiled-event", box.Text);
-        Assert.Null(TextBoxConsole.CurrentScope);
+        Assert.Null(KIDConsole.CurrentScope);
         return Assert.IsType<WeakReference>(AppContext.GetData(referenceKey));
     }
 
@@ -346,7 +346,7 @@ public sealed class TextBoxConsoleCompletionTests
             {
                 try
                 {
-                    var scope = TextBoxConsole.Init(new TextBox(), environment);
+                    var scope = KIDConsole.Init(new TextBox(), environment);
                     initialized.TrySetResult((dispatcher, scope));
                 }
                 catch (Exception exception)
@@ -402,7 +402,7 @@ public sealed class TextBoxConsoleCompletionTests
             try
             {
                 environment = ExecutionEnvironmentManager.GetCurrent(executionId);
-                Scope = TextBoxConsole.Init(box, environment);
+                Scope = KIDConsole.Init(box, environment);
             }
             catch
             {
@@ -412,8 +412,8 @@ public sealed class TextBoxConsoleCompletionTests
         }
 
         internal ConsoleExecutionScope Scope { get; }
-        internal TextWriter Out => TextBoxConsole.GetOut(Scope);
-        internal TextReader In => TextBoxConsole.GetIn(Scope);
+        internal TextWriter Out => KIDConsole.GetOut(Scope);
+        internal TextReader In => KIDConsole.GetIn(Scope);
 
         public ValueTask DisposeAsync()
         {
@@ -424,10 +424,10 @@ public sealed class TextBoxConsoleCompletionTests
         private async Task DisposeCoreAsync()
         {
             environmentLease.BeginCleanup();
-            TextBoxConsole.BeginCleanup(environment);
+            KIDConsole.BeginCleanup(environment);
             try
             {
-                await TextBoxConsole.ShutdownAsync(environment);
+                await KIDConsole.ShutdownAsync(environment);
             }
             finally
             {

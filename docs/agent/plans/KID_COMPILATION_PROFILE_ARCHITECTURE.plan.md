@@ -97,7 +97,7 @@ Roslyn разрешает ссылки на уровне assembly, а не от�
 #### Runtime-support API, также доступный пользователю
 
 - `KID.StopManager`;
-- `KID.TextBoxConsole`;
+- `KID.KIDConsole`;
 - `KID.DispatcherManager`.
 
 Поскольку эти три типа являются `public` и находятся в той же assembly, compilation profile не может скрыть их, сохранив ссылку на `KID.Library`. Если они не должны быть пользовательским API, это отдельная задача изменения accessibility/assembly boundaries; текущий план честно считает их compile-visible.
@@ -262,10 +262,10 @@ typeof(NAudio.Wave.PlaybackState).Assembly.Location
 
 Это фиксирует текущий публичный контракт:
 
-- `KID.Library` содержит API `Graphics`, `Music`, `Keyboard`, `Mouse`, `Sprite`, `StopManager` и `TextBoxConsole`;
+- `KID.Library` содержит API `Graphics`, `Music`, `Keyboard`, `Mouse`, `Sprite`, `StopManager` и `KIDConsole`;
 - `NAudio.Core` нужна, потому что публичные сигнатуры KID содержат `PlaybackState`; вместе с assembly становится compile-visible вся её публичная поверхность.
 
-`KID.WPF.IDE` не добавляется: rewritten `Console.Clear` вызывает `global::KID.TextBoxConsole.Clear()` из `KID.Library`.
+`KID.WPF.IDE` не добавляется: rewritten `Console.Clear` вызывает `global::KID.KIDConsole.Clear()` из `KID.Library`.
 
 Не добавляются автоматически другие `NAudio.*`, `RoslynPad.*`, `Microsoft.CodeAnalysis.*` или любая DLL только потому, что её загрузила IDE. Новая внешняя зависимость public KID API добавляется явно и сопровождается тестом.
 

@@ -8,7 +8,7 @@ using System.Windows.Input;
 namespace KID.Tests.Console;
 
 [Collection(ExecutionLifecycleCollection.Name)]
-public sealed class StaticTextBoxConsoleSpecifications
+public sealed class StaticKIDConsoleSpecifications
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
@@ -40,7 +40,7 @@ public sealed class StaticTextBoxConsoleSpecifications
             environmentLease.Dispose();
 
             var error = Assert.Throws<InvalidOperationException>(() =>
-                TextBoxConsole.Init(new TextBox(), environment));
+                KIDConsole.Init(new TextBox(), environment));
 
             Assert.Equal("Execution does not own the current environment.", error.Message);
         });
@@ -56,11 +56,11 @@ public sealed class StaticTextBoxConsoleSpecifications
             var box = new TextBox();
 
             var error = await Task.Run(
-                () => Record.Exception(() => TextBoxConsole.Init(box, environment)),
+                () => Record.Exception(() => KIDConsole.Init(box, environment)),
                 TestContext.Current.CancellationToken);
 
             Assert.IsType<InvalidOperationException>(error);
-            Assert.Null(TextBoxConsole.CurrentScope);
+            Assert.Null(KIDConsole.CurrentScope);
         });
     }
 
@@ -73,14 +73,14 @@ public sealed class StaticTextBoxConsoleSpecifications
             var firstEnvironment = ExecutionEnvironmentManager.GetCurrent(1);
             try
             {
-                _ = TextBoxConsole.Init(new TextBox(), firstEnvironment);
+                _ = KIDConsole.Init(new TextBox(), firstEnvironment);
                 Assert.Throws<InvalidOperationException>(() =>
-                    TextBoxConsole.Init(new TextBox(), firstEnvironment));
+                    KIDConsole.Init(new TextBox(), firstEnvironment));
 
                 firstLease.BeginCleanup();
-                TextBoxConsole.BeginCleanup(firstEnvironment);
-                await TextBoxConsole.ShutdownAsync(firstEnvironment);
-                Assert.Null(TextBoxConsole.CurrentScope);
+                KIDConsole.BeginCleanup(firstEnvironment);
+                await KIDConsole.ShutdownAsync(firstEnvironment);
+                Assert.Null(KIDConsole.CurrentScope);
             }
             finally
             {
@@ -89,10 +89,10 @@ public sealed class StaticTextBoxConsoleSpecifications
 
             using var nextLease = ExecutionEnvironmentManager.BeginExecution(2, CancellationToken.None);
             var nextEnvironment = ExecutionEnvironmentManager.GetCurrent(2);
-            _ = TextBoxConsole.Init(new TextBox(), nextEnvironment);
+            _ = KIDConsole.Init(new TextBox(), nextEnvironment);
             nextLease.BeginCleanup();
-            TextBoxConsole.BeginCleanup(nextEnvironment);
-            await TextBoxConsole.ShutdownAsync(nextEnvironment);
+            KIDConsole.BeginCleanup(nextEnvironment);
+            await KIDConsole.ShutdownAsync(nextEnvironment);
         });
     }
 
@@ -104,25 +104,25 @@ public sealed class StaticTextBoxConsoleSpecifications
             var oldBox = new TextBox { IsReadOnly = true };
             var oldLease = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
             var oldEnvironment = ExecutionEnvironmentManager.GetCurrent(1);
-            var oldScope = TextBoxConsole.Init(oldBox, oldEnvironment);
-            var oldWriter = TextBoxConsole.GetOut(oldScope);
-            var oldReader = TextBoxConsole.GetIn(oldScope);
+            var oldScope = KIDConsole.Init(oldBox, oldEnvironment);
+            var oldWriter = KIDConsole.GetOut(oldScope);
+            var oldReader = KIDConsole.GetIn(oldScope);
 
             Assert.DoesNotContain(
                 oldWriter.GetType().GetMethods(),
-                method => method.Name == nameof(TextBoxConsole.Clear));
+                method => method.Name == nameof(KIDConsole.Clear));
 
             await oldWriter.WriteAsync("old");
             Assert.Equal("old", oldBox.Text);
             oldLease.BeginCleanup();
-            TextBoxConsole.BeginCleanup(oldEnvironment);
-            await TextBoxConsole.ShutdownAsync(oldEnvironment);
+            KIDConsole.BeginCleanup(oldEnvironment);
+            await KIDConsole.ShutdownAsync(oldEnvironment);
             oldLease.Dispose();
 
             var nextBox = new TextBox { IsReadOnly = true };
             using var nextLease = ExecutionEnvironmentManager.BeginExecution(2, CancellationToken.None);
             var nextEnvironment = ExecutionEnvironmentManager.GetCurrent(2);
-            var nextScope = TextBoxConsole.Init(nextBox, nextEnvironment);
+            var nextScope = KIDConsole.Init(nextBox, nextEnvironment);
             try
             {
                 await oldWriter.WriteAsync("stale");
@@ -135,7 +135,7 @@ public sealed class StaticTextBoxConsoleSpecifications
                 Assert.Equal(string.Empty, nextBox.Text);
 
                 var nextRead = Task.Run(
-                    () => TextBoxConsole.GetIn(nextScope).Read(),
+                    () => KIDConsole.GetIn(nextScope).Read(),
                     TestContext.Current.CancellationToken);
                 await WaitUntilAsync(() => !nextBox.IsReadOnly);
                 Assert.True(SendText(nextBox, "Z").Handled);
@@ -148,8 +148,8 @@ public sealed class StaticTextBoxConsoleSpecifications
             finally
             {
                 nextLease.BeginCleanup();
-                TextBoxConsole.BeginCleanup(nextEnvironment);
-                await TextBoxConsole.ShutdownAsync(nextEnvironment);
+                KIDConsole.BeginCleanup(nextEnvironment);
+                await KIDConsole.ShutdownAsync(nextEnvironment);
             }
         });
     }
@@ -161,25 +161,25 @@ public sealed class StaticTextBoxConsoleSpecifications
         {
             var oldLease = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
             var oldEnvironment = ExecutionEnvironmentManager.GetCurrent(1);
-            _ = TextBoxConsole.Init(new TextBox(), oldEnvironment);
+            _ = KIDConsole.Init(new TextBox(), oldEnvironment);
             oldLease.BeginCleanup();
-            TextBoxConsole.BeginCleanup(oldEnvironment);
-            await TextBoxConsole.ShutdownAsync(oldEnvironment);
+            KIDConsole.BeginCleanup(oldEnvironment);
+            await KIDConsole.ShutdownAsync(oldEnvironment);
             oldLease.Dispose();
 
             using var currentLease = ExecutionEnvironmentManager.BeginExecution(2, CancellationToken.None);
             var currentEnvironment = ExecutionEnvironmentManager.GetCurrent(2);
-            var currentScope = TextBoxConsole.Init(new TextBox(), currentEnvironment);
+            var currentScope = KIDConsole.Init(new TextBox(), currentEnvironment);
             try
             {
-                await TextBoxConsole.ShutdownAsync(oldEnvironment);
-                Assert.Same(currentScope, TextBoxConsole.CurrentScope);
+                await KIDConsole.ShutdownAsync(oldEnvironment);
+                Assert.Same(currentScope, KIDConsole.CurrentScope);
             }
             finally
             {
                 currentLease.BeginCleanup();
-                TextBoxConsole.BeginCleanup(currentEnvironment);
-                await TextBoxConsole.ShutdownAsync(currentEnvironment);
+                KIDConsole.BeginCleanup(currentEnvironment);
+                await KIDConsole.ShutdownAsync(currentEnvironment);
             }
         });
     }
@@ -195,13 +195,13 @@ public sealed class StaticTextBoxConsoleSpecifications
             await using var owner = new TextBoxConsoleContext(box);
             var conflicting = new TextBoxConsoleContext(new TextBox());
             owner.Init(1, CancellationToken.None);
-            var ownerScope = TextBoxConsole.CurrentScope;
+            var ownerScope = KIDConsole.CurrentScope;
 
             Assert.Throws<InvalidOperationException>(() =>
                 conflicting.Init(1, CancellationToken.None));
             await conflicting.DisposeAsync();
 
-            Assert.Same(ownerScope, TextBoxConsole.CurrentScope);
+            Assert.Same(ownerScope, KIDConsole.CurrentScope);
             global::System.Console.Write("owner");
             Assert.Equal("owner", box.Text);
 
@@ -215,15 +215,15 @@ public sealed class StaticTextBoxConsoleSpecifications
     [Fact]
     public void PublicApi_WithoutActiveExecution_HasDefinedBehavior()
     {
-        TextBoxConsole.Write("ignored");
-        TextBoxConsole.Clear();
+        KIDConsole.Write("ignored");
+        KIDConsole.Clear();
 
         Assert.Equal(
             "No console execution is active.",
-            Assert.Throws<InvalidOperationException>(() => TextBoxConsole.Read()).Message);
+            Assert.Throws<InvalidOperationException>(() => KIDConsole.Read()).Message);
         Assert.Equal(
             "No console execution is active.",
-            Assert.Throws<InvalidOperationException>(TextBoxConsole.ReadLine).Message);
+            Assert.Throws<InvalidOperationException>(KIDConsole.ReadLine).Message);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)

@@ -1,6 +1,6 @@
 namespace KID;
 
-public static partial class TextBoxConsole
+public static partial class KIDConsole
 {
     /// <summary>Публикует один UTF-16 символ в консоли текущей execution-сессии.</summary>
     public static void Write(char value) => Write(value.ToString());

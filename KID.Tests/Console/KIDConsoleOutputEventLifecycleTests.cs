@@ -8,7 +8,7 @@ using System.Windows.Controls;
 namespace KID.Tests.Console;
 
 [Collection(ExecutionLifecycleCollection.Name)]
-public sealed class TextBoxConsoleOutputEventLifecycleTests
+public sealed class KIDConsoleOutputEventLifecycleTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
@@ -20,7 +20,7 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
             using var environmentLease = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
             var environment = ExecutionEnvironmentManager.GetCurrent(1);
             var box = new TextBox();
-            _ = TextBoxConsole.Init(box, environment);
+            _ = KIDConsole.Init(box, environment);
             using var releaseFirst = new ManualResetEventSlim();
             var firstEntered = NewCompletionSource();
             var secondCalled = NewCompletionSource();
@@ -28,7 +28,7 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
             var firstRanOnDispatcher = true;
             var firstWasReleased = false;
 
-            TextBoxConsole.OutputReceived += _ =>
+            KIDConsole.OutputReceived += _ =>
             {
                 firstRanOnDispatcher = box.Dispatcher.CheckAccess();
                 order.Enqueue("first");
@@ -36,7 +36,7 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
                 firstWasReleased = releaseFirst.Wait(Timeout);
                 throw new InvalidOperationException("observer failure");
             };
-            TextBoxConsole.OutputReceived += _ =>
+            KIDConsole.OutputReceived += _ =>
             {
                 order.Enqueue("second");
                 secondCalled.TrySetResult();
@@ -44,7 +44,7 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
 
             try
             {
-                TextBoxConsole.Write("value");
+                KIDConsole.Write("value");
                 await firstEntered.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
                 Assert.False(firstRanOnDispatcher);
@@ -71,28 +71,28 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
         {
             using var environmentLease = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
             var environment = ExecutionEnvironmentManager.GetCurrent(1);
-            var scope = TextBoxConsole.Init(new TextBox(), environment);
+            var scope = KIDConsole.Init(new TextBox(), environment);
             using var releaseHandler = new ManualResetEventSlim();
             var handlerEntered = NewCompletionSource();
             var queuedCalls = 0;
 
-            TextBoxConsole.OutputReceived += value =>
+            KIDConsole.OutputReceived += value =>
             {
                 handlerEntered.TrySetResult();
                 _ = releaseHandler.Wait(Timeout);
             };
-            TextBoxConsole.OutputReceived += _ => Interlocked.Increment(ref queuedCalls);
+            KIDConsole.OutputReceived += _ => Interlocked.Increment(ref queuedCalls);
 
             Task? shutdown = null;
             try
             {
-                TextBoxConsole.Write("value");
+                KIDConsole.Write("value");
                 await handlerEntered.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
                 environmentLease.BeginCleanup();
-                TextBoxConsole.BeginCleanup(environment);
-                shutdown = TextBoxConsole.ShutdownAsync(environment).AsTask();
-                var repeatedShutdown = TextBoxConsole.ShutdownAsync(environment).AsTask();
+                KIDConsole.BeginCleanup(environment);
+                shutdown = KIDConsole.ShutdownAsync(environment).AsTask();
+                var repeatedShutdown = KIDConsole.ShutdownAsync(environment).AsTask();
 
                 Assert.Same(shutdown, repeatedShutdown);
                 Assert.False(shutdown.IsCompleted);
@@ -104,12 +104,12 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
 
                 Assert.Equal(0, Volatile.Read(ref queuedCalls));
                 Assert.True(scope.EventWorker.Completion.IsCompletedSuccessfully);
-                Assert.Null(TextBoxConsole.CurrentScope);
+                Assert.Null(KIDConsole.CurrentScope);
             }
             finally
             {
                 releaseHandler.Set();
-                if (TextBoxConsole.CurrentScope != null)
+                if (KIDConsole.CurrentScope != null)
                     await ShutdownAsync(environmentLease, environment);
                 else if (shutdown != null)
                     await shutdown;
@@ -125,9 +125,9 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
             using var environmentLease = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
             var environment = ExecutionEnvironmentManager.GetCurrent(1);
             var box = new TextBox();
-            _ = TextBoxConsole.Init(box, environment);
+            _ = KIDConsole.Init(box, environment);
             var handlerCalls = 0;
-            TextBoxConsole.OutputReceived += _ => Interlocked.Increment(ref handlerCalls);
+            KIDConsole.OutputReceived += _ => Interlocked.Increment(ref handlerCalls);
             using var outputAccepted = new ManualResetEventSlim();
             Task? writer = null;
             Task? shutdown = null;
@@ -137,15 +137,15 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
                 using var blocked = box.Dispatcher.DisableProcessing();
                 writer = Task.Run(() =>
                 {
-                    TextBoxConsole.Write("accepted");
+                    KIDConsole.Write("accepted");
                     outputAccepted.Set();
                 }, TestContext.Current.CancellationToken);
                 Assert.True(outputAccepted.Wait(Timeout));
                 Assert.Equal(string.Empty, box.Text);
 
                 environmentLease.BeginCleanup();
-                TextBoxConsole.BeginCleanup(environment);
-                shutdown = TextBoxConsole.ShutdownAsync(environment).AsTask();
+                KIDConsole.BeginCleanup(environment);
+                shutdown = KIDConsole.ShutdownAsync(environment).AsTask();
 
                 Assert.Equal("accepted", box.Text);
                 Assert.Equal(0, Volatile.Read(ref handlerCalls));
@@ -165,21 +165,21 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
         {
             var subscribedBeforeInitCalls = 0;
             var oldSessionCalls = 0;
-            TextBoxConsole.OutputReceived += _ =>
+            KIDConsole.OutputReceived += _ =>
                 Interlocked.Increment(ref subscribedBeforeInitCalls);
 
             using (var firstLease = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None))
             {
                 var firstEnvironment = ExecutionEnvironmentManager.GetCurrent(1);
-                _ = TextBoxConsole.Init(new TextBox(), firstEnvironment);
+                _ = KIDConsole.Init(new TextBox(), firstEnvironment);
                 var firstDelivered = NewCompletionSource();
-                TextBoxConsole.OutputReceived += _ =>
+                KIDConsole.OutputReceived += _ =>
                 {
                     Interlocked.Increment(ref oldSessionCalls);
                     firstDelivered.TrySetResult();
                 };
 
-                TextBoxConsole.Write("first");
+                KIDConsole.Write("first");
                 await firstDelivered.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
                 Assert.Equal(0, Volatile.Read(ref subscribedBeforeInitCalls));
                 Assert.Equal(1, Volatile.Read(ref oldSessionCalls));
@@ -188,11 +188,11 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
 
             using var nextLease = ExecutionEnvironmentManager.BeginExecution(2, CancellationToken.None);
             var nextEnvironment = ExecutionEnvironmentManager.GetCurrent(2);
-            _ = TextBoxConsole.Init(new TextBox(), nextEnvironment);
+            _ = KIDConsole.Init(new TextBox(), nextEnvironment);
             var nextDelivered = NewCompletionSource();
-            TextBoxConsole.OutputReceived += _ => nextDelivered.TrySetResult();
+            KIDConsole.OutputReceived += _ => nextDelivered.TrySetResult();
 
-            TextBoxConsole.Write("next");
+            KIDConsole.Write("next");
             await nextDelivered.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
 
             Assert.Equal(0, Volatile.Read(ref subscribedBeforeInitCalls));
@@ -221,12 +221,12 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
     {
         using var environmentLease = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
         var environment = ExecutionEnvironmentManager.GetCurrent(1);
-        _ = TextBoxConsole.Init(new TextBox(), environment);
+        _ = KIDConsole.Init(new TextBox(), environment);
         var observer = new OutputObserver();
-        TextBoxConsole.OutputReceived += observer.Receive;
+        KIDConsole.OutputReceived += observer.Receive;
         var reference = new WeakReference(observer);
 
-        TextBoxConsole.Write("value");
+        KIDConsole.Write("value");
         await observer.Called.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
         await ShutdownAsync(environmentLease, environment);
         observer = null!;
@@ -238,8 +238,8 @@ public sealed class TextBoxConsoleOutputEventLifecycleTests
         ExecutionEnvironment environment)
     {
         environmentLease.BeginCleanup();
-        TextBoxConsole.BeginCleanup(environment);
-        await TextBoxConsole.ShutdownAsync(environment);
+        KIDConsole.BeginCleanup(environment);
+        await KIDConsole.ShutdownAsync(environment);
     }
 
     private static TaskCompletionSource NewCompletionSource() =>

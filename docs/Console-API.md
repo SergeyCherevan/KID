@@ -150,7 +150,7 @@ Console.WriteLine("Консоль очищена!");
 ```
 
 **Особенности:**
-- Автоматически заменяется компилятором на `global::KID.TextBoxConsole.Clear()`
+- Автоматически заменяется компилятором на `global::KID.KIDConsole.Clear()`
 - Работает как стандартный `Console.Clear()` в пользовательском коде
 - Полностью очищает содержимое панели консоли
 
@@ -258,7 +258,7 @@ Console.WriteLine("Время вышло!");
 ### Автоматическая замена Console.Clear()
 
 Компилятор автоматически заменяет настоящий безаргументный `System.Console.Clear()` на
-`global::KID.TextBoxConsole.Clear()`. Одноимённые пользовательские типы и методы не переписываются.
+`global::KID.KIDConsole.Clear()`. Одноимённые пользовательские типы и методы не переписываются.
 
 ## Ограничения
 
@@ -271,13 +271,13 @@ Console.WriteLine("Время вышло!");
 
 Модуль консоли разделён между библиотечным runtime и host-интеграцией IDE.
 
-- `KID.TextBoxConsole` — публичный статический facade в `KID.Library` для `Read`, `ReadLine`,
+- `KID.KIDConsole` — публичный статический facade в `KID.Library` для `Read`, `ReadLine`,
   `Write`, `Clear` и `OutputReceived`.
 - `ConsoleExecutionScope` — внутренний пассивный паспорт запуска: он хранит точные
   `ExecutionEnvironment`, WPF `TextBox` и `ExecutionEventWorker`.
 - `TextBoxConsoleContext` остаётся в `KID.WPF.IDE` и один владеет process-wide перенаправлением
   `System.Console.In/Out/Error` и восстановлением исходных streams.
-- Instance `TextBoxConsole`, `IConsole` и вложенный `StaticConsole` удалены.
+- Instance `KIDConsole`, `IConsole` и вложенный `StaticConsole` удалены.
 
 ### Execution-scoped static runtime
 
@@ -291,7 +291,7 @@ Console.WriteLine("Время вышло!");
 - stale writer/read-request/shutdown не могут обратиться к TextBox или состоянию нового запуска.
 
 Scope-bound writer предоставляет только `TextWriter` API и не содержит `Clear`. Публичный
-`TextBoxConsole.Clear()` обслуживает активную сессию и используется compiler rewrite.
+`KIDConsole.Clear()` обслуживает активную сессию и используется compiler rewrite.
 
 ### Input, output и UI
 
@@ -329,7 +329,7 @@ Run.
 ### Compiler rewrite и зависимости
 
 `ConsoleClearRewriter` семантически заменяет только настоящий безаргументный
-`System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`. Сгенерированная программа
+`System.Console.Clear()` на `global::KID.KIDConsole.Clear()`. Сгенерированная программа
 ссылается на `KID.Library`; Console bridge больше не создаёт обязательную runtime dependency на
 `KID.WPF.IDE`.
 
