@@ -2,15 +2,19 @@
 
 **Production-ready: нет — решение `No-Go`.**
 
+**Статус актуализации:** 2026-10-05, ветка `develop`, коммит `f4ea499` до правки этого документа.
+Ниже результаты прежних веток и ручных проверок сохранены как исторические свидетельства;
+текущими считаются только проверки, явно датированные 2026-10-05. Оценки готовности ниже
+остаются экспертными ориентирами от 2026-09-20, а не результатом нового количественного пересчёта.
+
 Исходная оценка от 2026-08-05:
 
 - **Для локального использования автором с доверенным кодом:** примерно **6,5/10**, поздняя beta.
 - **Для распространения среди учеников и запуска полученных извне `.cs`-файлов:** примерно **3/10**, небезопасно.
 - **Общая production-readiness:** около **40–45%**.
 
-Актуализированная оценка от 2026-09-20 после завершения execution-scoped миграции
-`TextBoxConsole`, единого compilation profile, structured logging/global diagnostics и текущего
-worktree с атомарным файловым хранилищем:
+Оценка от 2026-09-20 после завершения execution-scoped миграции `TextBoxConsole`, единого
+compilation profile, structured logging/global diagnostics и атомарного файлового хранилища:
 
 - **Для локального использования автором с доверенным кодом:** примерно **8,5/10**, стабильная beta.
 - **Для распространения среди учеников при условии запуска собственного или иного доверенного кода:** примерно **7,5/10**, beta.
@@ -21,42 +25,55 @@ worktree с атомарным файловым хранилищем:
 reliability-риски: Console перенесена в `KID.Library` как execution-scoped static runtime с защитой
 от stale-потоков, readers и callbacks, редактор и compiler используют один детерминированный
 compilation profile, а обычные файлы, recovery и настройки теперь публикуются одним атомарным
-механизмом. Сохранения настроек дополнительно упорядочены очередью. Полный Release-прогон текущего
-worktree — **242/242** теста; ручной standalone `.exe` smoke и dispatcher crash smoke также
-подтверждены. Балл для недоверенного кода не вырос: изменения сознательно сохраняют in-process
-trust model и не добавляют security sandbox.
+механизмом. Сохранения настроек дополнительно упорядочены очередью. На `develop` 2026-10-05
+Release-сборка прошла с **0 предупреждений и 0 ошибок**, тесты — **242/242**; framework-dependent
+publish создан. Ручной standalone `.exe` smoke и dispatcher crash smoke относятся к предыдущим
+проверкам, а не к этому publish. Балл для недоверенного кода не вырос: изменения сознательно
+сохраняют in-process trust model и не добавляют security sandbox.
 Верхнюю границу общей оценки по-прежнему ограничивают отсутствие CI, отсутствие версии/миграции
-схемы настроек, зависимость конфигурации от working directory, незавершённый release engineering
-и неподтверждённая accessibility.
+схемы настроек, незавершённый release engineering и неподтверждённая accessibility.
+Зависимость default-конфигурации и шаблона от working directory устранена ранее и не является
+открытым пунктом.
 
-За 5 августа устранены startup-deadlock, warning-сборка и риск молчаливой потери несохранённого кода. На ветке `feature/FixC2C3` C2 принят как осознанная in-process trust model для доверенного учебного кода, а согласованный кооперативный scope C3 реализован и подтверждён. Общий `No-Go` для широкого production-релиза сохраняется из-за остальных пунктов аудита, а не из-за требования обязательно вынести выполнение в sandbox/worker.
+После исходного аудита устранены startup-deadlock, warning-сборка и риск молчаливой потери несохранённого кода. На ветке `feature/FixC2C3` C2 принят как осознанная in-process trust model для доверенного учебного кода, а согласованный кооперативный scope C3 реализован и подтверждён. Общий `No-Go` для широкого production-релиза сохраняется из-за остальных пунктов аудита, а не из-за требования обязательно вынести выполнение в sandbox/worker.
+
+## 📌 Открытые задачи на 2026-10-05
+
+1. **Quality gate:** добавить CI для restore, Release build, тестов, NuGet vulnerability scan и publish. Локальный прогон 242/242 не заменяет автоматическую проверку каждого изменения.
+2. **Устойчивость настроек:** ввести версию схемы, миграции и валидацию `settings.json`; определить восстановление повреждённого файла без потери доступных пользовательских данных.
+3. **Дистрибутив:** выбрать и оформить installer/MSIX, версионирование и code signing; подготовить SBOM, third-party notices и корневые README, LICENSE, SECURITY, CHANGELOG. Текущий framework-dependent publish получен, но не подписан и не упакован. Self-contained publish требует отдельной доработки `KIDCompilationProfileProvider`, который сейчас отвергает такое размещение assemblies.
+4. **Release smoke:** проверить именно текущий publish на чистой Windows-машине с .NET 10 Desktop Runtime, включая cold start и основные сценарии Run/Stop, сохранения и восстановления.
+5. **Accessibility и UI:** задать критерии приёмки и вручную проверить клавиатуру, screen reader, High Contrast, DPI и локализации; автоматическое покрытие startup/тем/ошибок настроек расширять по обнаруженным рискам.
+6. **Условно, при изменении trust model:** если появится требование запускать недоверенные `.cs`, отдельно определить threat model и OS-level изоляцию. Для принятого trusted-code scope это не блокер.
 
 ## 🔬 Что проверено
 
-- В текущем checkout: 165 production C#-файлов и около 16 371 строки production C#; отдельно 34 test C#-файла и около 8 464 строк тестового кода.
+- Исторический срез предыдущего checkout: 165 production C#-файлов и около 16 371 строки production C#; отдельно 34 test C#-файла и около 8 464 строк тестового кода. Эти объёмы 2026-10-05 не пересчитывались.
 - Два production-проекта: `KID.WPF.IDE` и `KID.Library`.
 - На момент исходного аудита было **0 тестовых проектов**; сейчас в решение добавлен `KID.Tests`.
 - В исходном аудите проверены восемь коммитов за 5 августа; на тот момент изменения production-кода были включены в `task/AtomicFilePersistence` (`02be930`).
 - Предыдущий аудитный checkout — `task/AtomicFilePersistence` на `c0b5b40` с изменениями файловой подсистемы, настроек, локализации и их тестов. Историческая проверка compilation profile относилась к `feature/CompilationProfile` на `6ad3342`.
-- Текущий checkout для structured diagnostics — `feature/StructuredLoggingAndGlobalDiagnostics` на `31f3b20`; после ручной проверки рабочее дерево чистое.
-- В обоих production-проектах включён `TreatWarningsAsErrors`; последняя зафиксированная Release-сборка текущей ветки завершилась с **0 ошибок и 0 предупреждений**.
+- Исторический checkout для structured diagnostics — `feature/StructuredLoggingAndGlobalDiagnostics` на `31f3b20`; после ручной проверки рабочее дерево было чистым.
+- Текущий checkout 2026-10-05 — `develop` на `f4ea499` до правки аудита. В обоих production-проектах включён `TreatWarningsAsErrors`; `dotnet build KID.sln -c Release --no-restore` завершился с **0 ошибок и 0 предупреждений**.
+- `dotnet test KID.sln -c Release --no-restore` на том же checkout: **242 passed, 0 skipped, 0 failed**. Это локальная проверка, не CI и не проверка GUI.
 - Контрольная проверка C2/C3 на `feature/FixC2C3` от 2026-09-15: `dotnet restore KID.sln` и Release build успешны; `dotnet test KID.sln -c Release --no-restore` — **166 passed, 0 skipped, 0 failed**; focused-набор Этапа 9 ранее повторён 10 раз — **10/10 PASS**.
 - На ветке `feature/TextBoxConsoleExecutionScope` после переноса Console зафиксированы: targeted hardening **9/9**, Console **52/52**, полный набор **188 passed, 0 skipped, 0 failed**, Release build без warnings/errors.
 - На `feature/CompilationProfile` (`6ad3342`) исторически зафиксированы: Release build — **0 warnings, 0 errors**; полный набор — **219 passed, 0 skipped, 0 failed**; `git diff --cached --check` прошёл.
 - На предыдущем `task/AtomicFilePersistence` (`c0b5b40` + worktree) выполнен `dotnet test KID.sln -c Release --no-restore`: **232 passed, 0 skipped, 0 failed**; сборка трёх проектов завершилась без предупреждений и ошибок.
-- NuGet vulnerability scan: известных уязвимых пакетов по текущим источникам не найдено.
-- Framework-dependent publish текущего `task/AtomicFilePersistence` успешно создан: 54 файла и 35,74 МБ в корне publish-каталога; 214 файлов и 51,19 МБ с учётом вложенных runtime- и localization-каталогов.
-- Исторический publish этого worktree требовал установленный .NET 8 Desktop Runtime, имел версию `1.0.0.0` и **не был подписан**; после retargeting на .NET 10 актуальный publish и smoke на чистой машине нужно отдельно подтвердить под .NET 10 Desktop Runtime.
-- Все три локализации содержат одинаковые 50 ключей.
-- Светлая и тёмная темы содержат одинаковые 54 ресурсных ключа.
+- Исторический NuGet vulnerability scan не нашёл известных уязвимых пакетов по использованным тогда источникам; 2026-10-05 скан не повторялся.
+- Исторический framework-dependent publish `task/AtomicFilePersistence`: 54 файла и 35,74 МБ в корне publish-каталога; 214 файлов и 51,19 МБ с вложенными каталогами. Он требовал .NET 8 Desktop Runtime, имел версию `1.0.0.0` и не был подписан.
+- На `develop` 2026-10-05 успешно выполнен `dotnet publish KID.WPF.IDE/KID.WPF.IDE.csproj -c Release --no-restore --self-contained false`. Созданы `KID.WPF.IDE.exe` и runtimeconfig с `Microsoft.NETCore.App`/`Microsoft.WindowsDesktop.App` версии `10.0.0`; версия файла `.exe` — `1.0.0.0`, `Get-AuthenticodeSignature` — `NotSigned`. Publish получен локально; cold-start smoke на чистой Windows-машине с .NET 10 Desktop Runtime не выполнялся.
+- Историческая проверка: все три локализации содержали одинаковые 50 ключей; отдельно 2026-10-05 ключи не пересчитывались.
+- Историческая проверка: светлая и тёмная темы содержали одинаковые 54 ресурсных ключа; отдельно 2026-10-05 ключи не пересчитывались.
 - В исходном аудите GUI не запускался. Для C2/C3 отдельно выполнен headless runtime smoke, а пользователь подтвердил manual GUI/visual checklist 2026-09-15. Для compilation profile 2026-09-18 пользователь отдельно подтвердил одинаковые completion, diagnostics и Run result в standalone `.exe` и Visual Studio F5.
 - Актуализация 2026-09-20: все три проекта переведены на `net10.0-windows`, добавлен корневой `global.json` для стабильного .NET 10 SDK; пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242 passed, 0 skipped, 0 failed** и успешный прогон программы на разных сценариях. Скриншот Visual Studio фиксирует 242/242 теста и build 0/0. Отдельная проверка актуального publish на чистой машине в эту запись не включена.
+- После этой проверки на `develop` обновлены `docs/README.md` (`6dfa06b`) и пакеты интеграции тестов с Visual Studio в `KID.Tests.csproj` (`f4ea499`). Текущие локальные build/test выше подтверждают состояние после этих коммитов; работа Test Explorer в Visual Studio отдельно не проверялась.
 
 ## 🚨 Критичные проблемы исходного аудита — C2/C3 повторно оценены
 
 ### ✅ C1. Возможен deadlock при запуске приложения — устранено в `feature/FixStartupDeadlock`, включено в `task/AtomicFilePersistence`
 
-Исходный риск подтверждался: главное окно синхронно выполняло инициализацию в `Loaded`, а создание Roslyn-редактора блокировало UI-поток через `.GetAwaiter().GetResult()`. В текущем `task/AtomicFilePersistence` вся цепочка переведена на асинхронную модель:
+Исходный риск подтверждался: главное окно синхронно выполняло инициализацию в `Loaded`, а создание Roslyn-редактора блокировало UI-поток через `.GetAwaiter().GetResult()`. В текущем `develop` эта цепочка остаётся асинхронной:
 
 - `ICodeEditorFactory.CreateAsync()` возвращает `Task<TextEditor>`, а `RoslynCodeEditorFactory` напрямую ожидает `InitializeAsync()` без `.GetResult()` и подавления анализатора: [ICodeEditorFactory.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeEditor/Interfaces/ICodeEditorFactory.cs:18>), [RoslynCodeEditorFactory.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs:34>).
 - Создание вкладки и инициализация окна асинхронны end-to-end: [CodeEditorsViewModel.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/ViewModels/CodeEditorsViewModel.cs:273>), [WindowInitializationService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs:54>).
@@ -155,7 +172,8 @@ Restricted token/AppContainer, запреты файловой системы/с
 
 Доказательства разделены: исходный C2/C3 runtime suite — 166/166; после Console migration/hardening —
 targeted 9/9, Console 52/52 и полный набор 188/188; исторический compilation-profile набор — 219/219,
-а текущий полный прогон `task/AtomicFilePersistence` с worktree — 232/232.
+проверка `task/AtomicFilePersistence` с worktree — 232/232, текущий локальный прогон `develop`
+от 2026-10-05 — 242/242.
 Console soak выполняет 50 последовательных циклов Init → Read → Stop → Shutdown с проверкой отписок,
 readers, worker queue и collectibility scope. Headless runtime smoke и manual GUI/visual acceptance
 учитываются отдельно. Это подтверждает C3, но не превращает in-process модель в security sandbox.
@@ -174,12 +192,12 @@ readers, worker queue и collectibility scope. Headless runtime smoke и manual 
 - `CodeFileService` разрешает сохранение пустого и состоящего только из пробелов содержимого: [CodeFileService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/CodeFileService.cs:56>).
 - `FileService` атомарно публикует пользовательские файлы, recovery и JSON-настройки через временный файл в каталоге назначения; focused-тесты проверяют замену, сохранение прежнего файла при ошибке и cleanup временного файла: [FileService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/FileService.cs:43>), [FileServiceTests.cs](</D:/Visual Studio Projects/KID/KID.Tests/FileServiceTests.cs:7>).
 
-Release-сборка текущего `task/AtomicFilePersistence` проходит без ошибок и предупреждений. Runtime/visual acceptance диалогов и автоматизированные regression-тесты по-прежнему нужны, но исходный сценарий молчаливой потери данных устранён на уровне реализации.
+Release-сборка текущего `develop` проходит без ошибок и предупреждений. Локальный полный набор regression-тестов — 242/242; свежая ручная visual acceptance диалогов на текущем publish не выполнялась. Исходный сценарий молчаливой потери данных устранён на уровне реализации.
 
 ## ⚠️ Проблемы средней серьёзности
 
 1. **✅ Автоматизированные execution/Console/compilation-profile и базовые persistence-тесты добавлены; CI по-прежнему отсутствует.**
-   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; текущий полный прогон — 242/242. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
+   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; локальный прогон 2026-10-05 — 242/242. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
    Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка завершается с **0 ошибок и 0 предупреждений**.
@@ -195,14 +213,14 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 
 6. **✅ Переход на поддерживаемую платформу выполнен; release-проверки продолжаются.**
 
-   Все три проекта (`KID.WPF.IDE`, `KID.Library`, `KID.Tests`) переведены с `net8.0-windows` на `net10.0-windows`; добавлен корневой `global.json`, который фиксирует стабильную ветку .NET 10 SDK. 20 сентября 2026 года пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242/242** тестов и успешный ручной прогон программы на разных сценариях. .NET 10 — активный LTS до **14 ноября 2028 года**; прежняя проблема поддержки .NET 8 закрыта на уровне исходных проектов. Отдельно остаются актуальный framework-dependent publish, проверка на чистой Windows-машине с .NET 10 Desktop Runtime и release engineering (подпись, installer/versioning). [Официальный lifecycle .NET](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)
+   Все три проекта (`KID.WPF.IDE`, `KID.Library`, `KID.Tests`) переведены с `net8.0-windows` на `net10.0-windows`; добавлен корневой `global.json`, который фиксирует стабильную ветку .NET 10 SDK. 20 сентября 2026 года пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242/242** тестов и успешный ручной прогон программы на разных сценариях. 2026-10-05 на `develop` повторены Release build (**0/0**) и тесты (**242/242**), а также создан актуальный framework-dependent publish. Отдельно остаются проверка этого publish на чистой Windows-машине с .NET 10 Desktop Runtime и release engineering (подпись, installer/versioning). По [официальной политике поддержки .NET](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core), .NET 10 — LTS до 14 ноября 2028 года.
 
 7. **✅ Основной пакетный стек обновлён; остаточный риск RoslynPad WPF задокументирован.**
-   На 20 сентября 2026 года IDE использует RoslynPad `5.0.0` (три пакета), Roslyn `5.9.0` с единым pinned family (CodeAnalysis/CSharp/Features/Scripting/Workspaces), NAudio `3.1.0`, DI/Logging `10.0.12`, Serilog.Extensions.Logging `10.0.0`; тестовый проект — xUnit `4.0.1` через Microsoft Testing Platform. Compatibility spike `RoslynPad 5.0.0 + Roslyn 5.3.0 → Roslyn 5.9.0` прошёл: Release build `0 warnings/0 errors`, `242/242` тестов. Publish `.exe` сформирован; deps.json подтверждает итоговые версии. Vulnerability scans не нашли известных уязвимостей; outdated scans не нашли обновлений. Deprecated scan показывает только транзитивный `System.Reactive.Linq 6.1.0 (Legacy)`, принесённый RoslynPad 5; устранение требует upstream/fork либо замены редактора.
-   RoslynPad upstream объявил завершение WPF-линии в пользу нового редактора; это отдельная архитектурная задача, не часть текущего package alignment. [RoslynPad](https://www.nuget.org/packages/RoslynPad.Editor.Windows/), [Roslyn](https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp), [NAudio](https://www.nuget.org/packages/NAudio), [DI](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection)
+   На 2026-10-05 IDE по `csproj` использует RoslynPad `5.0.0` (три пакета), Roslyn `5.9.0` с единым pinned family (CodeAnalysis/CSharp/Features/Scripting/Workspaces), NAudio `3.1.0`, DI/Logging `10.0.12`, Serilog.Extensions.Logging `10.0.0`; тестовый проект — xUnit `4.0.1`, `Microsoft.NET.Test.Sdk` `18.8.1` и `xunit.runner.visualstudio` `4.0.0` через Microsoft Testing Platform. Локальные Release build и тесты прошли. Исторические vulnerability/outdated scans не нашли известных уязвимостей или обновлений на использованных тогда источниках; deprecated scan показывал транзитивный `System.Reactive.Linq 6.1.0 (Legacy)` из RoslynPad 5. В этот день сканы не повторялись, а устранение остаточного риска требует upstream/fork либо замены редактора.
+   Историческая оценка upstream-риска: RoslynPad объявил завершение WPF-линии в пользу нового редактора; это отдельная архитектурная задача, не часть текущего package alignment. Состояние upstream 2026-10-05 отдельно не перепроверялось. [RoslynPad](https://www.nuget.org/packages/RoslynPad.Editor.Windows/), [Roslyn](https://www.nuget.org/packages/Microsoft.CodeAnalysis.CSharp), [NAudio](https://www.nuget.org/packages/NAudio), [DI](https://www.nuget.org/packages/Microsoft.Extensions.DependencyInjection)
 
 8. **Нет полноценного release-процесса.**  
-   Отсутствуют CI, installer/MSIX, code signing, SBOM, third-party notices, корневой README, LICENSE, SECURITY, CHANGELOG и управляемое версионирование.
+   На текущем `develop` отсутствуют CI, installer/MSIX, code signing, SBOM, third-party notices, корневые README, LICENSE, SECURITY, CHANGELOG и управляемое версионирование. `docs/README.md` обновлён, но корневого README нет; framework-dependent publish создаётся, однако его `.exe` пока имеет `FileVersion=1.0.0.0` и не подписан.
 
 9. **✅ Основная архитектурная документация синхронизирована с кодом.**
    `ARCHITECTURE.md`, `SUBSYSTEMS.md`, `FEATURES.md`, `DEVELOPMENT.md` и API-документы описывают безопасное закрытие/autosave, C2/C3 lifecycle, статический execution-scoped Console runtime в `KID.Library`, process-wide stream ownership в IDE и единый compilation profile редактора/compiler. Независимая проверка документации при будущих изменениях всё ещё не автоматизирована.
@@ -214,12 +232,12 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 
 - ✅ `isRunning` заменён на синхронизированную `ExecutionSession` и enum-based FSM.
 - ✅ Session `CancellationTokenSource` имеет одного владельца и освобождается после зависимых ожиданий и cleanup.
-- `ThemeService` очищает все merged dictionaries, что сломает будущие общие ресурсы: [ThemeService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Themes/ThemeService.cs:80>).
-- В каталоге проекта лежат старые ignored `*wpftmp.csproj` с абсолютными локальными путями — они не попадают в Git, но загрязняют поиск и диагностику.
+- `ThemeService` очищает все merged dictionaries. Пока коллекция содержит только словарь темы, это не наблюдаемый дефект; при добавлении общих ресурсов их также удалит переключение темы: [ThemeService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Themes/ThemeService.cs:79>).
+- ✅ Старые `*wpftmp.csproj` в текущем checkout 2026-10-05 не обнаружены, включая игнорируемые файлы. Правило `*_wpftmp.csproj` остаётся в `.gitignore`; прежнее замечание о лежащих в каталоге файлах устарело.
 - `Music` теперь переиспользует один `HttpClient`, передаёт cancellation token и детерминированно удаляет временные файлы, но URL-ответ всё ещё материализуется целиком в память без отдельного ограничения размера: [MusicRuntime.cs](</D:/Visual Studio Projects/KID/KID.Library/Music/MusicRuntime.cs>).
 - Compilation profile детерминирован, но вся публичная поверхность `KID.Library` compile-visible; вместе с учебным API доступны runtime-support типы `StopManager`, `TextBoxConsole` и `DispatcherManager`.
 - Из-за публичного `NAudio.Wave.PlaybackState` в API KID профиль вынужден напрямую открывать всю публичную поверхность `NAudio.Core`; сужение границы потребует собственного KID enum и совместимой API-миграции.
-- В коде и документации остаётся значительное количество подавленных исключений и комментариев, описывающих будущие исправления вместо формализованных задач.
+- В коде остаются широкие `catch` и комментарии о будущих изменениях. Некоторые `catch` намеренно собирают ошибки cleanup либо игнорируют ожидаемую отмену; общая формулировка «подавленные исключения» не доказывает дефект. Для отдельной задачи нужен поштучный разбор с вызывающим кодом, обработкой ошибки и тестом конкретного сценария.
 
 ## ✅ Сильные стороны
 
@@ -233,15 +251,15 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 - Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
-- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics и базовые persistence-контракты: 242 passed, 0 skipped, 0 failed в финальном полном прогоне.
+- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics и базовые persistence-контракты: 242 passed, 0 skipped, 0 failed в локальном прогоне 2026-10-05.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.
-- Release build и базовый publish проходят.
+- Release build и framework-dependent publish `develop` от 2026-10-05 проходят; актуальный publish пока не проверен на чистой машине.
 - NuGet-аудит не нашёл известных уязвимых пакетов.
 - Документация объёмная; разделы об архитектуре редактора, закрытии, autosave и восстановлении сессии актуализированы вместе с кодом.
 
-## 🗓️ План на ближайшие недели
+## 🗓️ Исходный поэтапный план и его состояние
 
 ### Неделя 1 — стабилизация P0
 
@@ -281,9 +299,9 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 
 ### Неделя 6 — релизная упаковка
 
-- Installer/MSIX, code signing, versioning.
+- Installer/MSIX, code signing, versioning; framework-dependent publish уже получен, но остаётся непроверенным на чистой машине.
 - SBOM и third-party notices.
-- README, LICENSE, SECURITY, CHANGELOG.
+- Корневые README, LICENSE, SECURITY, CHANGELOG; `docs/README.md` уже существует и обновлён.
 - Smoke-тест чистой Windows-машины.
 - Ручная проверка UI, High Contrast, DPI, клавиатуры и локализаций.
 
@@ -298,7 +316,7 @@ Release-сборка текущего `task/AtomicFilePersistence` проход�
 7. **P1 — выполнено:** заменить AppDomain-зависимые references единым детерминированным compilation profile редактора/compiler.
 8. **P1 — частично выполнено:** добавлены критические compiler/editor/compilation-profile/Console/library/lifecycle и базовые file/session/settings/localization tests; startup, themes и расширенные failure-сценарии оцениваются отдельно.
 9. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`; создать CI.
-10. **P1 — выполнено в текущем worktree:** пользовательские файлы, настройки и autosave/recovery публикуются атомарно; сохранения настроек упорядочены.
+10. **P1 — выполнено на `develop`:** пользовательские файлы, настройки и autosave/recovery публикуются атомарно; сохранения настроек упорядочены.
 11. **P1 — выполнено для текущего package scope:** production/test stack aligned and validated; remaining residuals are legacy `System.Reactive.Linq` transitively from RoslynPad and upstream WPF-line support risk.
 12. **P1:** подписанный и версионированный дистрибутив.
 
