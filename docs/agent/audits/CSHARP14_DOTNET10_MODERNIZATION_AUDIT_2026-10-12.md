@@ -108,28 +108,28 @@ Multi-targeting отсутствует. Явного `LangVersion` в проек
 
 ## 📊 3. Сводная таблица рекомендаций
 
-Таблица сохраняет рекомендации исходного аудита до реализации; текущий статус каждой группы указан в разделе 0 и под её заголовком. Одна строка — группа изменений; места одной группы перечислены далее. Приоритет относится к KID и его действующим контрактам, а не к новизне синтаксиса.
+Таблица сохраняет рекомендации исходного аудита до реализации; текущий статус каждой группы отмечен в столбце «Статус» и описан в разделе 0 и под её заголовком. **✅ — реализовано; ⏸️ — отложено по решению пользователя (ещё не реализовано).** Одна строка — группа изменений; места одной группы перечислены далее. Приоритет относится к KID и его действующим контрактам, а не к новизне синтаксиса.
 
-| Приоритет | Файл и строка | Текущее решение | Предлагаемое изменение | Преимущество | Риск |
-|---|---|---|---|---|---|
-| P0 · R01 | CancellationInstrumentationRewriter.cs:501–524 | Любой operator => превращается в return | Учитывать IMethodSymbol.ReturnsVoid | Корректный C# 14 в KID | Нужна регрессия прежних операторов |
-| P1 · R02 | MusicRuntime.cs:57–66; Music.Advanced.cs:161–170 | HTTP body целиком в byte[] | Ограниченная потоковая загрузка в temp file | Ограничение памяти/размера | Новый лимит, lifecycle temp file |
-| P1 · R03 | Graphics.SimpleFigures.cs:128–152,165–189 | Проверяется лишь null/0 | Проверять минимум 3/4 точки | Ошибка аргумента до UI-операции | Меняется тип ошибки некорректного ввода |
-| P1 · R04 | FileService.cs:85–91; WindowConfigurationData.cs:9–19 | JSON может нарушить NRT | RespectNullableAnnotations + model validation | Защита persistence boundary | Политика восстановления старых файлов |
-| P2 · R05 | 21 lock-поле, полный список ниже | private readonly object | System.Threading.Lock | Явный тип синхронизации | Нельзя смешивать с Monitor |
-| P2 · R06 | OpenedFileTab.cs:11–38,81–85; MainViewModel.cs:15–33 | 5 ручных backing fields | field с прежним SetProperty | Меньше дублирования | Сохранить initializers/уведомления |
-| P2 · R07 | OpenedFileTab.cs:72–76; Music.Advanced.cs:78–83 | if + одиночная запись | Null-conditional assignment | Яснее nullable-действие | Не распространять на многокомандные блоки |
-| P2 · R08 | FileService.cs:94–103; CrashReportWriter.cs:64–66 | Новые JSON options каждый раз | Кэшировать неизменяемые options | Повторное использование metadata cache | Не менять naming/defaults |
-| P2 · R09 | CSharpCompiler.cs:323–325; CompilationArtifact.cs:44–45 | ToArray перед защитным ToArray | Передавать точный срез буфера | Убрать одну копию PE и PDB | Ограничить Length, сохранить защитную копию |
-| P2 · R10 | FontProviderService.cs:47–50 | Contains + Add | Использовать результат Add | Один поиск, тот же порядок | Низкий |
-| P2 · R11 | Mouse.System.cs:203–210 | Ручное nullable equality | Lifted Point operator == | Убрать ветви и null-forgiving | Не заменять на Nullable.Equals |
-| P2 · R12 | Graphics/Sprite: 38 Canvas checks + 3 input guards | Сообщение попадает в paramName | Верный тип/paramName исключения | Точная диагностика | Контракт исключений |
-| P2 · R13 | FileService.cs:89 | Последний duplicate JSON key побеждает | AllowDuplicateProperties=false для settings/session | Однозначность данных | Ранее допустимые файлы отвергаются |
-| P2 · R14 | Проекты: свойства анализа; .editorconfig отсутствует | Правила не закреплены | Малый явный набор правил | Не возвращать исправленные дефекты | TWA требует постепенного включения |
-| P2 · R15 | LocalizationService.cs:86–89 | Ambient culture при форматировании | Явная culture сервиса | Последовательная локализация | Меняется формат чисел/дат при разных cultures |
-| P3 · R16 | RoslynHostService.cs:47–51; ProfileProvider.cs:221–228; Keyboard.State.cs:13–19 | Повторение типов/array initializer | Локальные collection expressions/new() | Согласованность стиля | Сохранить target type/comparer |
-| P3 · R17 | WindowConfigurationData.cs:19–34 | Verbatim string с удвоением кавычек | Raw string literal | Шаблон читается как исходник | Переносы и отступы — часть данных |
-| P3 · R18 | CodeEditorsView.xaml:68–72,108–116 | Простые Grid definitions | WPF .NET 10 shorthand | Меньше XAML boilerplate | Не потерять MinWidth/MinHeight |
+| Статус | Приоритет | Файл и строка | Текущее решение | Предлагаемое изменение | Преимущество | Риск |
+|---|---|---|---|---|---|---|
+| ✅ | P0 · R01 | CancellationInstrumentationRewriter.cs:501–524 | Любой operator => превращается в return | Учитывать IMethodSymbol.ReturnsVoid | Корректный C# 14 в KID | Нужна регрессия прежних операторов |
+| ⏸️ | P1 · R02 | MusicRuntime.cs:57–66; Music.Advanced.cs:161–170 | HTTP body целиком в byte[] | Ограниченная потоковая загрузка в temp file | Ограничение памяти/размера | Новый лимит, lifecycle temp file |
+| ✅ | P1 · R03 | Graphics.SimpleFigures.cs:128–152,165–189 | Проверяется лишь null/0 | Проверять минимум 3/4 точки | Ошибка аргумента до UI-операции | Меняется тип ошибки некорректного ввода |
+| ✅ | P1 · R04 | FileService.cs:85–91; WindowConfigurationData.cs:9–19 | JSON может нарушить NRT | RespectNullableAnnotations + model validation | Защита persistence boundary | Политика восстановления старых файлов |
+| ✅ | P2 · R05 | 21 lock-поле, полный список ниже | private readonly object | System.Threading.Lock | Явный тип синхронизации | Нельзя смешивать с Monitor |
+| ✅ | P2 · R06 | OpenedFileTab.cs:11–38,81–85; MainViewModel.cs:15–33 | 5 ручных backing fields | field с прежним SetProperty | Меньше дублирования | Сохранить initializers/уведомления |
+| ✅ | P2 · R07 | OpenedFileTab.cs:72–76; Music.Advanced.cs:78–83 | if + одиночная запись | Null-conditional assignment | Яснее nullable-действие | Не распространять на многокомандные блоки |
+| ✅ | P2 · R08 | FileService.cs:94–103; CrashReportWriter.cs:64–66 | Новые JSON options каждый раз | Кэшировать неизменяемые options | Повторное использование metadata cache | Не менять naming/defaults |
+| ⏸️ | P2 · R09 | CSharpCompiler.cs:323–325; CompilationArtifact.cs:44–45 | ToArray перед защитным ToArray | Передавать точный срез буфера | Убрать одну копию PE и PDB | Ограничить Length, сохранить защитную копию |
+| ✅ | P2 · R10 | FontProviderService.cs:47–50 | Contains + Add | Использовать результат Add | Один поиск, тот же порядок | Низкий |
+| ✅ | P2 · R11 | Mouse.System.cs:203–210 | Ручное nullable equality | Lifted Point operator == | Убрать ветви и null-forgiving | Не заменять на Nullable.Equals |
+| ✅ | P2 · R12 | Graphics/Sprite: 38 Canvas checks + 3 input guards | Сообщение попадает в paramName | Верный тип/paramName исключения | Точная диагностика | Контракт исключений |
+| ✅ | P2 · R13 | FileService.cs:89 | Последний duplicate JSON key побеждает | AllowDuplicateProperties=false для settings/session | Однозначность данных | Ранее допустимые файлы отвергаются |
+| ⏸️ | P2 · R14 | Проекты: свойства анализа; .editorconfig отсутствует | Правила не закреплены | Малый явный набор правил | Не возвращать исправленные дефекты | TWA требует постепенного включения |
+| ⏸️ | P2 · R15 | LocalizationService.cs:86–89 | Ambient culture при форматировании | Явная culture сервиса | Последовательная локализация | Меняется формат чисел/дат при разных cultures |
+| ✅ | P3 · R16 | RoslynHostService.cs:47–51; ProfileProvider.cs:221–228; Keyboard.State.cs:13–19 | Повторение типов/array initializer | Локальные collection expressions/new() | Согласованность стиля | Сохранить target type/comparer |
+| ✅ | P3 · R17 | WindowConfigurationData.cs:19–34 | Verbatim string с удвоением кавычек | Raw string literal | Шаблон читается как исходник | Переносы и отступы — часть данных |
+| ✅ | P3 · R18 | CodeEditorsView.xaml:68–72,108–116 | Простые Grid definitions | WPF .NET 10 shorthand | Меньше XAML boilerplate | Не потерять MinWidth/MinHeight |
 
 **Количество:** P0 — 1 группа, P1 — 3, P2 — 11, P3 — 3; всего **18 групп**. Это не 18 независимых ошибок. R05 содержит 21 поле, R06 — 5 свойств, R07 — 2 места. Новые C# 13–14: R01, R05–R07; новые JSON API .NET 9–10: R04/R13; новый WPF API .NET 10: R18. Остальные 11 групп используют возможности, существовавшие до этой миграции.
 
