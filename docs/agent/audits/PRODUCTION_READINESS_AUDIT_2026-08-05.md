@@ -4,7 +4,8 @@
 
 **Статус актуализации:** 2026-10-05, ветка `develop`, коммит `f4ea499` до правки этого документа.
 Ниже результаты прежних веток и ручных проверок сохранены как исторические свидетельства;
-текущими считаются только проверки, явно датированные 2026-10-05. Оценки готовности ниже
+к последнему проверенному срезу этого аудита относятся только проверки, явно датированные
+2026-10-05; они не являются результатами проверки последующих checkout. Оценки готовности ниже
 остаются экспертными ориентирами от 2026-09-20, а не результатом нового количественного пересчёта.
 
 Исходная оценка от 2026-08-05:
@@ -80,7 +81,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - `MainWindow` запускает отдельный `InitializeAfterLoadedAsync()`, ожидает сервис и локально передаёт исключения централизованному обработчику: [MainWindow.xaml.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/MainWindow.xaml.cs:43>).
 - Для ошибок инициализации редактора и приложения добавлены одинаковые ключи во все три локализации.
 
-Контрольная Release-сборка проходит без ошибок и предупреждений. GUI не запускался, поэтому cold-start smoke и визуальное подтверждение появления окна по-прежнему необходимы, но исходная блокировка UI-потока устранена на уровне реализации.
+Контрольная Release-сборка 2026-10-05 прошла без ошибок и предупреждений. GUI в том прогоне не запускался, поэтому cold-start smoke и визуальное подтверждение появления окна для соответствующего publish остаются неподтверждёнными, но исходная блокировка UI-потока устранена на уровне реализации.
 
 ---
 
@@ -192,7 +193,7 @@ readers, worker queue и collectibility scope. Headless runtime smoke и manual 
 - `CodeFileService` разрешает сохранение пустого и состоящего только из пробелов содержимого: [CodeFileService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/CodeFileService.cs:56>).
 - `FileService` атомарно публикует пользовательские файлы, recovery и JSON-настройки через временный файл в каталоге назначения; focused-тесты проверяют замену, сохранение прежнего файла при ошибке и cleanup временного файла: [FileService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/FileService.cs:43>), [FileServiceTests.cs](</D:/Visual Studio Projects/KID/KID.Tests/FileServiceTests.cs:7>).
 
-Release-сборка текущего `develop` проходит без ошибок и предупреждений. Локальный полный набор regression-тестов — 242/242; свежая ручная visual acceptance диалогов на текущем publish не выполнялась. Исходный сценарий молчаливой потери данных устранён на уровне реализации.
+Release-сборка `develop` в прогоне 2026-10-05 прошла без ошибок и предупреждений. Локальный полный набор regression-тестов в том прогоне — 242/242; ручная visual acceptance диалогов на publish от 2026-10-05 не выполнялась. Исходный сценарий молчаливой потери данных устранён на уровне реализации.
 
 ## ⚠️ Проблемы средней серьёзности
 
@@ -200,7 +201,7 @@ Release-сборка текущего `develop` проходит без ошиб
    `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; локальный прогон 2026-10-05 — 242/242. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
-   Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка завершается с **0 ошибок и 0 предупреждений**.
+   Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка 2026-10-05 завершилась с **0 ошибок и 0 предупреждений**.
 
 3. **✅ Структурное журналирование и глобальная диагностика реализованы и проверены.**
    `LoggingConfiguration` подключает Serilog через `ILogger` и пишет ограниченные compact-JSONL файлы в `%LOCALAPPDATA%\KID\Logs`; `CrashReportWriter` создаёт атомарный `crash-<CrashId>.json`. `App` регистрирует `DispatcherUnhandledException`, `AppDomain.UnhandledException` и `TaskScheduler.UnobservedTaskException`; fatal dispatcher startup получает controlled shutdown и безопасный диалог с идентификатором отчёта. `AsyncOperationErrorHandler`, настройки, локализация, fallback theme/font и cleanup временных файлов сохраняют структурированный контекст. `ExecutionEventWorker` передаёт ошибки через host-neutral `ExecutionDiagnostic`, а lifecycle/cleanup ошибки журналируются одной записью на границе `CodeExecutionService`. Добавлены regression-тесты для crash report, async handler, event worker и settings/localization. Release build и полный набор из **237 тестов** прошли успешно; standalone `.exe` smoke и ручной `DispatcherUnhandledException` smoke подтверждены, crash report разобран по JSON-полям, временный тестовый trigger удалён.
@@ -244,7 +245,7 @@ Release-сборка текущего `develop` проходит без ошиб
 - Понятное разделение IDE и учебной библиотеки.
 - MVVM и DI дают хорошую основу для тестирования.
 - Сервисы и интерфейсы в основном разделены логично.
-- Nullable и `TreatWarningsAsErrors` включены в обоих проектах; текущая Release-сборка warning-free.
+- Nullable и `TreatWarningsAsErrors` включены в обоих production-проектах; Release-сборка в прогоне 2026-10-05 прошла без предупреждений.
 - Инициализация Roslyn-редактора асинхронна end-to-end, без UI-thread `.GetResult()`.
 - `CodeExecutionService` корректно освобождает execution context даже при ошибке компиляции: [CodeExecutionService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CodeExecutionService.cs:62>).
 - Реализованы единая execution-сессия/FSM, cooperative Stop instrumentation, token-aware Console input и ожидание async Main.
@@ -255,8 +256,8 @@ Release-сборка текущего `develop` проходит без ошиб
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.
-- Release build и framework-dependent publish `develop` от 2026-10-05 проходят; актуальный publish пока не проверен на чистой машине.
-- NuGet-аудит не нашёл известных уязвимых пакетов.
+- Release build и framework-dependent publish `develop` от 2026-10-05 прошли успешно; этот publish не проверялся на чистой машине в рамках указанного прогона.
+- Исторический NuGet vulnerability scan не нашёл известных уязвимых пакетов по использованным тогда источникам; 2026-10-05 скан не повторялся.
 - Документация объёмная; разделы об архитектуре редактора, закрытии, autosave и восстановлении сессии актуализированы вместе с кодом.
 
 ## 🗓️ Исходный поэтапный план и его состояние
