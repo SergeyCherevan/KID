@@ -1,13 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:codeEditor="clr-namespace:KID.Services.CodeEditor"
-                    xmlns:roslyn="clr-namespace:RoslynPad.Editor;assembly=RoslynPad.Editor.Windows">
+                    xmlns:codeEditor="clr-namespace:KID.Services.CodeEditor">
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="MenuStyles.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <roslyn:ClassificationHighlightColors
+    <codeEditor:VS2022LightClassificationHighlightColors
         x:Key="{x:Static codeEditor:ClassificationHighlightColorsProvider.CodeEditorClassificationColors}" />
     
     <!-- Цвета -->

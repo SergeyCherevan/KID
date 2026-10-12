@@ -522,10 +522,10 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 **LightTheme.xaml** (`KID.WPF.IDE/Themes/LightTheme.xaml`)
 - Светлая цветовая схема
 - Определяет кисти, цвета, стили для светлой темы
-- Предоставляет готовый `ClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
+- Предоставляет `VS2022LightClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
 
 **DarkTheme.xaml** (`KID.WPF.IDE/Themes/DarkTheme.xaml`)
-- Предоставляет готовый `DarkClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
+- Предоставляет `VS2022DarkClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
 - Тёмная цветовая схема
 - Определяет кисти, цвета, стили для тёмной темы
 
@@ -587,7 +587,7 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 
 **Файлы:**
 - `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
-- `KID.WPF.IDE/Services/CodeEditor/DarkClassificationHighlightColors.cs` — палитра синтаксической подсветки для тёмной темы (фон #1E1E1E, в духе VS Dark)
+- `VS2022LightClassificationHighlightColors` / `VS2022DarkClassificationHighlightColors` — цвета и начертания VS2022 для действующих тем; самостоятельные `VS2026LightClassificationHighlightColors` / `VS2026DarkClassificationHighlightColors` пока не подключены.
 - `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — ленивое потокобезопасное создание и кэширование RoslynHost; references/imports берёт из общего `IKIDCompilationProfileProvider`
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
 - `KID.WPF.IDE/Services/CompilationProfile/` — общая immutable-инфраструктура references/imports для editor и compiler

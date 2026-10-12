@@ -11,7 +11,7 @@ public sealed class ClassificationHighlightColorsProvider : IClassificationHighl
 {
     public const string CodeEditorClassificationColors = nameof(CodeEditorClassificationColors);
 
-    private static readonly ClassificationHighlightColors LightColors = new();
+    private static readonly VS2022LightClassificationHighlightColors LightColors = new();
 
     private readonly App app;
 

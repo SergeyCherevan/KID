@@ -281,7 +281,7 @@ native/сторонний вызов, неинструментированный
 - Метод `CreateAsync(content, programmingLanguage)` — получает `RoslynHost` и активную палитру через `IRoslynHostService`/`IClassificationHighlightColorsProvider`, затем ожидает `RoslynCodeEditor.InitializeAsync(...)`
 - **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; получает тот же `KIDCompilationProfile`, что и `CSharpCompiler`, и создаёт `RoslynHostReferences.Empty.With(references:, imports:)` без скрытых RoslynPad defaults
 - RoslynPad assemblies в `additionalAssemblies` обслуживают MEF редактора, но не становятся references пользовательского документа
-- **DarkClassificationHighlightColors** (`DarkClassificationHighlightColors.cs`) — палитра подсветки для тёмной темы (фон #1E1E1E); светлая тема — `ClassificationHighlightColors` из RoslynPad
+- **VS2022LightClassificationHighlightColors / VS2022DarkClassificationHighlightColors** — самостоятельные палитры цветов и начертаний VS2022 для действующих светлой и тёмной тем. `VS2026LightClassificationHighlightColors` и `VS2026DarkClassificationHighlightColors` подготовлены для будущих тем окна и пока не подключены.
 - `ClassificationHighlightColorsProvider` получает готовый `IClassificationHighlightColors` из ресурсов активной XAML-темы по ключу `CodeEditorClassificationColors` и не зависит от строкового ключа темы
 
 #### 3.6. Initialize (Инициализация)

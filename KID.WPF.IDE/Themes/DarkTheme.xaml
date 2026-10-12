@@ -6,7 +6,7 @@
         <ResourceDictionary Source="MenuStyles.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <codeEditor:DarkClassificationHighlightColors
+    <codeEditor:VS2022DarkClassificationHighlightColors
         x:Key="{x:Static codeEditor:ClassificationHighlightColorsProvider.CodeEditorClassificationColors}" />
     
     <!-- Цвета -->
