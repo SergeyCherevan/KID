@@ -494,15 +494,19 @@ internal sealed class CancellationInstrumentationRewriter : CSharpSyntaxRewriter
 
     /// <summary>
     /// Добавляет контрольную точку на входе в пользовательский оператор и преобразует
-    /// безопасное тело-выражение в блок с return.
+    /// безопасное тело-выражение в блок с учётом возвращаемого типа.
     /// </summary>
     /// <param name="node">Исходное объявление оператора.</param>
     /// <returns>Инструментированное объявление оператора.</returns>
     public override SyntaxNode? VisitOperatorDeclaration(OperatorDeclarationSyntax node)
     {
-        /* Оператор всегда имеет возвращаемое значение, поэтому поддержанное тело-выражение требует
-         * оператора return; возможность преобразования зависит прежде всего от директив.
+        /* Символ берётся из исходного дерева до базового обхода. Новые instance operators
+         * C# 14 возвращают void и требуют оператора выражения; прежний fallback — return.
          */
+        var symbol = semanticModel.GetDeclaredSymbol(node, cancellationToken) as IMethodSymbol;
+        var behavior = symbol?.ReturnsVoid == true
+            ? ExpressionBodyBehavior.Expression
+            : ExpressionBodyBehavior.Return;
         var canConvertExpression = CanConvertExpressionBody(node.ExpressionBody);
         var rewritten = (OperatorDeclarationSyntax)base.VisitOperatorDeclaration(node)!;
 
@@ -514,12 +518,12 @@ internal sealed class CancellationInstrumentationRewriter : CSharpSyntaxRewriter
         if (rewritten.ExpressionBody is null || !canConvertExpression)
             return rewritten;
 
-        /* Выражение либо throw-выражение превращается вспомогательным методом в оператор return/throw. */
+        /* Вспомогательный метод сохраняет throw и выбирает expression statement/return по символу. */
         return rewritten
             .WithBody(CreateExpressionBody(
                 rewritten.ExpressionBody,
                 rewritten.SemicolonToken,
-                ExpressionBodyBehavior.Return))
+                behavior))
             .WithExpressionBody(null)
             .WithSemicolonToken(default);
     }

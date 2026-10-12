@@ -1,3 +1,4 @@
+using System.Threading;
 namespace KID;
 
 /// <summary>
@@ -6,7 +7,7 @@ namespace KID;
 /// </summary>
 internal sealed class MusicExecutionScope : IAsyncDisposable
 {
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private readonly CancellationTokenSource lifetimeSource;
     private readonly Dictionary<int, MusicPlayback> activeSounds = [];
     private readonly HashSet<Task> backgroundTasks = [];

@@ -11,7 +11,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var point = new Rectangle
                 {
                     Width = 1,
@@ -34,7 +34,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var ellipse = new Ellipse
                 {
                     Width = radius * 2,
@@ -57,7 +57,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var ellipse = new Ellipse
                 {
                     Width = radiusX * 2,
@@ -80,7 +80,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var rect = new Rectangle
                 {
                     Width = width,
@@ -107,7 +107,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var line = new Line
                 {
                     X1 = x1,
@@ -127,12 +127,13 @@ namespace KID
 
         public static Path QuadraticBezier(Point[] points)
         {
-            if (points == null || points.Length == 0)
-                throw new ArgumentNullException("Points array is null or empty");
+            ArgumentNullException.ThrowIfNull(points);
+            if (points.Length < 3)
+                throw new ArgumentException("At least three points are required.", nameof(points));
 
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var path = new Path
                 {
                     Stroke = strokeBrush,
@@ -164,12 +165,13 @@ namespace KID
         }
         public static Path CubicBezier(Point[] points)
         {
-            if (points == null || points.Length == 0)
-                throw new ArgumentNullException("Points array is null or empty");
+            ArgumentNullException.ThrowIfNull(points);
+            if (points.Length < 4)
+                throw new ArgumentException("At least four points are required.", nameof(points));
 
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var path = new Path
                 {
                     Stroke = strokeBrush,
@@ -203,8 +205,9 @@ namespace KID
         
         public static Polygon Polygon(Point[] points)
         {
-            if (points == null || points.Length == 0)
-                throw new ArgumentNullException("Points array is null or empty");
+            ArgumentNullException.ThrowIfNull(points);
+            if (points.Length < 1)
+                throw new ArgumentException("At least one point is required.", nameof(points));
 
             var scope = DispatcherManager.GetScope();
             return Polygon(scope, points);
@@ -214,7 +217,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(scope, () =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var polygon = new Polygon
                 {
                     Points = CreatePoints(points, scope.Environment),

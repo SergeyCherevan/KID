@@ -218,14 +218,14 @@ namespace KID.Services.CompilationProfile
             string? kidLibraryName,
             string? playbackStateAssemblyName)
         {
-            var requiredNames = new[]
-            {
+            string?[] requiredNames =
+            [
                 "System.Private.CoreLib",
                 "System.Runtime",
                 "System.Console",
                 kidLibraryName,
                 playbackStateAssemblyName
-            };
+            ];
             var actualNames = paths
                 .Select(path => AssemblyName.GetAssemblyName(path).Name)
                 .Where(name => !string.IsNullOrWhiteSpace(name))

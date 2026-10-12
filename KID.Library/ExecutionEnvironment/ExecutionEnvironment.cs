@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Windows.Threading;
 using System.Diagnostics;
 
@@ -10,7 +11,7 @@ namespace KID;
 /// </summary>
 internal sealed class ExecutionEnvironment
 {
-    private readonly object capabilityGate = new();
+    private readonly Lock capabilityGate = new();
     private DispatcherScope? dispatcherScope;
     private int cleanupStarted;
 

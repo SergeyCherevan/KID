@@ -17,7 +17,7 @@ namespace KID
         {
             return InvokeOnUI(() =>
             {
-                if (Graphics.Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Graphics.Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var canvas = Graphics.Canvas;
 
                 var result = new List<Collision>();

@@ -77,9 +77,7 @@ public static partial class Music
     /// <summary>Включает или выключает повторное воспроизведение.</summary>
     public static void SoundLoop(this SoundPlayer player, bool loop)
     {
-        var playback = GetOwnedPlayback(player);
-        if (playback != null)
-            playback.Loop = loop;
+        GetOwnedPlayback(player)?.Loop = loop;
     }
 
     /// <summary>Возвращает длительность звука.</summary>

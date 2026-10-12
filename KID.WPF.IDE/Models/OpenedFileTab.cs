@@ -8,34 +8,30 @@ namespace KID.Models
     /// </summary>
     public class OpenedFileTab : ViewModelBase
     {
-        private string filePath = string.Empty;
-        private string savedContent = string.Empty;
-        private TextEditor? codeEditor;
-
         /// <summary>
         /// Путь к файлу. Для нового файла — /NewFile.cs.
         /// </summary>
         public string FilePath
         {
-            get => filePath;
+            get;
             set
             {
-                if (SetProperty(ref filePath, value ?? string.Empty))
+                if (SetProperty(ref field, value ?? string.Empty))
                 {
                     OnPropertyChanged(nameof(FileName));
                     OnPropertyChanged(nameof(DisplayName));
                 }
             }
-        }
+        } = string.Empty;
 
         /// <summary>
         /// Текст на момент последнего сохранения или открытия. Для NewFile — шаблон по умолчанию.
         /// </summary>
         public string SavedContent
         {
-            get => savedContent;
-            private set => SetProperty(ref savedContent, value ?? string.Empty);
-        }
+            get;
+            private set => SetProperty(ref field, value ?? string.Empty);
+        } = string.Empty;
 
         /// <summary>
         /// Текущее содержимое вкладки.
@@ -71,8 +67,7 @@ namespace KID.Models
         /// </summary>
         public void RestoreSavedContent()
         {
-            if (CodeEditor != null)
-                CodeEditor.Text = SavedContent;
+            CodeEditor?.Text = SavedContent;
         }
 
         /// <summary>
@@ -80,8 +75,8 @@ namespace KID.Models
         /// </summary>
         public TextEditor? CodeEditor
         {
-            get => codeEditor;
-            set => SetProperty(ref codeEditor, value);
+            get;
+            set => SetProperty(ref field, value);
         }
 
         /// <summary>

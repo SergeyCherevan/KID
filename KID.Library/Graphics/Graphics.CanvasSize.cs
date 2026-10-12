@@ -12,7 +12,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 return Canvas.ActualWidth;
             });
         }
@@ -24,7 +24,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 return Canvas.ActualHeight;
             });
         }
@@ -87,7 +87,7 @@ namespace KID
         {
             DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 if (double.IsNaN(minWidth) || double.IsInfinity(minWidth) || minWidth < 0)
                     throw new ArgumentOutOfRangeException(nameof(minWidth));
 
@@ -113,7 +113,7 @@ namespace KID
         {
             DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 if (double.IsNaN(minHeight) || double.IsInfinity(minHeight) || minHeight < 0)
                     throw new ArgumentOutOfRangeException(nameof(minHeight));
 
@@ -151,7 +151,7 @@ namespace KID
         {
             DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 if (double.IsNaN(width) || double.IsInfinity(width) || width <= 0)
                     throw new ArgumentOutOfRangeException(nameof(width));
 
@@ -189,7 +189,7 @@ namespace KID
         {
             DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 if (double.IsNaN(height) || double.IsInfinity(height) || height <= 0)
                     throw new ArgumentOutOfRangeException(nameof(height));
 

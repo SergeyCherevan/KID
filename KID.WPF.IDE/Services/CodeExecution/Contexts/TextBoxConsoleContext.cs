@@ -1,5 +1,6 @@
 using KID.Services.Errors;
 using System.IO;
+using System.Threading;
 using System.Windows.Controls;
 using KID.Services.CodeExecution.Contexts.Interfaces;
 
@@ -18,7 +19,7 @@ namespace KID.Services.CodeExecution.Contexts;
 /// </remarks>
 public sealed class TextBoxConsoleContext : IConsoleContext
 {
-    private readonly object lifecycleLock = new();
+    private readonly Lock lifecycleLock = new();
     private readonly Action<TextWriter, TextReader, TextWriter> redirectStreams;
     private TextWriter? originalConsoleOut;
     private TextReader? originalConsoleIn;

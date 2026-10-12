@@ -22,7 +22,7 @@ namespace KID.Services.Initialize
         private readonly string _appDataDirectory;
         private readonly string _settingsPath;
         private readonly string _defaultConfigurationPath;
-        private readonly object _settingsSaveQueueLock = new();
+        private readonly Lock _settingsSaveQueueLock = new();
         private readonly Queue<SettingsSaveRequest> _settingsSaveQueue = new();
         private bool _isProcessingSettingsSaveQueue;
 

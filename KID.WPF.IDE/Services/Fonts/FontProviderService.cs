@@ -44,9 +44,8 @@ namespace KID.Services.Fonts
                 for (int i = 0; i < count; i++)
                 {
                     var fontName = _resourceManager.GetString($"Font_{i}", CultureInfo.InvariantCulture);
-                    if (!string.IsNullOrEmpty(fontName) && installedFontNames.Contains(fontName) && !added.Contains(fontName))
+                    if (!string.IsNullOrEmpty(fontName) && installedFontNames.Contains(fontName) && added.Add(fontName))
                     {
-                        added.Add(fontName);
                         result.Add(fontName);
                     }
                 }

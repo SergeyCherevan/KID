@@ -8,6 +8,90 @@ namespace KID.Tests.Compiler;
 
 public sealed class CancellationInstrumentationTests
 {
+    [Theory]
+    [InlineData("class", false, false)]
+    [InlineData("class", false, true)]
+    [InlineData("class", true, false)]
+    [InlineData("class", true, true)]
+    [InlineData("struct", false, false)]
+    [InlineData("struct", false, true)]
+    [InlineData("struct", true, false)]
+    [InlineData("struct", true, true)]
+    public void Rewriter_PreservesVoidInstanceOperators(
+        string typeKind, bool blockBody, bool throws)
+    {
+        string Body(string expression) => blockBody
+            ? "{ " + (throws ? "throw new System.InvalidOperationException()" : expression) + "; }"
+            : "=> " + (throws ? "throw new System.InvalidOperationException()" : expression) + ";";
+
+        var code = $$"""
+            {{typeKind}} Counter
+            {
+                private int value;
+                public void operator +=(int amount) {{Body("value += amount")}}
+                public void operator -=(int amount) {{Body("value -= amount")}}
+                public void operator ++() {{Body("value++")}}
+                public void operator --() {{Body("value--")}}
+                public void operator checked +=(int amount) {{Body("value += amount")}}
+                public void operator checked -=(int amount) {{Body("value -= amount")}}
+                public void operator checked ++() {{Body("value++")}}
+                public void operator checked --() {{Body("value--")}}
+            }
+            class Program { static void Main() { } }
+            """;
+
+        AssertCompilesWithoutErrors(code);
+        var rewritten = RewriteCancellation(code);
+        var operators = rewritten.DescendantNodes().OfType<OperatorDeclarationSyntax>().ToArray();
+        Assert.Equal(8, operators.Length);
+        foreach (var declaration in operators)
+        {
+            Assert.Null(declaration.ExpressionBody);
+            var body = Assert.IsType<BlockSyntax>(declaration.Body);
+            AssertStartsWithCheckpoint(body);
+            Assert.Empty(body.DescendantNodes().OfType<ReturnStatementSyntax>());
+            if (throws)
+                Assert.IsType<ThrowStatementSyntax>(body.Statements.Last());
+            else
+                Assert.IsType<ExpressionStatementSyntax>(body.Statements.Last());
+        }
+
+        var rewrittenCode = rewritten.ToFullString();
+        AssertCompilesWithoutErrors(rewrittenCode);
+        Assert.Equal(CountLines(code), CountLines(rewrittenCode));
+        Assert.Equal(rewrittenCode, RewriteCancellation(rewrittenCode).ToFullString());
+    }
+
+    [Fact]
+    public void Rewriter_PreservesReturnInStaticAndConversionOperators()
+    {
+        const string code = """
+            class Counter
+            {
+                public static Counter operator +(Counter left, Counter right) => left;
+                public static Counter operator -(Counter value) => value;
+                public static implicit operator int(Counter value) => 1;
+                public static explicit operator Counter(int value) => new Counter();
+            }
+            class Program { static void Main() { } }
+            """;
+
+        AssertCompilesWithoutErrors(code);
+        var rewritten = RewriteCancellation(code);
+        var bodies = rewritten.DescendantNodes()
+            .OfType<OperatorDeclarationSyntax>().Select(declaration => declaration.Body!)
+            .Concat(rewritten.DescendantNodes()
+                .OfType<ConversionOperatorDeclarationSyntax>().Select(declaration => declaration.Body!))
+            .ToArray();
+        Assert.Equal(4, bodies.Length);
+        foreach (var body in bodies)
+        {
+            AssertStartsWithCheckpoint(body);
+            Assert.IsType<ReturnStatementSyntax>(body.Statements.Last());
+        }
+        AssertCompilesWithoutErrors(rewritten.ToFullString());
+    }
+
     [Fact]
     public void Rewriter_InsertsCheckpointAtEveryLoopEntry()
     {
@@ -536,6 +620,14 @@ public sealed class CancellationInstrumentationTests
 
         Assert.Empty(errors);
         Assert.Equal(CountLines(code), CountLines(rewrittenCode));
+    }
+
+    private static void AssertCompilesWithoutErrors(string code)
+    {
+        var (_, semanticModel) = CreateSemanticModel(code);
+        Assert.Empty(semanticModel.Compilation
+            .GetDiagnostics(TestContext.Current.CancellationToken)
+            .Where(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error));
     }
 
     private static CompilationUnitSyntax RewriteCancellation(string code)

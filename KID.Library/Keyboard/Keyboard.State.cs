@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,15 +9,15 @@ namespace KID
 {
     public static partial class Keyboard
     {
-        private static readonly object _stateLock = new object();
+        private static readonly Lock _stateLock = new();
 
-        private static readonly HashSet<WpfKey> _downKeys = new HashSet<WpfKey>();
-        private static readonly HashSet<WpfKey> _pressedEdges = new HashSet<WpfKey>();
-        private static readonly HashSet<WpfKey> _releasedEdges = new HashSet<WpfKey>();
+        private static readonly HashSet<WpfKey> _downKeys = new();
+        private static readonly HashSet<WpfKey> _pressedEdges = new();
+        private static readonly HashSet<WpfKey> _releasedEdges = new();
 
-        private static readonly Dictionary<WpfKey, int> _repeatCounts = new Dictionary<WpfKey, int>();
+        private static readonly Dictionary<WpfKey, int> _repeatCounts = new();
 
-        private static readonly StringBuilder _textBuffer = new StringBuilder();
+        private static readonly StringBuilder _textBuffer = new();
         private const int TextBufferLimit = 4096;
 
         private static KeyboardState _currentState = new KeyboardState(

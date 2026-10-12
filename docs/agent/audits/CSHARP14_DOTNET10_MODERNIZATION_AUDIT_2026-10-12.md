@@ -1,11 +1,37 @@
 # 🔎 Аудит модернизации KID: C# 14 / .NET 10
 
 Дата: 12 октября 2026 года. Репозиторий: `D:\Visual Studio Projects\KID`.
-Проверенный checkout: ветка `feature/DotNet10Modernization`, HEAD `ccc1897fc27b5361175c4c6ee10ab4a21d227885`. Результаты запусков ниже относятся к этому срезу и не подтверждают последующие checkout.
+Исходный проверенный checkout: ветка `feature/DotNet10Modernization`, HEAD `ccc1897fc27b5361175c4c6ee10ab4a21d227885`. Результаты исходного аудита относятся к этому срезу; проверка после реализации описана отдельно в разделе 0.
 
-**Вывод:** в проверенном срезе базовая миграция платформы работоспособна: Release собрался без предупреждений и ошибок, 242 теста прошли. Однако объявлять полную поддержку новых конструкций C# 14 в учебном компиляторе пока рано: подтверждена ошибка преобразования новых instance operators. Наибольшая практическая польза следующего этапа — корректность компилятора, ограничение загрузки аудио, валидация входных данных и несколько небольших улучшений языка. Массовая перепись в новый синтаксис не нужна.
+**Исходный вывод до реализации:** в проверенном срезе базовая миграция платформы работоспособна: Release собрался без предупреждений и ошибок, 242 теста прошли. Однако объявлять полную поддержку новых конструкций C# 14 в учебном компиляторе пока рано: подтверждена ошибка преобразования новых instance operators. Наибольшая практическая польза следующего этапа — корректность компилятора, ограничение загрузки аудио, валидация входных данных и несколько небольших улучшений языка. Массовая перепись в новый синтаксис не нужна.
 
-Это аудит и план. При проведении исходного аудита исходники, конфигурации, зависимости и отслеживаемые документы не изменялись; коммиты не создавались. Копия отчёта размещена в `docs/agent/audits/`; диагностический лог и воспроизводящий проект сохранены вне репозитория по локальным путям из раздела 13. Сборки и тесты исходного аудита обновили обычные игнорируемые `bin/obj` и результаты тестирования.
+Документ сохраняет исходный аудит и план, а ниже фиксирует статус реализации. При проведении исходного аудита исходники, конфигурации, зависимости и отслеживаемые документы не изменялись; коммиты не создавались. Копия отчёта размещена в `docs/agent/audits/`; диагностический лог и воспроизводящий проект сохранены вне репозитория по локальным путям из раздела 13. Сборки и тесты исходного аудита обновили обычные игнорируемые `bin/obj` и результаты тестирования.
+
+## ✅ 0. Статус реализации и проверка после изменений — 2026-10-12
+
+**Реализованы 11 из 18 групп:** R01, R03, R05, R06, R07, R10, R11, R12, R16, R17, R18. **По решению пользователя отложены:** R02, R04, R08, R09, R13, R14, R15. Исходные описания, фрагменты «Сейчас» и номера строк в разделах 1–13 относятся к срезу до реализации; они сохранены для объяснения причин изменений.
+
+Проверенное пользователем рабочее дерево: ветка `feature/DotNet10Modernization`, базовый HEAD `13a7730773795ca57ba924c644a9c9e1efd0e588` плюс незакоммиченные изменения 37 файлов исходников и тестов. Этот HEAD содержит исходный аудит, а не реализацию; отдельного commit hash для проверенных изменений пока нет.
+
+Внесённые изменения:
+
+- **R01:** rewriter получает символ исходного оператора до обхода и учитывает `IMethodSymbol.ReturnsVoid`. Void instance operators получают expression statement; static operators сохраняют return, throw-expression сохраняет throw.
+- **R03/R12:** QuadraticBezier требует минимум 3 точки, CubicBezier — 4; лишние точки по-прежнему допустимы. Null/недостаточная длина проверяются до обращения к Dispatcher. Исправлены 38 Canvas guards на `InvalidOperationException`, оба path guards на `ArgumentException.ThrowIfNullOrWhiteSpace`, а Polygon различает null и пустой массив с корректным `ParamName`.
+- **R05:** все 21 закрытое поле из перечня переведены на `Lock` с `using System.Threading;`. Тела и порядок критических секций сохранены; async semaphores не менялись.
+- **R06/R07:** пять MVVM-свойств используют `field`, прежние initializers и `SetProperty`; сохранён порядок зависимых уведомлений. RestoreSavedContent и SoundLoop используют null-conditional assignment.
+- **R10/R11:** фильтр шрифтов использует результат `HashSet.Add`, сохраняя comparer и порядок; nullable Point equality использует lifted `==`.
+- **R16–R18:** локальные collection expressions и target-typed `new()`, raw literal встроенного шаблона и shorthand простых Grid definitions. Текст шаблона проверен посимвольно: сохранены все 304 символа, CRLF и буквальные backslash+n; Grid с MinWidth/MinHeight в MainWindow не менялся.
+
+Добавлены **23 regression-сценария**: 9 compiler и 14 Graphics. Compiler покрывает class/struct, block/arrow, обычные и checked `+=`, `-=`, `++`, `--`, throw, сохранение контрольной точки, числа строк и идемпотентности, а также прежние static/conversion operators. Graphics покрывает ранние guards и `ParamName`, минимум/лишние точки и геометрию Bézier, отсутствие Canvas как ошибку состояния. Полный набор вырос с 242 до 265.
+
+**Проверка выполнена пользователем в Visual Studio 12.10.2026:**
+
+- Приложенный build log: **Debug Any CPU**, сборка начата в 15:18:53; **0 предупреждений, 0 ошибок**. Итог решения: 1 проект собран успешно, 2 уже актуальны, 0 со сбоем, 0 пропущено; время решения **5,784 с**. Это инкрементальная Debug-сборка, а не новая Release/Rebuild-проверка.
+- Скриншот Test Explorer: **265 passed, 0 failed, 0 skipped**; запуск завершён за **23,5 с**, длительность группы KID.Tests — **21,3 с**. Compiler — 37 сценариев, Library — 71. Подтверждена работа Test Explorer в Visual Studio.
+- Источники: [build log пользователя](<C:/Users/chere/.codex/attachments/eeb60390-bfbd-4422-b175-fd0fba752993/Вставленный текст.txt>) и [скриншот Test Explorer](<C:/Users/chere/AppData/Local/Temp/codex-clipboard-8f953484-d61a-4162-b7b4-ac8a148fb53e.png>). Это локальные вложения; исходный Release-прогон 242/242 ниже является отдельным историческим свидетельством.
+- Агент при реализации и актуализации не запускал компиляцию, сборку или тесты. Выполнены только проверка diff, разбор XAML как XML и сравнение содержимого шаблона.
+
+**Актуальный вывод:** воспроизведённый дефект R01 исправлен и покрыт прошедшими regression-тестами; выбранные 11 групп реализованы. Полная матрица возможностей C# 14 в editor/compiler, recursive-operator Stop, PDB/portable stack trace, отдельный stress для новых Lock и ручная visual acceptance Grid в обеих темах остаются вне этой проверки. Новый Release build, restore/vulnerability scan, publish и clean-machine smoke не выполнялись. Семь отложенных рекомендаций остаются открытыми.
 
 ## 🧭 1. Область и достоверность
 
@@ -57,7 +83,7 @@ Multi-targeting отсутствует. Явного `LangVersion` в проек
 
 ## 📊 3. Сводная таблица рекомендаций
 
-Одна строка — группа изменений; места одной группы перечислены далее. Приоритет относится к KID и его действующим контрактам, а не к новизне синтаксиса.
+Таблица сохраняет рекомендации исходного аудита до реализации; текущий статус каждой группы указан в разделе 0 и под её заголовком. Одна строка — группа изменений; места одной группы перечислены далее. Приоритет относится к KID и его действующим контрактам, а не к новизне синтаксиса.
 
 | Приоритет | Файл и строка | Текущее решение | Предлагаемое изменение | Преимущество | Риск |
 |---|---|---|---|---|---|
@@ -97,6 +123,8 @@ Multi-targeting отсутствует. Явного `LangVersion` в проек
 ## 🚨 4. P0 — необходимое исправление
 
 ### R01. Новые void instance operators ломаются после instrumentation
+
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
 
 Место: [CancellationInstrumentationRewriter.cs:501–524](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Compilation/Rewriters/CancellationInstrumentationRewriter.cs:501>), формирование return — [867–882](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Compilation/Rewriters/CancellationInstrumentationRewriter.cs:867>).
 
@@ -158,6 +186,8 @@ return rewritten
 
 ### R02. Ограниченная загрузка аудио без полного body в памяти
 
+**Статус 2026-10-12: ⏸️ отложено по решению пользователя; в текущий этап реализации не входит.**
+
 Места: [MusicRuntime.cs:16–18,57–76](<D:/Visual Studio Projects/KID/KID.Library/Music/MusicRuntime.cs:57>), [Music.Advanced.cs:161–170](<D:/Visual Studio Projects/KID/KID.Library/Music/Music.Advanced.cs:161>); сохранить cleanup в finally этого метода.
 
 Сейчас:
@@ -213,6 +243,8 @@ Caller должен создать и зарегистрировать temp path
 
 ### R03. Проверять достаточное число точек Bézier
 
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
+
 Места: [Graphics.SimpleFigures.cs:128–152](<D:/Visual Studio Projects/KID/KID.Library/Graphics/Graphics.SimpleFigures.cs:128>), [165–189](<D:/Visual Studio Projects/KID/KID.Library/Graphics/Graphics.SimpleFigures.cs:165>).
 
 Сейчас:
@@ -234,6 +266,8 @@ if (points.Length < 3)
 **Версия:** ThrowIfNull — .NET 6; обычная валидация существовала ранее. **Целесообразность: высокая.** **Доказательство:** guard пропускает длины 1/2, либо 1/2/3, а далее выполняются безусловные обращения по недоступным индексам в активной среде. Полный UI-repro не запускался. **Риск:** неправильные данные теперь получают ArgumentException вместо позднего IndexOutOfRangeException; null сохраняет ArgumentNullException с верным paramName. Не требовать строго равного числа точек: существующая реализация допускает лишние точки и использует первые 3/4. Это исправление прежнего кода, не breaking change .NET 10.
 
 ### R04. Контролировать nullable и значения на persistence boundary
+
+**Статус 2026-10-12: ⏸️ отложено по решению пользователя; в текущий этап реализации не входит.**
 
 Места: [FileService.cs:85–91](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/FileService.cs:85>), [WindowConfigurationData.cs:9–19](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Models/WindowConfigurationData.cs:9>), [EditorSessionData.cs:12–24](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Models/EditorSessionData.cs:12>), settings load [WindowConfigurationService.cs:55–69](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs:55>).
 
@@ -266,6 +300,8 @@ if (!double.IsFinite(settings.FontSize) || settings.FontSize <= 0)
 ## 🧩 6. P2 — полезные небольшие изменения
 
 ### R05. System.Threading.Lock для закрытых lock-объектов
+
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
 
 Сейчас:
 ```csharp
@@ -303,6 +339,8 @@ lock (gate) { /* прежнее тело */ }
 Поиск Monitor.Wait/Pulse/Enter/Exit в пользовательском коде не нашёл применений. Не передавать новый объект как object в generic helpers: Monitor и Lock — разные механизмы. Не заменять SemaphoreSlim в EditorSessionService или async signal в ExecutionEventWorker: они ожидаются через await, а lock этого не позволяет. Не менять порядок вложенных блокировок. [Правила lock](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/lock).
 
 ### R06. field-backed properties с сохранением MVVM
+
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
 
 Места: [OpenedFileTab.cs:11–38,81–85](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Models/OpenedFileTab.cs:18>) — FilePath, SavedContent, CodeEditor; [MainViewModel.cs:15–33](<D:/Visual Studio Projects/KID/KID.WPF.IDE/ViewModels/MainViewModel.cs:15>) — WindowState, MaximizeButtonContent.
 
@@ -353,6 +391,8 @@ SetProperty и CallerMemberName оставляем: notifications, equality и �
 
 ### R07. Null-conditional assignment для одиночных действий
 
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
+
 [OpenedFileTab.cs:72–76](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Models/OpenedFileTab.cs:72>):
 ```csharp
 if (CodeEditor != null)
@@ -380,6 +420,8 @@ GetOwnedPlayback(player)?.Loop = loop;
 
 ### R08. Кэширование JsonSerializerOptions
 
+**Статус 2026-10-12: ⏸️ отложено по решению пользователя; в текущий этап реализации не входит.**
+
 Места: [FileService.cs:94–103](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/FileService.cs:94>), [CrashReportWriter.cs:64–66](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Diagnostics/CrashReportWriter.cs:64>).
 
 Сейчас:
@@ -403,6 +445,8 @@ Options не отдавать наружу и не изменять после �
 
 ### R09. Убрать промежуточные копии PE/PDB, сохранив ownership
 
+**Статус 2026-10-12: ⏸️ отложено по решению пользователя; в текущий этап реализации не входит.**
+
 Места: [CSharpCompiler.cs:323–325](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/Compilation/CSharpCompiler.cs:323>), защитное копирование [CompilationArtifact.cs:34–45](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Models/CompilationArtifact.cs:34>).
 
 Сейчас:
@@ -422,6 +466,8 @@ var artifact = new CompilationArtifact(
 У текущих `new MemoryStream()` буфер доступен. Capacity не равна Length: нельзя передавать весь массив. Конструктор CompilationArtifact по-прежнему немедленно копирует срез, поэтому using-streams не меняют lifetime результата. Не удалять его защитную копию. ToArray в runner остаётся отдельной задачей; получить Stream из публичного ReadOnlyMemory без копирования требует иного контракта, и здесь не рекомендуется. [GetBuffer и границы массива](https://learn.microsoft.com/en-us/dotnet/api/system.io.memorystream.getbuffer?view=net-10.0).
 
 ### R10. HashSet.Add вместо Contains + Add
+
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
 
 [FontProviderService.cs:47–50](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Fonts/FontProviderService.cs:47>):
 ```csharp
@@ -445,6 +491,8 @@ if (!string.IsNullOrEmpty(fontName) &&
 
 ### R11. Lifted equality для Point?
 
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
+
 [Mouse.System.cs:203–210](<D:/Visual Studio Projects/KID/KID.Library/Mouse/Mouse.System.cs:203>):
 ```csharp
 if (!a.HasValue && !b.HasValue) return true;
@@ -461,6 +509,8 @@ private static bool NullablePointEquals(Point? a, Point? b) => a == b;
 Не заменять на Nullable.Equals/EqualityComparer без отдельной оценки: Point.Equals и Point.operator== по-разному трактуют NaN. [Point equality](https://learn.microsoft.com/en-us/dotnet/api/system.windows.point.op_equality?view=windowsdesktop-10.0).
 
 ### R12. Исключения должны описывать аргумент или состояние
+
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
 
 Текущий пример [Graphics.Image.cs:13–14](<D:/Visual Studio Projects/KID/KID.Library/Graphics/Graphics.Image.cs:13>):
 ```csharp
@@ -497,6 +547,8 @@ Input guards: Graphics.Image.cs:14,61 (path), Graphics.SimpleFigures.cs:207 (Pol
 
 ### R13. Отклонять duplicate JSON properties после определения recovery policy
 
+**Статус 2026-10-12: ⏸️ отложено по решению пользователя; в текущий этап реализации не входит.**
+
 [FileService.cs:89](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Files/FileService.cs:89>):
 ```csharp
 var jsonObject = JsonSerializer.Deserialize<T>(jsonString);
@@ -515,6 +567,8 @@ private static readonly JsonSerializerOptions SettingsReadOptions = new()
 Не включать JsonSerializerOptions.Strict целиком: Disallow для unknown members может помешать совместимости настроек разных версий. Missing props с полезными initializers должны продолжить работать, включая DefaultWindowConfiguration.json без UILanguage/TemplateCode. Отсутствие дубликатов не исправляет schema migration. [Новые JSON options .NET 10](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/libraries#option-to-disallow-duplicate-json-properties).
 
 ### R14. Закрепить малый набор анализаторов и стиль будущих изменений
+
+**Статус 2026-10-12: ⏸️ отложено по решению пользователя; в текущий этап реализации не входит.**
 
 Места: [IDE csproj:5–9](<D:/Visual Studio Projects/KID/KID.WPF.IDE/KID.WPF.IDE.csproj:5>), [Library csproj:4–8](<D:/Visual Studio Projects/KID/KID.Library/KID.Library.csproj:4>), [Tests csproj:8–14](<D:/Visual Studio Projects/KID/KID.Tests/KID.Tests.csproj:8>). Новый `.editorconfig` сейчас отсутствует; ему не приписывается выдуманный номер строки.
 
@@ -541,6 +595,8 @@ dotnet_diagnostic.CA1707.severity = none
 
 ### R15. Явная культура при форматировании локализованного сообщения
 
+**Статус 2026-10-12: ⏸️ отложено по решению пользователя; в текущий этап реализации не входит.**
+
 [LocalizationService.cs:86–89](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Localization/LocalizationService.cs:86>):
 ```csharp
 var format = _resourceManager.GetString(key, _currentCulture) ?? $"[{key}]";
@@ -562,6 +618,8 @@ return args != null && args.Length > 0
 ## 🎨 7. P3 — опциональные изменения
 
 ### R16. Локально унифицировать collection expressions и new()
+
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
 
 Места: [RoslynHostService.cs:47–51](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs:47>), [CompilationProfileProvider.cs:221–228](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CompilationProfile/KIDCompilationProfileProvider.cs:221>), [Keyboard.State.cs:13–19](<D:/Visual Studio Projects/KID/KID.Library/Keyboard/Keyboard.State.cs:13>).
 
@@ -599,6 +657,8 @@ private static readonly StringBuilder _textBuffer = new();
 
 ### R17. Raw string для встроенного шаблона
 
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
+
 [WindowConfigurationData.cs:19–34](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Models/WindowConfigurationData.cs:19>).
 Сейчас — `@"using System; ... Console.WriteLine(""Hello World!""); ...";`.
 
@@ -627,6 +687,8 @@ Graphics.Text(150, 150, "Hello\nWorld!");
 **Риск:** literal newline и common indentation становятся содержимым TemplateCode. При реализации сравнить старое и новое значение посимвольно, включая CRLF, конечный newline и ведущие пробелы. Не переносить этот пример без проверки line endings.
 
 ### R18. WPF Grid shorthand только для простых определений
+
+**Статус 2026-10-12: ✅ реализовано; пользователь подтвердил Debug build 0/0 и полный набор 265/265. Подробности и границы проверки — в разделе 0.**
 
 [CodeEditorsView.xaml:68–72](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Views/CodeEditorsView.xaml:68>):
 ```xml
@@ -698,7 +760,7 @@ Graphics.Text(150, 150, "Hello\nWorld!");
 
 Основания: [библиотеки .NET 9](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-9/libraries), [библиотеки .NET 10](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-10/libraries). Здесь перечислены причины отказа, а не требования использовать каждый API.
 
-## 🧪 10. Совместимость и проверенные ограничения
+## 🧪 10. Совместимость и проверенные ограничения исходного среза
 
 | Изменение платформы | Результат проверки KID |
 |---|---|
@@ -723,7 +785,7 @@ Graphics.Text(150, 150, "Hello\nWorld!");
 
 NAudio 3.1/RoslynPad 5 compatibility доказана сборкой и существующими tests на этом графе. Это не полная проверка API всех сторонних библиотек. Большинство music tests использует fake runtime: настоящее устройство, decoder, сеть, media formats требуют smoke. Внешние release-specific library claims без подтверждённого документа здесь не делаются.
 
-### Выполненные проверки
+### Выполненные проверки исходного аудита до реализации
 
 ```powershell
 dotnet --info
@@ -773,7 +835,7 @@ Probe находится в соседнем artifact directory, ссылает�
 14. Не менять DllImport на LibraryImport только ради возраста API: LibraryImport появился в .NET 7, требует partial declarations и корректного marshalling Win32 BOOL/CharSet/GetMonitorInfoW; Win32 behavior надо проверять отдельно.
 15. Не считать все 399 warnings ошибками и не отключать TreatWarningsAsErrors в проекте ради «зелёного» результата.
 
-## 🗺️ 12. Рекомендуемая последовательность небольших этапов
+## 🗺️ 12. Исходная рекомендуемая последовательность небольших этапов
 
 | Этап | Объём | Критерий завершения |
 |---|---|---|
@@ -787,9 +849,9 @@ Probe находится в соседнем artifact directory, ссылает�
 | 8 | R14/R15 | Узкие analyzer rules и culture tests, без массового форматирования |
 | 9 | R16–R18 при желании | Literal equality и WPF layout smoke; практической срочности нет |
 
-После каждого этапа — обычная Release-сборка с TWA и только относящиеся к изменению проверки; перед завершением серии — все 242 теста и новые regressions. После платформенных/пакетных изменений отдельно fresh restore/resolve и publish, а не перезапуск того же no-restore результата.
+Статус текущего этапа: выбранные 11 групп реализованы, Debug build и все 265 тестов подтверждены пользователем (раздел 0); остальные 7 групп отложены. Таблица и перечень ниже сохраняют первоначальный план потенциальных проверок, а не утверждают выполнение каждой из них. После следующих этапов — обычная Release-сборка с TWA и относящиеся к изменению проверки; перед завершением серии — весь актуальный набор тестов. После платформенных/пакетных изменений отдельно fresh restore/resolve и publish, а не перезапуск того же no-restore результата.
 
-### Необходимые новые тесты
+### Исходный перечень необходимых новых тестов
 
 - **Компилятор:** class/struct void +=/-=/++/--, block/arrow, checked, throw expression, прежние static/conversion operators; C# 14 field/ref field, extension methods/properties, partial members, null conditional assignment, params collections, span inference. Editor diagnostics и compiler emit сравнить на одинаковых snippets. Recursive operator Stop проверить в execution environment, а не только compilation.
 - **Graphics:** Quadratic длины null/0/1/2/3/4 и Cubic null/0/1/2/3/4/5; valid render, premature guard до Dispatcher work. Исключения и paramName закрепить.
@@ -809,4 +871,4 @@ Probe находится в соседнем artifact directory, ссылает�
 
 Сборка и tests от 2026-10-12 подтверждают техническую работоспособность проверенного checkout `ccc1897`, указанного в начале документа. Ручной smoke, install/publish, настоящая сеть/аудио и clean-machine validation в этом аудите не выполнялись. Ни релизная готовность целиком, ни безопасность исполнения произвольного недоверенного кода из этих проверок не следуют. Collectible AssemblyLoadContext — граница выгрузки, а не security sandbox.
 
-Практический план: исправить одну воспроизведённую несовместимость, укрепить входные границы, затем внедрять синтаксис маленькими независимыми изменениями. Прежняя реализация остаётся предпочтительной там, где новый API не решает существующей задачи.
+Текущий этап завершён в согласованном объёме: 11 групп реализованы, пользователь подтвердил Debug build 0/0 и 265/265 тестов. R02/R04/R08/R09/R13/R14/R15 остаются отложенными. Исходные результаты выше сохраняются как исторические; новая проверка и её ограничения описаны в разделе 0.

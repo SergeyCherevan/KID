@@ -46,7 +46,7 @@ namespace KID.Services.CodeExecution
 
         // Monitor / Critical Section: этот объект синхронизирует чтение и изменение
         // currentSession, счётчика id и переходов state machine.
-        private readonly object sessionLock = new();
+        private readonly Lock sessionLock = new();
         private ExecutionSession? currentSession;
         private long lastExecutionId;
         private ExecutionResult? lastResult;

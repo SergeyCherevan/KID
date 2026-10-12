@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Threading.Tasks;
 using System.Windows;
@@ -8,7 +9,7 @@ namespace KID
 {
     public static partial class Mouse
     {
-        private static readonly object _initLock = new object();
+        private static readonly Lock _initLock = new();
 
         private static MouseExecutionScope? _executionScope;
 
@@ -200,15 +201,7 @@ namespace KID
             }
         }
 
-        private static bool NullablePointEquals(Point? a, Point? b)
-        {
-            if (!a.HasValue && !b.HasValue)
-                return true;
-            if (a.HasValue != b.HasValue)
-                return false;
-
-            return a!.Value == b!.Value;
-        }
+        private static bool NullablePointEquals(Point? a, Point? b) => a == b;
 
         private static void RegisterClick(
             MouseExecutionScope scope,

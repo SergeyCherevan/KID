@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace KID
 {
     public static partial class Keyboard
     {
-        private static readonly object _initLock = new object();
+        private static readonly Lock _initLock = new();
         private static KeyboardExecutionScope? _executionScope;
 
         private static int _keyPressPulseVersion;
@@ -20,7 +21,7 @@ namespace KID
         private const int CurrentPulseMs = 80; // 50–100ms, чтобы удобно ловилось polling'ом
 
         // --- shortcuts ---
-        private static readonly object _shortcutsLock = new object();
+        private static readonly Lock _shortcutsLock = new();
         private static int _nextShortcutId = 1;
         private static readonly Dictionary<int, Shortcut> _shortcuts = new Dictionary<int, Shortcut>();
 

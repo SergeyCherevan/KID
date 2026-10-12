@@ -1,3 +1,4 @@
+using System.Threading;
 using System;
 
 namespace KID
@@ -7,7 +8,7 @@ namespace KID
     /// </summary>
     public static partial class Mouse
     {
-        private static readonly object _stateLock = new object();
+        private static readonly Lock _stateLock = new();
 
         private static CursorInfo _currentCursor = new CursorInfo(null, PressButtonStatus.OutOfArea);
         private static CursorInfo _lastActualCursor = new CursorInfo(null, PressButtonStatus.NoButton);

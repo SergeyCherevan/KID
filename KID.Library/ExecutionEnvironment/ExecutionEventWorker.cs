@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace KID;
 
@@ -8,7 +9,7 @@ namespace KID;
 /// </summary>
 internal sealed class ExecutionEventWorker : IAsyncDisposable
 {
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private readonly ConcurrentQueue<Action> queue = new();
     private readonly SemaphoreSlim signal = new(0, int.MaxValue);
     private readonly CancellationTokenSource lifetimeSource;

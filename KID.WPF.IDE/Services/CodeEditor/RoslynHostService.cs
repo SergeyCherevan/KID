@@ -44,11 +44,11 @@ namespace KID.Services.CodeEditor
 
             // additionalAssemblies — только для MEF редактора (RoslynPad). Не добавлять typeof(RoslynHost).Assembly — дублирование даёт CompositionFailedException (два экспорта DocumentationProviderService).
             return new RoslynHost(
-                additionalAssemblies: new[]
-                {
+                additionalAssemblies:
+                [
                     Assembly.Load("RoslynPad.Roslyn.Windows"),
                     Assembly.Load("RoslynPad.Editor.Windows")
-                },
+                ],
                 references: references);
 
         }

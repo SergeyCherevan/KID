@@ -12,7 +12,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.SetLeft(element, x);
                 return element;
             });
@@ -21,7 +21,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.SetTop(element, y);
                 return element;
             });
@@ -30,7 +30,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.SetLeft(element, x);
                 Canvas.SetTop(element, y);
                 return element;
@@ -45,7 +45,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");                
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 return Canvas.GetLeft(element);
             });
         }
@@ -53,7 +53,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 return Canvas.GetTop(element);
             });
         }
@@ -67,7 +67,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.SetLeft(element, x - element.ActualWidth / 2);
                 return element;
             });
@@ -76,7 +76,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.SetTop(element, y - element.ActualHeight / 2);
                 return element;
             });
@@ -85,7 +85,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.SetLeft(element, x - element.ActualWidth / 2);
                 Canvas.SetTop(element, y - element.ActualHeight / 2);
                 return element;
@@ -126,7 +126,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 element.Width = width;
                 return element;
             });
@@ -135,7 +135,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 element.Height = height;
                 return element;
             });
@@ -144,7 +144,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 element.Width = width;
                 element.Height = height;
                 return element;
@@ -160,7 +160,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.Children.Add(element);
                 return element;
             });
@@ -170,7 +170,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 Canvas.Children.Remove(element);
                 return element;
             });
@@ -181,7 +181,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 element.Stroke = color.CreateBrush();
                 return element;
             });
@@ -190,7 +190,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 element.Fill = color.CreateBrush();
                 return element;
             });
@@ -199,7 +199,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 element.Stroke = color.CreateBrush();
                 element.Fill = color.CreateBrush();
                 return element;

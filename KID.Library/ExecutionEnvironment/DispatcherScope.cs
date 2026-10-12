@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Windows.Threading;
 
 namespace KID;
@@ -9,7 +10,7 @@ namespace KID;
 /// </summary>
 internal sealed class DispatcherScope : IAsyncDisposable
 {
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private readonly HashSet<IWork> pending = [];
     private readonly ConcurrentQueue<Exception> failures = new();
     private readonly TaskCompletionSource disposed = new(TaskCreationOptions.RunContinuationsAsynchronously);

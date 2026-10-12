@@ -10,12 +10,11 @@ namespace KID
     {
         public static Image Image(double x, double y, string path, double? width = null, double? height = null)
         {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentNullException("Image path is null or emty");
+            ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
 
                 if (!File.Exists(path))
                     throw new FileNotFoundException($"Image file not found: {path}");
@@ -57,12 +56,11 @@ namespace KID
 
         public static Image SetSource(this Image image, string path, double? width = null, double? height = null)
         {
-            if (string.IsNullOrWhiteSpace(path))
-                throw new ArgumentNullException("Image path is null or emthy");
+            ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
 
                 if (!File.Exists(path))
                     throw new FileNotFoundException($"Image file not found: {path}");

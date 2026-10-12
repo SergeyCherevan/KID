@@ -22,7 +22,7 @@ namespace KID
             
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var textBlock = new TextBlock
                 {
                     Text = text,
@@ -48,7 +48,7 @@ namespace KID
         {
             return DispatcherManager.InvokeOnUI(() =>
             {
-                if (Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 textBlock.Text = text;
                 return textBlock;
             });

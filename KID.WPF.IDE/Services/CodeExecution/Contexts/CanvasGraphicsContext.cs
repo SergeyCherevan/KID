@@ -1,4 +1,5 @@
 using KID.Services.CodeExecution.Contexts.Interfaces;
+using System.Threading;
 using System.Windows.Controls;
 using System.Windows;
 using System.Windows.Threading;
@@ -8,7 +9,7 @@ namespace KID.Services.CodeExecution.Contexts
 {
     public class CanvasGraphicsContext : IGraphicsContext
     {
-        private readonly object gate = new();
+        private readonly Lock gate = new();
         private DispatcherScope? scope;
         private ExecutionEnvironment? environment;
         private bool initialized;

@@ -1,3 +1,4 @@
+using System.Threading;
 namespace KID;
 
 /// <summary>
@@ -6,7 +7,7 @@ namespace KID;
 /// </summary>
 internal static class ExecutionEnvironmentManager
 {
-    private static readonly object gate = new();
+    private static readonly Lock gate = new();
     private static ExecutionEnvironment? current;
 
     internal static ExecutionEnvironment? Current => Volatile.Read(ref current);

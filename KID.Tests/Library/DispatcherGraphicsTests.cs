@@ -19,6 +19,99 @@ public sealed class DispatcherGraphicsTests
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
     [Fact]
+    public void FigureGuards_RejectNullBeforeAccessingDispatcher()
+    {
+        Assert.Equal("points", Assert.Throws<ArgumentNullException>(() => Graphics.QuadraticBezier(null!)).ParamName);
+        Assert.Equal("points", Assert.Throws<ArgumentNullException>(() => Graphics.CubicBezier(null!)).ParamName);
+        Assert.Equal("points", Assert.Throws<ArgumentNullException>(() => Graphics.Polygon((Point[])null!)).ParamName);
+        Assert.Equal("path", Assert.Throws<ArgumentNullException>(() => Graphics.Image(0, 0, null!)).ParamName);
+        Assert.Equal("path", Assert.Throws<ArgumentNullException>(() => Graphics.SetSource(null!, null!)).ParamName);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void QuadraticBezier_RejectsInsufficientPointsBeforeAccessingDispatcher(int count)
+    {
+        var error = Assert.Throws<ArgumentException>(() => Graphics.QuadraticBezier(new Point[count]));
+        Assert.Equal("points", error.ParamName);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void CubicBezier_RejectsInsufficientPointsBeforeAccessingDispatcher(int count)
+    {
+        var error = Assert.Throws<ArgumentException>(() => Graphics.CubicBezier(new Point[count]));
+        Assert.Equal("points", error.ParamName);
+    }
+
+    [Fact]
+    public void Polygon_RejectsEmptyPointsBeforeAccessingDispatcher()
+    {
+        var error = Assert.Throws<ArgumentException>(() => Graphics.Polygon(Array.Empty<Point>()));
+        Assert.Equal("points", error.ParamName);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \t")]
+    public void ImageGuards_RejectBlankPathsBeforeAccessingDispatcher(string path)
+    {
+        Assert.Equal("path", Assert.Throws<ArgumentException>(() => Graphics.Image(0, 0, path)).ParamName);
+        Assert.Equal("path", Assert.Throws<ArgumentException>(() => Graphics.SetSource(null!, path)).ParamName);
+    }
+
+    [Theory]
+    [InlineData(3, 4)]
+    [InlineData(4, 5)]
+    public async Task Bezier_AcceptsMinimumAndExtraPoints(int quadraticCount, int cubicCount)
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            var canvas = new Canvas();
+            await using var scope = BeginDispatcherExecution(1, canvas.Dispatcher, default);
+            Graphics.Init(canvas, scope);
+            try
+            {
+                Point[] points = [new(1, 2), new(3, 4), new(5, 6), new(7, 8), new(9, 10)];
+                var quadratic = Graphics.QuadraticBezier(points[..quadraticCount]);
+                var cubic = Graphics.CubicBezier(points[..cubicCount]);
+                var quadraticFigure = Assert.Single(Assert.IsType<PathGeometry>(quadratic.Data).Figures);
+                var cubicFigure = Assert.Single(Assert.IsType<PathGeometry>(cubic.Data).Figures);
+                Assert.Equal(points[0], quadraticFigure.StartPoint);
+                Assert.Equal(points[0], cubicFigure.StartPoint);
+                var quadraticSegment = Assert.IsType<QuadraticBezierSegment>(Assert.Single(quadraticFigure.Segments));
+                Assert.Equal(points[1], quadraticSegment.Point1);
+                Assert.Equal(points[2], quadraticSegment.Point2);
+                var cubicSegment = Assert.IsType<BezierSegment>(Assert.Single(cubicFigure.Segments));
+                Assert.Equal(points[1], cubicSegment.Point1);
+                Assert.Equal(points[2], cubicSegment.Point2);
+                Assert.Equal(points[3], cubicSegment.Point3);
+                Assert.Equal(2, canvas.Children.Count);
+            }
+            finally
+            {
+                await scope.ShutdownAsync(() => Graphics.Release(scope));
+            }
+        });
+    }
+
+    [Fact]
+    public async Task Figure_RejectsUninitializedCanvasAsInvalidState()
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            await using var scope = BeginDispatcherExecution(1, Dispatcher.CurrentDispatcher, default);
+            var error = Assert.Throws<InvalidOperationException>(() => Graphics.Plot(0, 0));
+            Assert.Equal("Graphics Canvas is not initialized.", error.Message);
+        });
+    }
+
+    [Fact]
     public async Task Scope_RejectsDoubleInit_AndOldDisposeCannotReleaseNextScope()
     {
         await StaTest.RunAsync(async () =>

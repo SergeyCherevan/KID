@@ -2,11 +2,12 @@
 
 **Production-ready: нет — решение `No-Go`.**
 
-**Статус актуализации:** 2026-10-05, ветка `develop`, коммит `f4ea499` до правки этого документа.
-Ниже результаты прежних веток и ручных проверок сохранены как исторические свидетельства;
-к последнему проверенному срезу этого аудита относятся только проверки, явно датированные
-2026-10-05; они не являются результатами проверки последующих checkout. Оценки готовности ниже
-остаются экспертными ориентирами от 2026-09-20, а не результатом нового количественного пересчёта.
+**Статус актуализации:** 2026-10-12, ветка `feature/DotNet10Modernization`, базовый HEAD `13a7730773795ca57ba924c644a9c9e1efd0e588` плюс незакоммиченная реализация модернизации.
+Пользователь подтвердил в Visual Studio инкрементальную Debug-сборку без предупреждений и ошибок
+и полный набор **265/265** тестов. Подробности и источники — в разделе актуализации ниже.
+Прежние результаты, включая Release build/test/publish `develop` на `f4ea499` от 2026-10-05,
+сохранены как отдельные исторические свидетельства и не подтверждают новый checkout.
+Оценки готовности остаются экспертными ориентирами от 2026-09-20, а не новым количественным пересчётом.
 
 Исходная оценка от 2026-08-05:
 
@@ -38,9 +39,22 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 
 После исходного аудита устранены startup-deadlock, warning-сборка и риск молчаливой потери несохранённого кода. На ветке `feature/FixC2C3` C2 принят как осознанная in-process trust model для доверенного учебного кода, а согласованный кооперативный scope C3 реализован и подтверждён. Общий `No-Go` для широкого production-релиза сохраняется из-за остальных пунктов аудита, а не из-за требования обязательно вынести выполнение в sandbox/worker.
 
-## 📌 Открытые задачи на 2026-10-05
+## ✅ Актуализация модернизации — 2026-10-12
 
-1. **Quality gate:** добавить CI для restore, Release build, тестов, NuGet vulnerability scan и publish. Локальный прогон 242/242 не заменяет автоматическую проверку каждого изменения.
+В рабочем дереве `feature/DotNet10Modernization` реализованы **R01, R03, R05–R07, R10–R12, R16–R18** из [аудита C# 14 / .NET 10](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). Исправлена instrumentation новых void instance operators, усилены Graphics guards, 21 закрытое поле использует `Lock` с `using System.Threading;`, выполнены согласованные локальные изменения MVVM, коллекций, nullable equality, шаблона и XAML. **R02, R04, R08, R09, R13, R14, R15 отложены по решению пользователя.**
+
+Проверка выполнена пользователем 12.10.2026 в Visual Studio:
+
+- [Приложенный build log](<C:/Users/chere/.codex/attachments/eeb60390-bfbd-4422-b175-fd0fba752993/Вставленный текст.txt>): **Debug Any CPU**, **0 предупреждений, 0 ошибок**; 1 проект успешно собран, 2 уже актуальны, 0 со сбоем, 0 пропущено. Сборка решения заняла **5,784 с**. Новая Release/Rebuild-проверка этим логом не подтверждается.
+- [Скриншот Test Explorer](<C:/Users/chere/AppData/Local/Temp/codex-clipboard-8f953484-d61a-4162-b7b4-ac8a148fb53e.png>): **265 passed, 0 failed, 0 skipped**; время запуска **23,5 с**, группы — **21,3 с**. Подтверждена работа интеграции тестов с Visual Studio.
+- Добавлены и прошли 23 regression-сценария: 9 compiler (class/struct, block/arrow, checked/обычные instance operators, throw, прежние static/conversion operators) и 14 Graphics (ранняя валидация, точные исключения/ParamName, минимальные и лишние точки Bézier, отсутствие Canvas). Локальный набор увеличился с 242 до 265.
+- Результат относится к базовому HEAD `13a7730` плюс 37 изменённым файлам исходников/тестов; реализация ещё не имеет отдельного commit hash. Агент сборку и тесты повторно не запускал.
+
+**Решение No-Go для широкого production-релиза сохраняется.** Эта проверка закрывает выбранный этап модернизации, но не CI, schema/recovery settings, ограниченную загрузку аудио, release engineering, accessibility или clean-machine smoke. Исторический publish от 2026-10-05 не включает нынешние изменения; новый publish и ручная проверка обеих тем/scroll layout не подтверждены. Подробный статус всех 18 рекомендаций и ограничения проверки указаны в разделе 0 связанного аудита.
+
+## 📌 Открытые задачи на 2026-10-12
+
+1. **Quality gate:** добавить CI для restore, Release build, тестов, NuGet vulnerability scan и publish. Локальный прогон 265/265 от 2026-10-12 не заменяет автоматическую проверку каждого изменения.
 2. **Устойчивость настроек:** ввести версию схемы, миграции и валидацию `settings.json`; определить восстановление повреждённого файла без потери доступных пользовательских данных.
 3. **Дистрибутив:** выбрать и оформить installer/MSIX, версионирование и code signing; подготовить SBOM, third-party notices и корневые README, LICENSE, SECURITY, CHANGELOG. Текущий framework-dependent publish получен, но не подписан и не упакован. Self-contained publish требует отдельной доработки `KIDCompilationProfileProvider`, который сейчас отвергает такое размещение assemblies.
 4. **Release smoke:** проверить именно текущий publish на чистой Windows-машине с .NET 10 Desktop Runtime, включая cold start и основные сценарии Run/Stop, сохранения и восстановления.
@@ -55,7 +69,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - В исходном аудите проверены восемь коммитов за 5 августа; на тот момент изменения production-кода были включены в `task/AtomicFilePersistence` (`02be930`).
 - Предыдущий аудитный checkout — `task/AtomicFilePersistence` на `c0b5b40` с изменениями файловой подсистемы, настроек, локализации и их тестов. Историческая проверка compilation profile относилась к `feature/CompilationProfile` на `6ad3342`.
 - Исторический checkout для structured diagnostics — `feature/StructuredLoggingAndGlobalDiagnostics` на `31f3b20`; после ручной проверки рабочее дерево было чистым.
-- Текущий checkout 2026-10-05 — `develop` на `f4ea499` до правки аудита. В обоих production-проектах включён `TreatWarningsAsErrors`; `dotnet build KID.sln -c Release --no-restore` завершился с **0 ошибок и 0 предупреждений**.
+- Исторический checkout 2026-10-05 — `develop` на `f4ea499` до правки аудита. В обоих production-проектах включён `TreatWarningsAsErrors`; `dotnet build KID.sln -c Release --no-restore` завершился с **0 ошибок и 0 предупреждений**.
 - `dotnet test KID.sln -c Release --no-restore` на том же checkout: **242 passed, 0 skipped, 0 failed**. Это локальная проверка, не CI и не проверка GUI.
 - Контрольная проверка C2/C3 на `feature/FixC2C3` от 2026-09-15: `dotnet restore KID.sln` и Release build успешны; `dotnet test KID.sln -c Release --no-restore` — **166 passed, 0 skipped, 0 failed**; focused-набор Этапа 9 ранее повторён 10 раз — **10/10 PASS**.
 - На ветке `feature/TextBoxConsoleExecutionScope` после переноса Console зафиксированы: targeted hardening **9/9**, Console **52/52**, полный набор **188 passed, 0 skipped, 0 failed**, Release build без warnings/errors.
@@ -68,7 +82,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - Историческая проверка: светлая и тёмная темы содержали одинаковые 54 ресурсных ключа; отдельно 2026-10-05 ключи не пересчитывались.
 - В исходном аудите GUI не запускался. Для C2/C3 отдельно выполнен headless runtime smoke, а пользователь подтвердил manual GUI/visual checklist 2026-09-15. Для compilation profile 2026-09-18 пользователь отдельно подтвердил одинаковые completion, diagnostics и Run result в standalone `.exe` и Visual Studio F5.
 - Актуализация 2026-09-20: все три проекта переведены на `net10.0-windows`, добавлен корневой `global.json` для стабильного .NET 10 SDK; пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242 passed, 0 skipped, 0 failed** и успешный прогон программы на разных сценариях. Скриншот Visual Studio фиксирует 242/242 теста и build 0/0. Отдельная проверка актуального publish на чистой машине в эту запись не включена.
-- После этой проверки на `develop` обновлены `docs/README.md` (`6dfa06b`) и пакеты интеграции тестов с Visual Studio в `KID.Tests.csproj` (`f4ea499`). Текущие локальные build/test выше подтверждают состояние после этих коммитов; работа Test Explorer в Visual Studio отдельно не проверялась.
+- После этой проверки на `develop` обновлены `docs/README.md` (`6dfa06b`) и пакеты интеграции тестов с Visual Studio в `KID.Tests.csproj` (`f4ea499`). Локальные build/test от 2026-10-05 подтвердили состояние после этих коммитов; Test Explorer тогда отдельно не проверялся. Его работа подтверждена пользователем 2026-10-12 на ветке модернизации (265/265).
 
 ## 🚨 Критичные проблемы исходного аудита — C2/C3 повторно оценены
 
@@ -198,7 +212,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 ## ⚠️ Проблемы средней серьёзности
 
 1. **✅ Автоматизированные execution/Console/compilation-profile и базовые persistence-тесты добавлены; CI по-прежнему отсутствует.**
-   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; локальный прогон 2026-10-05 — 242/242. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
+   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; исторический локальный прогон 2026-10-05 — 242/242; текущий пользовательский прогон в Visual Studio 2026-10-12 — 265/265, включая новые compiler/Graphics regressions. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
    Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка 2026-10-05 завершилась с **0 ошибок и 0 предупреждений**.
@@ -252,7 +266,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 - Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
-- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics и базовые persistence-контракты: 242 passed, 0 skipped, 0 failed в локальном прогоне 2026-10-05.
+- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics, базовые persistence-контракты и новые compiler/Graphics regressions: пользовательский прогон в Visual Studio 2026-10-12 — 265 passed, 0 skipped, 0 failed; исторический локальный прогон 2026-10-05 — 242/242.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.IO;
+using System.Threading;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
@@ -18,9 +19,9 @@ namespace KID;
 /// </remarks>
 public static partial class TextBoxConsole
 {
-    private static readonly object initLock = new();
-    private static readonly object stateLock = new();
-    private static readonly object readLock = new();
+    private static readonly Lock initLock = new();
+    private static readonly Lock stateLock = new();
+    private static readonly Lock readLock = new();
     private static readonly Queue<char> input = new();
     private static readonly Queue<OutputWorkItem> output = new();
     private static readonly ConcurrentQueue<Exception> uiFailures = new();

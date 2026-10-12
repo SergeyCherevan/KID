@@ -13,7 +13,7 @@ namespace KID
         {
             return InvokeOnUI(() =>
             {
-                if (Graphics.Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Graphics.Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
 
                 foreach (var element in GraphicElements)
                 {
@@ -35,7 +35,7 @@ namespace KID
         {
             return InvokeOnUI(() =>
             {
-                if (Graphics.Canvas == null) throw new ArgumentNullException("Canvas is null");
+                if (Graphics.Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
 
                 foreach (var element in GraphicElements)
                 {

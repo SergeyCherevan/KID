@@ -1,5 +1,6 @@
 using KID.Services.Errors;
 using KID.Services.CodeExecution.Contexts.Interfaces;
+using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace KID.Services.CodeExecution.Contexts
     /// </summary>
     public class CodeExecutionContext : ICodeExecutionContext
     {
-        private readonly object lifecycleLock = new();
+        private readonly Lock lifecycleLock = new();
         private readonly TaskCompletionSource disposeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         private bool disposeStarted;
         private bool cleanupStarted;

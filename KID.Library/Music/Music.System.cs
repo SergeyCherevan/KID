@@ -1,3 +1,4 @@
+using System.Threading;
 namespace KID;
 
 /// <summary>
@@ -7,7 +8,7 @@ namespace KID;
 /// </summary>
 public static partial class Music
 {
-    private static readonly object _lockObject = new();
+    private static readonly Lock _lockObject = new();
     private static MusicExecutionScope? executionScope;
 
     /// <summary>Инициализирует Music API для текущего запуска.</summary>

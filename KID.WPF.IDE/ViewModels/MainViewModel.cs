@@ -12,25 +12,23 @@ namespace KID.ViewModels
 {
     public class MainViewModel : ViewModelBase, IMainViewModel
     {
-        private WindowState windowState = WindowState.Normal;
         public WindowState WindowState
         {
-            get => windowState;
+            get;
             set
             {
-                if (SetProperty(ref windowState, value))
+                if (SetProperty(ref field, value))
                 {
                     MaximizeButtonContent = value == WindowState.Maximized ? "❐" : "☐";
                 }
             }
-        }
+        } = WindowState.Normal;
 
-        private string maximizeButtonContent = "☐";
         public string MaximizeButtonContent
         {
-            get => maximizeButtonContent;
-            private set => SetProperty(ref maximizeButtonContent, value);
-        }
+            get;
+            private set => SetProperty(ref field, value);
+        } = "☐";
 
         public ICommand MinimizeCommand { get; }
         public ICommand MaximizeCommand { get; }

@@ -65,11 +65,7 @@
         </Style>
     </UserControl.Resources>
     
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <Grid RowDefinitions="Auto,*">
         
         <!-- Панель вкладок -->
         <Border Grid.Row="0"
@@ -105,15 +101,8 @@
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ScrollViewer">
-                                    <Grid SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                        </Grid.RowDefinitions>
+                                    <Grid SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                          ColumnDefinitions="*,Auto" RowDefinitions="Auto,*">
                                         <ScrollBar x:Name="PART_HorizontalScrollBar"
                                                    Grid.Row="0"
                                                    Grid.Column="0"

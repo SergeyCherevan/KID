@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows;
@@ -14,7 +15,7 @@ namespace KID
         private static Typeface currentFont = new Typeface("Arial");
         private static double currentFontSize = 20;
         private static DispatcherScope? owner;
-        private static readonly object ownershipGate = new();
+        private static readonly Lock ownershipGate = new();
 
         internal static void Init(Canvas targetCanvas, DispatcherScope scope)
         {

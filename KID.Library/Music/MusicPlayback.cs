@@ -1,3 +1,4 @@
+using System.Threading;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 
@@ -10,7 +11,7 @@ namespace KID;
 /// </summary>
 internal sealed class MusicPlayback
 {
-    private readonly object gate = new();
+    private readonly Lock gate = new();
     private readonly CancellationTokenSource lifetimeSource;
     private readonly HashSet<Task> auxiliaryTasks = [];
     private Task? completion;
