@@ -8,13 +8,19 @@ namespace KID;
 public static partial class Music
 {
     /// <summary>Асинхронно запускает локальный файл или URL.</summary>
-    public static SoundPlayer SoundPlay(string filePath)
+    public static SoundPlayer SoundPlay(string filePath) => SoundPlay(filePath, maxDownloadBytes: null);
+
+    /// <summary>Запускает файл или URL; null означает загрузку без ограничения размера.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">Лимит не является положительным.</exception>
+    public static SoundPlayer SoundPlay(string filePath, long? maxDownloadBytes)
     {
+        ValidateMaxDownloadBytes(maxDownloadBytes);
         if (string.IsNullOrWhiteSpace(filePath))
             return new SoundPlayer(0);
 
         var scope = GetActiveScope();
-        var playback = scope?.CreatePlayback(VolumeToAmplitude(Volume), filePath);
+        var playback = scope?.CreatePlayback(
+            VolumeToAmplitude(Volume), filePath, maxDownloadBytes: maxDownloadBytes);
         if (scope == null || playback == null)
             return new SoundPlayer(0);
 
@@ -31,12 +37,18 @@ public static partial class Music
     }
 
     /// <summary>Регистрирует файл в текущей сессии без запуска.</summary>
-    public static SoundPlayer SoundLoad(string filePath)
+    public static SoundPlayer SoundLoad(string filePath) => SoundLoad(filePath, maxDownloadBytes: null);
+
+    /// <summary>Регистрирует файл или URL с лимитом будущей загрузки в байтах; null — без лимита.</summary>
+    /// <exception cref="ArgumentOutOfRangeException">Лимит не является положительным.</exception>
+    public static SoundPlayer SoundLoad(string filePath, long? maxDownloadBytes)
     {
+        ValidateMaxDownloadBytes(maxDownloadBytes);
         if (string.IsNullOrWhiteSpace(filePath))
             return new SoundPlayer(0);
 
-        return GetActiveScope()?.CreatePlayback(VolumeToAmplitude(Volume), filePath)?.Player
+        return GetActiveScope()?.CreatePlayback(
+                   VolumeToAmplitude(Volume), filePath, maxDownloadBytes: maxDownloadBytes)?.Player
                ?? new SoundPlayer(0);
     }
 
@@ -158,12 +170,11 @@ public static partial class Music
             var actualPath = filePath;
             if (IsUrl(filePath))
             {
-                var content = await scope.Runtime.DownloadBytesAsync(filePath, cancellationToken)
-                    .ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
                 temporaryPath = scope.Runtime.CreateTemporaryPath();
                 scope.TrackTemporaryFile(temporaryPath);
-                await scope.Runtime.WriteAllBytesAsync(temporaryPath, content, cancellationToken)
+                await scope.Runtime.DownloadToFileAsync(
+                        filePath, temporaryPath, playback.MaxDownloadBytes, cancellationToken)
                     .ConfigureAwait(false);
                 actualPath = temporaryPath;
             }
@@ -192,7 +203,9 @@ public static partial class Music
             }
             finally
             {
-                if (!sourcePublished)
+                if (sourcePublished)
+                    playback.ReleaseAudioFile(source);
+                else
                     source.Dispose();
             }
         }
@@ -263,4 +276,10 @@ public static partial class Music
     private static bool IsUrl(string path) =>
         path.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+
+    private static void ValidateMaxDownloadBytes(long? maxDownloadBytes)
+    {
+        if (maxDownloadBytes is long limit)
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(limit, nameof(maxDownloadBytes));
+    }
 }

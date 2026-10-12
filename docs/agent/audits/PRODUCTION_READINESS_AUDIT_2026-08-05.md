@@ -2,9 +2,14 @@
 
 **Production-ready: нет — решение `No-Go`.**
 
-**Статус актуализации:** 2026-10-12, ветка `feature/DotNet10Modernization`, базовый HEAD `19a7f0dc2717ceabea074696c6b6c9cefa240378` плюс незакоммиченные изменения 7 файлов исходников/тестов R04/R08/R13.
-Пользователь подтвердил в Visual Studio инкрементальную Debug-сборку без предупреждений и ошибок
-и полный набор **298/298** тестов. Подробности и источники — в разделе актуализации ниже.
+**Статус актуализации:** 2026-10-12, ветка `feature/DotNet10Modernization`, HEAD `ebc03989c352509b91a08030b89b6c1c799b6881` (`feat(music): stream URL audio with optional size limits`). Коммит содержит реализацию R02, её тесты и материалы ручной проверки. До редактирования этого аудита рабочее дерево было чистым.
+Последняя проверка реализации агентом: Release build **0 предупреждений, 0 ошибок**, полный набор
+**333/333** тестов. Пользователь подтвердил ручной прогон всех 12 сценариев URL-аудио со слышимым звуком;
+агент дополнительно проверил реальные temp files, recovery, внешний HTTPS и MP3-декодер.
+Проверки выполнены перед созданием коммита на базовом HEAD `5697e0f` плюс изменения R02, затем включённые
+в `ebc0398`; при этой документационной актуализации сборка и тесты не повторялись.
+Предыдущий пользовательский Debug-прогон **298/298** сохраняется как исторический этап. Подробности
+и источники — в разделе актуализации ниже.
 Прежние результаты, включая Release build/test/publish `develop` на `f4ea499` от 2026-10-05,
 сохранены как отдельные исторические свидетельства и не подтверждают новый checkout.
 Оценки готовности остаются экспертными ориентирами от 2026-09-20, а не новым количественным пересчётом.
@@ -41,7 +46,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 
 ## ✅ Актуализация модернизации — 2026-10-12
 
-В рабочем дереве `feature/DotNet10Modernization` реализованы **14 из 18 групп: R01, R03–R08, R10–R13, R16–R18** из [аудита C# 14 / .NET 10](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). Исправлена instrumentation новых void instance operators, усилены Graphics guards, 21 закрытое поле использует `Lock` с `using System.Threading;`, выполнены согласованные локальные изменения MVVM, коллекций, nullable equality, шаблона и XAML. **R02, R09, R14, R15 отложены по решению пользователя.**
+На ветке `feature/DotNet10Modernization` реализованы **15 из 18 групп: R01–R08, R10–R13, R16–R18** из [аудита C# 14 / .NET 10](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). Исправлена instrumentation новых void instance operators, усилены Graphics guards, 21 закрытое поле использует `Lock` с `using System.Threading;`, выполнены согласованные локальные изменения MVVM, коллекций, nullable equality, шаблона и XAML; R02 добавил потоковую URL-загрузку с необязательным лимитом. **R09, R14, R15 остаются отложенными по решению пользователя.**
 
 Первый этап проверен пользователем 12.10.2026 в Visual Studio (исторический прогон до R04/R08/R13):
 
@@ -50,7 +55,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - Добавлены и прошли 23 regression-сценария: 9 compiler (class/struct, block/arrow, checked/обычные instance operators, throw, прежние static/conversion operators) и 14 Graphics (ранняя валидация, точные исключения/ParamName, минимальные и лишние точки Bézier, отсутствие Canvas). Локальный набор увеличился с 242 до 265.
 - Результат относится к базовому HEAD `13a7730` плюс 37 изменённым файлам исходников/тестов; реализация ещё не имеет отдельного commit hash. Агент сборку и тесты повторно не запускал.
 
-**Последний этап R04/R08/R13, проверка в 15:52:**
+**Предыдущий этап R04/R08/R13, проверка в 15:52:**
 
 - Чтение settings/session отклоняет duplicate properties, root-null и explicit null в обязательных свойствах; missing properties сохраняют defaults, unknown fields допускаются. Дополнительная model validation нормализует параметры шрифта и культуры с диагностикой, проверяет Version/вкладки сессии, пропускает null-элементы и ограничивает ActiveTabIndex. JsonSerializerOptions кэшируются в FileService и CrashReportWriter.
 - Recovery использует существующие boundaries: settings получают defaults с SettingsFallback, ошибка session передаётся startup-обработчику с диагностикой и сообщением. При чтении исходный файл не перезаписывается; последующее сохранение может его заменить. Резервная копия, частичное восстановление повреждённого JSON, версия и миграции схемы settings не реализованы.
@@ -58,15 +63,24 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - [Новый скриншот Test Explorer](<C:/Users/chere/AppData/Local/Temp/codex-clipboard-eedb66fd-a43f-4d48-a331-9833385fe4d9.png>): **298 тестов, все пройдены**, длительность группы **17,4 с**; Files — 35, Initialize — 16. Добавлены 33 regression-сценария для JSON-контрактов, нормализации и восстановления; набор вырос 265 → 298. Полная матрица повреждённых файлов не проверена; базовый ручной UI smoke восстановления подтверждён пользователем ниже.
 - Проверенный срез: HEAD `19a7f0dc2717ceabea074696c6b6c9cefa240378` плюс 7 изменённых файлов исходников/тестов. Новый этап не имеет отдельного commit hash. Агент сборку и тесты не запускал.
 
-**Решение No-Go для широкого production-релиза сохраняется.** Эта проверка закрывает выбранные 14 групп модернизации и усиливает JSON boundary, но не CI, миграции схемы и сохранение повреждённых данных, ограниченную загрузку аудио, release engineering, accessibility или clean-machine smoke. Исторический publish от 2026-10-05 не включает нынешние изменения; новый publish и ручная проверка обеих тем/scroll layout не подтверждены. Подробный статус всех 18 рекомендаций и ограничения проверки указаны в разделах 0–0.2 связанного аудита.
+**Последний этап R02, реализация и дополнительные проверки:**
+
+- URL-аудио записывается небольшими порциями во временный файл вместо полного `byte[]`. Сохранены прежние одноаргументные вызовы; перегрузки `Sound`, `SoundPlay` и `SoundLoad` принимают `long? maxDownloadBytes`. Отсутствие лимита или `null` означают неограниченный размер, положительный лимит проверяется по Content-Length и фактически полученным байтам. Ровно лимит допустим; превышение даёт `InvalidDataException`. Лимит SoundLoad применяется при последующем запуске. Локальные файлы не ограничиваются.
+- Настоящие файловые проверки подтвердили удаление temp file после успеха, ошибок и отмены, закрытие эксклюзивного source до удаления, repeated SoundStop и закрытие write handle. Интеграционные проверки текущего host подтвердили возврат в Idle и следующий Run после пойманных ошибок лимита/HTTP. Прежнее статическое предположение о блокировке Run оказалось неверным и не является открытым дефектом этого проверенного пути.
+- Пользователь выполнил все 12 интерактивных сценариев в KID и подтвердил слышимость и ожидаемое поведение: загрузку без лимита, ровно лимит, отказы по размеру, chunked, SoundLoad, HTTP 404, повторный SoundStop, Stop кнопкой KID и Stop по Enter. После остановки кнопкой выполнены новые запуски; выход через 0 завершился штатно. Лог и три скриншота описаны в разделе 0.4 связанного аудита.
+- Агент скачал публичный MP3 по HTTPS настоящим MusicRuntime с обычной проверкой TLS: 28 915 байт без лимита и с точным лимитом; 28 914 байт отклонены до записи body. Реальный NAudio source декодировал 134 880 float samples, длительность 00:00:01.5411791; аудиовыход для этой MP3-проверки не открывался. Файлы probe удалены.
+- Итоговая `dotnet build KID.sln -c Release --no-restore -v:minimal` — **0 warnings, 0 errors**, **14,18 с**. `dotnet test KID.sln -c Release --no-build --no-restore` — **333 passed, 0 failed, 0 skipped**, **23,399 с**. R02 добавил 35 regression-сценариев: набор вырос **298 → 325 → 333**. Это локальная Release-сборка, без явного Rebuild и fresh restore/vulnerability scan.
+- Исходный проверенный срез R02 — HEAD `5697e0f` плюс изменения, теперь сохранённые в коммите `ebc0398`. Полные результаты и границы проверки приведены в разделах 0.3–0.5 [аудита модернизации](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). В этой актуализации изменяется только production-readiness документ; новые прогоны не выполнялись.
+
+**Решение No-Go для широкого production-релиза сохраняется.** Проверки закрывают выбранные 15 групп модернизации и усиливают JSON/audio boundaries. Открыты CI, миграции схемы и сохранение повреждённых данных, release engineering, accessibility и clean-machine smoke. Для аудио лимит размера является выбором пользователя, а не обязательной общей квотой: без него временный диск не ограничен, автоматический тайм-аут body и суммарный лимит параллельных загрузок не добавлены. Сбой write посередине записи и все внешние серверы/кодеки не проверены. Исторический publish от 2026-10-05 не включает нынешние изменения; новый publish и ручная проверка обеих тем/scroll layout не подтверждены. Подробный статус всех 18 рекомендаций и ограничения проверки указаны в разделах 0–0.5 связанного аудита.
 
 **Ручная проверка восстановления сессии, 2026-10-12:** пользователь сообщил, что все сценарии отработали: несохранённая вкладка восстановилась после autosave и прерывания процесса; две вкладки открылись в заданном порядке, индекс `99` выбрал последнюю; при `Tabs: null` появилось сообщение об ошибке, затем открылась рабочая стандартная вкладка. Сценарии подготовлены [скриптом](<D:/Visual Studio Projects/KID/scripts/manual-checks/Prepare-EditorSessionRecovery.ps1>). Это пользовательское подтверждение; отдельные UI-логи или скриншоты не приложены. Smoke не охватывает полную матрицу аварийных завершений и повреждений файлов.
 
 ## 📌 Открытые задачи на 2026-10-12
 
-1. **Quality gate:** добавить CI для restore, Release build, тестов, NuGet vulnerability scan и publish. Пользовательский прогон 298/298 от 2026-10-12 не заменяет автоматическую проверку каждого изменения.
+1. **Quality gate:** добавить CI для restore, Release build, тестов, NuGet vulnerability scan и publish. Локальный Release-прогон 333/333 и пользовательский ручной smoke от 2026-10-12 не заменяют автоматическую проверку каждого изменения.
 2. **Устойчивость настроек:** валидация JSON boundary и значений реализована в R04/R13; остаются версия схемы, миграции и восстановление повреждённого файла без потери доступных пользовательских данных.
-3. **Дистрибутив:** выбрать и оформить installer/MSIX, версионирование и code signing; подготовить SBOM, third-party notices и корневые README, LICENSE, SECURITY, CHANGELOG. Текущий framework-dependent publish получен, но не подписан и не упакован. Self-contained publish требует отдельной доработки `KIDCompilationProfileProvider`, который сейчас отвергает такое размещение assemblies.
+3. **Дистрибутив:** выбрать и оформить installer/MSIX, версионирование и code signing; подготовить SBOM, third-party notices и корневые README, LICENSE, SECURITY, CHANGELOG. Исторический framework-dependent publish `develop` от 2026-10-05 получен, но не подписан и не упакован; новый publish после модернизации не проверен. Self-contained publish требует отдельной доработки `KIDCompilationProfileProvider`, который сейчас отвергает такое размещение assemblies.
 4. **Release smoke:** проверить именно текущий publish на чистой Windows-машине с .NET 10 Desktop Runtime, включая cold start и основные сценарии Run/Stop, сохранения и восстановления.
 5. **Accessibility и UI:** задать критерии приёмки и вручную проверить клавиатуру, screen reader, High Contrast, DPI и локализации; автоматическое покрытие startup/тем/ошибок настроек расширять по обнаруженным рискам.
 6. **Условно, при изменении trust model:** если появится требование запускать недоверенные `.cs`, отдельно определить threat model и OS-level изоляцию. Для принятого trusted-code scope это не блокер.
@@ -81,6 +95,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - Исторический checkout для structured diagnostics — `feature/StructuredLoggingAndGlobalDiagnostics` на `31f3b20`; после ручной проверки рабочее дерево было чистым.
 - Исторический checkout 2026-10-05 — `develop` на `f4ea499` до правки аудита. В обоих production-проектах включён `TreatWarningsAsErrors`; `dotnet build KID.sln -c Release --no-restore` завершился с **0 ошибок и 0 предупреждений**.
 - `dotnet test KID.sln -c Release --no-restore` на том же checkout: **242 passed, 0 skipped, 0 failed**. Это локальная проверка, не CI и не проверка GUI.
+- Последний проверенный набор модернизации/R02 от 2026-10-12: Release build **0/0**, **333 passed, 0 skipped, 0 failed**, пользовательский ручной smoke 12 сценариев и дополнительные проверки реальных файлов/host recovery/HTTPS/MP3. Изменения затем сохранены в `ebc0398`; проверки текущего publish на чистой машине нет. Подробности — в актуализации выше и разделах 0.3–0.5 связанного аудита.
 - Контрольная проверка C2/C3 на `feature/FixC2C3` от 2026-09-15: `dotnet restore KID.sln` и Release build успешны; `dotnet test KID.sln -c Release --no-restore` — **166 passed, 0 skipped, 0 failed**; focused-набор Этапа 9 ранее повторён 10 раз — **10/10 PASS**.
 - На ветке `feature/TextBoxConsoleExecutionScope` после переноса Console зафиксированы: targeted hardening **9/9**, Console **52/52**, полный набор **188 passed, 0 skipped, 0 failed**, Release build без warnings/errors.
 - На `feature/CompilationProfile` (`6ad3342`) исторически зафиксированы: Release build — **0 warnings, 0 errors**; полный набор — **219 passed, 0 skipped, 0 failed**; `git diff --cached --check` прошёл.
@@ -222,7 +237,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 ## ⚠️ Проблемы средней серьёзности
 
 1. **✅ Автоматизированные execution/Console/compilation-profile и базовые persistence-тесты добавлены; CI по-прежнему отсутствует.**
-   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; исторический локальный прогон 2026-10-05 — 242/242; текущий пользовательский прогон в Visual Studio 2026-10-12 — 298/298, включая compiler/Graphics и новые JSON/persistence regressions. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
+   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; исторический локальный прогон 2026-10-05 — 242/242; пользовательский этап в Visual Studio 2026-10-12 — 298/298. Последний локальный Release-прогон агентом — 333/333, включая compiler/Graphics/JSON и новые audio/download/cleanup/host recovery regressions. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
    Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка 2026-10-05 завершилась с **0 ошибок и 0 предупреждений**.
@@ -259,7 +274,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 - ✅ Session `CancellationTokenSource` имеет одного владельца и освобождается после зависимых ожиданий и cleanup.
 - `ThemeService` очищает все merged dictionaries. Пока коллекция содержит только словарь темы, это не наблюдаемый дефект; при добавлении общих ресурсов их также удалит переключение темы: [ThemeService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Themes/ThemeService.cs:79>).
 - ✅ Старые `*wpftmp.csproj` в текущем checkout 2026-10-05 не обнаружены, включая игнорируемые файлы. Правило `*_wpftmp.csproj` остаётся в `.gitignore`; прежнее замечание о лежащих в каталоге файлах устарело.
-- `Music` теперь переиспользует один `HttpClient`, передаёт cancellation token и детерминированно удаляет временные файлы, но URL-ответ всё ещё материализуется целиком в память без отдельного ограничения размера: [MusicRuntime.cs](</D:/Visual Studio Projects/KID/KID.Library/Music/MusicRuntime.cs>).
+- ✅ R02 устранил полную материализацию URL-аудио в память: общий `HttpClient` читает body небольшими порциями и пишет в temp file с cancellation token; необязательный пользовательский лимит проверяется по заголовку и фактическим байтам. Cleanup настоящих файлов, Stop, следующий Run после пойманных ошибок, внешний HTTPS и MP3-декодирование проверены. По принятому контракту размер по умолчанию не ограничен; автоматический body timeout и общий лимит параллельных загрузок не добавлены: [MusicRuntime.cs](</D:/Visual Studio Projects/KID/KID.Library/Music/MusicRuntime.cs>).
 - Compilation profile детерминирован, но вся публичная поверхность `KID.Library` compile-visible; вместе с учебным API доступны runtime-support типы `StopManager`, `TextBoxConsole` и `DispatcherManager`.
 - Из-за публичного `NAudio.Wave.PlaybackState` в API KID профиль вынужден напрямую открывать всю публичную поверхность `NAudio.Core`; сужение границы потребует собственного KID enum и совместимой API-миграции.
 - В коде остаются широкие `catch` и комментарии о будущих изменениях. Некоторые `catch` намеренно собирают ошибки cleanup либо игнорируют ожидаемую отмену; общая формулировка «подавленные исключения» не доказывает дефект. Для отдельной задачи нужен поштучный разбор с вызывающим кодом, обработкой ошибки и тестом конкретного сценария.
@@ -276,7 +291,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 - Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
-- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics, persistence-контракты и compiler/Graphics/JSON regressions: пользовательский прогон в Visual Studio 2026-10-12 — 298 тестов, все пройдены; исторический локальный прогон 2026-10-05 — 242/242.
+- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics, persistence-контракты, compiler/Graphics/JSON и audio regressions: последний локальный Release-прогон агентом — 333/333. Пользовательский этап в Visual Studio 2026-10-12 — 298/298 и последующий ручной audio smoke всех 12 сценариев; исторический локальный прогон 2026-10-05 — 242/242.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.

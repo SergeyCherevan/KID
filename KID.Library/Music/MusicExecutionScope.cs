@@ -76,7 +76,8 @@ internal sealed class MusicExecutionScope : IAsyncDisposable
     internal MusicPlayback? CreatePlayback(
         double volume,
         string? filePath = null,
-        Func<CancellationToken, NAudio.Wave.ISampleProvider>? sampleProviderFactory = null)
+        Func<CancellationToken, NAudio.Wave.ISampleProvider>? sampleProviderFactory = null,
+        long? maxDownloadBytes = null)
     {
         lock (gate)
         {
@@ -90,7 +91,8 @@ internal sealed class MusicExecutionScope : IAsyncDisposable
                 id,
                 volume,
                 filePath,
-                sampleProviderFactory);
+                sampleProviderFactory,
+                maxDownloadBytes);
             activeSounds.Add(id, playback);
             return playback;
         }

@@ -27,12 +27,14 @@ internal sealed class MusicPlayback
         int id,
         double volume,
         string? filePath,
-        Func<CancellationToken, ISampleProvider>? sampleProviderFactory)
+        Func<CancellationToken, ISampleProvider>? sampleProviderFactory,
+        long? maxDownloadBytes)
     {
         Scope = scope ?? throw new ArgumentNullException(nameof(scope));
         lifetimeSource = CancellationTokenSource.CreateLinkedTokenSource(scope.CancellationToken);
         Volume = volume;
         FilePath = filePath;
+        MaxDownloadBytes = maxDownloadBytes;
         SampleProviderFactory = sampleProviderFactory;
         Player = new SoundPlayer(id, this);
     }
@@ -41,6 +43,7 @@ internal sealed class MusicPlayback
     internal SoundPlayer Player { get; }
     internal CancellationToken CancellationToken => lifetimeSource.Token;
     internal string? FilePath { get; }
+    internal long? MaxDownloadBytes { get; }
     internal Func<CancellationToken, ISampleProvider>? SampleProviderFactory { get; private set; }
 
     internal double Volume { get; private set; }
@@ -188,6 +191,19 @@ internal sealed class MusicPlayback
                 throw new InvalidOperationException("Playback audio file is already active.");
             audioFile = value;
         }
+    }
+
+    // Закрывает file source до удаления URL-файла; scope cleanup остаётся идемпотентным.
+    internal void ReleaseAudioFile(IMusicFileSource value)
+    {
+        lock (gate)
+        {
+            if (!ReferenceEquals(audioFile, value))
+                return;
+            audioFile = null;
+        }
+        try { value.Dispose(); }
+        catch (Exception exception) { Scope.RecordFailure(exception); }
     }
 
     internal void PublishVolumeProvider(VolumeSampleProvider value)

@@ -268,16 +268,11 @@ public sealed class Stage9ReliabilityTests
         public IMusicFileSource OpenFile(string path) =>
             throw new NotSupportedException("The Stage 9 soak uses generated audio only.");
 
-        public Task<byte[]> DownloadBytesAsync(string url, CancellationToken cancellationToken) =>
+        public Task DownloadToFileAsync(
+            string url, string path, long? maxBytes, CancellationToken cancellationToken) =>
             throw new NotSupportedException("The Stage 9 soak does not use the network.");
 
         public string CreateTemporaryPath() =>
-            throw new NotSupportedException("The Stage 9 soak creates no files.");
-
-        public Task WriteAllBytesAsync(
-            string path,
-            byte[] content,
-            CancellationToken cancellationToken) =>
             throw new NotSupportedException("The Stage 9 soak creates no files.");
 
         public bool FileExists(string path) => false;

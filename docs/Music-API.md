@@ -204,6 +204,7 @@ Music.Sound(track1, track2);
 **Сигнатура:**
 ```csharp
 public static void Sound(string filePath)
+public static void Sound(string filePath, long? maxDownloadBytes)
 ```
 
 **Параметры:**
@@ -227,6 +228,52 @@ Music.Sound("https://example.com/music/song.wav");
 
 **Примечание:** При использовании URL файл загружается во временную папку и удаляется после воспроизведения.
 
+### Ограничение размера URL-загрузки
+
+`Sound`, `SoundPlay` и `SoundLoad` поддерживают перегрузку с `long? maxDownloadBytes`.
+Это максимальный размер скачиваемого файла в **байтах**, а не длительность аудио.
+Прежние одноаргументные вызовы и значение `null` загружают файл без ограничения размера.
+Положительный лимит применяется только к HTTP/HTTPS URL; локальный файл воспроизводится без этой проверки.
+Ноль и отрицательное значение вызывают `ArgumentOutOfRangeException` с `ParamName = "maxDownloadBytes"`
+сразу при вызове, включая `SoundLoad`, до регистрации плеера и запуска загрузки.
+
+```csharp
+const long maxBytes = 20L * 1024 * 1024; // 20 МиБ
+Music.Sound(url, maxDownloadBytes: maxBytes);
+
+var player = Music.SoundLoad(url, maxDownloadBytes: maxBytes);
+player.SoundPlay(); // Сохранённый лимит применяется при запуске загрузки
+player.SoundWait();
+
+Music.Sound(url); // Без ограничения размера
+Music.Sound(url, maxDownloadBytes: null); // То же поведение
+```
+
+Загрузка всегда записывается небольшими порциями во временный файл, без массива с полным содержимым.
+Воспроизведение начинается после завершения скачивания. Лимит проверяется по `Content-Length`, если
+он известен, и по фактически полученным байтам. Размер ровно на границе допустим; при превышении
+загрузка завершается с `System.IO.InvalidDataException`, частичный файл очищается и playback не начинается.
+Без лимита размер временного файла может расти до доступного места на диске.
+Автоматический тайм-аут чтения body в этом изменении не добавлен; Stop отменяет текущую загрузку.
+
+Для блокирующего `Sound` ошибка передаётся из вызова. Для фонового `SoundPlay` ошибка наблюдается
+при `SoundWait` или ожидании `PlaySoundAsync`. Ошибку можно поймать в пользовательской программе.
+В ручном прогоне и отдельной интеграционной проверке 12.10.2026 после пойманных ошибок лимита и HTTP
+host вернулся в `Idle`, а следующий Run выполнился. Прежнее предположение о блокировке следующего Run
+этими пойманными ошибками опровергнуто проверкой текущего host.
+
+```csharp
+try
+{
+    var player = Music.SoundPlay(url, maxDownloadBytes: 20L * 1024 * 1024);
+    player.SoundWait();
+}
+catch (System.IO.InvalidDataException)
+{
+    Console.WriteLine("Аудиофайл превышает допустимый размер.");
+}
+```
+
 ## Расширенное API для асинхронного управления
 
 Расширенное API позволяет управлять несколькими звуками одновременно, ставить на паузу, останавливать, зацикливать и т.д.
@@ -238,6 +285,7 @@ Music.Sound("https://example.com/music/song.wav");
 **Сигнатура:**
 ```csharp
 public static SoundPlayer SoundPlay(string filePath)
+public static SoundPlayer SoundPlay(string filePath, long? maxDownloadBytes)
 ```
 
 **Возвращает:** `SoundPlayer` для управления воспроизведением.
@@ -312,6 +360,7 @@ poly.SoundLoop(true); // Зациклить (повторять аккорд/ф�
 **Сигнатура:**
 ```csharp
 public static SoundPlayer SoundLoad(string filePath)
+public static SoundPlayer SoundLoad(string filePath, long? maxDownloadBytes)
 ```
 
 **Возвращает:** `SoundPlayer` для управления.

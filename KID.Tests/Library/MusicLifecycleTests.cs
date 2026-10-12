@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Windows.Controls;
 using KID.Services;
@@ -392,6 +395,336 @@ public sealed class MusicLifecycleTests
         }
     }
 
+    [Theory]
+    [InlineData("Sound", null)]
+    [InlineData("Sound", 3L)]
+    [InlineData("SoundPlay", null)]
+    [InlineData("SoundPlay", 3L)]
+    [InlineData("SoundLoad", null)]
+    [InlineData("SoundLoad", 3L)]
+    public async Task UrlPlayback_PreservesLimitAndClosesSourceBeforeDeletingFile(string method, long? limit)
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(1, TestContext.Current.CancellationToken);
+        var environment = ExecutionEnvironmentManager.GetCurrent(1);
+        var runtime = new FakeMusicRuntime { CompleteImmediately = true };
+        var scope = Music.Init(environment, runtime);
+        const string url = "https://example.test/audio.mp3";
+        try
+        {
+            if (method == "Sound")
+            {
+                if (limit.HasValue)
+                    Music.Sound(url, limit);
+                else
+                    Music.Sound(url);
+            }
+            else
+            {
+                using var player = method == "SoundLoad"
+                    ? (limit.HasValue ? Music.SoundLoad(url, limit) : Music.SoundLoad(url))
+                    : (limit.HasValue ? Music.SoundPlay(url, limit) : Music.SoundPlay(url));
+                if (method == "SoundLoad")
+                {
+                    Assert.Empty(runtime.DownloadLimits);
+                    player.SoundPlay();
+                }
+                await player.PlaySoundAsync().WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            }
+
+            Assert.Equal(limit, Assert.Single(runtime.DownloadLimits));
+            Assert.Equal(["source-disposed", "deleted"], runtime.FileEvents);
+            Assert.Equal(1, Assert.Single(runtime.Sources).DisposeCount);
+            Assert.Equal(0, scope.ActiveSoundCount);
+            Assert.Equal(0, scope.TemporaryFileCount);
+            await Music.ShutdownAsync(environment);
+            Assert.Equal(0, scope.BackgroundTaskCount);
+        }
+        finally { await IgnoreCleanupFailureAsync(environment); }
+    }
+
+    [Theory]
+    [InlineData(0L)]
+    [InlineData(-1L)]
+    public void FileOverloads_RejectInvalidLimitSynchronouslyEvenWithoutActiveSession(long limit)
+    {
+        Assert.Equal("maxDownloadBytes", Assert.Throws<ArgumentOutOfRangeException>(
+            () => Music.Sound("", limit)).ParamName);
+        Assert.Equal("maxDownloadBytes", Assert.Throws<ArgumentOutOfRangeException>(
+            () => Music.SoundPlay("", limit)).ParamName);
+        Assert.Equal("maxDownloadBytes", Assert.Throws<ArgumentOutOfRangeException>(
+            () => Music.SoundLoad("", limit)).ParamName);
+    }
+
+    [Fact]
+    public async Task LocalFile_IgnoresDownloadLimitAndDoesNotCreateTemporaryFile()
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(1, TestContext.Current.CancellationToken);
+        var environment = ExecutionEnvironmentManager.GetCurrent(1);
+        var runtime = new FakeMusicRuntime { CompleteImmediately = true };
+        runtime.AddLocalFile("local.wav");
+        Music.Init(environment, runtime);
+        try
+        {
+            Music.Sound("local.wav", maxDownloadBytes: 1);
+            Assert.Empty(runtime.DownloadLimits);
+            Assert.Empty(runtime.DeletedFiles);
+            Assert.Equal(1, Assert.Single(runtime.Sources).DisposeCount);
+        }
+        finally { await IgnoreCleanupFailureAsync(environment); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UrlFailure_IsObservedAndDeletesFileWithoutStartingOutput(bool failOpening)
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(1, TestContext.Current.CancellationToken);
+        var environment = ExecutionEnvironmentManager.GetCurrent(1);
+        var failure = new InvalidDataException("test failure");
+        var runtime = new FakeMusicRuntime
+        {
+            DownloadFailure = failOpening ? null : failure,
+            OpenFileFailure = failOpening ? failure : null
+        };
+        var scope = Music.Init(environment, runtime);
+        try
+        {
+            using var player = Music.SoundPlay("https://example.test/audio.mp3", 3);
+            var observed = await Assert.ThrowsAsync<InvalidDataException>(async () =>
+                await player.PlaySoundAsync().WaitAsync(Timeout, TestContext.Current.CancellationToken));
+            Assert.Same(failure, observed);
+            Assert.Empty(runtime.Outputs);
+            Assert.Single(runtime.DeletedFiles);
+            Assert.Equal(0, scope.ActiveSoundCount);
+            Assert.Equal(0, scope.TemporaryFileCount);
+        }
+        finally { await IgnoreCleanupFailureAsync(environment); }
+    }
+
+    [Fact]
+    public async Task SoundStop_CancelsDownloadAndRepeatedStopLeavesSessionUsable()
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(1, TestContext.Current.CancellationToken);
+        var environment = ExecutionEnvironmentManager.GetCurrent(1);
+        var runtime = new FakeMusicRuntime { BlockWrite = true };
+        var scope = Music.Init(environment, runtime);
+        try
+        {
+            using var player = Music.SoundPlay("https://example.test/audio.mp3", 3);
+            await runtime.WriteStarted.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            await Task.Run(() => player.SoundStop(), TestContext.Current.CancellationToken)
+                .WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            player.SoundStop();
+            Assert.Single(runtime.DeletedFiles);
+            Assert.Empty(runtime.Outputs);
+            Assert.Equal(0, scope.TemporaryFileCount);
+            Assert.Equal(0, scope.ActiveSoundCount);
+            Assert.True(scope.IsAccepting);
+        }
+        finally { await IgnoreCleanupFailureAsync(environment); }
+    }
+
+    [Theory]
+    [InlineData("success")]
+    [InlineData("header-limit")]
+    [InlineData("body-limit")]
+    [InlineData("read-failure")]
+    [InlineData("http-failure")]
+    public async Task UrlPlayback_DeletesRealTemporaryFileAndClosesExclusiveSource(string scenario)
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(1, TestContext.Current.CancellationToken);
+        var environment = ExecutionEnvironmentManager.GetCurrent(1);
+        using var runtime = new DiskMusicRuntime(scenario);
+        var scope = Music.Init(environment, runtime);
+        try
+        {
+            using var player = Music.SoundPlay("https://example.test/audio.wav",
+                scenario is "header-limit" or "body-limit" ? 3 : null);
+            var failure = await Record.ExceptionAsync(async () =>
+                await player.PlaySoundAsync().WaitAsync(Timeout, TestContext.Current.CancellationToken));
+            if (scenario == "success")
+            {
+                Assert.Null(failure);
+                Assert.Equal(["source-disposed", "deleted"], runtime.Events);
+            }
+            else
+            {
+                Assert.NotNull(failure);
+                Assert.Equal(["deleted"], runtime.Events);
+            }
+            Assert.False(File.Exists(Assert.Single(runtime.Paths)));
+            Assert.Equal(0, scope.TemporaryFileCount);
+            Assert.Equal(0, scope.ActiveSoundCount);
+        }
+        finally { await IgnoreCleanupFailureAsync(environment); }
+    }
+
+    [Fact]
+    public async Task SoundStop_DeletesRealPartialFileAndClosesWriteHandle()
+    {
+        using var lease = ExecutionEnvironmentManager.BeginExecution(1, TestContext.Current.CancellationToken);
+        var environment = ExecutionEnvironmentManager.GetCurrent(1);
+        using var runtime = new DiskMusicRuntime("blocked");
+        Music.Init(environment, runtime);
+        try
+        {
+            using var player = Music.SoundPlay("https://example.test/audio.wav");
+            await runtime.Input.Blocked.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            Assert.True(File.Exists(Assert.Single(runtime.Paths)));
+            await Task.Run(() => player.SoundStop(), TestContext.Current.CancellationToken)
+                .WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            player.SoundStop();
+            Assert.False(File.Exists(runtime.Paths[0]));
+            Assert.Equal(["deleted"], runtime.Events);
+            await Music.ShutdownAsync(environment);
+        }
+        finally { await IgnoreCleanupFailureAsync(environment); }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CaughtDownloadFailure_AllowsNextHostRunAndCleansFiles(bool httpFailure)
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            const string code = """
+                public static class Program
+                {
+                    public static void Main()
+                    {
+                        try { KID.Music.Sound("https://example.test/audio.wav", 3); }
+                        catch (System.Exception) { }
+                    }
+                }
+                """;
+            var localization = new StubLocalizationService();
+            var compilation = await CompilerFactory.Create(localization)
+                .CompileAsync(code, TestContext.Current.CancellationToken);
+            Assert.True(compilation.Success, string.Join(Environment.NewLine, compilation.Errors));
+            var runtime = new FakeMusicRuntime
+            {
+                DownloadFailure = httpFailure
+                    ? new HttpRequestException("HTTP 404")
+                    : new InvalidDataException("Audio download exceeds the size limit.")
+            };
+            var service = new CodeExecutionService(
+                FakeCodeCompiler.Returning(compilation),
+                new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory));
+            var canvas = new Canvas();
+            var execution = service.ExecuteAsync(code, _ => new TrackingCodeExecutionContext
+            {
+                GraphicsContext = new CanvasGraphicsContext(canvas, (_, environment) => Music.Init(environment, runtime))
+            });
+            var result = await execution.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            Assert.Equal(ExecutionResultKind.Completed, result.Kind);
+            Assert.Single(runtime.DownloadLimits);
+            Assert.Equal(ExecutionState.Idle, service.State);
+            Assert.False(service.IsExecutionActive);
+            Assert.Null(Music.CurrentScope);
+            Assert.Single(runtime.DeletedFiles);
+
+            var nextRuntime = new FakeMusicRuntime { CompleteImmediately = true };
+            var next = await service.ExecuteAsync(code, _ => new TrackingCodeExecutionContext
+            {
+                GraphicsContext = new CanvasGraphicsContext(canvas, (_, environment) => Music.Init(environment, nextRuntime))
+            }).WaitAsync(Timeout, TestContext.Current.CancellationToken);
+            Assert.Equal(ExecutionResultKind.Completed, next.Kind);
+            Assert.Single(nextRuntime.DownloadLimits);
+            Assert.Equal(ExecutionState.Idle, service.State);
+            Assert.Null(Music.CurrentScope);
+            Assert.Single(nextRuntime.DeletedFiles);
+        });
+    }
+
+    private sealed class DiskMusicRuntime : IMusicRuntime, IDisposable
+    {
+        private readonly HttpClient client;
+        private readonly DefaultMusicRuntime runtime;
+        internal DiskReadStream Input { get; }
+        internal List<string> Paths { get; } = [];
+        internal List<string> Events { get; } = [];
+
+        internal DiskMusicRuntime(string scenario)
+        {
+            Input = new DiskReadStream(scenario);
+            client = new HttpClient(new DiskResponseHandler(Input, scenario));
+            runtime = new DefaultMusicRuntime(client);
+        }
+        public IMusicOutput CreateOutput() => new FakeMusicOutput(false, false, false, true);
+        public IMusicFileSource OpenFile(string path) => new LockedDiskSource(path, Events);
+        public string CreateTemporaryPath()
+        {
+            var path = runtime.CreateTemporaryPath();
+            Paths.Add(path);
+            return path;
+        }
+        public Task DownloadToFileAsync(string url, string path, long? maxBytes, CancellationToken token) =>
+            runtime.DownloadToFileAsync(url, path, maxBytes, token);
+        public bool FileExists(string path) => File.Exists(path);
+        public void DeleteFile(string path)
+        {
+            File.Delete(path);
+            Events.Add("deleted");
+        }
+        public void Dispose()
+        {
+            client.Dispose();
+            foreach (var path in Paths)
+                File.Delete(path);
+        }
+    }
+
+    private sealed class LockedDiskSource : IMusicFileSource
+    {
+        private readonly FileStream file;
+        private readonly List<string> events;
+        internal LockedDiskSource(string path, List<string> events)
+        {
+            file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+            this.events = events;
+        }
+        public ISampleProvider SampleProvider { get; } = new SignalGenerator(44100, 1);
+        public TimeSpan CurrentTime { get; set; }
+        public TimeSpan TotalTime => TimeSpan.FromSeconds(1);
+        public long Position { get; set; }
+        public float Volume { get; set; }
+        public void Dispose()
+        {
+            file.Dispose();
+            events.Add("source-disposed");
+        }
+    }
+
+    private sealed class DiskResponseHandler(Stream input, string scenario) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+        {
+            var content = new StreamContent(input);
+            if (scenario == "header-limit")
+                content.Headers.ContentLength = 4;
+            return Task.FromResult(new HttpResponseMessage(
+                scenario == "http-failure" ? HttpStatusCode.NotFound : HttpStatusCode.OK) { Content = content });
+        }
+    }
+
+    private sealed class DiskReadStream(string scenario) : MemoryStream([1, 2, 3, 4])
+    {
+        internal TaskCompletionSource Blocked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override bool CanSeek => false;
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken token = default)
+        {
+            if (base.Position >= 2 && scenario == "blocked")
+            {
+                Blocked.TrySetResult();
+                await Task.Delay(System.Threading.Timeout.InfiniteTimeSpan, token);
+            }
+            if (base.Position >= 2 && scenario == "read-failure")
+                throw new IOException("Read failed midway.");
+            return await base.ReadAsync(buffer[..Math.Min(buffer.Length, 2)], token);
+        }
+    }
+
     private static async Task IgnoreCleanupFailureAsync(ExecutionEnvironment environment) =>
         _ = await Record.ExceptionAsync(async () => await Music.ShutdownAsync(environment));
 
@@ -402,6 +735,12 @@ public sealed class MusicLifecycleTests
 
         internal List<FakeMusicOutput> Outputs { get; } = [];
         internal List<string> DeletedFiles { get; } = [];
+        internal List<long?> DownloadLimits { get; } = [];
+        internal List<string> FileEvents { get; } = [];
+        internal List<FakeMusicFileSource> Sources { get; } = [];
+        internal Exception? DownloadFailure { get; init; }
+        internal Exception? OpenFileFailure { get; init; }
+        internal bool CompleteImmediately { get; init; }
         internal TaskCompletionSource WriteStarted { get; } =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
         internal bool BlockWrite { get; init; }
@@ -414,7 +753,8 @@ public sealed class MusicLifecycleTests
             var output = new FakeMusicOutput(
                 ThrowOnStop,
                 ThrowOnDispose,
-                DrainProviderDuringInit);
+                DrainProviderDuringInit,
+                CompleteImmediately);
             lock (gate)
             {
                 Outputs.Add(output);
@@ -422,12 +762,13 @@ public sealed class MusicLifecycleTests
             return output;
         }
 
-        public IMusicFileSource OpenFile(string path) => new FakeMusicFileSource();
-
-        public Task<byte[]> DownloadBytesAsync(string url, CancellationToken cancellationToken)
+        public IMusicFileSource OpenFile(string path)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            return Task.FromResult<byte[]>([1, 2, 3]);
+            if (OpenFileFailure != null)
+                throw OpenFileFailure;
+            var source = new FakeMusicFileSource(() => FileEvents.Add("source-disposed"));
+            Sources.Add(source);
+            return source;
         }
 
         public string CreateTemporaryPath()
@@ -440,15 +781,19 @@ public sealed class MusicLifecycleTests
             return path;
         }
 
-        public async Task WriteAllBytesAsync(
+        public async Task DownloadToFileAsync(
+            string url,
             string path,
-            byte[] content,
+            long? maxBytes,
             CancellationToken cancellationToken)
         {
+            DownloadLimits.Add(maxBytes);
             WriteStarted.TrySetResult();
             if (BlockWrite)
                 await Task.Delay(System.Threading.Timeout.InfiniteTimeSpan, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
+            if (DownloadFailure != null)
+                throw DownloadFailure;
             lock (gate)
             {
                 files.Add(path);
@@ -469,8 +814,11 @@ public sealed class MusicLifecycleTests
             {
                 files.Remove(path);
                 DeletedFiles.Add(path);
+                FileEvents.Add("deleted");
             }
         }
+
+        internal void AddLocalFile(string path) => files.Add(path);
 
         internal async Task WaitForOutputsAsync(int count)
         {
@@ -493,7 +841,8 @@ public sealed class MusicLifecycleTests
     private sealed class FakeMusicOutput(
         bool throwOnStop,
         bool throwOnDispose,
-        bool drainProviderDuringInit) : IMusicOutput
+        bool drainProviderDuringInit,
+        bool completeImmediately) : IMusicOutput
     {
         private readonly object gate = new();
         private PlaybackState state;
@@ -531,7 +880,7 @@ public sealed class MusicLifecycleTests
             lock (gate)
             {
                 PlayCount++;
-                state = drainProviderDuringInit
+                state = drainProviderDuringInit || completeImmediately
                     ? PlaybackState.Stopped
                     : PlaybackState.Playing;
             }
@@ -568,13 +917,18 @@ public sealed class MusicLifecycleTests
         }
     }
 
-    private sealed class FakeMusicFileSource : IMusicFileSource
+    private sealed class FakeMusicFileSource(Action onDispose) : IMusicFileSource
     {
+        internal int DisposeCount { get; private set; }
         public ISampleProvider SampleProvider { get; } = new SignalGenerator(44100, 1);
         public TimeSpan CurrentTime { get; set; }
         public TimeSpan TotalTime => TimeSpan.FromSeconds(1);
         public long Position { get; set; }
         public float Volume { get; set; }
-        public void Dispose() { }
+        public void Dispose()
+        {
+            DisposeCount++;
+            onDispose();
+        }
     }
 }
