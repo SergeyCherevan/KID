@@ -26,6 +26,22 @@ public sealed class CompilationArtifactTests
     }
 
     [Fact]
+    public void Constructor_CopiesOnlyRequestedSlices()
+    {
+        byte[] peBuffer = [99, 1, 2, 3, 99, 99];
+        byte[] pdbBuffer = [99, 4, 5, 99];
+        var artifact = new CompilationArtifact(
+            peBuffer.AsMemory(1, 3),
+            pdbBuffer.AsMemory(1, 2));
+
+        Array.Fill(peBuffer, (byte)0);
+        Array.Fill(pdbBuffer, (byte)0);
+
+        Assert.Equal(new byte[] { 1, 2, 3 }, artifact.PeImage.ToArray());
+        Assert.Equal(new byte[] { 4, 5 }, artifact.PdbImage.ToArray());
+    }
+
+    [Fact]
     public void CompilationResult_Factories_PreserveSuccessInvariant()
     {
         var artifact = new CompilationArtifact(new byte[] { 1 });

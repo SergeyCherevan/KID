@@ -318,11 +318,12 @@ namespace KID.Services.CodeExecution.Compilation
             cancellationToken.ThrowIfCancellationRequested();
 
             /* Защитные копии внутри CompilationArtifact отделяют время жизни потоков Emit от
-             * результата компиляции. На этой стадии CLR ещё не загружает пользовательскую сборку.
+             * результата компиляции. Передаём только записанные байты, без свободной capacity
+             * и промежуточных копий ToArray. На этой стадии CLR ещё не загружает сборку.
              */
             var artifact = new CompilationArtifact(
-                peStream.ToArray(),
-                pdbStream.ToArray());
+                peStream.GetBuffer().AsMemory(0, checked((int)peStream.Length)),
+                pdbStream.GetBuffer().AsMemory(0, checked((int)pdbStream.Length)));
             return CompilationResult.FromArtifact(artifact);
         }
 

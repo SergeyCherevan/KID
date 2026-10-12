@@ -29,8 +29,14 @@ public sealed class CSharpCompilerTests
         Assert.False(artifact.PeImage.IsEmpty);
         Assert.False(artifact.PdbImage.IsEmpty);
 
+        using var peReader = new PEReader(new MemoryStream(artifact.PeImage.ToArray()));
+        var expectedPeLength = peReader.PEHeaders.SectionHeaders
+            .Max(section => section.PointerToRawData + section.SizeOfRawData);
+        Assert.Equal(expectedPeLength, artifact.PeImage.Length);
+
         using var pdbProvider = MetadataReaderProvider.FromPortablePdbStream(
             new MemoryStream(artifact.PdbImage.ToArray()));
+        Assert.Equal(pdbProvider.GetMetadataReader().MetadataLength, artifact.PdbImage.Length);
         Assert.NotEmpty(pdbProvider.GetMetadataReader().Documents);
 
         var loadContext = new UserProgramLoadContext();
