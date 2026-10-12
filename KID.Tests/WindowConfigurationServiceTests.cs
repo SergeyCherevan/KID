@@ -3,6 +3,9 @@ using KID.Services.Files.Interfaces;
 using KID.Services.Initialize;
 using System.IO;
 using System.Threading.Channels;
+using System.Text.Json;
+using KID.Services.Diagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace KID.Tests.Initialize;
 
@@ -206,6 +209,89 @@ public sealed class WindowConfigurationServiceTests
         var service = new WindowConfigurationService(new FailingWriteFileService());
 
         await Assert.ThrowsAsync<IOException>(() => service.SaveSettingsAsync());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public async Task SetConfigurationFromFileAsync_NormalizesInvalidFontSizeWithDiagnostic(double fontSize)
+    {
+        var settings = new WindowConfigurationData { FontSize = fontSize, FontFamily = "Fira Code" };
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => true,
+            ReadJsonImplementation = (_, _) => settings
+        };
+        var logger = new RecordingLogger();
+        var service = new WindowConfigurationService(fileService, logger);
+
+        await service.SetConfigurationFromFileAsync();
+
+        Assert.Equal(14, service.Settings.FontSize);
+        Assert.Equal("Fira Code", service.Settings.FontFamily);
+        Assert.Single(logger.Events);
+        Assert.Equal(DiagnosticEventIds.SettingsFallback, logger.Events[0]);
+        Assert.Empty(fileService.WrittenJsonPaths);
+    }
+
+    [Fact]
+    public async Task SetConfigurationFromFileAsync_NormalizesBlankFontAndInvalidCulture()
+    {
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => true,
+            ReadJsonImplementation = (_, _) => new WindowConfigurationData
+            {
+                FontFamily = " ",
+                UILanguage = "not/a/culture",
+                FontSize = 22
+            }
+        };
+        var service = new WindowConfigurationService(fileService);
+
+        await service.SetConfigurationFromFileAsync();
+
+        Assert.Equal("Consolas", service.Settings.FontFamily);
+        Assert.Equal("ru-RU", service.Settings.UILanguage);
+        Assert.Equal(22, service.Settings.FontSize);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task SetConfigurationFromFileAsync_WhenSettingsAreRejected_LogsBeforeLaterSave(bool nullProperty)
+    {
+        var logger = new RecordingLogger();
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => true,
+            ReadJsonImplementation = (_, _) => nullProperty
+                ? new WindowConfigurationData { FontFamily = null! }
+                : throw new JsonException("Invalid settings JSON")
+        };
+        var service = new WindowConfigurationService(fileService, logger);
+
+        await service.SetConfigurationFromFileAsync();
+
+        Assert.Equal("Consolas", service.Settings.FontFamily);
+        Assert.Single(logger.Events);
+        Assert.Equal(DiagnosticEventIds.SettingsFallback, logger.Events[0]);
+        Assert.Empty(fileService.WrittenJsonPaths);
+
+        await service.SaveSettingsAsync();
+
+        Assert.Single(fileService.WrittenJsonPaths);
+    }
+
+    private sealed class RecordingLogger : ILogger<WindowConfigurationService>
+    {
+        internal List<EventId> Events { get; } = [];
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+            Exception? exception, Func<TState, Exception?, string> formatter) => Events.Add(eventId);
     }
 
     private sealed class RecordingFileService : IFileService

@@ -12,7 +12,7 @@ public sealed class EditorSessionServiceTests
     public async Task LoadAsync_DelegatesToFileService()
     {
         var sessionDirectory = CreateSessionDirectoryPath();
-        var expectedSession = new EditorSessionData { ActiveTabIndex = 2 };
+        var expectedSession = new EditorSessionData();
         var fileService = new RecordingFileService
         {
             ReadJsonImplementation = (_, type) =>
@@ -122,6 +122,97 @@ public sealed class EditorSessionServiceTests
         {
             if (Directory.Exists(sessionDirectory))
                 Directory.Delete(sessionDirectory, recursive: true);
+        }
+    }
+
+    [Theory]
+    [InlineData(-10, 0)]
+    [InlineData(10, 1)]
+    [InlineData(1, 1)]
+    public async Task LoadAsync_SkipsNullTabsAndClampsActiveIndex(int activeIndex, int expectedIndex)
+    {
+        var expectedSession = new EditorSessionData
+        {
+            ActiveTabIndex = activeIndex,
+            Tabs = [new(), null!, new()]
+        };
+        var fileService = new RecordingFileService
+        {
+            ReadJsonImplementation = (_, _) => expectedSession
+        };
+        var service = new EditorSessionService(fileService, CreateSessionDirectoryPath());
+
+        var session = await service.LoadAsync();
+
+        Assert.NotNull(session);
+        Assert.Equal(2, session.Tabs.Count);
+        Assert.Equal(expectedIndex, session.ActiveTabIndex);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WhenTabsAreEmpty_NormalizesActiveIndexToZero()
+    {
+        var fileService = new RecordingFileService
+        {
+            ReadJsonImplementation = (_, _) => new EditorSessionData { ActiveTabIndex = 10 }
+        };
+        var service = new EditorSessionService(fileService, CreateSessionDirectoryPath());
+
+        var session = await service.LoadAsync();
+
+        Assert.NotNull(session);
+        Assert.Empty(session.Tabs);
+        Assert.Equal(0, session.ActiveTabIndex);
+    }
+
+    [Theory]
+    [InlineData("Tabs")]
+    [InlineData("FilePath")]
+    [InlineData("Content")]
+    [InlineData("SavedContent")]
+    public async Task LoadAsync_WhenFileServiceReturnsNullRequiredProperty_RejectsSession(string property)
+    {
+        var tab = new EditorSessionTabData();
+        var session = new EditorSessionData { Tabs = [tab] };
+        switch (property)
+        {
+            case "Tabs": session.Tabs = null!; break;
+            case "FilePath": tab.FilePath = null!; break;
+            case "Content": tab.Content = null!; break;
+            case "SavedContent": tab.SavedContent = null!; break;
+        }
+        var fileService = new RecordingFileService
+        {
+            ReadJsonImplementation = (_, _) => session
+        };
+        var service = new EditorSessionService(fileService, CreateSessionDirectoryPath());
+
+        await Assert.ThrowsAsync<InvalidDataException>(service.LoadAsync);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WithJsonNullTab_RestoresRemainingTab()
+    {
+        var directory = CreateSessionDirectoryPath();
+        try
+        {
+            Directory.CreateDirectory(directory);
+            await File.WriteAllTextAsync(
+                Path.Combine(directory, "editor-session.json"),
+                """{"ActiveTabIndex":9,"Tabs":[null,{"Content":"unsaved"}]}""",
+                TestContext.Current.CancellationToken);
+            var service = new EditorSessionService(new FileService(new StubLocalizationService()), directory);
+
+            var session = await service.LoadAsync();
+
+            Assert.NotNull(session);
+            Assert.Equal("unsaved", Assert.Single(session.Tabs).Content);
+            Assert.Equal(0, session.ActiveTabIndex);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
         }
     }
 

@@ -5,6 +5,7 @@ using KID.Services.Initialize.Interfaces;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,6 +58,7 @@ namespace KID.Services.Initialize
                     // Загружаем пользовательские настройки
                     Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>(_settingsPath)
                         ?? new WindowConfigurationData();
+                    ValidateLoadedSettings(_settingsPath);
                     NormalizeTemplateName();
                 }
                 catch (Exception exception)
@@ -78,6 +80,7 @@ namespace KID.Services.Initialize
             {
                 Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>(_defaultConfigurationPath)
                     ?? new WindowConfigurationData();
+                ValidateLoadedSettings(_defaultConfigurationPath);
                 NormalizeTemplateName();
             }
             catch (Exception exception)
@@ -138,6 +141,55 @@ namespace KID.Services.Initialize
                     Settings.TemplateName,
                     resolvedTemplatePath);
                 Settings.TemplateCode = new WindowConfigurationData().TemplateCode;
+            }
+        }
+
+        private void ValidateLoadedSettings(string sourcePath)
+        {
+            // Also validate objects returned by alternative IFileService implementations.
+            if (Settings.ColorTheme is null || Settings.UILanguage is null
+                || Settings.ProgrammingLanguage is null || Settings.FontFamily is null
+                || Settings.TemplateName is null || Settings.TemplateCode is null)
+            {
+                throw new InvalidDataException("Settings contain a null required property.");
+            }
+
+            var defaults = new WindowConfigurationData();
+            bool normalized = false;
+            if (!double.IsFinite(Settings.FontSize) || Settings.FontSize <= 0)
+            {
+                Settings.FontSize = defaults.FontSize;
+                normalized = true;
+            }
+            if (string.IsNullOrWhiteSpace(Settings.FontFamily))
+            {
+                Settings.FontFamily = defaults.FontFamily;
+                normalized = true;
+            }
+            bool validCulture = !string.IsNullOrWhiteSpace(Settings.UILanguage);
+            if (validCulture)
+            {
+                try
+                {
+                    _ = CultureInfo.GetCultureInfo(Settings.UILanguage);
+                }
+                catch (CultureNotFoundException)
+                {
+                    validCulture = false;
+                }
+            }
+            if (!validCulture)
+            {
+                Settings.UILanguage = defaults.UILanguage;
+                normalized = true;
+            }
+
+            if (normalized)
+            {
+                _logger?.LogWarning(
+                    DiagnosticEventIds.SettingsFallback,
+                    "Invalid font or culture settings were replaced with defaults. Path={Path}",
+                    sourcePath);
             }
         }
 

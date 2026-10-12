@@ -1,4 +1,5 @@
 using KID.Services.Files.Interfaces;
+using KID.Models;
 using KID.Services.Diagnostics;
 using KID.Services.Localization.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,17 @@ namespace KID.Services.Files
 {
     public class FileService : IFileService
     {
+        // Only these persistence models opt in; generic JSON readers retain their contract.
+        private static readonly JsonSerializerOptions PersistenceReadOptions = new()
+        {
+            RespectNullableAnnotations = true,
+            AllowDuplicateProperties = false
+        };
+        private static readonly JsonSerializerOptions IndentedOptions = new()
+        {
+            WriteIndented = true
+        };
+
         private readonly ILocalizationService _localizationService;
         private readonly ILogger<FileService>? _logger;
 
@@ -86,19 +98,20 @@ namespace KID.Services.Files
         {
             string jsonString = await ReadFileAsync(filePath);
 
-            var jsonObject = JsonSerializer.Deserialize<T>(jsonString);
+            bool isPersistenceModel = typeof(T) == typeof(WindowConfigurationData)
+                || typeof(T) == typeof(EditorSessionData);
+            var jsonObject = JsonSerializer.Deserialize<T>(
+                jsonString, isPersistenceModel ? PersistenceReadOptions : null);
+
+            if (isPersistenceModel && jsonObject is null)
+                throw new JsonException("Settings and editor sessions must contain a JSON object, not null.");
 
             return jsonObject;
         }
 
         public async Task WriteJsonAsync<T>(string filePath, T data)
         {
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-
-            string jsonString = JsonSerializer.Serialize(data, options);
+            string jsonString = JsonSerializer.Serialize(data, IndentedOptions);
 
             await WriteFileAsync(filePath, jsonString);
         }

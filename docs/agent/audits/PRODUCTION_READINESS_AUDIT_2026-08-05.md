@@ -2,9 +2,9 @@
 
 **Production-ready: нет — решение `No-Go`.**
 
-**Статус актуализации:** 2026-10-12, ветка `feature/DotNet10Modernization`, базовый HEAD `13a7730773795ca57ba924c644a9c9e1efd0e588` плюс незакоммиченная реализация модернизации.
+**Статус актуализации:** 2026-10-12, ветка `feature/DotNet10Modernization`, базовый HEAD `19a7f0dc2717ceabea074696c6b6c9cefa240378` плюс незакоммиченные изменения 7 файлов исходников/тестов R04/R08/R13.
 Пользователь подтвердил в Visual Studio инкрементальную Debug-сборку без предупреждений и ошибок
-и полный набор **265/265** тестов. Подробности и источники — в разделе актуализации ниже.
+и полный набор **298/298** тестов. Подробности и источники — в разделе актуализации ниже.
 Прежние результаты, включая Release build/test/publish `develop` на `f4ea499` от 2026-10-05,
 сохранены как отдельные исторические свидетельства и не подтверждают новый checkout.
 Оценки готовности остаются экспертными ориентирами от 2026-09-20, а не новым количественным пересчётом.
@@ -41,21 +41,29 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 
 ## ✅ Актуализация модернизации — 2026-10-12
 
-В рабочем дереве `feature/DotNet10Modernization` реализованы **R01, R03, R05–R07, R10–R12, R16–R18** из [аудита C# 14 / .NET 10](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). Исправлена instrumentation новых void instance operators, усилены Graphics guards, 21 закрытое поле использует `Lock` с `using System.Threading;`, выполнены согласованные локальные изменения MVVM, коллекций, nullable equality, шаблона и XAML. **R02, R04, R08, R09, R13, R14, R15 отложены по решению пользователя.**
+В рабочем дереве `feature/DotNet10Modernization` реализованы **14 из 18 групп: R01, R03–R08, R10–R13, R16–R18** из [аудита C# 14 / .NET 10](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). Исправлена instrumentation новых void instance operators, усилены Graphics guards, 21 закрытое поле использует `Lock` с `using System.Threading;`, выполнены согласованные локальные изменения MVVM, коллекций, nullable equality, шаблона и XAML. **R02, R09, R14, R15 отложены по решению пользователя.**
 
-Проверка выполнена пользователем 12.10.2026 в Visual Studio:
+Первый этап проверен пользователем 12.10.2026 в Visual Studio (исторический прогон до R04/R08/R13):
 
 - [Приложенный build log](<C:/Users/chere/.codex/attachments/eeb60390-bfbd-4422-b175-fd0fba752993/Вставленный текст.txt>): **Debug Any CPU**, **0 предупреждений, 0 ошибок**; 1 проект успешно собран, 2 уже актуальны, 0 со сбоем, 0 пропущено. Сборка решения заняла **5,784 с**. Новая Release/Rebuild-проверка этим логом не подтверждается.
 - [Скриншот Test Explorer](<C:/Users/chere/AppData/Local/Temp/codex-clipboard-8f953484-d61a-4162-b7b4-ac8a148fb53e.png>): **265 passed, 0 failed, 0 skipped**; время запуска **23,5 с**, группы — **21,3 с**. Подтверждена работа интеграции тестов с Visual Studio.
 - Добавлены и прошли 23 regression-сценария: 9 compiler (class/struct, block/arrow, checked/обычные instance operators, throw, прежние static/conversion operators) и 14 Graphics (ранняя валидация, точные исключения/ParamName, минимальные и лишние точки Bézier, отсутствие Canvas). Локальный набор увеличился с 242 до 265.
 - Результат относится к базовому HEAD `13a7730` плюс 37 изменённым файлам исходников/тестов; реализация ещё не имеет отдельного commit hash. Агент сборку и тесты повторно не запускал.
 
-**Решение No-Go для широкого production-релиза сохраняется.** Эта проверка закрывает выбранный этап модернизации, но не CI, schema/recovery settings, ограниченную загрузку аудио, release engineering, accessibility или clean-machine smoke. Исторический publish от 2026-10-05 не включает нынешние изменения; новый publish и ручная проверка обеих тем/scroll layout не подтверждены. Подробный статус всех 18 рекомендаций и ограничения проверки указаны в разделе 0 связанного аудита.
+**Последний этап R04/R08/R13, проверка в 15:52:**
+
+- Чтение settings/session отклоняет duplicate properties, root-null и explicit null в обязательных свойствах; missing properties сохраняют defaults, unknown fields допускаются. Дополнительная model validation нормализует параметры шрифта и культуры с диагностикой, проверяет Version/вкладки сессии, пропускает null-элементы и ограничивает ActiveTabIndex. JsonSerializerOptions кэшируются в FileService и CrashReportWriter.
+- Recovery использует существующие boundaries: settings получают defaults с SettingsFallback, ошибка session передаётся startup-обработчику с диагностикой и сообщением. При чтении исходный файл не перезаписывается; последующее сохранение может его заменить. Резервная копия, частичное восстановление повреждённого JSON, версия и миграции схемы settings не реализованы.
+- [Новый build log](<C:/Users/chere/.codex/attachments/d04d6d90-9256-4ae9-b2ad-ed27bc6782c3/Вставленный текст.txt>): **Debug Any CPU**, **0 предупреждений, 0 ошибок**, 1 проект успешно собран (KID.Tests), 2 уже актуальны, 0 со сбоем, 0 пропущено; время проекта **5,09 с**, решения **6,054 с**. Это инкрементальная сборка, не Release/Rebuild.
+- [Новый скриншот Test Explorer](<C:/Users/chere/AppData/Local/Temp/codex-clipboard-eedb66fd-a43f-4d48-a331-9833385fe4d9.png>): **298 тестов, все пройдены**, длительность группы **17,4 с**; Files — 35, Initialize — 16. Добавлены 33 regression-сценария для JSON-контрактов, нормализации и восстановления; набор вырос 265 → 298. Полная матрица повреждённых файлов и ручной UI recovery не проверены.
+- Проверенный срез: HEAD `19a7f0dc2717ceabea074696c6b6c9cefa240378` плюс 7 изменённых файлов исходников/тестов. Новый этап не имеет отдельного commit hash. Агент сборку и тесты не запускал.
+
+**Решение No-Go для широкого production-релиза сохраняется.** Эта проверка закрывает выбранные 14 групп модернизации и усиливает JSON boundary, но не CI, миграции схемы и сохранение повреждённых данных, ограниченную загрузку аудио, release engineering, accessibility или clean-machine smoke. Исторический publish от 2026-10-05 не включает нынешние изменения; новый publish и ручная проверка обеих тем/scroll layout не подтверждены. Подробный статус всех 18 рекомендаций и ограничения проверки указаны в разделах 0–0.1 связанного аудита.
 
 ## 📌 Открытые задачи на 2026-10-12
 
-1. **Quality gate:** добавить CI для restore, Release build, тестов, NuGet vulnerability scan и publish. Локальный прогон 265/265 от 2026-10-12 не заменяет автоматическую проверку каждого изменения.
-2. **Устойчивость настроек:** ввести версию схемы, миграции и валидацию `settings.json`; определить восстановление повреждённого файла без потери доступных пользовательских данных.
+1. **Quality gate:** добавить CI для restore, Release build, тестов, NuGet vulnerability scan и publish. Пользовательский прогон 298/298 от 2026-10-12 не заменяет автоматическую проверку каждого изменения.
+2. **Устойчивость настроек:** валидация JSON boundary и значений реализована в R04/R13; остаются версия схемы, миграции и восстановление повреждённого файла без потери доступных пользовательских данных.
 3. **Дистрибутив:** выбрать и оформить installer/MSIX, версионирование и code signing; подготовить SBOM, third-party notices и корневые README, LICENSE, SECURITY, CHANGELOG. Текущий framework-dependent publish получен, но не подписан и не упакован. Self-contained publish требует отдельной доработки `KIDCompilationProfileProvider`, который сейчас отвергает такое размещение assemblies.
 4. **Release smoke:** проверить именно текущий publish на чистой Windows-машине с .NET 10 Desktop Runtime, включая cold start и основные сценарии Run/Stop, сохранения и восстановления.
 5. **Accessibility и UI:** задать критерии приёмки и вручную проверить клавиатуру, screen reader, High Contrast, DPI и локализации; автоматическое покрытие startup/тем/ошибок настроек расширять по обнаруженным рискам.
@@ -82,7 +90,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - Историческая проверка: светлая и тёмная темы содержали одинаковые 54 ресурсных ключа; отдельно 2026-10-05 ключи не пересчитывались.
 - В исходном аудите GUI не запускался. Для C2/C3 отдельно выполнен headless runtime smoke, а пользователь подтвердил manual GUI/visual checklist 2026-09-15. Для compilation profile 2026-09-18 пользователь отдельно подтвердил одинаковые completion, diagnostics и Run result в standalone `.exe` и Visual Studio F5.
 - Актуализация 2026-09-20: все три проекта переведены на `net10.0-windows`, добавлен корневой `global.json` для стабильного .NET 10 SDK; пользователь подтвердил Release-сборку с **0 ошибок и 0 предупреждений**, полный набор **242 passed, 0 skipped, 0 failed** и успешный прогон программы на разных сценариях. Скриншот Visual Studio фиксирует 242/242 теста и build 0/0. Отдельная проверка актуального publish на чистой машине в эту запись не включена.
-- После этой проверки на `develop` обновлены `docs/README.md` (`6dfa06b`) и пакеты интеграции тестов с Visual Studio в `KID.Tests.csproj` (`f4ea499`). Локальные build/test от 2026-10-05 подтвердили состояние после этих коммитов; Test Explorer тогда отдельно не проверялся. Его работа подтверждена пользователем 2026-10-12 на ветке модернизации (265/265).
+- После этой проверки на `develop` обновлены `docs/README.md` (`6dfa06b`) и пакеты интеграции тестов с Visual Studio в `KID.Tests.csproj` (`f4ea499`). Локальные build/test от 2026-10-05 подтвердили состояние после этих коммитов; Test Explorer тогда отдельно не проверялся. Его работа подтверждена пользователем 2026-10-12 на ветке модернизации (сначала 265/265, после R04/R08/R13 — 298/298).
 
 ## 🚨 Критичные проблемы исходного аудита — C2/C3 повторно оценены
 
@@ -212,7 +220,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 ## ⚠️ Проблемы средней серьёзности
 
 1. **✅ Автоматизированные execution/Console/compilation-profile и базовые persistence-тесты добавлены; CI по-прежнему отсутствует.**
-   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; исторический локальный прогон 2026-10-05 — 242/242; текущий пользовательский прогон в Visual Studio 2026-10-12 — 265/265, включая новые compiler/Graphics regressions. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
+   `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; исторический локальный прогон 2026-10-05 — 242/242; текущий пользовательский прогон в Visual Studio 2026-10-12 — 298/298, включая compiler/Graphics и новые JSON/persistence regressions. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
    Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка 2026-10-05 завершилась с **0 ошибок и 0 предупреждений**.
@@ -266,7 +274,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 - Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
-- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics, базовые persistence-контракты и новые compiler/Graphics regressions: пользовательский прогон в Visual Studio 2026-10-12 — 265 passed, 0 skipped, 0 failed; исторический локальный прогон 2026-10-05 — 242/242.
+- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics, persistence-контракты и compiler/Graphics/JSON regressions: пользовательский прогон в Visual Studio 2026-10-12 — 298 тестов, все пройдены; исторический локальный прогон 2026-10-05 — 242/242.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.

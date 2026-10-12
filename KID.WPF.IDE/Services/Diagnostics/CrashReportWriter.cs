@@ -14,6 +14,11 @@ public sealed record CrashReportInfo(string CrashId, string? Path);
 /// </summary>
 public sealed class CrashReportWriter
 {
+    private static readonly JsonSerializerOptions IndentedOptions = new()
+    {
+        WriteIndented = true
+    };
+
     private readonly string logsDirectory;
 
     public CrashReportWriter()
@@ -63,7 +68,7 @@ public sealed class CrashReportWriter
 
             var json = JsonSerializer.Serialize(
                 report,
-                new JsonSerializerOptions { WriteIndented = true });
+                IndentedOptions);
             File.WriteAllText(temporaryPath, json);
             File.Move(temporaryPath, reportPath, overwrite: true);
             return new CrashReportInfo(id, reportPath);

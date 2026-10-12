@@ -46,6 +46,26 @@ namespace KID.Services.Files
                         $"Unsupported editor session version: {session.Version}.");
                 }
 
+                if (session != null)
+                {
+                    if (session.Tabs is null)
+                        throw new InvalidDataException("Editor session tabs must not be null.");
+
+                    foreach (var tab in session.Tabs)
+                    {
+                        // Null collection elements were historically skipped during restoration.
+                        if (tab is null)
+                            continue;
+                        if (tab.FilePath is null || tab.Content is null || tab.SavedContent is null)
+                            throw new InvalidDataException("An editor session tab contains a null required property.");
+                    }
+
+                    session.Tabs.RemoveAll(tab => tab is null);
+                    session.ActiveTabIndex = session.Tabs.Count == 0
+                        ? 0
+                        : Math.Clamp(session.ActiveTabIndex, 0, session.Tabs.Count - 1);
+                }
+
                 return session;
             }
             catch (FileNotFoundException)
