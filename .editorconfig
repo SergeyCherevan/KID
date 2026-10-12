@@ -1,0 +1,16 @@
+root = true
+
+[*.cs]
+indent_style = space
+indent_size = 4
+tab_width = 4
+csharp_new_line_before_open_brace = all
+
+# Preserve the JSON options reuse introduced by R08.
+dotnet_diagnostic.CA1869.severity = warning
+# Preserve the argument exception fixes introduced by R12.
+dotnet_diagnostic.CA2208.severity = warning
+
+[KID.Tests/**/*.cs]
+# Underscores separate the method, scenario, and expected result in test names.
+dotnet_diagnostic.CA1707.severity = none

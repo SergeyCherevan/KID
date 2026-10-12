@@ -2,11 +2,12 @@
 
 **Production-ready: нет — решение `No-Go`.**
 
-**Статус актуализации:** 2026-10-12, ветка `feature/DotNet10Modernization`, HEAD — amended R09 commit (`perf(compiler): avoid intermediate PE and PDB buffer copies`). Коммит содержит реализацию R09, regression-проверки и актуализацию аудитов модернизации и production readiness. Реализация R02, её тесты и материалы ручной проверки находятся в предыдущем коммите `f7473cc`. До редактирования этого аудита рабочее дерево было чистым.
+**Статус актуализации:** 2026-10-12, ветка `feature/DotNet10Modernization`, HEAD `9bd09cc86d3025d032be3463707c63ffe68dfff8` плюс незакоммиченные изменения R14: `.editorconfig`, повторное использование настроек JSON в тесте FileService и актуализация аудита модернизации. HEAD содержит реализацию R09, regression-проверки и предыдущую актуализацию обоих аудитов; реализация R02, её тесты и материалы ручной проверки находятся в предыдущем коммите `f7473cc`. Отдельного коммита R14 пока нет.
 Последняя проверка реализации агентом: Release build **0 предупреждений, 0 ошибок**, полный набор
-**334/334** тестов после R09. Эти проверки выполнены перед созданием коммита на базовом HEAD
-`f7473cc` плюс изменения R09, затем включённые в amended R09 commit; при этой документационной актуализации
-сборка и тесты не повторялись.
+**334/334** тестов после R14 на указанном HEAD плюс изменения R14. Итоговая конфигурация содержит
+CA1869 и CA2208 уровня `warning`; проверки выполнены при реализации R14 и описаны ниже.
+При этой документационной актуализации сборка и тесты не повторялись. Прогон после R09 сохранён
+как отдельный предыдущий этап.
 На предыдущем этапе R02 пользователь подтвердил ручной прогон всех 12 сценариев URL-аудио со слышимым
 звуком; агент дополнительно проверил реальные temp files, recovery, внешний HTTPS и MP3-декодер.
 Release-прогон R02 **333/333** и пользовательский Debug-прогон **298/298** сохраняются как исторические этапы. Подробности
@@ -47,7 +48,7 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 
 ## ✅ Актуализация модернизации — 2026-10-12
 
-На ветке `feature/DotNet10Modernization` реализованы **16 из 18 групп: R01–R13, R16–R18** из [аудита C# 14 / .NET 10](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). Исправлена instrumentation новых void instance operators, усилены Graphics guards, 21 закрытое поле использует `Lock` с `using System.Threading;`, выполнены согласованные локальные изменения MVVM, коллекций, nullable equality, шаблона и XAML; R02 добавил потоковую URL-загрузку с необязательным лимитом, R09 устранил промежуточные копии PE/PDB с сохранением ownership. **R14 и R15 остаются отложенными по решению пользователя.**
+На ветке `feature/DotNet10Modernization` реализованы **17 из 18 групп: R01–R14, R16–R18** из [аудита C# 14 / .NET 10](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). Исправлена instrumentation новых void instance operators, усилены Graphics guards, 21 закрытое поле использует `Lock` с `using System.Threading;`, выполнены согласованные локальные изменения MVVM, коллекций, nullable equality, шаблона и XAML; R02 добавил потоковую URL-загрузку с необязательным лимитом, R09 устранил промежуточные копии PE/PDB с сохранением ownership, R14 закрепил выбранные анализаторы и стиль будущих изменений. **R15 остаётся отложенной по решению пользователя.**
 
 Первый этап проверен пользователем 12.10.2026 в Visual Studio (исторический прогон до R04/R08/R13):
 
@@ -73,14 +74,21 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - Итоговая `dotnet build KID.sln -c Release --no-restore -v:minimal` — **0 warnings, 0 errors**, **14,18 с**. `dotnet test KID.sln -c Release --no-build --no-restore` — **333 passed, 0 failed, 0 skipped**, **23,399 с**. R02 добавил 35 regression-сценариев: набор вырос **298 → 325 → 333**. Это локальная Release-сборка, без явного Rebuild и fresh restore/vulnerability scan.
 - Исходный проверенный срез R02 — HEAD `5697e0f` плюс изменения, сохранённые в текущей истории в коммите `f7473cc`. Полные результаты и границы проверки приведены в разделах 0.3–0.5 [аудита модернизации](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). В этой актуализации изменяется только production-readiness документ; новые прогоны не выполнялись.
 
-**Последний этап R09, устранение промежуточных копий PE/PDB:**
+**Предыдущий этап R09, устранение промежуточных копий PE/PDB:**
 
 - `CSharpCompiler` передаёт в `CompilationArtifact` точные срезы `MemoryStream.GetBuffer()` по `Length`, исключая свободную capacity и промежуточный `ToArray` каждого образа. Конструктор артефакта сохраняет защитное копирование; публичный контракт и runner не изменены. Результат независим от исходных буферов и времени жизни потоков Emit.
 - Добавлен regression-тест копирования только заданных срезов с последующей мутацией исходных массивов. Integration-тест компилятора дополнен проверками точной длины PE по границам секций и portable PDB по длине метаданных; чтение PDB и загрузка сборки после возврата из компилятора проходят. Точные номера исходных строк stack trace отдельным assertion не проверялись.
 - `dotnet build KID.sln -c Release --no-restore -v:minimal` — **0 warnings, 0 errors**, **39,74 с**. Полный `dotnet test KID.sln -c Release --no-build --no-restore` — **334 passed, 0 failed, 0 skipped**, **17,763 с**; набор вырос **333 → 334**. Проверенный срез — HEAD `f7473cc` плюс изменения R09, затем включённые в amended R09 commit. Подробности — в разделе 0.6 [аудита модернизации](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md).
 - Устранена одна промежуточная полная копия каждого PE/PDB-буфера; выигрыш во времени и объёме аллокаций не измерялся benchmark. Fresh restore/vulnerability scan, новый publish и clean-machine smoke не выполнялись. R09 не закрывает release blockers и не является основанием менять `No-Go` или пересчитывать оценки готовности.
 
-**Решение No-Go для широкого production-релиза сохраняется.** Проверки закрывают выбранные 16 групп модернизации, усиливают JSON/audio boundaries и подтверждают сохранение ownership при оптимизации PE/PDB. Открыты CI, миграции схемы и сохранение повреждённых данных, release engineering, accessibility и clean-machine smoke. Для аудио лимит размера является выбором пользователя, а не обязательной общей квотой: без него временный диск не ограничен, автоматический тайм-аут body и суммарный лимит параллельных загрузок не добавлены. Сбой write посередине записи и все внешние серверы/кодеки не проверены. Исторический publish от 2026-10-05 не включает нынешние изменения; новый publish и ручная проверка обеих тем/scroll layout не подтверждены. Подробный статус всех 18 рекомендаций и ограничения проверки указаны в разделах 0–0.6 связанного аудита.
+**Последний этап R14, выбранные анализаторы и стиль будущих изменений:**
+
+- Добавлен корневой [.editorconfig](<D:/Visual Studio Projects/KID/.editorconfig>): CA1869 и CA2208 имеют уровень `warning`, CA1707 отключён только для `KID.Tests/**/*.cs`, чтобы сохранить имена тестовых сценариев с подчёркиваниями. Закреплены отступы пробелами по 4 символа и открывающие скобки на новой строке; массовое форматирование не выполнялось. AnalysisMode=All/Recommended и отдельные IDE-диагностики оформления не включались.
+- `TreatWarningsAsErrors` сохранён во всех трёх проектах: нарушения выбранных правил блокируют сборку. CA2208 сначала проверен на уровне `suggestion`, затем повышен до `warning` после реализованного R12. Тест `WriteJsonAsync_ReusedOptions_PreserveIndentedDefaultFormat` повторно использует собственные локальные настройки JSON для двух вычислений ожидаемого результата, независимо от production-поля FileService; assertions сохранены, новые сценарии не добавлялись.
+- SDK `10.0.401`. Полная Release-пересборка `dotnet build KID.sln -c Release --no-restore -t:Rebuild -v:minimal` — **0 warnings, 0 errors**, **42,34 с** (CA2208 ещё `suggestion`). Итоговый `dotnet build KID.sln -c Release --no-restore -v:minimal` — **0 warnings, 0 errors**, **15,49 с** (CA1869 и CA2208 — `warning`). Полный `dotnet test KID.sln -c Release --no-build --no-restore` — **334 passed, 0 failed, 0 skipped**, **21,609 с**.
+- Проверенный срез — HEAD `9bd09cc86d3025d032be3463707c63ffe68dfff8` плюс незакоммиченные изменения R14. Подробности — в разделе 0.7 [аудита модернизации](CSHARP14_DOTNET10_MODERNIZATION_AUDIT_2026-10-12.md). При обновлении production-аудита прогоны не повторялись; fresh restore/vulnerability scan, publish и ручная проверка форматирования в редакторе в этапе R14 не выполнялись.
+
+**Решение No-Go для широкого production-релиза сохраняется.** Реализованы выбранные 17 групп модернизации: усилены JSON/audio boundaries, сохранено ownership при оптимизации PE/PDB и закреплены автоматические проверки повторного использования настроек JSON и корректных аргументных исключений. Открыты CI, миграции схемы и сохранение повреждённых данных, release engineering, accessibility и clean-machine smoke. Для аудио лимит размера является выбором пользователя, а не обязательной общей квотой: без него временный диск не ограничен, автоматический тайм-аут body и суммарный лимит параллельных загрузок не добавлены. Сбой write посередине записи и все внешние серверы/кодеки не проверены. Исторический publish от 2026-10-05 не включает нынешние изменения; новый publish и ручная проверка обеих тем/scroll layout не подтверждены. Подробный статус всех 18 рекомендаций и ограничения проверки указаны в разделах 0–0.7 связанного аудита; R14 не закрывает release blockers и не является основанием пересчитывать оценки готовности.
 
 **Ручная проверка восстановления сессии, 2026-10-12:** пользователь сообщил, что все сценарии отработали: несохранённая вкладка восстановилась после autosave и прерывания процесса; две вкладки открылись в заданном порядке, индекс `99` выбрал последнюю; при `Tabs: null` появилось сообщение об ошибке, затем открылась рабочая стандартная вкладка. Сценарии подготовлены [скриптом](<D:/Visual Studio Projects/KID/scripts/manual-checks/Prepare-EditorSessionRecovery.ps1>). Это пользовательское подтверждение; отдельные UI-логи или скриншоты не приложены. Smoke не охватывает полную матрицу аварийных завершений и повреждений файлов.
 
@@ -104,7 +112,8 @@ publish создан. Ручной standalone `.exe` smoke и dispatcher crash s
 - Исторический checkout 2026-10-05 — `develop` на `f4ea499` до правки аудита. В обоих production-проектах включён `TreatWarningsAsErrors`; `dotnet build KID.sln -c Release --no-restore` завершился с **0 ошибок и 0 предупреждений**.
 - `dotnet test KID.sln -c Release --no-restore` на том же checkout: **242 passed, 0 skipped, 0 failed**. Это локальная проверка, не CI и не проверка GUI.
 - Предыдущий проверенный набор модернизации/R02 от 2026-10-12: Release build **0/0**, **333 passed, 0 skipped, 0 failed**, пользовательский ручной smoke 12 сценариев и дополнительные проверки реальных файлов/host recovery/HTTPS/MP3. Изменения сохранены в текущей истории в `f7473cc`. Подробности — в актуализации выше и разделах 0.3–0.5 связанного аудита.
-- Последний проверенный набор после R09 от 2026-10-12: Release build **0/0**, **334 passed, 0 skipped, 0 failed** на HEAD `f7473cc` плюс изменения, затем включённые в amended R09 commit. Проверки текущего publish на чистой машине нет. Подробности — в актуализации выше и разделе 0.6 связанного аудита; при обновлении этого документа прогоны не повторялись.
+- Предыдущий проверенный набор после R09 от 2026-10-12: Release build **0/0**, **334 passed, 0 skipped, 0 failed** на HEAD `f7473cc` плюс изменения, затем включённые в amended R09 commit. Подробности — в актуализации выше и разделе 0.6 связанного аудита.
+- Последний проверенный набор после R14 от 2026-10-12: Release build **0/0**, **334 passed, 0 skipped, 0 failed**, **21,609 с** на HEAD `9bd09cc` плюс незакоммиченные изменения R14. CA1869 и CA2208 имеют уровень `warning`, `TreatWarningsAsErrors` сохранён. Проверки текущего publish на чистой машине нет. Подробности — в актуализации выше и разделе 0.7 связанного аудита; при обновлении этого документа прогоны не повторялись.
 - Контрольная проверка C2/C3 на `feature/FixC2C3` от 2026-09-15: `dotnet restore KID.sln` и Release build успешны; `dotnet test KID.sln -c Release --no-restore` — **166 passed, 0 skipped, 0 failed**; focused-набор Этапа 9 ранее повторён 10 раз — **10/10 PASS**.
 - На ветке `feature/TextBoxConsoleExecutionScope` после переноса Console зафиксированы: targeted hardening **9/9**, Console **52/52**, полный набор **188 passed, 0 skipped, 0 failed**, Release build без warnings/errors.
 - На `feature/CompilationProfile` (`6ad3342`) исторически зафиксированы: Release build — **0 warnings, 0 errors**; полный набор — **219 passed, 0 skipped, 0 failed**; `git diff --cached --check` прошёл.
@@ -249,7 +258,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
    `KID.Tests` содержит compiler, editor integration, compilation-profile, execution, Console, library, lifecycle, FileService, EditorSessionService, WindowConfigurationService и LocalizationService regression-сценарии; исторический локальный прогон 2026-10-05 — 242/242; пользовательский этап в Visual Studio 2026-10-12 — 298/298. Последний локальный Release-прогон агентом — 334/334, включая compiler/Graphics/JSON, audio/download/cleanup/host recovery и проверки точных размеров и защитного копирования PE/PDB после R09. Автоматический CI gate и полное покрытие startup, тем, повреждённых настроек и UI-интеграции остаются отдельной задачей.
 
 2. **✅ Warning-сборка — устранено в `feature/FixBuildWarnings`, включено в `task/AtomicFilePersistence`.**
-   Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. В обоих production-проектах включён `TreatWarningsAsErrors`; контрольная Release-сборка 2026-10-05 завершилась с **0 ошибок и 0 предупреждений**.
+   Исправлены nullable-контракты, сигнатуры `ICommand`, fire-and-forget адаптеры асинхронных команд и синхронная обёртка обработчика ошибок. Во всех трёх проектах включён `TreatWarningsAsErrors`; R14 закрепил CA1869/CA2208 уровня `warning` и стиль будущих изменений в корневом `.editorconfig`, отключив CA1707 только для тестов. Последняя Release-сборка после R14 от 2026-10-12 завершилась с **0 ошибок и 0 предупреждений**; контрольная Release-сборка 2026-10-05 остаётся историческим свидетельством.
 
 3. **✅ Структурное журналирование и глобальная диагностика реализованы и проверены.**
    `LoggingConfiguration` подключает Serilog через `ILogger` и пишет ограниченные compact-JSONL файлы в `%LOCALAPPDATA%\KID\Logs`; `CrashReportWriter` создаёт атомарный `crash-<CrashId>.json`. `App` регистрирует `DispatcherUnhandledException`, `AppDomain.UnhandledException` и `TaskScheduler.UnobservedTaskException`; fatal dispatcher startup получает controlled shutdown и безопасный диалог с идентификатором отчёта. `AsyncOperationErrorHandler`, настройки, локализация, fallback theme/font и cleanup временных файлов сохраняют структурированный контекст. `ExecutionEventWorker` передаёт ошибки через host-neutral `ExecutionDiagnostic`, а lifecycle/cleanup ошибки журналируются одной записью на границе `CodeExecutionService`. Добавлены regression-тесты для crash report, async handler, event worker и settings/localization. Release build и полный набор из **237 тестов** прошли успешно; standalone `.exe` smoke и ручной `DispatcherUnhandledException` smoke подтверждены, crash report разобран по JSON-полям, временный тестовый trigger удалён.
@@ -293,14 +302,14 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 - Понятное разделение IDE и учебной библиотеки.
 - MVVM и DI дают хорошую основу для тестирования.
 - Сервисы и интерфейсы в основном разделены логично.
-- Nullable и `TreatWarningsAsErrors` включены в обоих production-проектах; Release-сборка в прогоне 2026-10-05 прошла без предупреждений.
+- Nullable и `TreatWarningsAsErrors` включены во всех трёх проектах; CA1869/CA2208 уровня `warning` закреплены в `.editorconfig`, CA1707 отключён только для тестов. Последняя Release-сборка после R14 от 2026-10-12 прошла без предупреждений и ошибок.
 - Инициализация Roslyn-редактора асинхронна end-to-end, без UI-thread `.GetResult()`.
 - `CodeExecutionService` корректно освобождает execution context даже при ошибке компиляции: [CodeExecutionService.cs](</D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/CodeExecution/CodeExecutionService.cs:62>).
 - Реализованы единая execution-сессия/FSM, cooperative Stop instrumentation, token-aware Console input и ожидание async Main.
 - Статический `TextBoxConsole` в `KID.Library` сохраняет execution identity, защищает новый Run от stale streams/callbacks и детерминированно завершает input/output/event lifecycle.
 - Dispatcher/Graphics, Keyboard/Mouse и Music имеют per-run ownership и детерминированный async cleanup; штатные пользовательские сборки загружаются в collectible ALC.
 - Редактор и compiler используют один immutable детерминированный compilation profile; их references/imports больше не зависят от порядка загрузки assemblies в `AppDomain`.
-- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics, persistence-контракты, compiler/Graphics/JSON, audio regressions и проверки PE/PDB после R09: последний локальный Release-прогон агентом — 334/334. Пользовательский этап в Visual Studio 2026-10-12 — 298/298 и последующий ручной audio smoke всех 12 сценариев; исторический локальный прогон 2026-10-05 — 242/242.
+- `KID.Tests` подтверждает execution, Console, compilation-profile, diagnostics, persistence-контракты, compiler/Graphics/JSON, audio regressions и проверки PE/PDB после R09: последний локальный Release-прогон агентом после R14 — 334/334; число сценариев в R14 не менялось. Пользовательский этап в Visual Studio 2026-10-12 — 298/298 и последующий ручной audio smoke всех 12 сценариев; исторический локальный прогон 2026-10-05 — 242/242.
 - Реализованы dirty-state, Save / Discard / Cancel, autosave/recovery и восстановление редакторской сессии.
 - Пользовательские файлы, recovery и настройки публикуются атомарно; конкурентные сохранения настроек упорядочены.
 - Темы и локализации структурно синхронизированы.
@@ -335,6 +344,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 - ✅ Добавлены allowlist/denylist, semantic, late-load, editor integration и shared-identity тесты единого compilation profile.
 - CI: restore → build → test → vulnerable scan → publish.
 - ✅ Убрать предупреждения и включить `TreatWarningsAsErrors` — выполнено в `feature/FixBuildWarnings` и включено в `task/AtomicFilePersistence`.
+- ✅ R14: закреплены CA1869/CA2208 уровня `warning` и стиль будущих изменений; CA1707 отключён только для тестов. Итоговая Release-сборка 0/0 и полный набор 334/334 подтверждены агентом 2026-10-12.
 - ✅ Добавлены базовые тесты локализации и настроек, а также regression-тесты startup, global exception и расширенных error-path сценариев.
 - ✅ Run/Stop проверяется автоматизированно, headless smoke и отдельной manual visual acceptance; cold start остаётся частью общего release smoke.
 
@@ -364,7 +374,7 @@ Release-сборка `develop` в прогоне 2026-10-05 прошла без 
 6. **P1 — выполнено:** завершить execution-scoped миграцию и hardening `TextBoxConsole`.
 7. **P1 — выполнено:** заменить AppDomain-зависимые references единым детерминированным compilation profile редактора/compiler.
 8. **P1 — частично выполнено:** добавлены критические compiler/editor/compilation-profile/Console/library/lifecycle и базовые file/session/settings/localization tests; startup, themes и расширенные failure-сценарии оцениваются отдельно.
-9. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`; создать CI.
+9. **P1 — частично выполнено:** warning-сборки запрещены через `TreatWarningsAsErrors`, R14 закрепил CA1869/CA2208 уровня `warning` и настройки оформления; создать CI.
 10. **P1 — выполнено на `develop`:** пользовательские файлы, настройки и autosave/recovery публикуются атомарно; сохранения настроек упорядочены.
 11. **P1 — выполнено для текущего package scope:** production/test stack aligned and validated; remaining residuals are legacy `System.Reactive.Linq` transitively from RoslynPad and upstream WPF-line support risk.
 12. **P1:** подписанный и версионированный дистрибутив.

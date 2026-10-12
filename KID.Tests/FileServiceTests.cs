@@ -91,11 +91,12 @@ public sealed class FileServiceTests
         await WithJsonFileAsync("{}", async (service, path) =>
         {
             var data = new WindowConfigurationData();
-            var expected = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+            var expectedOptions = new JsonSerializerOptions { WriteIndented = true };
+            var expected = JsonSerializer.Serialize(data, expectedOptions);
             await service.WriteJsonAsync(path, data);
             Assert.Equal(expected, await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
             data.FontSize = 22;
-            expected = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true });
+            expected = JsonSerializer.Serialize(data, expectedOptions);
             await service.WriteJsonAsync(path, data);
             Assert.Equal(expected, await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
         });
