@@ -3,9 +3,9 @@
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
     <!-- WPF-типы важны: Height и RowDefinition.Height используют разные типы. -->
     <sys:Boolean x:Key="UseModernTheme">True</sys:Boolean>
-    <sys:Double x:Key="WindowTitleHeight">30</sys:Double>
-    <GridLength x:Key="WindowTitleRowHeight">30</GridLength>
-    <sys:Double x:Key="WindowIconSize">16</sys:Double>
+    <sys:Double x:Key="WindowTitleHeight">32</sys:Double>
+    <GridLength x:Key="WindowTitleRowHeight">32</GridLength>
+    <sys:Double x:Key="WindowIconSize">30</sys:Double>
     <Thickness x:Key="WindowIconMargin">6,0,6,0</Thickness>
     <Thickness x:Key="WindowTitleMargin">0</Thickness>
     <sys:Double x:Key="WindowTitleFontSize">12</sys:Double>
