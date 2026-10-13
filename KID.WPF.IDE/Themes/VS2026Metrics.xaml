@@ -42,7 +42,7 @@
     <sys:Double x:Key="TabMinHeight">24</sys:Double>
     <Thickness x:Key="TabBorderThickness">1</Thickness>
     <CornerRadius x:Key="TabCornerRadius">4</CornerRadius>
-    <FontWeight x:Key="TabSelectedFontWeight">Normal</FontWeight>
+    <FontWeight x:Key="TabSelectedFontWeight">Bold</FontWeight>
     <Thickness x:Key="TabTextMargin">0,0,8,0</Thickness>
     <sys:Double x:Key="TabCloseButtonSize">24</sys:Double>
     <sys:Double x:Key="TabScrollBarHeight">4</sys:Double>

@@ -162,7 +162,7 @@ public sealed class ThemeSwitchingTests
                 Assert.Equal(8, closeStart - textStart - text.ActualWidth, 6);
                 Assert.Equal(4, tab.ActualWidth - sideInset - tab.BorderThickness.Right
                     - closeStart - close.ActualWidth, 6);
-                Assert.Equal(modern ? FontWeights.Normal : FontWeights.Bold, text.FontWeight);
+                Assert.Equal(FontWeights.Bold, text.FontWeight);
                 Assert.Equal(BrushColor(dictionary["TabActiveBrush"]), BrushColor(tab.Background));
                 Assert.Equal(BrushColor(dictionary["TextBrush"]), BrushColor(child.Foreground));
                 Assert.Equal(BrushColor(dictionary["TabActiveTextBrush"]), BrushColor(close.Foreground));
