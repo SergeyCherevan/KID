@@ -99,10 +99,10 @@ VS. Недостающие значения проверить перед реа
 
 ## 3. 🔄 Подключение к существующим темам
 
-1. В [LightTheme.xaml](../../../KID.WPF.IDE/Themes/LightTheme.xaml)
+1. В [VS2022LightTheme.xaml](../../../KID.WPF.IDE/Themes/VS2022LightTheme.xaml)
    использовать VS2022LightClassificationHighlightColors вместо
    стандартного ClassificationHighlightColors RoslynPad.
-2. В [DarkTheme.xaml](../../../KID.WPF.IDE/Themes/DarkTheme.xaml)
+2. В [VS2022DarkTheme.xaml](../../../KID.WPF.IDE/Themes/VS2022DarkTheme.xaml)
    обновить ссылку на переименованный VS2022DarkClassificationHighlightColors.
 3. В [ClassificationHighlightColorsProvider.cs](../../../KID.WPF.IDE/Services/CodeEditor/ClassificationHighlightColorsProvider.cs)
    заменить только резервную светлую палитру на
@@ -110,8 +110,10 @@ VS. Недостающие значения проверить перед реа
 4. Сохранить существующий ключ ресурса CodeEditorClassificationColors
    и действующий механизм смены палитры.
 
-**Обе палитры VS2026 пока нигде не подключать.** Они будут использоваться
-позже, когда появятся новые темы окна под VS2026.
+**Историческая граница этапа палитр:** обе палитры VS2026 первоначально
+не подключались. Темы окна добавлены следующим этапом по
+[плану тем окна](VISUAL_STUDIO_WINDOW_THEMES.plan.md); теперь они используют
+соответствующие классы VS2026. Результаты проверок ниже относятся к этапу палитр.
 
 Существующие цвета окна и фон/Foreground редактора не менять.
 Новые темы окна, переключатель версии, настройки, DI-сервисы, изменение

@@ -1,6 +1,6 @@
 {
   "ProgrammingLanguage": "C#",
-  "ColorTheme": "Theme_Light",
+  "ColorTheme": "Theme_VS2022Light",
   "FontFamily": "Consolas",
   "FontSize": 14,
   "TemplateName": "HelloWorld.cs"

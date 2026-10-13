@@ -3,12 +3,15 @@
                     xmlns:codeEditor="clr-namespace:KID.Services.CodeEditor">
 
     <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="VS2022Metrics.xaml" />
         <ResourceDictionary Source="MenuStyles.xaml" />
+        <ResourceDictionary Source="WindowStyles.xaml" />
+        <ResourceDictionary Source="EditorTabStyles.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <codeEditor:VS2022DarkClassificationHighlightColors
         x:Key="{x:Static codeEditor:ClassificationHighlightColorsProvider.CodeEditorClassificationColors}" />
-    
+
     <!-- Цвета -->
     <Color x:Key="WindowBackground">#1F1F1F</Color>
     <Color x:Key="MenuBackground">#1F1F1F</Color>
@@ -116,5 +119,25 @@
         </Setter>
     </Style>
 
-</ResourceDictionary>
 
+    <!-- Дополнительные роли общих шаблонов; прежние цвета VS2022 сохранены. -->
+    <SolidColorBrush x:Key="TitleInactiveBrush" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="WindowInactiveBorderBrush" Color="{StaticResource WindowBorder}" />
+    <SolidColorBrush x:Key="MenuItemHoverBorderBrush" Color="{StaticResource MenuBorder}" />
+    <SolidColorBrush x:Key="MenuItemPressedBorderBrush" Color="{StaticResource MenuBorder}" />
+    <SolidColorBrush x:Key="MenuPressedTextBrush" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="TabHoverBorderBrush" Color="{StaticResource TabInactiveBackground}" />
+    <SolidColorBrush x:Key="TabActiveBorderBrush" Color="{StaticResource TabActiveBackground}" />
+    <SolidColorBrush x:Key="TabInactiveWindowBorderBrush" Color="{StaticResource TabActiveBackground}" />
+    <SolidColorBrush x:Key="TabScrollThumbBrush" Color="{StaticResource WindowBackground}" />
+    <SolidColorBrush x:Key="ThemeFocusBrush" Color="{StaticResource MenuIndicator}" />
+    <sys:Double xmlns:sys="clr-namespace:System;assembly=mscorlib" x:Key="MenuShadowOpacity">0</sys:Double>
+    <Style x:Key="MinimizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}" />
+    <Style x:Key="MaximizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}" />
+    <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}" />
+
+    <SolidColorBrush x:Key="MenuCheckFillBrush" Color="Transparent" />
+    <SolidColorBrush x:Key="MenuCheckStrokeBrush" Color="{StaticResource MenuIndicator}" />
+    <SolidColorBrush x:Key="MenuChevronFillBrush" Color="Transparent" />
+    <SolidColorBrush x:Key="MenuChevronStrokeBrush" Color="{StaticResource MenuIndicator}" />
+</ResourceDictionary>

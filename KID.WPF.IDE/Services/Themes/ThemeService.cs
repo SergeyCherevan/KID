@@ -59,7 +59,10 @@ public sealed class ThemeService : IThemeService
     {
         try
         {
-            var themeUri = new Uri($"/{theme.ResourcePath}", UriKind.Relative);
+            // Указываем сборку явно: словарь принадлежит KID даже при размещении
+            // приложения в другом WPF-хосте (например, интеграционной проверке).
+            var themeUri = new Uri(
+                $"/{typeof(App).Assembly.GetName().Name};component/{theme.ResourcePath}", UriKind.Relative);
             var themeDictionary = new ResourceDictionary { Source = themeUri };
 
             if (app.Resources == null)

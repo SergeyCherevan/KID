@@ -7,6 +7,7 @@
              xmlns:viewModelsInterfaces="clr-namespace:KID.ViewModels.Interfaces"
              xmlns:di="clr-namespace:KID.Services.DI"
              xmlns:models="clr-namespace:KID.Models"
+             xmlns:controls="clr-namespace:KID.Controls"
              xmlns:converters="clr-namespace:KID.Converters"
              xmlns:localization="clr-namespace:KID.Services.Localization"
              xmlns:roslyn="clr-namespace:RoslynPad.Editor;assembly=RoslynPad.Editor.Windows">
@@ -29,143 +30,21 @@
             <Setter Property="FontFamily" Value="{Binding DataContext.FontFamily, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
             <Setter Property="FontSize" Value="{Binding DataContext.FontSize, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
         </Style>
-        <Style TargetType="TextBlock" x:Key="TabTextStyle">
-            <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Normal"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
-            <Setter Property="MaxWidth" Value="150"/>
-            <Style.Triggers>
-                <DataTrigger Value="True">
-                    <DataTrigger.Binding>
-                        <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
-                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
-                            <Binding/>
-                        </MultiBinding>
-                    </DataTrigger.Binding>
-                    <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}"/>
-                    <Setter Property="FontWeight" Value="Bold"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-        <Style TargetType="Button" x:Key="TabCloseButtonStyle">
-            <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}"/>
-            <Style.Triggers>
-                <DataTrigger Value="True">
-                    <DataTrigger.Binding>
-                        <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
-                            <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
-                            <Binding/>
-                        </MultiBinding>
-                    </DataTrigger.Binding>
-                    <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}"/>
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
     </UserControl.Resources>
     
     <Grid RowDefinitions="Auto,*">
         
         <!-- Панель вкладок -->
         <Border Grid.Row="0"
-                Background="{DynamicResource TabBarBackgroundBrush}">
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Padding" Value="7,5,2,0"/>
-                    <Style.Triggers>
-                        <DataTrigger Binding="{Binding ElementName=TabScrollViewer, Path=ComputedHorizontalScrollBarVisibility}" Value="Visible">
-                            <Setter Property="Padding" Value="7,0,2,0"/>
-                        </DataTrigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
-            <ScrollViewer x:Name="TabScrollViewer"
+                Background="{DynamicResource TabBarBackgroundBrush}"
+                Style="{DynamicResource TabStripStyle}">
+
+            <ScrollViewer x:Name="TabScrollViewer" Style="{DynamicResource TabScrollViewerStyle}"
                           HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Disabled"
                           CanContentScroll="False"
                           Padding="0,0,0,0">
-                <ScrollViewer.Resources>
-                    <Style x:Key="ThinTabScrollThumbStyle" TargetType="Thumb">
-                        <Setter Property="Background" Value="{DynamicResource WindowBrush}"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="Thumb">
-                                    <Border Background="{TemplateBinding Background}"
-                                            CornerRadius="2"/>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                    <Style TargetType="ScrollViewer">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ScrollViewer">
-                                    <Grid SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
-                                          ColumnDefinitions="*,Auto" RowDefinitions="Auto,*">
-                                        <ScrollBar x:Name="PART_HorizontalScrollBar"
-                                                   Grid.Row="0"
-                                                   Grid.Column="0"
-                                                   Orientation="Horizontal"
-                                                   Maximum="{TemplateBinding ScrollableWidth}"
-                                                   ViewportSize="{TemplateBinding ViewportWidth}"
-                                                   Value="{TemplateBinding HorizontalOffset}"
-                                                   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"/>
-                                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
-                                                                Grid.Row="1"
-                                                                Grid.Column="0"
-                                                                CanContentScroll="{TemplateBinding CanContentScroll}"
-                                                                Content="{TemplateBinding Content}"
-                                                                ContentTemplate="{TemplateBinding ContentTemplate}"
-                                                                ContentStringFormat="{TemplateBinding ContentStringFormat}"
-                                                                Margin="{TemplateBinding Padding}"/>
-                                        <ScrollBar x:Name="PART_VerticalScrollBar"
-                                                   Grid.Row="1"
-                                                   Grid.Column="1"
-                                                   Orientation="Vertical"
-                                                   Maximum="{TemplateBinding ScrollableHeight}"
-                                                   ViewportSize="{TemplateBinding ViewportHeight}"
-                                                   Value="{TemplateBinding VerticalOffset}"
-                                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
-                                    </Grid>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
-                    <Style TargetType="ScrollBar">
-                        <Style.Triggers>
-                            <Trigger Property="Orientation" Value="Horizontal">
-                                <Setter Property="Height" Value="4"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ScrollBar">
-                                            <Grid Background="Transparent"
-                                                  Height="{TemplateBinding Height}">
-                                                <Track x:Name="PART_Track"
-                                                       Focusable="False"
-                                                       IsDirectionReversed="False">
-                                                    <Track.DecreaseRepeatButton>
-                                                        <RepeatButton Command="ScrollBar.PageLeftCommand"
-                                                                      Opacity="0"
-                                                                      IsTabStop="False"/>
-                                                    </Track.DecreaseRepeatButton>
-                                                    <Track.Thumb>
-                                                        <Thumb Style="{StaticResource ThinTabScrollThumbStyle}"/>
-                                                    </Track.Thumb>
-                                                    <Track.IncreaseRepeatButton>
-                                                        <RepeatButton Command="ScrollBar.PageRightCommand"
-                                                                      Opacity="0"
-                                                                      IsTabStop="False"/>
-                                                    </Track.IncreaseRepeatButton>
-                                                </Track>
-                                            </Grid>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </ScrollViewer.Resources>
+
                 <ItemsControl ItemsSource="{Binding OpenedFileTabs}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -174,11 +53,8 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="2,0,0,0"
-                                    Padding="10,2,4,2"
-                                    MinWidth="80"
-                                    Cursor="Hand">
-                                <Border.ContextMenu>
+                            <controls:EditorTabBorder Style="{DynamicResource EditorTabBorderStyle}">
+                                <controls:EditorTabBorder.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="{localization:Localization TabContext_Close}"
                                                   Command="{Binding DataContext.CloseFileCommand, Source={x:Reference CodeEditorsViewRoot}}"
@@ -200,47 +76,21 @@
                                                   Command="{Binding DataContext.MoveTabRightCommand, Source={x:Reference CodeEditorsViewRoot}}"
                                                   CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                     </ContextMenu>
-                                </Border.ContextMenu>
-                                <Border.InputBindings>
+                                </controls:EditorTabBorder.ContextMenu>
+                                <controls:EditorTabBorder.InputBindings>
                                     <MouseBinding Gesture="LeftClick"
                                                   Command="{Binding DataContext.SelectFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                   CommandParameter="{Binding}"/>
-                                </Border.InputBindings>
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Background" Value="{DynamicResource TabInactiveBrush}"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Value="True">
-                                                <DataTrigger.Binding>
-                                                    <MultiBinding Converter="{StaticResource EqualityToBoolConverter}">
-                                                        <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab"/>
-                                                        <Binding/>
-                                                    </MultiBinding>
-                                                </DataTrigger.Binding>
-                                                <Setter Property="Background" Value="{DynamicResource TabActiveBrush}"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
+                                </controls:EditorTabBorder.InputBindings>
                                 <DockPanel>
                                     <TextBlock Text="{Binding DisplayName}"
-                                               Style="{StaticResource TabTextStyle}"
-                                               DockPanel.Dock="Left"
-                                               Margin="0,0,8,0"/>
-                                    <Button Content="×"
-                                            Width="18"
-                                            Height="18"
-                                            Padding="0"
-                                            FontSize="12"
-                                            Cursor="Hand"
-                                            VerticalAlignment="Center"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Style="{StaticResource TabCloseButtonStyle}"
+                                               Style="{DynamicResource TabTextStyle}"
+                                               DockPanel.Dock="Left"/>
+                                    <Button Content="×" Style="{DynamicResource TabCloseButtonStyle}"
                                             Command="{Binding DataContext.CloseFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                             CommandParameter="{Binding}"/>
                                 </DockPanel>
-                            </Border>
+                            </controls:EditorTabBorder>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -250,7 +100,7 @@
         <!-- Редактор кода текущей вкладки (растягивается на всю доступную высоту) -->
         <ContentControl Grid.Row="1"
                         Content="{Binding CurrentFileTab}"
-                        Margin="5">
+                        Margin="{DynamicResource WorkspaceContentMargin}">
             <ContentControl.ContentTemplate>
                 <DataTemplate DataType="{x:Type models:OpenedFileTab}">
                     <ContentPresenter Content="{Binding CodeEditor}"

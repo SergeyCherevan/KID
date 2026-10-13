@@ -16,7 +16,7 @@ namespace KID.Services.Themes;
 public sealed class ThemeProviderService : IThemeProviderService
 {
     private static readonly ThemeDefinition BuiltInDefaultTheme =
-        new("Theme_Light", "Themes/LightTheme.xaml");
+        new("Theme_VS2022Light", "Themes/VS2022LightTheme.xaml");
 
     private static readonly ResourceManager ResourceManager =
         new("KID.Resources.AvailableThemes", typeof(Strings).Assembly);
@@ -39,6 +39,15 @@ public sealed class ThemeProviderService : IThemeProviderService
     /// <inheritdoc />
     public bool TryGetTheme(string? localizationKey, out ThemeDefinition theme)
     {
+        // Старый settings.json продолжает выбирать ту же светлую/тёмную тему.
+        // Возвращаем канонический ключ: ThemeService сохранит его после применения.
+        localizationKey = localizationKey switch
+        {
+            "Theme_Light" => "Theme_VS2022Light",
+            "Theme_Dark" => "Theme_VS2022Dark",
+            _ => localizationKey
+        };
+
         if (!string.IsNullOrWhiteSpace(localizationKey))
         {
             foreach (var availableTheme in availableThemes)

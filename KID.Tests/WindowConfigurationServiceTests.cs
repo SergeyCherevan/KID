@@ -179,7 +179,7 @@ public sealed class WindowConfigurationServiceTests
             TimeSpan.FromSeconds(5),
             TestContext.Current.CancellationToken);
 
-        var themeChange = service.SetColorThemeAsync("Theme_Dark");
+        var themeChange = service.SetColorThemeAsync("Theme_VS2022Dark");
         var writesStartedBeforeRelease = fileService.WriteCount;
 
         fileService.ReleaseFirstWrite();
@@ -194,12 +194,12 @@ public sealed class WindowConfigurationServiceTests
             first =>
             {
                 Assert.Equal("Fira Code", first.FontFamily);
-                Assert.Equal("Theme_Light", first.ColorTheme);
+                Assert.Equal("Theme_VS2022Light", first.ColorTheme);
             },
             second =>
             {
                 Assert.Equal("Fira Code", second.FontFamily);
-                Assert.Equal("Theme_Dark", second.ColorTheme);
+                Assert.Equal("Theme_VS2022Dark", second.ColorTheme);
         });
     }
 

@@ -14,7 +14,7 @@
         Height="600" Width="800"
         WindowState="{Binding WindowState, Mode=TwoWay}"
         WindowStyle="None"
-        AllowsTransparency="False" 
+        AllowsTransparency="False"
         ResizeMode="CanResize"
         Icon="Resources/KID.ico"
         Background="{DynamicResource SpecialElementsBrush}">
@@ -50,12 +50,12 @@
         </Style>
     </Window.Style>
 
-    <Border BorderBrush="{DynamicResource WindowBorderBrush}"
+    <Border Style="{DynamicResource WindowFrameStyle}"
             BorderThickness="1"
             Margin="{Binding WindowState, Converter={StaticResource WindowStateToMarginConverter}}">
         <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="32"/>
+            <RowDefinition Height="{DynamicResource WindowTitleRowHeight}"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
@@ -63,40 +63,36 @@
         <!-- Заголовок -->
         <Border Grid.Row="0"
                 Background="{DynamicResource WindowBrush}"
-                Height="32">
+                Height="{DynamicResource WindowTitleHeight}">
             <DockPanel LastChildFill="True">
                 <DockPanel.InputBindings>
                     <MouseBinding Gesture="LeftClick"
                                 Command="{Binding DragMoveCommand}"/>
                 </DockPanel.InputBindings>
                 <Image Source="Resources/KID.ico"
-                       Width="30" Height="30"
-                       Margin="7.5,0,0,0"
+                       Width="{DynamicResource WindowIconSize}" Height="{DynamicResource WindowIconSize}"
+                       Margin="{DynamicResource WindowIconMargin}"
                        VerticalAlignment="Center" />
                 <StackPanel Orientation="Horizontal"
                             DockPanel.Dock="Right"
                             VerticalAlignment="Center">
-                    <Button Name="MinimizeButton" 
-                            Style="{DynamicResource WindowButtonStyle}" 
-                            Command="{Binding MinimizeCommand}" 
+                    <Button Name="MinimizeButton"
+                            Style="{DynamicResource MinimizeButtonStyle}"
+                            Command="{Binding MinimizeCommand}"
                             Content="—"/>
-                    <Button Name="MaximizeButton" 
-                            Style="{DynamicResource WindowButtonStyle}" 
-                            Command="{Binding MaximizeCommand}" 
+                    <Button Name="MaximizeButton"
+                            Style="{DynamicResource MaximizeButtonStyle}"
+                            Command="{Binding MaximizeCommand}"
                             Content="{Binding MaximizeButtonContent}"/>
-                    <Button Name="CloseButton" 
-                            Style="{DynamicResource WindowButtonStyle}" 
+                    <Button Name="CloseButton"
+                            Style="{DynamicResource CloseButtonStyle}"
                             Command="{Binding CloseCommand}"
                             CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                             Content="╳"/>
                 </StackPanel>
                 <TextBlock Text="{localization:Localization Window_Title}"
                            DockPanel.Dock="Left"
-                           Foreground="{DynamicResource TitleBrush}"
-                           VerticalAlignment="Center"
-                           FontWeight="Bold"
-                           FontSize="13"
-                           Margin="7.5,0,0,0"/>
+                           Style="{DynamicResource WindowTitleTextStyle}"/>
             </DockPanel>
         </Border>
 
@@ -121,7 +117,7 @@
                           Background="{DynamicResource SplitterBrush}" />
 
             <!-- Вывод -->
-            <Grid x:Name="OutputGrid" Grid.Column="2" Margin="5">
+            <Grid x:Name="OutputGrid" Grid.Column="2" Margin="{DynamicResource WorkspaceContentMargin}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*" />
                     <RowDefinition Height="5" />

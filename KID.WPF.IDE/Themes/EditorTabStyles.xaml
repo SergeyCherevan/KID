@@ -1,0 +1,225 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+                    xmlns:controls="clr-namespace:KID.Controls"
+                    xmlns:converters="clr-namespace:KID.Converters">
+    <sys:Boolean x:Key="ModernTabEnabled">True</sys:Boolean>
+    <converters:EqualityToBoolConverter x:Key="TabEqualityConverter" />
+    <Style x:Key="TabStripStyle" TargetType="Border">
+        <Setter Property="Padding" Value="{DynamicResource TabStripPadding}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding ElementName=TabScrollViewer, Path=ComputedHorizontalScrollBarVisibility}" Value="Visible">
+                <Setter Property="Padding" Value="{DynamicResource TabStripScrollingPadding}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="EditorTabBorderStyle" TargetType="controls:EditorTabBorder">
+        <Setter Property="Margin" Value="{DynamicResource TabMargin}" />
+        <Setter Property="Padding" Value="{DynamicResource TabPadding}" />
+        <Setter Property="MinWidth" Value="80" />
+        <Setter Property="MinHeight" Value="{DynamicResource TabMinHeight}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="UseCurvedShape" Value="{DynamicResource UseModernTheme}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource TabCornerRadius}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource TabBorderThickness}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="Background" Value="{DynamicResource TabInactiveBrush}" />
+        <Style.Triggers>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="UseCurvedShape" Value="True" />
+                    <Condition Property="IsMouseOver" Value="True" />
+                </MultiTrigger.Conditions>
+                <Setter Property="BorderBrush" Value="{DynamicResource TabHoverBorderBrush}" />
+            </MultiTrigger>
+            <DataTrigger Value="True">
+                <DataTrigger.Binding>
+                    <MultiBinding Converter="{StaticResource TabEqualityConverter}">
+                        <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab" />
+                        <Binding />
+                    </MultiBinding>
+                </DataTrigger.Binding>
+                <Setter Property="Background" Value="{DynamicResource TabActiveBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource TabActiveBorderBrush}" />
+            </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Value="True">
+                        <Condition.Binding>
+                            <MultiBinding Converter="{StaticResource TabEqualityConverter}">
+                                <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab" />
+                                <Binding />
+                            </MultiBinding>
+                        </Condition.Binding>
+                    </Condition>
+                    <Condition Binding="{Binding IsActive, RelativeSource={RelativeSource AncestorType=Window}}" Value="False" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="BorderBrush" Value="{DynamicResource TabInactiveWindowBorderBrush}" />
+            </MultiDataTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="TabTextStyle" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}" />
+        <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize}" />
+        <Setter Property="FontWeight" Value="Normal" />
+        <Setter Property="Margin" Value="{DynamicResource TabTextMargin}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        <Setter Property="MaxWidth" Value="150" />
+        <Style.Triggers>
+            <DataTrigger Value="True">
+                <DataTrigger.Binding>
+                    <MultiBinding Converter="{StaticResource TabEqualityConverter}">
+                        <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab" />
+                        <Binding />
+                    </MultiBinding>
+                </DataTrigger.Binding>
+                <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}" />
+                <Setter Property="FontWeight" Value="{DynamicResource TabSelectedFontWeight}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+    <ControlTemplate x:Key="ModernTabCloseTemplate" TargetType="Button">
+        <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource TabCloseCornerRadius}">
+            <Path x:Name="Glyph" Data="{DynamicResource Dismiss}" Fill="{TemplateBinding Foreground}"
+                  Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </ControlTemplate>
+    <Style x:Key="TabCloseButtonStyle" TargetType="Button">
+        <Setter Property="Tag" Value="{DynamicResource UseModernTheme}" />
+        <Setter Property="Width" Value="{DynamicResource TabCloseButtonSize}" />
+        <Setter Property="Height" Value="{DynamicResource TabCloseButtonSize}" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}" />
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="{StaticResource ModernTabEnabled}">
+                <Setter Property="Template" Value="{StaticResource ModernTabCloseTemplate}" />
+                <Setter Property="Foreground" Value="Transparent" />
+                <Setter Property="FocusVisualStyle" Value="{DynamicResource ThemeFocusVisual}" />
+            </Trigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True" />
+                    <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=controls:EditorTabBorder}}" Value="True" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Foreground" Value="{DynamicResource TabInactiveTextBrush}" />
+            </MultiDataTrigger>
+            <DataTrigger Value="True">
+                <DataTrigger.Binding>
+                    <MultiBinding Converter="{StaticResource TabEqualityConverter}">
+                        <Binding RelativeSource="{RelativeSource AncestorType=UserControl}" Path="DataContext.CurrentFileTab" />
+                        <Binding />
+                    </MultiBinding>
+                </DataTrigger.Binding>
+                <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}" />
+            </DataTrigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="Tag" Value="{StaticResource ModernTabEnabled}" />
+                    <Condition Property="IsMouseOver" Value="True" />
+                </MultiTrigger.Conditions>
+                <Setter Property="Background" Value="{DynamicResource MenuItemHoverBrush}" />
+            </MultiTrigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="Tag" Value="{StaticResource ModernTabEnabled}" />
+                    <Condition Property="IsPressed" Value="True" />
+                </MultiTrigger.Conditions>
+                <Setter Property="Background" Value="{DynamicResource MenuItemPressedBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource MenuPressedTextBrush}" />
+            </MultiTrigger>
+            <MultiTrigger>
+                <MultiTrigger.Conditions>
+                    <Condition Property="Tag" Value="{StaticResource ModernTabEnabled}" />
+                    <Condition Property="IsKeyboardFocused" Value="True" />
+                </MultiTrigger.Conditions>
+                <Setter Property="Foreground" Value="{DynamicResource TabActiveTextBrush}" />
+            </MultiTrigger>
+        </Style.Triggers>
+    </Style>
+    <Style x:Key="TabScrollThumbStyle" TargetType="Thumb">
+        <Setter Property="Background" Value="{DynamicResource TabScrollThumbBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{TemplateBinding Background}"
+                            CornerRadius="2"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="TabScrollViewerStyle" TargetType="ScrollViewer">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollViewer">
+                    <Grid SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                          ColumnDefinitions="*,Auto" RowDefinitions="Auto,*">
+                        <ScrollBar Style="{DynamicResource TabScrollBarStyle}" x:Name="PART_HorizontalScrollBar"
+                                   Grid.Row="0"
+                                   Grid.Column="0"
+                                   Orientation="Horizontal"
+                                   Maximum="{TemplateBinding ScrollableWidth}"
+                                   ViewportSize="{TemplateBinding ViewportWidth}"
+                                   Value="{TemplateBinding HorizontalOffset}"
+                                   Visibility="{TemplateBinding ComputedHorizontalScrollBarVisibility}"/>
+                        <ScrollContentPresenter x:Name="PART_ScrollContentPresenter"
+                                                Grid.Row="1"
+                                                Grid.Column="0"
+                                                CanContentScroll="{TemplateBinding CanContentScroll}"
+                                                Content="{TemplateBinding Content}"
+                                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                                Margin="{TemplateBinding Padding}"/>
+                        <ScrollBar Style="{DynamicResource TabScrollBarStyle}" x:Name="PART_VerticalScrollBar"
+                                   Grid.Row="1"
+                                   Grid.Column="1"
+                                   Orientation="Vertical"
+                                   Maximum="{TemplateBinding ScrollableHeight}"
+                                   ViewportSize="{TemplateBinding ViewportHeight}"
+                                   Value="{TemplateBinding VerticalOffset}"
+                                   Visibility="{TemplateBinding ComputedVerticalScrollBarVisibility}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="TabScrollBarStyle" TargetType="ScrollBar">
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Height" Value="{DynamicResource TabScrollBarHeight}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ScrollBar">
+                            <Grid Background="Transparent"
+                                  Height="{TemplateBinding Height}">
+                                <Track x:Name="PART_Track"
+                                       Focusable="False"
+                                       IsDirectionReversed="False">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageLeftCommand"
+                                                      Opacity="0"
+                                                      IsTabStop="False"/>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb Style="{DynamicResource TabScrollThumbStyle}"/>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="ScrollBar.PageRightCommand"
+                                                      Opacity="0"
+                                                      IsTabStop="False"/>
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

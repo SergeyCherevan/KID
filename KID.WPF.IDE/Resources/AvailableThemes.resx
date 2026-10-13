@@ -59,18 +59,30 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Theme_Count" xml:space="preserve">
-    <value>2</value>
+    <value>4</value>
   </data>
   <data name="Theme_0_LocalizationKey" xml:space="preserve">
-    <value>Theme_Light</value>
+    <value>Theme_VS2022Light</value>
   </data>
   <data name="Theme_0_ResourcePath" xml:space="preserve">
-    <value>Themes/LightTheme.xaml</value>
+    <value>Themes/VS2022LightTheme.xaml</value>
   </data>
   <data name="Theme_1_LocalizationKey" xml:space="preserve">
-    <value>Theme_Dark</value>
+    <value>Theme_VS2022Dark</value>
   </data>
   <data name="Theme_1_ResourcePath" xml:space="preserve">
-    <value>Themes/DarkTheme.xaml</value>
+    <value>Themes/VS2022DarkTheme.xaml</value>
+  </data>
+  <data name="Theme_2_LocalizationKey" xml:space="preserve">
+    <value>Theme_VS2026Light</value>
+  </data>
+  <data name="Theme_2_ResourcePath" xml:space="preserve">
+    <value>Themes/VS2026LightTheme.xaml</value>
+  </data>
+  <data name="Theme_3_LocalizationKey" xml:space="preserve">
+    <value>Theme_VS2026Dark</value>
+  </data>
+  <data name="Theme_3_ResourcePath" xml:space="preserve">
+    <value>Themes/VS2026DarkTheme.xaml</value>
   </data>
 </root>

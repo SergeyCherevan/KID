@@ -190,11 +190,11 @@
   <data name="Language_Ukrainian" xml:space="preserve">
     <value>Українська</value>
   </data>
-  <data name="Theme_Light" xml:space="preserve">
-    <value>Світла</value>
+  <data name="Theme_VS2022Light" xml:space="preserve">
+    <value>Visual Studio 2022 — світла</value>
   </data>
-  <data name="Theme_Dark" xml:space="preserve">
-    <value>Темна</value>
+  <data name="Theme_VS2022Dark" xml:space="preserve">
+    <value>Visual Studio 2022 — темна</value>
   </data>
   <data name="Menu_Font" xml:space="preserve">
     <value>Шрифт</value>
@@ -228,6 +228,12 @@
   </data>
   <data name="Error_ClosePreparationFailed" xml:space="preserve">
     <value>Не вдалося безпечно закрити застосунок: {0}</value>
+  </data>
+  <data name="Theme_VS2026Light" xml:space="preserve">
+    <value>Visual Studio 2026 — світла</value>
+  </data>
+  <data name="Theme_VS2026Dark" xml:space="preserve">
+    <value>Visual Studio 2026 — темна</value>
   </data>
 </root>
 

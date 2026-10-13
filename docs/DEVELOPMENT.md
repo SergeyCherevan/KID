@@ -200,34 +200,37 @@ private static SoundNote[] Snapshot(
 
 ### Добавление новой темы
 
-1. Создайте файл `Themes/MyTheme.xaml`:
-
-```xaml
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-    <SolidColorBrush x:Key="WindowBrush" Color="#FFFFFF"/>
-    <!-- Другие ресурсы -->
-</ResourceDictionary>
-```
-
-2. Добавьте тему в `ThemeService.GetAvailableThemes()`:
-
-```csharp
-new AvailableTheme
-{
-    ThemeKey = "MyTheme",
-    EnglishName = "MyTheme"
-}
-```
-
-3. Добавьте локализованное название в ресурсы:
+1. Создайте `Themes/MyTheme.xaml` по образцу полного словаря существующей темы,
+   например `VS2026LightTheme.xaml`. Объявите все используемые цвета/кисти,
+   палитру `CodeEditorClassificationColors` и подключите соответствующие метрики
+   и общие стили внутри `ResourceDictionary.MergedDictionaries` темы.
+2. В `Resources/AvailableThemes.resx` увеличьте `Theme_Count` и добавьте запись
+   со следующим индексом. Для текущего каталога из четырёх тем:
 
 ```xml
-<data name="Theme_MyTheme" xml:space="preserve">
-    <value>Моя тема</value>
-</data>
+<data name="Theme_Count" xml:space="preserve"><value>5</value></data>
+<data name="Theme_4_LocalizationKey" xml:space="preserve"><value>Theme_MyTheme</value></data>
+<data name="Theme_4_ResourcePath" xml:space="preserve"><value>Themes/MyTheme.xaml</value></data>
 ```
 
-4. Обновите метод `ApplyTheme()` для загрузки новой темы
+3. Добавьте `Theme_MyTheme` с отображаемым названием в три локализации
+   `Strings.en-US.resx`, `Strings.ru-RU.resx`, `Strings.uk-UA.resx`.
+4. `ThemeProviderService` прочитает каталог; меню строится автоматически.
+   Изменять `ThemeService.ApplyTheme`, DI или ViewModel для новой записи не нужно.
+   SDK автоматически включает новый XAML; явный `Page Include` не требуется.
+5. Проверьте загрузку словаря, переключение существующих элементов UI,
+   палитры всех открытых редакторов и восстановление выбора после перезапуска.
+
+Размеры имеют тип соответствующего WPF-свойства: например, для `Height`
+используется `double`, а для `RowDefinition.Height` — `GridLength`.
+Изменяемые кисти/метрики/стили в представлениях разрешаются через `DynamicResource`.
+Общие шаблоны сохраняют одну структуру и динамические параметры, поэтому
+захваченный `BasedOn` в меню не удерживает старые цвета и размеры.
+
+Корневые темы: `VS2022LightTheme`, `VS2022DarkTheme`, `VS2026LightTheme`,
+`VS2026DarkTheme`. Старые сохранённые ключи `Theme_Light` / `Theme_Dark`
+разрешаются в VS2022 и после применения сохраняются под каноническими именами.
+Стартовая и резервная тема — `Theme_VS2022Light`.
 
 ### Добавление нового сервиса
 

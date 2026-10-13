@@ -46,6 +46,7 @@ public sealed class FileServiceTests
     [Fact]
     public async Task ReadJsonAsync_WhenSettingsPropertiesAreMissing_PreservesDefaultsAndIgnoresUnknownFields()
     {
+        // Старый идентификатор темы допустим в JSON: миграцию выполняет provider, а не FileService.
         const string json = """{"ProgrammingLanguage":"C#","ColorTheme":"Theme_Light","FontFamily":"Consolas","FontSize":14,"TemplateName":"HelloWorld.cs","FutureSetting":true}""";
         await WithJsonFileAsync(json, async (service, path) =>
         {

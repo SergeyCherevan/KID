@@ -1,0 +1,4029 @@
+{
+  "verified_on": "2026-10-12",
+  "product": "Visual Studio Community 2026",
+  "display_version": "18.10.3",
+  "installation_version": "18.10.12224.181",
+  "installation_path": "C:\\Program Files\\Microsoft Visual Studio\\18\\Community",
+  "color_format": "#AARRGGBB",
+  "method": "Read-only factory pkgdef decoding and BAML/CIL inspection with ILSpy 9.1.0.7988; no Visual Studio setting changes.",
+  "sources": [
+    {
+      "path": "CommonExtensions\\Platform\\Shell.Light.pkgdef",
+      "bytes": 21012,
+      "sha256": "2e06735bb76962612481d1f25f2f85b7f69ef8d21b7ba25edfb854c040c6bffb"
+    },
+    {
+      "path": "CommonExtensions\\Platform\\Shell.Dark.pkgdef",
+      "bytes": 21012,
+      "sha256": "aaeee4a4b8914cc1529af0944dac639b3b229959552d8b00087e44a43054ed31"
+    },
+    {
+      "path": "CommonExtensions\\Platform\\Theme.Light.pkgdef",
+      "bytes": 185423,
+      "sha256": "f419c58bf11b4f806abd6cc774a81258e53cf447879b9a9090503c11f481f6e8"
+    },
+    {
+      "path": "CommonExtensions\\Platform\\Theme.Dark.pkgdef",
+      "bytes": 185423,
+      "sha256": "1f535380c31201c65ae785df98f6da0046fa7d145a3ee9580a2fb63ebd47a89b"
+    },
+    {
+      "path": "CommonExtensions\\Platform\\EditorColors.pkgdef",
+      "bytes": 71658,
+      "sha256": "efe4d0204755fd0e501d5a26b905594dcf65e8706ab998b81f3ed3cde0dc124e"
+    },
+    {
+      "path": "Microsoft.VisualStudio.Shell.Styles.dll",
+      "bytes": 654176,
+      "sha256": "68410779214fe3209b494e119bb9a84af925fa572f4a126a928a2eede0cd1b5e"
+    },
+    {
+      "path": "Microsoft.VisualStudio.Shell.UI.Internal.dll",
+      "bytes": 16557368,
+      "sha256": "af539fe7c6014db3c02199f1b2c1f43e45826f39516641385c2cacc7bc710877"
+    },
+    {
+      "path": "Microsoft.VisualStudio.Platform.WindowManagement.dll",
+      "bytes": 1937208,
+      "sha256": "efde5e079c4cf97f370f58d77616442389e813696916d3ce3b67602b92a18cc3"
+    }
+  ],
+  "themes": {
+    "Light": {
+      "guid": "de3dbbcd-f642-433c-8353-8f1df4370aba",
+      "categories": {
+        "EditorOverride": {
+          "PopupBackground": {
+            "background": {
+              "argb": "#FFF6F6F6"
+            },
+            "foreground": null
+          },
+          "PopupBorder": {
+            "background": {
+              "argb": "#FFCCCEDB"
+            },
+            "foreground": null
+          },
+          "PopupHyperlink": {
+            "background": {
+              "argb": "#FF006CBE"
+            },
+            "foreground": null
+          },
+          "PopupSelectedBackground": {
+            "background": {
+              "argb": "#FFCCCEDB"
+            },
+            "foreground": null
+          },
+          "PopupSelectedText": {
+            "background": {
+              "argb": "#FF1E1E1E"
+            },
+            "foreground": null
+          },
+          "PopupShadow": {
+            "background": {
+              "argb": "#72000000"
+            },
+            "foreground": null
+          },
+          "PopupSubtleText": {
+            "background": {
+              "argb": "#FF808080"
+            },
+            "foreground": null
+          },
+          "PopupText": {
+            "background": {
+              "argb": "#FF1E1E1E"
+            },
+            "foreground": null
+          }
+        },
+        "Shell": {
+          "AccentFillAlt": {
+            "background": {
+              "argb": "#FF3F3682"
+            },
+            "foreground": null
+          },
+          "AccentFillDefault": {
+            "background": {
+              "argb": "#FF5649B0"
+            },
+            "foreground": null
+          },
+          "AccentFillDisabled": {
+            "background": {
+              "argb": "#37000000"
+            },
+            "foreground": null
+          },
+          "AccentFillSecondary": {
+            "background": {
+              "argb": "#E55649B0"
+            },
+            "foreground": null
+          },
+          "AccentFillSelectedTextBackground": {
+            "background": {
+              "argb": "#FF0078D4"
+            },
+            "foreground": null
+          },
+          "AccentFillSelectedTextBackgroundSubtle": {
+            "background": {
+              "argb": "#4D0078D4"
+            },
+            "foreground": null
+          },
+          "AccentFillSenary": {
+            "background": {
+              "argb": "#1F5649B0"
+            },
+            "foreground": null
+          },
+          "AccentFillTertiary": {
+            "background": {
+              "argb": "#CC5649B0"
+            },
+            "foreground": null
+          },
+          "AccentTextFillDisabled": {
+            "background": {
+              "argb": "#5C000000"
+            },
+            "foreground": null
+          },
+          "AccentTextFillPrimary": {
+            "background": {
+              "argb": "#FF3F3682"
+            },
+            "foreground": null
+          },
+          "AccentTextFillSecondary": {
+            "background": {
+              "argb": "#FF221D46"
+            },
+            "foreground": null
+          },
+          "AccentTextFillTertiary": {
+            "background": {
+              "argb": "#FF5649B0"
+            },
+            "foreground": null
+          },
+          "CardBackgroundFillDefault": {
+            "background": {
+              "argb": "#B2FFFFFF"
+            },
+            "foreground": null
+          },
+          "CardBackgroundFillSecondary": {
+            "background": {
+              "argb": "#80F6F6F6"
+            },
+            "foreground": null
+          },
+          "CardBackgroundFillTertiary": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "CardStrokeDefault": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "CardStrokeDefaultSolid": {
+            "background": {
+              "argb": "#FFEBEBEB"
+            },
+            "foreground": null
+          },
+          "CardStrokeDefaultSolidAlt": {
+            "background": {
+              "argb": "#FFDADADA"
+            },
+            "foreground": null
+          },
+          "ControlAltFillDisabled": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlAltFillQuaternary": {
+            "background": {
+              "argb": "#18000000"
+            },
+            "foreground": null
+          },
+          "ControlAltFillSecondary": {
+            "background": {
+              "argb": "#06000000"
+            },
+            "foreground": null
+          },
+          "ControlAltFillTertiary": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "ControlAltFillTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillActiveInput": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillDefault": {
+            "background": {
+              "argb": "#B2FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillDisabled": {
+            "background": {
+              "argb": "#4DF9F9F9"
+            },
+            "foreground": null
+          },
+          "ControlFillQuaternary": {
+            "background": {
+              "argb": "#C2F3F3F3"
+            },
+            "foreground": null
+          },
+          "ControlFillSecondary": {
+            "background": {
+              "argb": "#80F9F9F9"
+            },
+            "foreground": null
+          },
+          "ControlFillTertiary": {
+            "background": {
+              "argb": "#4DF9F9F9"
+            },
+            "foreground": null
+          },
+          "ControlFillTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillDefault": {
+            "background": {
+              "argb": "#C9FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillDisabled": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillSecondary": {
+            "background": {
+              "argb": "#FFF3F3F3"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillTertiary": {
+            "background": {
+              "argb": "#FFEBEBEB"
+            },
+            "foreground": null
+          },
+          "ControlSolidFillDefault": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrokeDefault": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeForStrongFillWhenOnImage": {
+            "background": {
+              "argb": "#59FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentDefault": {
+            "background": {
+              "argb": "#14FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentDisabled": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentSecondary": {
+            "background": {
+              "argb": "#66000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentTertiary": {
+            "background": {
+              "argb": "#37000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeSecondary": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrongFillDefault": {
+            "background": {
+              "argb": "#72000000"
+            },
+            "foreground": null
+          },
+          "ControlStrongFillDisabled": {
+            "background": {
+              "argb": "#51000000"
+            },
+            "foreground": null
+          },
+          "ControlStrongStrokeDefault": {
+            "background": {
+              "argb": "#9C000000"
+            },
+            "foreground": null
+          },
+          "ControlStrongStrokeDisabled": {
+            "background": {
+              "argb": "#37000000"
+            },
+            "foreground": null
+          },
+          "DividerStrokeDefault": {
+            "background": {
+              "argb": "#14000000"
+            },
+            "foreground": null
+          },
+          "FocusStrokeInner": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "FocusStrokeOuter": {
+            "background": {
+              "argb": "#E4000000"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillDisabled": {
+            "background": {
+              "argb": "#5C000000"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillPrimary": {
+            "background": {
+              "argb": "#FF003E92"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillSecondary": {
+            "background": {
+              "argb": "#FF001A68"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillTertiary": {
+            "background": {
+              "argb": "#FF005FB8"
+            },
+            "foreground": null
+          },
+          "LayerFillAlt": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "LayerFillDefault": {
+            "background": {
+              "argb": "#80FFFFFF"
+            },
+            "foreground": null
+          },
+          "ShadowFlyout": {
+            "background": {
+              "argb": "#24000000"
+            },
+            "foreground": null
+          },
+          "SmokeFillDefault": {
+            "background": {
+              "argb": "#4D000000"
+            },
+            "foreground": null
+          },
+          "SmokeFillInverse": {
+            "background": {
+              "argb": "#C9FFFFFF"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillBase": {
+            "background": {
+              "argb": "#FFF3F3F3"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillBaseAlt": {
+            "background": {
+              "argb": "#FFDADADA"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillQuaternary": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillQuinary": {
+            "background": {
+              "argb": "#FFFDFDFD"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillSecondary": {
+            "background": {
+              "argb": "#FFEEEEEE"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillSenary": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillTertiary": {
+            "background": {
+              "argb": "#FFF9F9F9"
+            },
+            "foreground": null
+          },
+          "SubtleFillDisabled": {
+            "background": {
+              "argb": "#00000000"
+            },
+            "foreground": null
+          },
+          "SubtleFillSecondary": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "SubtleFillTertiary": {
+            "background": {
+              "argb": "#0A000000"
+            },
+            "foreground": null
+          },
+          "SubtleFillTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "SurfaceBackgroundFillDefault": {
+            "background": {
+              "argb": "#FFF9F9F9"
+            },
+            "foreground": null
+          },
+          "SurfaceStrokeDefault": {
+            "background": {
+              "argb": "#66757575"
+            },
+            "foreground": null
+          },
+          "SurfaceStrokeFlyout": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "SystemFillAttention": {
+            "background": {
+              "argb": "#FF005FB7"
+            },
+            "foreground": null
+          },
+          "SystemFillAttentionBackground": {
+            "background": {
+              "argb": "#80F6F6F6"
+            },
+            "foreground": null
+          },
+          "SystemFillCaution": {
+            "background": {
+              "argb": "#FF9D5D00"
+            },
+            "foreground": null
+          },
+          "SystemFillCautionBackground": {
+            "background": {
+              "argb": "#FFFFF4CE"
+            },
+            "foreground": null
+          },
+          "SystemFillCritical": {
+            "background": {
+              "argb": "#FFC42B1C"
+            },
+            "foreground": null
+          },
+          "SystemFillCriticalBackground": {
+            "background": {
+              "argb": "#FFFDE7E9"
+            },
+            "foreground": null
+          },
+          "SystemFillNeutral": {
+            "background": {
+              "argb": "#72000000"
+            },
+            "foreground": null
+          },
+          "SystemFillNeutralBackground": {
+            "background": {
+              "argb": "#06000000"
+            },
+            "foreground": null
+          },
+          "SystemFillSolidAttentionBackground": {
+            "background": {
+              "argb": "#FFF7F7F7"
+            },
+            "foreground": null
+          },
+          "SystemFillSolidNeutral": {
+            "background": {
+              "argb": "#FF8A8A8A"
+            },
+            "foreground": null
+          },
+          "SystemFillSolidNeutralBackground": {
+            "background": {
+              "argb": "#FFF3F3F3"
+            },
+            "foreground": null
+          },
+          "SystemFillSuccess": {
+            "background": {
+              "argb": "#FF0F7B0F"
+            },
+            "foreground": null
+          },
+          "SystemFillSuccessBackground": {
+            "background": {
+              "argb": "#FFDFF6DD"
+            },
+            "foreground": null
+          },
+          "TextFillDisabled": {
+            "background": {
+              "argb": "#5C000000"
+            },
+            "foreground": null
+          },
+          "TextFillPrimary": {
+            "background": {
+              "argb": "#E4000000"
+            },
+            "foreground": null
+          },
+          "TextFillSecondary": {
+            "background": {
+              "argb": "#9E000000"
+            },
+            "foreground": null
+          },
+          "TextFillTertiary": {
+            "background": {
+              "argb": "#72000000"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillDisabled": {
+            "background": {
+              "argb": "#B2FFFFFF"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillPrimary": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillSecondary": {
+            "background": {
+              "argb": "#B2FFFFFF"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillSelectedText": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          }
+        },
+        "ShellInternal": {
+          "CaptionControlCloseFillPrimary": {
+            "background": {
+              "argb": "#FFC42B1C"
+            },
+            "foreground": null
+          },
+          "CaptionControlCloseFillSecondary": {
+            "background": {
+              "argb": "#E6C42B1C"
+            },
+            "foreground": null
+          },
+          "CaptionControlCloseTextFillPrimary": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "CaptionControlCloseTextFillSecondary": {
+            "background": {
+              "argb": "#B3FFFFFF"
+            },
+            "foreground": null
+          },
+          "EnvironmentBackground": {
+            "background": {
+              "argb": "#FFEEEEEE"
+            },
+            "foreground": null
+          },
+          "EnvironmentBadge": {
+            "background": {
+              "argb": "#B2FFFFFF"
+            },
+            "foreground": null
+          },
+          "EnvironmentBody": {
+            "background": {
+              "argb": "#FFEEEEEE"
+            },
+            "foreground": null
+          },
+          "EnvironmentBodyText": {
+            "background": {
+              "argb": "#E4000000"
+            },
+            "foreground": null
+          },
+          "EnvironmentBorder": {
+            "background": {
+              "argb": "#FF5649B0"
+            },
+            "foreground": null
+          },
+          "EnvironmentBorderInactive": {
+            "background": {
+              "argb": "#FFADADAD"
+            },
+            "foreground": null
+          },
+          "EnvironmentHeader": {
+            "background": {
+              "argb": "#FFF9F9F9"
+            },
+            "foreground": null
+          },
+          "EnvironmentHeaderInactive": {
+            "background": {
+              "argb": "#FFF9F9F9"
+            },
+            "foreground": null
+          },
+          "EnvironmentIndicator": {
+            "background": {
+              "argb": "#66757575"
+            },
+            "foreground": null
+          },
+          "EnvironmentLayeredBackground": {
+            "background": {
+              "argb": "#80FFFFFF"
+            },
+            "foreground": null
+          },
+          "EnvironmentLayeredBorder": {
+            "background": {
+              "argb": "#0F000000"
+            },
+            "foreground": null
+          },
+          "EnvironmentLogo": {
+            "background": {
+              "argb": "#FF5649B0"
+            },
+            "foreground": null
+          },
+          "EnvironmentTab": {
+            "background": {
+              "argb": "#FFF9F9F9"
+            },
+            "foreground": null
+          },
+          "EnvironmentTabInactive": {
+            "background": {
+              "argb": "#FFF9F9F9"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillBuilding": {
+            "background": {
+              "argb": "#FF5649B0"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillDebugging": {
+            "background": {
+              "argb": "#FFBC4B09"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillRest": {
+            "background": {
+              "argb": "#8B000000"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillSolutionLoading": {
+            "background": {
+              "argb": "#FF005BA1"
+            },
+            "foreground": null
+          },
+          "StatusBarControlFillSecondary": {
+            "background": {
+              "argb": "#33000000"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillBuilding": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillDebugging": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillDisabled": {
+            "background": {
+              "argb": "#90FFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillRest": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillSolutionLoading": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          }
+        }
+      },
+      "legacy_environment": {
+        "EnvironmentBackground": {
+          "background": {
+            "argb": "#FFEEEEF2"
+          },
+          "foreground": null
+        },
+        "MainWindowActiveCaption": {
+          "background": {
+            "argb": "#FFEEEEF2"
+          },
+          "foreground": {
+            "argb": "#FF525252"
+          }
+        },
+        "MainWindowInactiveCaption": {
+          "background": {
+            "argb": "#FFEEEEF2"
+          },
+          "foreground": {
+            "argb": "#99525252"
+          }
+        },
+        "MainWindowActiveDefaultBorder": {
+          "background": {
+            "argb": "#FF9B9FB9"
+          },
+          "foreground": null
+        },
+        "MainWindowActiveNoSolutionBorder": {
+          "background": {
+            "argb": "#FF9B9FB9"
+          },
+          "foreground": null
+        },
+        "MainWindowInactiveBorder": {
+          "background": {
+            "argb": "#FFCCCEDB"
+          },
+          "foreground": null
+        },
+        "ToolWindowBackground": {
+          "background": {
+            "argb": "#FFF5F5F5"
+          },
+          "foreground": null
+        },
+        "ToolWindowText": {
+          "background": {
+            "argb": "#FF1E1E1E"
+          },
+          "foreground": null
+        }
+      },
+      "editor_plain_text": {
+        "Output Window": {
+          "Plain Text": {
+            "background": {
+              "argb": "#FFF9F9F9"
+            },
+            "foreground": {
+              "argb": "#FF000000"
+            }
+          }
+        }
+      }
+    },
+    "Dark": {
+      "guid": "1ded0138-47ce-435e-84ef-9ec1f439b749",
+      "categories": {
+        "EditorOverride": {
+          "PopupBackground": {
+            "background": {
+              "argb": "#FF2E2E2E"
+            },
+            "foreground": null
+          },
+          "PopupBorder": {
+            "background": {
+              "argb": "#FF424242"
+            },
+            "foreground": null
+          },
+          "PopupHyperlink": {
+            "background": {
+              "argb": "#FF83BEEB"
+            },
+            "foreground": null
+          },
+          "PopupSelectedBackground": {
+            "background": {
+              "argb": "#FF424242"
+            },
+            "foreground": null
+          },
+          "PopupSelectedText": {
+            "background": {
+              "argb": "#FFFAFAFA"
+            },
+            "foreground": null
+          },
+          "PopupShadow": {
+            "background": {
+              "argb": "#4D000000"
+            },
+            "foreground": null
+          },
+          "PopupSubtleText": {
+            "background": {
+              "argb": "#FFA1A1A1"
+            },
+            "foreground": null
+          },
+          "PopupText": {
+            "background": {
+              "argb": "#FFFAFAFA"
+            },
+            "foreground": null
+          }
+        },
+        "Shell": {
+          "AccentFillAlt": {
+            "background": {
+              "argb": "#FFD2CCF8"
+            },
+            "foreground": null
+          },
+          "AccentFillDefault": {
+            "background": {
+              "argb": "#FF9184EE"
+            },
+            "foreground": null
+          },
+          "AccentFillDisabled": {
+            "background": {
+              "argb": "#28FFFFFF"
+            },
+            "foreground": null
+          },
+          "AccentFillSecondary": {
+            "background": {
+              "argb": "#E59184EE"
+            },
+            "foreground": null
+          },
+          "AccentFillSelectedTextBackground": {
+            "background": {
+              "argb": "#FF005FB7"
+            },
+            "foreground": null
+          },
+          "AccentFillSelectedTextBackgroundSubtle": {
+            "background": {
+              "argb": "#6660CDFF"
+            },
+            "foreground": null
+          },
+          "AccentFillSenary": {
+            "background": {
+              "argb": "#1F9184EE"
+            },
+            "foreground": null
+          },
+          "AccentFillTertiary": {
+            "background": {
+              "argb": "#CC9184EE"
+            },
+            "foreground": null
+          },
+          "AccentTextFillDisabled": {
+            "background": {
+              "argb": "#5DFFFFFF"
+            },
+            "foreground": null
+          },
+          "AccentTextFillPrimary": {
+            "background": {
+              "argb": "#FFD2CCF8"
+            },
+            "foreground": null
+          },
+          "AccentTextFillSecondary": {
+            "background": {
+              "argb": "#FFD2CCF8"
+            },
+            "foreground": null
+          },
+          "AccentTextFillTertiary": {
+            "background": {
+              "argb": "#FFA79CF1"
+            },
+            "foreground": null
+          },
+          "CardBackgroundFillDefault": {
+            "background": {
+              "argb": "#0DFFFFFF"
+            },
+            "foreground": null
+          },
+          "CardBackgroundFillSecondary": {
+            "background": {
+              "argb": "#08FFFFFF"
+            },
+            "foreground": null
+          },
+          "CardBackgroundFillTertiary": {
+            "background": {
+              "argb": "#12FFFFFF"
+            },
+            "foreground": null
+          },
+          "CardStrokeDefault": {
+            "background": {
+              "argb": "#1A000000"
+            },
+            "foreground": null
+          },
+          "CardStrokeDefaultSolid": {
+            "background": {
+              "argb": "#FF1C1C1C"
+            },
+            "foreground": null
+          },
+          "CardStrokeDefaultSolidAlt": {
+            "background": {
+              "argb": "#FF0A0A0A"
+            },
+            "foreground": null
+          },
+          "ControlAltFillDisabled": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlAltFillQuaternary": {
+            "background": {
+              "argb": "#12FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlAltFillSecondary": {
+            "background": {
+              "argb": "#1A000000"
+            },
+            "foreground": null
+          },
+          "ControlAltFillTertiary": {
+            "background": {
+              "argb": "#0BFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlAltFillTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillActiveInput": {
+            "background": {
+              "argb": "#B21E1E1E"
+            },
+            "foreground": null
+          },
+          "ControlFillDefault": {
+            "background": {
+              "argb": "#0FFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillDisabled": {
+            "background": {
+              "argb": "#0BFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillQuaternary": {
+            "background": {
+              "argb": "#0FFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillSecondary": {
+            "background": {
+              "argb": "#15FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillTertiary": {
+            "background": {
+              "argb": "#08FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlFillTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillDefault": {
+            "background": {
+              "argb": "#B21C1C1C"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillDisabled": {
+            "background": {
+              "argb": "#001E1E1E"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillSecondary": {
+            "background": {
+              "argb": "#FF1A1A1A"
+            },
+            "foreground": null
+          },
+          "ControlOnImageFillTertiary": {
+            "background": {
+              "argb": "#FF131313"
+            },
+            "foreground": null
+          },
+          "ControlSolidFillDefault": {
+            "background": {
+              "argb": "#FF454545"
+            },
+            "foreground": null
+          },
+          "ControlStrokeDefault": {
+            "background": {
+              "argb": "#12FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrokeForStrongFillWhenOnImage": {
+            "background": {
+              "argb": "#6B000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentDefault": {
+            "background": {
+              "argb": "#14FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentDisabled": {
+            "background": {
+              "argb": "#33000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentSecondary": {
+            "background": {
+              "argb": "#24000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeOnAccentTertiary": {
+            "background": {
+              "argb": "#37000000"
+            },
+            "foreground": null
+          },
+          "ControlStrokeSecondary": {
+            "background": {
+              "argb": "#12FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrokeTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrongFillDefault": {
+            "background": {
+              "argb": "#8BFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrongFillDisabled": {
+            "background": {
+              "argb": "#3FFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrongStrokeDefault": {
+            "background": {
+              "argb": "#9AFFFFFF"
+            },
+            "foreground": null
+          },
+          "ControlStrongStrokeDisabled": {
+            "background": {
+              "argb": "#28FFFFFF"
+            },
+            "foreground": null
+          },
+          "DividerStrokeDefault": {
+            "background": {
+              "argb": "#15FFFFFF"
+            },
+            "foreground": null
+          },
+          "FocusStrokeInner": {
+            "background": {
+              "argb": "#B2000000"
+            },
+            "foreground": null
+          },
+          "FocusStrokeOuter": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillDisabled": {
+            "background": {
+              "argb": "#5DFFFFFF"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillPrimary": {
+            "background": {
+              "argb": "#FF99EBFF"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillSecondary": {
+            "background": {
+              "argb": "#FF60CDFF"
+            },
+            "foreground": null
+          },
+          "HyperlinkFillTertiary": {
+            "background": {
+              "argb": "#E660CDFF"
+            },
+            "foreground": null
+          },
+          "LayerFillAlt": {
+            "background": {
+              "argb": "#0EFFFFFF"
+            },
+            "foreground": null
+          },
+          "LayerFillDefault": {
+            "background": {
+              "argb": "#4D3A3A3A"
+            },
+            "foreground": null
+          },
+          "ShadowFlyout": {
+            "background": {
+              "argb": "#42000000"
+            },
+            "foreground": null
+          },
+          "SmokeFillDefault": {
+            "background": {
+              "argb": "#4D000000"
+            },
+            "foreground": null
+          },
+          "SmokeFillInverse": {
+            "background": {
+              "argb": "#B21C1C1C"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillBase": {
+            "background": {
+              "argb": "#FF202020"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillBaseAlt": {
+            "background": {
+              "argb": "#FF0A0A0A"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillQuaternary": {
+            "background": {
+              "argb": "#FF2C2C2C"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillQuinary": {
+            "background": {
+              "argb": "#FF333333"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillSecondary": {
+            "background": {
+              "argb": "#FF1C1C1C"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillSenary": {
+            "background": {
+              "argb": "#FF373737"
+            },
+            "foreground": null
+          },
+          "SolidBackgroundFillTertiary": {
+            "background": {
+              "argb": "#FF282828"
+            },
+            "foreground": null
+          },
+          "SubtleFillDisabled": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "SubtleFillSecondary": {
+            "background": {
+              "argb": "#0FFFFFFF"
+            },
+            "foreground": null
+          },
+          "SubtleFillTertiary": {
+            "background": {
+              "argb": "#0BFFFFFF"
+            },
+            "foreground": null
+          },
+          "SubtleFillTransparent": {
+            "background": {
+              "argb": "#00FFFFFF"
+            },
+            "foreground": null
+          },
+          "SurfaceBackgroundFillDefault": {
+            "background": {
+              "argb": "#FF2C2C2C"
+            },
+            "foreground": null
+          },
+          "SurfaceStrokeDefault": {
+            "background": {
+              "argb": "#66757575"
+            },
+            "foreground": null
+          },
+          "SurfaceStrokeFlyout": {
+            "background": {
+              "argb": "#33000000"
+            },
+            "foreground": null
+          },
+          "SystemFillAttention": {
+            "background": {
+              "argb": "#FF60CDFF"
+            },
+            "foreground": null
+          },
+          "SystemFillAttentionBackground": {
+            "background": {
+              "argb": "#08FFFFFF"
+            },
+            "foreground": null
+          },
+          "SystemFillCaution": {
+            "background": {
+              "argb": "#FFFCE100"
+            },
+            "foreground": null
+          },
+          "SystemFillCautionBackground": {
+            "background": {
+              "argb": "#FF433519"
+            },
+            "foreground": null
+          },
+          "SystemFillCritical": {
+            "background": {
+              "argb": "#FFFF99A4"
+            },
+            "foreground": null
+          },
+          "SystemFillCriticalBackground": {
+            "background": {
+              "argb": "#FF442726"
+            },
+            "foreground": null
+          },
+          "SystemFillNeutral": {
+            "background": {
+              "argb": "#8BFFFFFF"
+            },
+            "foreground": null
+          },
+          "SystemFillNeutralBackground": {
+            "background": {
+              "argb": "#08FFFFFF"
+            },
+            "foreground": null
+          },
+          "SystemFillSolidAttentionBackground": {
+            "background": {
+              "argb": "#FF2E2E2E"
+            },
+            "foreground": null
+          },
+          "SystemFillSolidNeutral": {
+            "background": {
+              "argb": "#FF8A8A8A"
+            },
+            "foreground": null
+          },
+          "SystemFillSolidNeutralBackground": {
+            "background": {
+              "argb": "#FF2E2E2E"
+            },
+            "foreground": null
+          },
+          "SystemFillSuccess": {
+            "background": {
+              "argb": "#FF6CCB5F"
+            },
+            "foreground": null
+          },
+          "SystemFillSuccessBackground": {
+            "background": {
+              "argb": "#FF393D1B"
+            },
+            "foreground": null
+          },
+          "TextFillDisabled": {
+            "background": {
+              "argb": "#5DFFFFFF"
+            },
+            "foreground": null
+          },
+          "TextFillPrimary": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "TextFillSecondary": {
+            "background": {
+              "argb": "#C8FFFFFF"
+            },
+            "foreground": null
+          },
+          "TextFillTertiary": {
+            "background": {
+              "argb": "#8BFFFFFF"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillDisabled": {
+            "background": {
+              "argb": "#80000000"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillPrimary": {
+            "background": {
+              "argb": "#FF000000"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillSecondary": {
+            "background": {
+              "argb": "#80000000"
+            },
+            "foreground": null
+          },
+          "TextOnAccentFillSelectedText": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          }
+        },
+        "ShellInternal": {
+          "CaptionControlCloseFillPrimary": {
+            "background": {
+              "argb": "#FFC42B1C"
+            },
+            "foreground": null
+          },
+          "CaptionControlCloseFillSecondary": {
+            "background": {
+              "argb": "#E6C42B1C"
+            },
+            "foreground": null
+          },
+          "CaptionControlCloseTextFillPrimary": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "CaptionControlCloseTextFillSecondary": {
+            "background": {
+              "argb": "#B3FFFFFF"
+            },
+            "foreground": null
+          },
+          "EnvironmentBackground": {
+            "background": {
+              "argb": "#FF1C1C1C"
+            },
+            "foreground": null
+          },
+          "EnvironmentBadge": {
+            "background": {
+              "argb": "#0FFFFFFF"
+            },
+            "foreground": null
+          },
+          "EnvironmentBody": {
+            "background": {
+              "argb": "#FF1C1C1C"
+            },
+            "foreground": null
+          },
+          "EnvironmentBodyText": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "EnvironmentBorder": {
+            "background": {
+              "argb": "#FF9184EE"
+            },
+            "foreground": null
+          },
+          "EnvironmentBorderInactive": {
+            "background": {
+              "argb": "#FF454545"
+            },
+            "foreground": null
+          },
+          "EnvironmentHeader": {
+            "background": {
+              "argb": "#FF282828"
+            },
+            "foreground": null
+          },
+          "EnvironmentHeaderInactive": {
+            "background": {
+              "argb": "#FF282828"
+            },
+            "foreground": null
+          },
+          "EnvironmentIndicator": {
+            "background": {
+              "argb": "#66757575"
+            },
+            "foreground": null
+          },
+          "EnvironmentLayeredBackground": {
+            "background": {
+              "argb": "#4D3A3A3A"
+            },
+            "foreground": null
+          },
+          "EnvironmentLayeredBorder": {
+            "background": {
+              "argb": "#80000000"
+            },
+            "foreground": null
+          },
+          "EnvironmentLogo": {
+            "background": {
+              "argb": "#FF9184EE"
+            },
+            "foreground": null
+          },
+          "EnvironmentTab": {
+            "background": {
+              "argb": "#FF282828"
+            },
+            "foreground": null
+          },
+          "EnvironmentTabInactive": {
+            "background": {
+              "argb": "#FF282828"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillBuilding": {
+            "background": {
+              "argb": "#FF3F3682"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillDebugging": {
+            "background": {
+              "argb": "#FF7A2101"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillRest": {
+            "background": {
+              "argb": "#4D000000"
+            },
+            "foreground": null
+          },
+          "StatusBarBackgroundFillSolutionLoading": {
+            "background": {
+              "argb": "#FF003B6A"
+            },
+            "foreground": null
+          },
+          "StatusBarControlFillSecondary": {
+            "background": {
+              "argb": "#20FFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillBuilding": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillDebugging": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillDisabled": {
+            "background": {
+              "argb": "#5DFFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillRest": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          },
+          "StatusBarTextFillSolutionLoading": {
+            "background": {
+              "argb": "#FFFFFFFF"
+            },
+            "foreground": null
+          }
+        }
+      },
+      "legacy_environment": {
+        "EnvironmentBackground": {
+          "background": {
+            "argb": "#FF1F1F1F"
+          },
+          "foreground": null
+        },
+        "MainWindowActiveCaption": {
+          "background": {
+            "argb": "#FF1F1F1F"
+          },
+          "foreground": {
+            "argb": "#FFFAFAFA"
+          }
+        },
+        "MainWindowInactiveCaption": {
+          "background": {
+            "argb": "#FF1F1F1F"
+          },
+          "foreground": {
+            "argb": "#FFD6D6D6"
+          }
+        },
+        "MainWindowActiveDefaultBorder": {
+          "background": {
+            "argb": "#FF7160E8"
+          },
+          "foreground": null
+        },
+        "MainWindowActiveNoSolutionBorder": {
+          "background": {
+            "argb": "#FF707070"
+          },
+          "foreground": null
+        },
+        "MainWindowInactiveBorder": {
+          "background": {
+            "argb": "#FF3D3D3D"
+          },
+          "foreground": null
+        },
+        "ToolWindowBackground": {
+          "background": {
+            "argb": "#FF1F1F1F"
+          },
+          "foreground": null
+        },
+        "ToolWindowText": {
+          "background": {
+            "argb": "#FFFAFAFA"
+          },
+          "foreground": null
+        }
+      },
+      "editor_plain_text": {
+        "Text Editor Text Manager Items": {
+          "Plain Text": {
+            "background": {
+              "argb": "#FF1E1E1E"
+            },
+            "foreground": {
+              "argb": "#FFDCDCDC"
+            }
+          }
+        },
+        "Output Window": {
+          "Plain Text": {
+            "background": {
+              "argb": "#FF282828"
+            },
+            "foreground": {
+              "argb": "#FFF1F1F1"
+            }
+          }
+        }
+      }
+    }
+  },
+  "metrics": {
+    "Sizes": {
+      "ContentMinHeight": {
+        "type": "double",
+        "value": 16.0
+      },
+      "ContentMinWidth": {
+        "type": "double",
+        "value": 16.0
+      },
+      "ControlMinHeight": {
+        "type": "double",
+        "value": 24.0
+      },
+      "ControlMinWidth": {
+        "type": "double",
+        "value": 24.0
+      },
+      "ResizeGripSize": {
+        "type": "double",
+        "value": 6.0
+      },
+      "ToggleSwitchSize": {
+        "type": "double",
+        "value": 20.0
+      },
+      "IconXXS": {
+        "type": "double",
+        "value": 8.0
+      },
+      "IconXS": {
+        "type": "double",
+        "value": 12.0
+      },
+      "IconS": {
+        "type": "double",
+        "value": 16.0
+      },
+      "IconM": {
+        "type": "double",
+        "value": 24.0
+      },
+      "IconL": {
+        "type": "double",
+        "value": 32.0
+      },
+      "NonClientControlHeight": {
+        "type": "double",
+        "value": 30.0
+      },
+      "NonClientControlWidth": {
+        "type": "double",
+        "value": 44.0
+      }
+    },
+    "Spacings": {
+      "PrimitiveNone": {
+        "type": "double",
+        "value": 0.0
+      },
+      "PrimitiveXXXS": {
+        "type": "double",
+        "value": 1.0
+      },
+      "PrimitiveXXS": {
+        "type": "double",
+        "value": 2.0
+      },
+      "PrimitiveXS": {
+        "type": "double",
+        "value": 4.0
+      },
+      "PrimitiveS": {
+        "type": "double",
+        "value": 8.0
+      },
+      "PrimitiveM": {
+        "type": "double",
+        "value": 12.0
+      },
+      "PrimitiveL": {
+        "type": "double",
+        "value": 16.0
+      },
+      "PrimitiveXL": {
+        "type": "double",
+        "value": 20.0
+      },
+      "PrimitiveXXL": {
+        "type": "double",
+        "value": 24.0
+      },
+      "PrimitiveXXXL": {
+        "type": "double",
+        "value": 32.0
+      },
+      "PrimitiveXSNudge": {
+        "type": "double",
+        "value": 3.0
+      },
+      "PrimitiveSNudge": {
+        "type": "double",
+        "value": 6.0
+      },
+      "PrimitiveMNudge": {
+        "type": "double",
+        "value": 10.0
+      },
+      "None": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "XXXS": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "XXS": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "XS": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          4.0,
+          4.0,
+          4.0
+        ]
+      },
+      "S": {
+        "type": "Thickness",
+        "value": [
+          8.0,
+          8.0,
+          8.0,
+          8.0
+        ]
+      },
+      "M": {
+        "type": "Thickness",
+        "value": [
+          12.0,
+          12.0,
+          12.0,
+          12.0
+        ]
+      },
+      "L": {
+        "type": "Thickness",
+        "value": [
+          16.0,
+          16.0,
+          16.0,
+          16.0
+        ]
+      },
+      "XL": {
+        "type": "Thickness",
+        "value": [
+          20.0,
+          20.0,
+          20.0,
+          20.0
+        ]
+      },
+      "XXL": {
+        "type": "Thickness",
+        "value": [
+          24.0,
+          24.0,
+          24.0,
+          24.0
+        ]
+      },
+      "XXXL": {
+        "type": "Thickness",
+        "value": [
+          32.0,
+          32.0,
+          32.0,
+          32.0
+        ]
+      },
+      "LeftXXXS": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftXXS": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftXS": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftS": {
+        "type": "Thickness",
+        "value": [
+          8.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftM": {
+        "type": "Thickness",
+        "value": [
+          12.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftL": {
+        "type": "Thickness",
+        "value": [
+          16.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftXL": {
+        "type": "Thickness",
+        "value": [
+          20.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftXXL": {
+        "type": "Thickness",
+        "value": [
+          24.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftXXXL": {
+        "type": "Thickness",
+        "value": [
+          32.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          2.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          4.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          8.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopM": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          12.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          16.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          20.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          24.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          32.0,
+          0.0,
+          0.0
+        ]
+      },
+      "RightXXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "RightXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          2.0,
+          0.0
+        ]
+      },
+      "RightXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          4.0,
+          0.0
+        ]
+      },
+      "RightS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          8.0,
+          0.0
+        ]
+      },
+      "RightM": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          12.0,
+          0.0
+        ]
+      },
+      "RightL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          16.0,
+          0.0
+        ]
+      },
+      "RightXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          20.0,
+          0.0
+        ]
+      },
+      "RightXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          24.0,
+          0.0
+        ]
+      },
+      "RightXXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          32.0,
+          0.0
+        ]
+      },
+      "BottomXXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "BottomXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          2.0
+        ]
+      },
+      "BottomXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          4.0
+        ]
+      },
+      "BottomS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          8.0
+        ]
+      },
+      "BottomM": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          12.0
+        ]
+      },
+      "BottomL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          16.0
+        ]
+      },
+      "BottomXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          20.0
+        ]
+      },
+      "BottomXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          24.0
+        ]
+      },
+      "BottomXXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          32.0
+        ]
+      },
+      "HorizontalXXXS": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "HorizontalXXS": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          0.0,
+          2.0,
+          0.0
+        ]
+      },
+      "HorizontalXS": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          0.0,
+          4.0,
+          0.0
+        ]
+      },
+      "HorizontalS": {
+        "type": "Thickness",
+        "value": [
+          8.0,
+          0.0,
+          8.0,
+          0.0
+        ]
+      },
+      "HorizontalM": {
+        "type": "Thickness",
+        "value": [
+          12.0,
+          0.0,
+          12.0,
+          0.0
+        ]
+      },
+      "HorizontalL": {
+        "type": "Thickness",
+        "value": [
+          16.0,
+          0.0,
+          16.0,
+          0.0
+        ]
+      },
+      "HorizontalXL": {
+        "type": "Thickness",
+        "value": [
+          20.0,
+          0.0,
+          20.0,
+          0.0
+        ]
+      },
+      "HorizontalXXL": {
+        "type": "Thickness",
+        "value": [
+          24.0,
+          0.0,
+          24.0,
+          0.0
+        ]
+      },
+      "HorizontalXXXL": {
+        "type": "Thickness",
+        "value": [
+          32.0,
+          0.0,
+          32.0,
+          0.0
+        ]
+      },
+      "VerticalXXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "VerticalXXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          2.0,
+          0.0,
+          2.0
+        ]
+      },
+      "VerticalXS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          4.0,
+          0.0,
+          4.0
+        ]
+      },
+      "VerticalS": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          8.0,
+          0.0,
+          8.0
+        ]
+      },
+      "VerticalM": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          12.0,
+          0.0,
+          12.0
+        ]
+      },
+      "VerticalL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          16.0,
+          0.0,
+          16.0
+        ]
+      },
+      "VerticalXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          20.0,
+          0.0,
+          20.0
+        ]
+      },
+      "VerticalXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          24.0,
+          0.0,
+          24.0
+        ]
+      },
+      "VerticalXXXL": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          32.0,
+          0.0,
+          32.0
+        ]
+      },
+      "XXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -1.0,
+          -1.0,
+          -1.0,
+          -1.0
+        ]
+      },
+      "XXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -2.0,
+          -2.0,
+          -2.0,
+          -2.0
+        ]
+      },
+      "XSInvert": {
+        "type": "Thickness",
+        "value": [
+          -4.0,
+          -4.0,
+          -4.0,
+          -4.0
+        ]
+      },
+      "SInvert": {
+        "type": "Thickness",
+        "value": [
+          -8.0,
+          -8.0,
+          -8.0,
+          -8.0
+        ]
+      },
+      "LeftXXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -2.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -4.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftSInvert": {
+        "type": "Thickness",
+        "value": [
+          -8.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -2.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -4.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -8.0,
+          0.0,
+          0.0
+        ]
+      },
+      "RightXXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          -1.0,
+          0.0
+        ]
+      },
+      "RightXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          -2.0,
+          0.0
+        ]
+      },
+      "RightXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          -4.0,
+          0.0
+        ]
+      },
+      "RightSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          -8.0,
+          0.0
+        ]
+      },
+      "BottomXXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          -1.0
+        ]
+      },
+      "BottomXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          -2.0
+        ]
+      },
+      "BottomXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          -4.0
+        ]
+      },
+      "BottomSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          -8.0
+        ]
+      },
+      "HorizontalXXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -1.0,
+          0.0,
+          -1.0,
+          0.0
+        ]
+      },
+      "HorizontalXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -2.0,
+          0.0,
+          -2.0,
+          0.0
+        ]
+      },
+      "HorizontalXSInvert": {
+        "type": "Thickness",
+        "value": [
+          -4.0,
+          0.0,
+          -4.0,
+          0.0
+        ]
+      },
+      "HorizontalSInvert": {
+        "type": "Thickness",
+        "value": [
+          -8.0,
+          0.0,
+          -8.0,
+          0.0
+        ]
+      },
+      "VerticalXXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -1.0,
+          0.0,
+          -1.0
+        ]
+      },
+      "VerticalXXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -2.0,
+          0.0,
+          -2.0
+        ]
+      },
+      "VerticalXSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -4.0,
+          0.0,
+          -4.0
+        ]
+      },
+      "VerticalSInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -8.0,
+          0.0,
+          -8.0
+        ]
+      },
+      "XSNudge": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          3.0,
+          3.0,
+          3.0
+        ]
+      },
+      "SNudge": {
+        "type": "Thickness",
+        "value": [
+          6.0,
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "MNudge": {
+        "type": "Thickness",
+        "value": [
+          10.0,
+          10.0,
+          10.0,
+          10.0
+        ]
+      },
+      "LeftXSNudge": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftSNudge": {
+        "type": "Thickness",
+        "value": [
+          6.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftMNudge": {
+        "type": "Thickness",
+        "value": [
+          10.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          3.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          6.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopMNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          10.0,
+          0.0,
+          0.0
+        ]
+      },
+      "RightXSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          3.0,
+          0.0
+        ]
+      },
+      "RightSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          6.0,
+          0.0
+        ]
+      },
+      "RightMNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          10.0,
+          0.0
+        ]
+      },
+      "BottomXSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      },
+      "BottomSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          6.0
+        ]
+      },
+      "BottomMNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          10.0
+        ]
+      },
+      "HorizontalXSNudge": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          0.0,
+          3.0,
+          0.0
+        ]
+      },
+      "HorizontalSNudge": {
+        "type": "Thickness",
+        "value": [
+          6.0,
+          0.0,
+          6.0,
+          0.0
+        ]
+      },
+      "HorizontalMNudge": {
+        "type": "Thickness",
+        "value": [
+          10.0,
+          0.0,
+          10.0,
+          0.0
+        ]
+      },
+      "VerticalXSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          3.0,
+          0.0,
+          3.0
+        ]
+      },
+      "VerticalSNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          6.0,
+          0.0,
+          6.0
+        ]
+      },
+      "VerticalMNudge": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          10.0,
+          0.0,
+          10.0
+        ]
+      },
+      "XSNudgeInvert": {
+        "type": "Thickness",
+        "value": [
+          -3.0,
+          -3.0,
+          -3.0,
+          -3.0
+        ]
+      },
+      "LeftXSNudgeInvert": {
+        "type": "Thickness",
+        "value": [
+          -3.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopXSNudgeInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -3.0,
+          0.0,
+          0.0
+        ]
+      },
+      "RightXSNudgeInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          -3.0,
+          0.0
+        ]
+      },
+      "BottomXSNudgeInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          -3.0
+        ]
+      },
+      "HorizontalXSNudgeInvert": {
+        "type": "Thickness",
+        "value": [
+          -3.0,
+          0.0,
+          -3.0,
+          0.0
+        ]
+      },
+      "VerticalXSNudgeInvert": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          -3.0,
+          0.0,
+          -3.0
+        ]
+      }
+    },
+    "CornerRadii": {
+      "PrimitiveNone": {
+        "type": "double",
+        "value": 0.0
+      },
+      "PrimitiveS": {
+        "type": "double",
+        "value": 2.0
+      },
+      "PrimitiveM": {
+        "type": "double",
+        "value": 4.0
+      },
+      "PrimitiveL": {
+        "type": "double",
+        "value": 6.0
+      },
+      "PrimitiveXL": {
+        "type": "double",
+        "value": 8.0
+      },
+      "PrimitiveFocusRect": {
+        "type": "double",
+        "value": 6.0
+      },
+      "None": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "S": {
+        "type": "CornerRadius",
+        "value": [
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "M": {
+        "type": "CornerRadius",
+        "value": [
+          4.0,
+          4.0,
+          4.0,
+          4.0
+        ]
+      },
+      "L": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "XL": {
+        "type": "CornerRadius",
+        "value": [
+          8.0,
+          8.0,
+          8.0,
+          8.0
+        ]
+      },
+      "FocusRect": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "TopLeftS": {
+        "type": "CornerRadius",
+        "value": [
+          2.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopLeftM": {
+        "type": "CornerRadius",
+        "value": [
+          4.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopLeftL": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopLeftXL": {
+        "type": "CornerRadius",
+        "value": [
+          8.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopRightS": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          2.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopRightM": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          4.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopRightL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          6.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopRightXL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          8.0,
+          0.0,
+          0.0
+        ]
+      },
+      "BottomRightS": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          2.0,
+          0.0
+        ]
+      },
+      "BottomRightM": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          4.0,
+          0.0
+        ]
+      },
+      "BottomRightL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          6.0,
+          0.0
+        ]
+      },
+      "BottomRightXL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          8.0,
+          0.0
+        ]
+      },
+      "BottomLeftS": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          2.0
+        ]
+      },
+      "BottomLeftM": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          4.0
+        ]
+      },
+      "BottomLeftL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          6.0
+        ]
+      },
+      "BottomLeftXL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          8.0
+        ]
+      },
+      "TopLeftBottomLeftS": {
+        "type": "CornerRadius",
+        "value": [
+          2.0,
+          0.0,
+          0.0,
+          2.0
+        ]
+      },
+      "TopLeftBottomLeftM": {
+        "type": "CornerRadius",
+        "value": [
+          4.0,
+          0.0,
+          0.0,
+          4.0
+        ]
+      },
+      "TopLeftBottomLeftL": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          0.0,
+          0.0,
+          6.0
+        ]
+      },
+      "TopLeftBottomLeftXL": {
+        "type": "CornerRadius",
+        "value": [
+          8.0,
+          0.0,
+          0.0,
+          8.0
+        ]
+      },
+      "TopRightBottomRightS": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          2.0,
+          2.0,
+          0.0
+        ]
+      },
+      "TopRightBottomRightM": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          4.0,
+          4.0,
+          0.0
+        ]
+      },
+      "TopRightBottomRightL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          6.0,
+          6.0,
+          0.0
+        ]
+      },
+      "TopRightBottomRightXL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          8.0,
+          8.0,
+          0.0
+        ]
+      },
+      "TopLeftTopRightS": {
+        "type": "CornerRadius",
+        "value": [
+          2.0,
+          2.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopLeftTopRightM": {
+        "type": "CornerRadius",
+        "value": [
+          4.0,
+          4.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopLeftTopRightL": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          6.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopLeftTopRightXL": {
+        "type": "CornerRadius",
+        "value": [
+          8.0,
+          8.0,
+          0.0,
+          0.0
+        ]
+      },
+      "BottomRightBottomLeftS": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          2.0,
+          2.0
+        ]
+      },
+      "BottomRightBottomLeftM": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          4.0,
+          4.0
+        ]
+      },
+      "BottomRightBottomLeftL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          6.0,
+          6.0
+        ]
+      },
+      "BottomRightBottomLeftXL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          0.0,
+          8.0,
+          8.0
+        ]
+      },
+      "TopLeftBottomRightBottomLeftS": {
+        "type": "CornerRadius",
+        "value": [
+          2.0,
+          0.0,
+          2.0,
+          2.0
+        ]
+      },
+      "TopLeftBottomRightBottomLeftM": {
+        "type": "CornerRadius",
+        "value": [
+          4.0,
+          0.0,
+          4.0,
+          4.0
+        ]
+      },
+      "TopLeftBottomRightBottomLeftL": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          0.0,
+          6.0,
+          6.0
+        ]
+      },
+      "TopLeftBottomRightBottomLeftXL": {
+        "type": "CornerRadius",
+        "value": [
+          8.0,
+          0.0,
+          8.0,
+          8.0
+        ]
+      },
+      "TopLeftTopRightBottomLeftS": {
+        "type": "CornerRadius",
+        "value": [
+          2.0,
+          2.0,
+          0.0,
+          2.0
+        ]
+      },
+      "TopLeftTopRightBottomLeftM": {
+        "type": "CornerRadius",
+        "value": [
+          4.0,
+          4.0,
+          0.0,
+          4.0
+        ]
+      },
+      "TopLeftTopRightBottomLeftL": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          6.0,
+          0.0,
+          6.0
+        ]
+      },
+      "TopLeftTopRightBottomLeftXL": {
+        "type": "CornerRadius",
+        "value": [
+          8.0,
+          8.0,
+          0.0,
+          8.0
+        ]
+      },
+      "TopLeftTopRightBottomRightS": {
+        "type": "CornerRadius",
+        "value": [
+          2.0,
+          2.0,
+          2.0,
+          0.0
+        ]
+      },
+      "TopLeftTopRightBottomRightM": {
+        "type": "CornerRadius",
+        "value": [
+          4.0,
+          4.0,
+          4.0,
+          0.0
+        ]
+      },
+      "TopLeftTopRightBottomRightL": {
+        "type": "CornerRadius",
+        "value": [
+          6.0,
+          6.0,
+          6.0,
+          0.0
+        ]
+      },
+      "TopLeftTopRightBottomRightXL": {
+        "type": "CornerRadius",
+        "value": [
+          8.0,
+          8.0,
+          8.0,
+          0.0
+        ]
+      },
+      "TopRightBottomRightBottomLeftS": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "TopRightBottomRightBottomLeftM": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          4.0,
+          4.0,
+          4.0
+        ]
+      },
+      "TopRightBottomRightBottomLeftL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          6.0,
+          6.0,
+          6.0
+        ]
+      },
+      "TopRightBottomRightBottomLeftXL": {
+        "type": "CornerRadius",
+        "value": [
+          0.0,
+          8.0,
+          8.0,
+          8.0
+        ]
+      }
+    },
+    "StrokeWidths": {
+      "PrimitiveNone": {
+        "type": "double",
+        "value": 0.0
+      },
+      "PrimitiveThin": {
+        "type": "double",
+        "value": 1.0
+      },
+      "PrimitiveThick": {
+        "type": "double",
+        "value": 2.0
+      },
+      "PrimitiveThicker": {
+        "type": "double",
+        "value": 3.0
+      },
+      "PrimitiveThickest": {
+        "type": "double",
+        "value": 4.0
+      },
+      "None": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "Thin": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "Thick": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "Thicker": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          3.0,
+          3.0,
+          3.0
+        ]
+      },
+      "Thickest": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          4.0,
+          4.0,
+          4.0
+        ]
+      },
+      "LeftThin": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftThick": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftThicker": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "LeftThickest": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopThin": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopThick": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          2.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopThicker": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          3.0,
+          0.0,
+          0.0
+        ]
+      },
+      "TopThickest": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          4.0,
+          0.0,
+          0.0
+        ]
+      },
+      "RightThin": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "RightThick": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          2.0,
+          0.0
+        ]
+      },
+      "RightThicker": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          3.0,
+          0.0
+        ]
+      },
+      "RightThickest": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          4.0,
+          0.0
+        ]
+      },
+      "BottomThin": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      },
+      "BottomThick": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          2.0
+        ]
+      },
+      "BottomThicker": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          3.0
+        ]
+      },
+      "BottomThickest": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          0.0,
+          0.0,
+          4.0
+        ]
+      },
+      "HorizontalThin": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "HorizontalThick": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          0.0,
+          2.0,
+          0.0
+        ]
+      },
+      "HorizontalThicker": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          0.0,
+          3.0,
+          0.0
+        ]
+      },
+      "HorizontalThickest": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          0.0,
+          4.0,
+          0.0
+        ]
+      },
+      "VerticalThin": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "VerticalThick": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          2.0,
+          0.0,
+          2.0
+        ]
+      },
+      "VerticalThicker": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          3.0,
+          0.0,
+          3.0
+        ]
+      },
+      "VerticalThickest": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          4.0,
+          0.0,
+          4.0
+        ]
+      },
+      "LeftTopRightThin": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          1.0,
+          1.0,
+          0.0
+        ]
+      },
+      "LeftTopRightThick": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          2.0,
+          2.0,
+          0.0
+        ]
+      },
+      "LeftTopRightThicker": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          3.0,
+          3.0,
+          0.0
+        ]
+      },
+      "LeftTopRightThickest": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          4.0,
+          4.0,
+          0.0
+        ]
+      },
+      "TopRightBottomThin": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "TopRightBottomThick": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          2.0,
+          2.0,
+          2.0
+        ]
+      },
+      "TopRightBottomThicker": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          3.0,
+          3.0,
+          3.0
+        ]
+      },
+      "TopRightBottomThickest": {
+        "type": "Thickness",
+        "value": [
+          0.0,
+          4.0,
+          4.0,
+          4.0
+        ]
+      },
+      "LeftRightBottomThin": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          0.0,
+          1.0,
+          1.0
+        ]
+      },
+      "LeftRightBottomThick": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          0.0,
+          2.0,
+          2.0
+        ]
+      },
+      "LeftRightBottomThicker": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          0.0,
+          3.0,
+          3.0
+        ]
+      },
+      "LeftRightBottomThickest": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          0.0,
+          4.0,
+          4.0
+        ]
+      },
+      "LeftTopBottomThin": {
+        "type": "Thickness",
+        "value": [
+          1.0,
+          1.0,
+          0.0,
+          1.0
+        ]
+      },
+      "LeftTopBottomThick": {
+        "type": "Thickness",
+        "value": [
+          2.0,
+          2.0,
+          0.0,
+          2.0
+        ]
+      },
+      "LeftTopBottomThicker": {
+        "type": "Thickness",
+        "value": [
+          3.0,
+          3.0,
+          0.0,
+          3.0
+        ]
+      },
+      "LeftTopBottomThickest": {
+        "type": "Thickness",
+        "value": [
+          4.0,
+          4.0,
+          0.0,
+          4.0
+        ]
+      }
+    },
+    "Typography_initial_fields": {
+      "bodyFontSize": 14.0,
+      "bodyLargeFontSize": 18.0,
+      "captionFontSize": 12.0,
+      "codeFontSize": 14.0,
+      "displayFontSize": 68.0,
+      "shellFontSize": 12.0,
+      "subtitleFontSize": 20.0,
+      "titleFontSize": 28.0,
+      "titleLargeFontSize": 40.0,
+      "codeFontFamily": "Cascadia Mono",
+      "shellFontFamily": "Segoe UI"
+    },
+    "verified_control_constants": {
+      "MenuItemMinWidth": 180,
+      "MenuItemHeaderGestureSpace": 24,
+      "FlyoutSurfaceShadowSize": 12,
+      "FlyoutSurfaceOffset": 2,
+      "FlyoutSurfaceShadowMargin": [
+        12,
+        2,
+        12,
+        12
+      ],
+      "FlyoutSurfaceMaxWidth": 660
+    },
+    "verified_visual_parameters": {
+      "Separator.StrokeWidth": {
+        "type": "double",
+        "value": 1,
+        "source": "Microsoft.VisualStudio.Shell.Controls.Separator"
+      },
+      "Separator.Margin": {
+        "type": "Thickness",
+        "value": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "source": "Shell.Styles/styles/separatorstyle.baml"
+      },
+      "MenuSeparator.InnerMargin": {
+        "type": "Thickness",
+        "value": [
+          0,
+          6,
+          0,
+          6
+        ],
+        "source": "Shell.UI.Internal/styles/commanding/vsmenuseparatorstyle.baml"
+      },
+      "FocusVisual.BorderThickness": {
+        "type": "Thickness",
+        "value": [
+          2,
+          2,
+          2,
+          2
+        ],
+        "source": "Shell.Styles/styles/focusvisualstyle.baml"
+      },
+      "FocusVisual.CornerRadius": {
+        "type": "CornerRadius",
+        "value": [
+          6,
+          6,
+          6,
+          6
+        ],
+        "source": "Shell.Styles/styles/focusvisualstyle.baml"
+      },
+      "FocusVisual.Margin": {
+        "type": "Thickness",
+        "value": [
+          -3,
+          -3,
+          -3,
+          -3
+        ],
+        "source": "Shell.Styles/styles/focusvisualstyle.baml"
+      },
+      "TabCloseButton.MinHeight": {
+        "type": "double",
+        "value": 24,
+        "source": "Shell.Styles/styles/buttonbasestyle.baml"
+      },
+      "TabCloseButton.MinWidth": {
+        "type": "double",
+        "value": 24,
+        "source": "Shell.Styles/styles/buttonbasestyle.baml"
+      },
+      "TabCloseButton.PathSize": {
+        "type": "double",
+        "value": 16,
+        "source": "Shell.Styles/styles/pathbuttonstyle.baml"
+      }
+    }
+  },
+  "limitations": [
+    "Colors are #AARRGGBB, including alpha; slot null means no override, not transparent.",
+    "Only binary_type=1 is converted to ARGB; other binary payloads remain unresolved.",
+    "Main-window legacy resource aliases and DWM/material backdrop must be distinguished from ShellInternal tokens.",
+    "Typography fields are initial defaults and can be replaced by Visual Studio environment settings.",
+    "Base Light Text Editor Plain Text is absent from EditorColors.pkgdef; its inherited background is not proven by this file.",
+    "Rendered pixels, external window corners, active preferences and DPI were not measured."
+  ],
+  "geometry_data": {
+    "source": "Factory BAML/CIL; filled vector paths, not font characters.",
+    "viewport_dip": [
+      16,
+      16
+    ],
+    "paths": {
+      "CheckBoxCheckmark": "F1M3.00195 8.49756C3.00195 8.36084 3.05078 8.24365 3.14844 8.146C3.24609 8.04834 3.36328 7.99951 3.5 7.99951C3.63672 7.99951 3.75391 8.04834 3.85156 8.146L6.5 10.7944L12.1484 5.146C12.2461 5.04834 12.3633 4.99951 12.5 4.99951C12.5703 4.99951 12.6348 5.01318 12.6934 5.04053C12.7559 5.06396 12.8086 5.09912 12.8516 5.146C12.8984 5.18896 12.9355 5.2417 12.9629 5.3042C12.9902 5.36279 13.0039 5.42725 13.0039 5.49756C13.0039 5.63428 12.9531 5.75342 12.8516 5.85498L6.85156 11.855C6.75391 11.9526 6.63672 12.0015 6.5 12.0015C6.36328 12.0015 6.24609 11.9526 6.14844 11.855L3.14844 8.85498C3.05078 8.75732 3.00195 8.63818 3.00195 8.49756z",
+      "ChevronDownSmall": "F1M4.14645 6.64645C4.34171 6.45118 4.65829 6.45118 4.85355 6.64645L8 9.79289L11.1464 6.64645C11.3417 6.45118 11.6583 6.45118 11.8536 6.64645C12.0488 6.84171 12.0488 7.15829 11.8536 7.35355L8.35355 10.8536C8.15829 11.0488 7.84171 11.0488 7.64645 10.8536L4.14645 7.35355C3.95118 7.15829 3.95118 6.84171 4.14645 6.64645z",
+      "ChevronRightSmall": "F1M6.64645 4.14645C6.45118 4.34171 6.45118 4.65829 6.64645 4.85355L9.79289 8L6.64645 11.1464C6.45118 11.3417 6.45118 11.6583 6.64645 11.8536C6.84171 12.0488 7.15829 12.0488 7.35355 11.8536L10.8536 8.35355C11.0488 8.15829 11.0488 7.84171 10.8536 7.64645L7.35355 4.14645C7.15829 3.95118 6.84171 3.95118 6.64645 4.14645z",
+      "Dismiss": "F1M8 8.70801L3.85449 12.8535C3.75684 12.9512 3.63965 13 3.50293 13C3.3597 13 3.23926 12.9528 3.1416 12.8584C3.0472 12.7607 3 12.6403 3 12.4971C3 12.3604 3.04883 12.2432 3.14648 12.1455L7.29199 8L3.14648 3.85449C3.04883 3.75684 3 3.63802 3 3.49805C3 3.42969 3.01302 3.36458 3.03906 3.30273C3.0651 3.24089 3.10091 3.1888 3.14648 3.14648C3.19206 3.10091 3.24577 3.0651 3.30762 3.03906C3.36947 3.01302 3.43457 3 3.50293 3C3.63965 3 3.75684 3.04883 3.85449 3.14648L8 7.29199L12.1455 3.14648C12.2432 3.04883 12.362 3 12.502 3C12.5703 3 12.6338 3.01302 12.6924 3.03906C12.7542 3.0651 12.8079 3.10091 12.8535 3.14648C12.8991 3.19206 12.9349 3.24577 12.9609 3.30762C12.987 3.36621 13 3.42969 13 3.49805C13 3.63802 12.9512 3.75684 12.8535 3.85449L8.70801 8L12.8535 12.1455C12.9512 12.2432 13 12.3604 13 12.4971C13 12.5654 12.987 12.6305 12.9609 12.6924C12.9349 12.7542 12.8991 12.8079 12.8535 12.8535C12.8112 12.8991 12.7591 12.9349 12.6973 12.9609C12.6354 12.987 12.5703 13 12.502 13C12.362 13 12.2432 12.9512 12.1455 12.8535L8 8.70801z",
+      "MinimizeButtonPath": "F1 M3,8 L13,8 L13,7 L3,7",
+      "MaximizeRestoreButtonPath": "F1 M12,12 L4,12 L4,4 L12,4 M3,13 L13,13 L13,3 L3,3",
+      "HideButtonPath": "F1 M8.583,8 L13,12.424 L12.424,13 L8,8.583 L3.576,13 L3,12.424 L7.417,8 L3,3.576 L3.576,3 L8,7.417 L12.424,3 L13,3.576",
+      "RestoreButtonPath": "F1 M11.999,10.002 L10.998,10.002 L10.998,5.002 L5.998,5.002 L5.998,4.001 L11.999,4.001 M10.002,11.999 L4.001,11.999 L4.001,5.998 L10.002,5.998 M5.002,3 L5.002,5.002 L3,5.002 L3,13 L10.998,13 L10.998,10.998 L13,10.998 L13,3"
+    }
+  }
+}

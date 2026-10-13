@@ -267,10 +267,17 @@ native/сторонний вызов, неинструментированный
 - Читает упорядоченный каталог тем из `Resources/AvailableThemes.resx`
 - Валидирует пары `LocalizationKey` / `ResourcePath`, устраняет дубликаты и предоставляет fallback
 - Отделяет список доступных тем от логики их применения
+- Разрешает старые `Theme_Light` / `Theme_Dark` в канонические ключи VS2022; после применения сохраняется новый ключ
 
 **Файлы тем:**
-- `Themes/LightTheme.xaml` — светлая тема
-- `Themes/DarkTheme.xaml` — тёмная тема
+- `Themes/VS2022LightTheme.xaml` — светлая тема
+- `Themes/VS2022DarkTheme.xaml` — прежняя тёмная тема
+- `Themes/VS2026LightTheme.xaml` / `VS2026DarkTheme.xaml` — оформление VS2026 и соответствующие палитры редактора
+- `VS2022Metrics.xaml` / `VS2026Metrics.xaml` — типизированные размеры, интервалы и геометрии
+- `MenuStyles.xaml`, `WindowStyles.xaml`, `EditorTabStyles.xaml` — общие шаблоны с динамическими ресурсами активной темы
+- `EditorScrollStyles.xaml` — полосы прокрутки VS2026 с цветами темы, системными размерами WPF и стандартными командами
+- Общие словари вложены в корневой словарь темы; существующий `ThemeService` заменяет всю эту группу. Резервная/стартовая тема — `Theme_VS2022Light`
+- `Controls/EditorTabBorder.cs` рисует форму вкладки VS2026 с нижними внешними сопряжениями; в VS2022 использует обычный `Border`
 
 #### 3.5. Code Editor (Редактор кода)
 
@@ -281,7 +288,7 @@ native/сторонний вызов, неинструментированный
 - Метод `CreateAsync(content, programmingLanguage)` — получает `RoslynHost` и активную палитру через `IRoslynHostService`/`IClassificationHighlightColorsProvider`, затем ожидает `RoslynCodeEditor.InitializeAsync(...)`
 - **IRoslynHostService** / **RoslynHostService** — единый RoslynHost; получает тот же `KIDCompilationProfile`, что и `CSharpCompiler`, и создаёт `RoslynHostReferences.Empty.With(references:, imports:)` без скрытых RoslynPad defaults
 - RoslynPad assemblies в `additionalAssemblies` обслуживают MEF редактора, но не становятся references пользовательского документа
-- **VS2022LightClassificationHighlightColors / VS2022DarkClassificationHighlightColors** — самостоятельные палитры цветов и начертаний VS2022 для действующих светлой и тёмной тем. `VS2026LightClassificationHighlightColors` и `VS2026DarkClassificationHighlightColors` подготовлены для будущих тем окна и пока не подключены.
+- **VS2022LightClassificationHighlightColors / VS2022DarkClassificationHighlightColors** — самостоятельные палитры цветов и начертаний VS2022 для действующих светлой и тёмной тем. `VS2026LightClassificationHighlightColors` и `VS2026DarkClassificationHighlightColors` используются новыми светлой/тёмной темами VS2026.
 - `ClassificationHighlightColorsProvider` получает готовый `IClassificationHighlightColors` из ресурсов активной XAML-темы по ключу `CodeEditorClassificationColors` и не зависит от строкового ключа темы
 
 #### 3.6. Initialize (Инициализация)

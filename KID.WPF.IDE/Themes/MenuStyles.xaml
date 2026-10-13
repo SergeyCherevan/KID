@@ -1,18 +1,21 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
     <!--
         Общие шаблоны меню. Конкретные цвета намеренно находятся в словарях тем,
         а здесь используются только семантические DynamicResource-ключи.
     -->
 
+    <sys:Boolean x:Key="ModernMenuEnabled">True</sys:Boolean>
     <ControlTemplate x:Key="TopLevelMenuHeaderTemplate" TargetType="{x:Type MenuItem}">
         <Grid SnapsToDevicePixels="True">
             <Border x:Name="ItemBorder"
                     Padding="{TemplateBinding Padding}"
                     Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}">
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{DynamicResource MenuItemCornerRadius}">
                 <ContentPresenter ContentSource="Header"
                                   RecognizesAccessKey="True"
                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -24,13 +27,18 @@
                    Focusable="False"
                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                    Placement="Bottom"
-                   PopupAnimation="Fade">
-                <Border Margin="0,1,0,0"
-                        Padding="2"
+                   PopupAnimation="Fade"
+                   HorizontalOffset="{DynamicResource MenuPopupHorizontalOffset}">
+                <Border Margin="{DynamicResource MenuTopPopupMargin}"
+                        Padding="{DynamicResource MenuPopupPadding}"
                         Background="{DynamicResource MenuPopupBrush}"
                         BorderBrush="{DynamicResource MenuBorderBrush}"
                         BorderThickness="1"
-                        CornerRadius="2">
+                        CornerRadius="{DynamicResource MenuPopupCornerRadius}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="4" Direction="270" Color="Black"
+                                          Opacity="{DynamicResource MenuShadowOpacity}" />
+                    </Border.Effect>
                     <ScrollViewer CanContentScroll="True"
                                   HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
@@ -44,11 +52,12 @@
         <ControlTemplate.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemHoverBrush}" />
-                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}" />
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuItemHoverBorderBrush}" />
             </Trigger>
             <Trigger Property="IsSubmenuOpen" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemPressedBrush}" />
-                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}" />
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuItemPressedBorderBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource MenuPressedTextBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Foreground" Value="{DynamicResource MenuItemDisabledTextBrush}" />
@@ -62,6 +71,7 @@
                 Background="{TemplateBinding Background}"
                 BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{DynamicResource MenuItemCornerRadius}"
                 SnapsToDevicePixels="True">
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -79,10 +89,11 @@
         <ControlTemplate.Triggers>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemHoverBrush}" />
-                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}" />
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuItemHoverBorderBrush}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemPressedBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource MenuPressedTextBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Foreground" Value="{DynamicResource MenuItemDisabledTextBrush}" />
@@ -94,16 +105,18 @@
         <Grid SnapsToDevicePixels="True">
             <Border x:Name="ItemBorder"
                     MinWidth="180"
-                    MinHeight="26"
+                    MinHeight="{DynamicResource MenuItemMinHeight}"
+                    Padding="{DynamicResource MenuSubContentPadding}"
                     Background="{TemplateBinding Background}"
                     BorderBrush="{TemplateBinding BorderBrush}"
-                    BorderThickness="{TemplateBinding BorderThickness}">
-                <Grid Margin="4,0">
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{DynamicResource MenuItemCornerRadius}">
+                <Grid Margin="{DynamicResource MenuContentMargin}">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="22" />
+                        <ColumnDefinition Width="{DynamicResource MenuIconColumnWidth}" />
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="18" />
+                        <ColumnDefinition Width="{DynamicResource MenuArrowColumnWidth}" />
                     </Grid.ColumnDefinitions>
 
                     <ContentPresenter Grid.Column="0"
@@ -112,29 +125,31 @@
                                       VerticalAlignment="Center" />
                     <Path x:Name="CheckMark"
                           Grid.Column="0"
-                          Width="11"
-                          Height="8"
-                          Data="M 0 4 L 3.5 7.5 L 11 0"
-                          Stroke="{DynamicResource MenuIndicatorBrush}"
-                          StrokeThickness="2"
+                          Width="{DynamicResource MenuCheckWidth}"
+                          Height="{DynamicResource MenuCheckHeight}"
+                          Data="{DynamicResource MenuCheckGeometry}"
+                          Stroke="{DynamicResource MenuCheckStrokeBrush}"
+                          Fill="{DynamicResource MenuCheckFillBrush}"
+                          StrokeThickness="{DynamicResource MenuCheckStrokeWidth}"
                           StrokeEndLineCap="Square"
                           Visibility="Collapsed" />
                     <ContentPresenter Grid.Column="1"
-                                      Margin="3,0,12,0"
+                                      Margin="{DynamicResource MenuTextMargin}"
                                       ContentSource="Header"
                                       RecognizesAccessKey="True"
                                       VerticalAlignment="Center" />
                     <TextBlock Grid.Column="2"
-                               Margin="12,0,4,0"
+                               Margin="{DynamicResource MenuGestureMargin}"
                                Foreground="{TemplateBinding Foreground}"
                                Text="{TemplateBinding InputGestureText}"
                                VerticalAlignment="Center" />
                     <Path Grid.Column="3"
-                          Width="5"
-                          Height="9"
-                          Data="M 0 0 L 4 4.5 L 0 9"
-                          Stroke="{DynamicResource MenuIndicatorBrush}"
-                          StrokeThickness="1.5"
+                          Width="{DynamicResource MenuChevronWidth}"
+                          Height="{DynamicResource MenuChevronHeight}"
+                          Data="{DynamicResource MenuChevronGeometry}"
+                          Stroke="{DynamicResource MenuChevronStrokeBrush}"
+                          Fill="{DynamicResource MenuChevronFillBrush}"
+                          StrokeThickness="{DynamicResource MenuChevronStrokeWidth}"
                           VerticalAlignment="Center" />
                 </Grid>
             </Border>
@@ -144,13 +159,18 @@
                    Focusable="False"
                    IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
                    Placement="Right"
-                   PopupAnimation="Fade">
-                <Border Margin="-1,0,0,0"
-                        Padding="2"
+                   PopupAnimation="Fade"
+                   HorizontalOffset="{DynamicResource MenuPopupHorizontalOffset}">
+                <Border Margin="{DynamicResource MenuSidePopupMargin}"
+                        Padding="{DynamicResource MenuPopupPadding}"
                         Background="{DynamicResource MenuPopupBrush}"
                         BorderBrush="{DynamicResource MenuBorderBrush}"
                         BorderThickness="1"
-                        CornerRadius="2">
+                        CornerRadius="{DynamicResource MenuPopupCornerRadius}">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="4" Direction="270" Color="Black"
+                                          Opacity="{DynamicResource MenuShadowOpacity}" />
+                    </Border.Effect>
                     <ScrollViewer CanContentScroll="True"
                                   HorizontalScrollBarVisibility="Disabled"
                                   VerticalScrollBarVisibility="Auto">
@@ -167,11 +187,12 @@
             </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemHoverBrush}" />
-                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}" />
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuItemHoverBorderBrush}" />
             </Trigger>
             <Trigger Property="IsSubmenuOpen" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemPressedBrush}" />
-                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}" />
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuItemPressedBorderBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource MenuPressedTextBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Foreground" Value="{DynamicResource MenuItemDisabledTextBrush}" />
@@ -183,17 +204,19 @@
     <ControlTemplate x:Key="SubmenuItemTemplate" TargetType="{x:Type MenuItem}">
         <Border x:Name="ItemBorder"
                 MinWidth="180"
-                MinHeight="26"
+                MinHeight="{DynamicResource MenuItemMinHeight}"
+                    Padding="{DynamicResource MenuSubContentPadding}"
                 Background="{TemplateBinding Background}"
                 BorderBrush="{TemplateBinding BorderBrush}"
                 BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{DynamicResource MenuItemCornerRadius}"
                 SnapsToDevicePixels="True">
-            <Grid Margin="4,0">
+            <Grid Margin="{DynamicResource MenuContentMargin}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="22" />
+                    <ColumnDefinition Width="{DynamicResource MenuIconColumnWidth}" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="18" />
+                    <ColumnDefinition Width="{DynamicResource MenuArrowColumnWidth}" />
                 </Grid.ColumnDefinitions>
 
                 <ContentPresenter Grid.Column="0"
@@ -202,20 +225,21 @@
                                   VerticalAlignment="Center" />
                 <Path x:Name="CheckMark"
                       Grid.Column="0"
-                      Width="11"
-                      Height="8"
-                      Data="M 0 4 L 3.5 7.5 L 11 0"
-                      Stroke="{DynamicResource MenuIndicatorBrush}"
-                      StrokeThickness="2"
+                      Width="{DynamicResource MenuCheckWidth}"
+                      Height="{DynamicResource MenuCheckHeight}"
+                      Data="{DynamicResource MenuCheckGeometry}"
+                      Stroke="{DynamicResource MenuCheckStrokeBrush}"
+                          Fill="{DynamicResource MenuCheckFillBrush}"
+                      StrokeThickness="{DynamicResource MenuCheckStrokeWidth}"
                       StrokeEndLineCap="Square"
                       Visibility="Collapsed" />
                 <ContentPresenter Grid.Column="1"
-                                  Margin="3,0,12,0"
+                                  Margin="{DynamicResource MenuTextMargin}"
                                   ContentSource="Header"
                                   RecognizesAccessKey="True"
                                   VerticalAlignment="Center" />
                 <TextBlock Grid.Column="2"
-                           Margin="12,0,4,0"
+                           Margin="{DynamicResource MenuGestureMargin}"
                            Foreground="{TemplateBinding Foreground}"
                            Text="{TemplateBinding InputGestureText}"
                            VerticalAlignment="Center" />
@@ -228,10 +252,11 @@
             </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemHoverBrush}" />
-                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuBorderBrush}" />
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuItemHoverBorderBrush}" />
             </Trigger>
             <Trigger Property="IsPressed" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemPressedBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource MenuPressedTextBrush}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Foreground" Value="{DynamicResource MenuItemDisabledTextBrush}" />
@@ -243,12 +268,16 @@
     <Style TargetType="{x:Type Menu}">
         <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
-        <Setter Property="FontFamily" Value="Segoe UI" />
-        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize}" />
         <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />
+        <Setter Property="MinHeight" Value="{DynamicResource MenuMinHeight}" />
     </Style>
 
     <Style TargetType="{x:Type MenuItem}">
+        <Setter Property="Tag" Value="{DynamicResource UseModernTheme}" />
+        <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+        <Setter Property="FontSize" Value="{DynamicResource UiFontSize}" />
         <Setter Property="Background" Value="{DynamicResource MenuPopupBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
         <Setter Property="BorderBrush" Value="Transparent" />
@@ -258,14 +287,20 @@
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="Template" Value="{StaticResource SubmenuItemTemplate}" />
         <Style.Triggers>
+            <Trigger Property="Tag" Value="{StaticResource ModernMenuEnabled}">
+                <Setter Property="FocusVisualStyle" Value="{DynamicResource ThemeFocusVisual}" />
+                <Setter Property="Background" Value="Transparent" />
+            </Trigger>
             <Trigger Property="Role" Value="TopLevelHeader">
                 <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
-                <Setter Property="Padding" Value="10,2" />
+                <Setter Property="Padding" Value="{DynamicResource MenuTopItemPadding}" />
+                <Setter Property="Margin" Value="{DynamicResource MenuTopItemMargin}" />
                 <Setter Property="Template" Value="{StaticResource TopLevelMenuHeaderTemplate}" />
             </Trigger>
             <Trigger Property="Role" Value="TopLevelItem">
                 <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
-                <Setter Property="Padding" Value="10,2" />
+                <Setter Property="Padding" Value="{DynamicResource MenuTopItemPadding}" />
+                <Setter Property="Margin" Value="{DynamicResource MenuTopItemMargin}" />
                 <Setter Property="Template" Value="{StaticResource TopLevelMenuItemTemplate}" />
             </Trigger>
             <Trigger Property="Role" Value="SubmenuHeader">
@@ -276,7 +311,7 @@
 
     <Style TargetType="{x:Type Separator}">
         <Setter Property="Height" Value="1" />
-        <Setter Property="Margin" Value="28,3,6,3" />
+        <Setter Property="Margin" Value="{DynamicResource MenuSeparatorMargin}" />
         <Setter Property="Background" Value="{DynamicResource MenuSeparatorBrush}" />
         <Setter Property="Template">
             <Setter.Value>
@@ -289,4 +324,29 @@
         </Setter>
     </Style>
 
+    <ControlTemplate x:Key="ModernContextMenuTemplate" TargetType="ContextMenu">
+        <Border Margin="12,2,12,12" Padding="{DynamicResource MenuPopupPadding}"
+                Background="{DynamicResource MenuPopupBrush}" BorderBrush="{DynamicResource MenuBorderBrush}"
+                BorderThickness="1" CornerRadius="{DynamicResource MenuPopupCornerRadius}">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="12" ShadowDepth="4" Direction="270" Color="Black"
+                                  Opacity="{DynamicResource MenuShadowOpacity}" />
+            </Border.Effect>
+            <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+            </ScrollViewer>
+        </Border>
+    </ControlTemplate>
+    <Style TargetType="ContextMenu">
+        <Setter Property="Tag" Value="{DynamicResource UseModernTheme}" />
+        <Style.Triggers>
+            <Trigger Property="Tag" Value="{StaticResource ModernMenuEnabled}">
+                <Setter Property="Template" Value="{StaticResource ModernContextMenuTemplate}" />
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}" />
+                <Setter Property="FontFamily" Value="{DynamicResource UiFontFamily}" />
+                <Setter Property="FontSize" Value="{DynamicResource UiFontSize}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
 </ResourceDictionary>

@@ -495,6 +495,7 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 - Валидация пар `LocalizationKey` / `ResourcePath`
 - Сохранение порядка тем, устранение дубликатов и Light-fallback
 - Поиск определения темы по стабильному ключу локализации
+- Миграция двух старых ключей в `Theme_VS2022Light` / `Theme_VS2022Dark`, без дублирования пунктов меню
 
 #### 4.2. ThemeService
 **Файл:** `KID.WPF.IDE/Services/Themes/ThemeService.cs`
@@ -514,20 +515,29 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 - При неизвестной или повреждённой теме использует Light-fallback
 
 **Доступные темы:**
-- Light — светлая тема
-- Dark — тёмная тема
+- Visual Studio 2022 — светлая / тёмная (сохранённое оформление KID)
+- Visual Studio 2026 — светлая / тёмная
+- Канонические ключи: `Theme_VS2022Light`, `Theme_VS2022Dark`, `Theme_VS2026Light`, `Theme_VS2026Dark`; default/fallback — VS2022 Light
 
 #### 4.3. Файлы тем
 
-**LightTheme.xaml** (`KID.WPF.IDE/Themes/LightTheme.xaml`)
+**VS2022LightTheme.xaml** (`KID.WPF.IDE/Themes/VS2022LightTheme.xaml`)
 - Светлая цветовая схема
 - Определяет кисти, цвета, стили для светлой темы
 - Предоставляет `VS2022LightClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
 
-**DarkTheme.xaml** (`KID.WPF.IDE/Themes/DarkTheme.xaml`)
+**VS2022DarkTheme.xaml** (`KID.WPF.IDE/Themes/VS2022DarkTheme.xaml`)
 - Предоставляет `VS2022DarkClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
 - Тёмная цветовая схема
 - Определяет кисти, цвета, стили для тёмной темы
+
+**VS2026LightTheme.xaml / VS2026DarkTheme.xaml**
+- Цвета и геометрия по [справочнику VS2026](agent/plans/VS2026_UI_REFERENCE.md), включая отмеченные ограничения переноса
+- Подключают соответствующие `VS2026LightClassificationHighlightColors` / `VS2026DarkClassificationHighlightColors`
+- Общие шаблоны меню, окна и вкладок используют `DynamicResource`; размеры разделены по `VS2022Metrics.xaml` / `VS2026Metrics.xaml`
+- Все общие словари вложены в активную тему и заменяются вместе с ней
+- `EditorScrollStyles.xaml` подключается только к VS2026: цвета полос прокрутки тематические, размеры системные и команды WPF сохранены
+- Вкладка VS2026 использует `EditorTabBorder`: нейтральный фон, акцентная граница, верхние закругления и внешние нижние сопряжения
 
 **Ресурсы тем:**
 - `WindowBrush` — фон окна
@@ -587,7 +597,7 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 
 **Файлы:**
 - `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
-- `VS2022LightClassificationHighlightColors` / `VS2022DarkClassificationHighlightColors` — цвета и начертания VS2022 для действующих тем; самостоятельные `VS2026LightClassificationHighlightColors` / `VS2026DarkClassificationHighlightColors` пока не подключены.
+- `VS2022LightClassificationHighlightColors` / `VS2022DarkClassificationHighlightColors` — цвета и начертания VS2022 для действующих тем; самостоятельные `VS2026LightClassificationHighlightColors` / `VS2026DarkClassificationHighlightColors` используются соответствующими темами VS2026.
 - `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — ленивое потокобезопасное создание и кэширование RoslynHost; references/imports берёт из общего `IKIDCompilationProfileProvider`
 - `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
 - `KID.WPF.IDE/Services/CompilationProfile/` — общая immutable-инфраструктура references/imports для editor и compiler

@@ -27,7 +27,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Menu Grid.Column="0" Margin="0,0,0,5">
+        <Menu Grid.Column="0" Margin="{DynamicResource MenuBottomMargin}">
             <MenuItem Header="{localization:Localization Menu_File}">
                 <MenuItem Header="{localization:Localization Menu_New}" InputGestureText="Ctrl+N" Command="{Binding NewFileCommand}" />
                 <MenuItem Header="{localization:Localization Menu_Open}" InputGestureText="Ctrl+O" Command="{Binding OpenFileCommand}" />
