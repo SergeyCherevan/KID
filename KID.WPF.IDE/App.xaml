@@ -1,12 +1,17 @@
 ﻿<Application x:Class="KID.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:themes="clr-namespace:KID.Services.Themes"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <!-- Светлая тема по умолчанию -->
-                <ResourceDictionary Source="Themes/VS2022LightTheme.xaml"/>
+                <themes:ThemeResourceContainer>
+                    <ResourceDictionary.MergedDictionaries>
+                        <ResourceDictionary Source="Themes/VS2022LightTheme.xaml"/>
+                    </ResourceDictionary.MergedDictionaries>
+                </themes:ThemeResourceContainer>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

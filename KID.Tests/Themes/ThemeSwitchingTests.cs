@@ -22,6 +22,12 @@ public sealed class ThemeSwitchingTests
         {
             var provider = new ThemeProviderService();
             var host = new UserControl();
+            var sharedResource = new object();
+            var sharedDictionary = new ResourceDictionary { ["SharedResource"] = sharedResource };
+            var hostThemeContainer = new ThemeResourceContainer();
+            hostThemeContainer.MergedDictionaries.Add(new ResourceDictionary());
+            host.Resources.MergedDictionaries.Add(sharedDictionary);
+            host.Resources.MergedDictionaries.Add(hostThemeContainer);
             var panel = new StackPanel();
             host.Content = panel;
             var item = new object();
@@ -40,6 +46,10 @@ public sealed class ThemeSwitchingTests
             header.Items.Add(child);
             menu.Items.Add(header);
             var context = new ContextMenu();
+            var contextThemeContainer = new ThemeResourceContainer();
+            contextThemeContainer.MergedDictionaries.Add(new ResourceDictionary());
+            context.Resources.MergedDictionaries.Add(sharedDictionary);
+            context.Resources.MergedDictionaries.Add(contextThemeContainer);
             context.Items.Add(new MenuItem { Header = "Close" });
             panel.Children.Add(menu);
             panel.Children.Add(minimize);
@@ -67,10 +77,14 @@ public sealed class ThemeSwitchingTests
                 {
                     Source = new Uri($"/KID.WPF.IDE;component/{theme.ResourcePath}", UriKind.Relative)
                 };
-                host.Resources.MergedDictionaries.Clear();
-                host.Resources.MergedDictionaries.Add(dictionary);
-                context.Resources.MergedDictionaries.Clear();
-                context.Resources.MergedDictionaries.Add(dictionary);
+                ThemeService.ReplaceThemeDictionary(host.Resources, dictionary);
+                ThemeService.ReplaceThemeDictionary(context.Resources, dictionary);
+                Assert.Same(sharedResource, host.FindResource("SharedResource"));
+                Assert.Same(sharedResource, context.FindResource("SharedResource"));
+                Assert.Same(dictionary, Assert.Single(hostThemeContainer.MergedDictionaries));
+                Assert.Same(dictionary, Assert.Single(contextThemeContainer.MergedDictionaries));
+                Assert.Equal(2, host.Resources.MergedDictionaries.Count);
+                Assert.Equal(2, context.Resources.MergedDictionaries.Count);
                 if (capturedMenuStyle == null)
                 {
                     capturedMenuStyle = new Style(typeof(MenuItem), (Style)dictionary[typeof(MenuItem)]);

@@ -68,19 +68,7 @@ public sealed class ThemeService : IThemeService
             if (app.Resources == null)
                 throw new InvalidOperationException("Application resources are not available.");
 
-            /*
-             * ВАЖНО: Clear() удаляет не только словарь предыдущей темы, но вообще все
-             * словари из Application.Resources.MergedDictionaries. Сейчас это допустимо,
-             * пока коллекция содержит только словарь темы. Если в будущем сюда будут
-             * добавлены общие стили, иконки, локализация или ресурсы сторонних библиотек,
-             * они также будут удалены при переключении темы.
-             *
-             * Возможные решения на будущее: хранить ссылку на активный словарь темы и
-             * заменять только его; выделить для темы отдельный словарь-контейнер; либо
-             * находить тематический словарь по Source/маркеру и сохранять остальные.
-             */
-            app.Resources.MergedDictionaries.Clear();
-            app.Resources.MergedDictionaries.Add(themeDictionary);
+            ReplaceThemeDictionary(app.Resources, themeDictionary);
 
             CurrentTheme = theme;
             _ = asyncOperationErrorHandler.ExecuteAsync(
@@ -96,6 +84,42 @@ public sealed class ThemeService : IThemeService
             error = ex;
             return false;
         }
+    }
+
+    /// <summary>
+    /// Заменяет только словарь внутри контейнера темы, сохраняя остальные ресурсы
+    /// и порядок их поиска. Вызывается на UI-потоке после загрузки новой темы.
+    /// </summary>
+    internal static void ReplaceThemeDictionary(
+        ResourceDictionary applicationResources,
+        ResourceDictionary themeDictionary)
+    {
+        ArgumentNullException.ThrowIfNull(applicationResources);
+        ArgumentNullException.ThrowIfNull(themeDictionary);
+
+        ThemeResourceContainer? themeContainer = null;
+        foreach (var dictionary in applicationResources.MergedDictionaries)
+        {
+            if (dictionary is not ThemeResourceContainer container)
+                continue;
+
+            if (themeContainer != null)
+                throw new InvalidOperationException("Application resources must contain exactly one theme resource container.");
+
+            themeContainer = container;
+        }
+
+        if (themeContainer == null)
+            throw new InvalidOperationException("Application resources must contain exactly one theme resource container.");
+
+        if (themeContainer.Source != null || themeContainer.Count != 0)
+            throw new InvalidOperationException("The theme resource container must not have a source or direct resources.");
+
+        if (themeContainer.MergedDictionaries.Count != 1)
+            throw new InvalidOperationException("The theme resource container must contain exactly one active theme dictionary.");
+
+        // Контейнер сохраняет свою позицию; заменяется только принадлежащая ему тема.
+        themeContainer.MergedDictionaries[0] = themeDictionary;
     }
 
     private void ReportThemeLoadFailure(Exception exception)
