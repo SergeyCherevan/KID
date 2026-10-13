@@ -32,7 +32,7 @@ dotnet run --file .\scripts\manual-checks\Serve-MusicDownloadFixture.cs -- --sel
 
 ## 2. Подготовить пример и наблюдение за файлами
 
-Открой соседний [пример MusicDownloadSmoke.cs](../../../scripts/manual-checks/MusicDownloadSmoke.cs) в редакторе KID и нажми Run.
+Открой [пример MusicDownloadSmoke.cs](../../scripts/manual-checks/MusicDownloadSmoke.cs) в редакторе KID и нажми Run.
 В консоли появится меню: введи номер сценария и нажми Enter. После завершения сценария меню появляется снова;
 `0` завершает проверку. Некорректный ввод повторяет запрос. Код между сценариями менять не требуется.
 Не запускай файл через dotnet: Music требует execution-сессию KID и её graphics runtime.
@@ -103,8 +103,8 @@ Get-ChildItem -LiteralPath $musicSmokeTemp -Filter 'kid-audio-*.tmp' -File |
 скриншота, затем подтвердил слышимость звука и ожидаемое поведение. После Stop в 6/8 выполнены новые
 запуски; выход через 0 завершился штатным сообщением. Предположение о заблокированном следующем Run
 в этом прогоне не воспроизведено и затем опровергнуто интеграционной проверкой текущего host.
-Подробности — в [итогах модернизации](../audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-results),
-источники и границы доказательности — в разделе [аудио smoke](../audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-evidence) production-readiness аудита.
+Подробности — в [итогах модернизации](../agent/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-results),
+источники и границы доказательности — в разделе [аудио smoke](../agent/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-evidence) production-readiness аудита.
 
 ## 5. Завершить и сообщить результат
 
@@ -129,6 +129,6 @@ Get-ChildItem -LiteralPath $musicSmokeTemp -Filter 'kid-audio-*.tmp' -File |
 Оставшиеся новые temp-файлы: нет / имена и размеры
 ```
 
-Сервер [Serve-MusicDownloadFixture.cs](../../../scripts/manual-checks/Serve-MusicDownloadFixture.cs)
+Сервер [Serve-MusicDownloadFixture.cs](../../scripts/manual-checks/Serve-MusicDownloadFixture.cs)
 поддерживает `--self-check`: он проверяет WAV/Content-Length/chunked/slow/404
 и завершает работу; KID и аудиоустройство не запускает.

@@ -164,6 +164,8 @@ if (cursor.Position.HasValue)
 - [Mouse API](Mouse-API.md) — полная документация по Mouse API
 - [Keyboard API](Keyboard-API.md) — полная документация по Keyboard API
 - [Руководство разработчика](DEVELOPMENT.md) — информация для разработчиков
+- [Ручная проверка URL-аудио](testing/MusicDownloadSmoke.md) — сценарии воспроизведения, лимита загрузки и Stop
+- [Эталон UI Visual Studio 2026](references/VS2026_UI_REFERENCE.md) — заводские цвета, параметры и ограничения переноса
 
 ## Лицензия
 

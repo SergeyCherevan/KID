@@ -92,7 +92,7 @@ Debug build и Test Explorer подтвердили **0 предупрежден
 Пользователь выполнил все 12 интерактивных сценариев с локальным WAV fixture и настоящим
 NAudio: без лимита, ровно лимит, превышение, chunked, SoundLoad, HTTP 404, повторный
 SoundStop, Stop кнопкой и по Enter. Подтверждены слышимость, новые запуски после Stop
-и штатный выход через `0`. Инструкция: [MusicDownloadSmoke.md](../plans/MusicDownloadSmoke.md).
+и штатный выход через `0`. Инструкция: [MusicDownloadSmoke.md](../../testing/MusicDownloadSmoke.md).
 Источники — пользовательский консольный лог, сообщение о слышимости и скриншоты:
 [Stop при загрузке](<C:/Users/chere/AppData/Local/Temp/codex-clipboard-9173ca89-019e-41ee-8ff2-189edd4b759a.png>),
 [Stop при playback](<C:/Users/chere/AppData/Local/Temp/codex-clipboard-2fe65520-96a1-46b0-a993-97bfc8dcbb46.png>),

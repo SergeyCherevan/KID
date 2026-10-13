@@ -2,7 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib"
                     xmlns:codeEditor="clr-namespace:KID.Services.CodeEditor">
-    <!-- VS2026 18.10.3; источники и ограничения: docs/agent/plans/VS2026_UI_REFERENCE.md. -->
+    <!-- VS2026 18.10.3; источники и ограничения: docs/references/VS2026_UI_REFERENCE.md. -->
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="VS2026Metrics.xaml" />
         <ResourceDictionary Source="MenuStyles.xaml" />

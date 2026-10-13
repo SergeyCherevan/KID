@@ -532,7 +532,7 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 - Определяет кисти, цвета, стили для тёмной темы
 
 **VS2026LightTheme.xaml / VS2026DarkTheme.xaml**
-- Цвета и геометрия по [справочнику VS2026](agent/plans/VS2026_UI_REFERENCE.md), включая отмеченные ограничения переноса
+- Цвета и геометрия по [справочнику VS2026](references/VS2026_UI_REFERENCE.md), включая отмеченные ограничения переноса
 - Подключают соответствующие `VS2026LightClassificationHighlightColors` / `VS2026DarkClassificationHighlightColors`
 - Общие шаблоны меню, окна и вкладок используют `DynamicResource`; размеры разделены по `VS2022Metrics.xaml` / `VS2026Metrics.xaml`
 - Все общие словари вложены в активную тему и заменяются вместе с ней
