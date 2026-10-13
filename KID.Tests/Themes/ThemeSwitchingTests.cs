@@ -26,7 +26,7 @@ public sealed class ThemeSwitchingTests
             host.Content = panel;
             var item = new object();
             host.DataContext = new TabSelection(item);
-            var tab = new EditorTabBorder { DataContext = item };
+            var tab = new EditorTabBorder { DataContext = item, HorizontalAlignment = HorizontalAlignment.Left };
             var tabContent = new DockPanel();
             tab.Child = tabContent;
             var text = new TextBlock { Text = "Example.cs" };
@@ -139,6 +139,15 @@ public sealed class ThemeSwitchingTests
                 Assert.Equal(modern ? 30 : 28, minimize.Height);
                 Assert.Equal(modern ? 24 : 18, close.Width);
                 Assert.Equal(modern ? 4 : 0, tab.CornerRadius.TopLeft);
+                // Compare actual content positions against the inner vertical edges,
+                // not Padding alone: VS2026's curved edges sit 4 DIP inside its bounds.
+                var sideInset = modern ? tab.CornerRadius.TopLeft : 0;
+                var textStart = text.TranslatePoint(new Point(), tab).X;
+                var closeStart = close.TranslatePoint(new Point(), tab).X;
+                Assert.Equal(10, textStart - sideInset - tab.BorderThickness.Left, 6);
+                Assert.Equal(8, closeStart - textStart - text.ActualWidth, 6);
+                Assert.Equal(4, tab.ActualWidth - sideInset - tab.BorderThickness.Right
+                    - closeStart - close.ActualWidth, 6);
                 Assert.Equal(modern ? FontWeights.Normal : FontWeights.Bold, text.FontWeight);
                 Assert.Equal(BrushColor(dictionary["TabActiveBrush"]), BrushColor(tab.Background));
                 Assert.Equal(BrushColor(dictionary["TextBrush"]), BrushColor(child.Foreground));

@@ -34,12 +34,14 @@
     <Thickness x:Key="TabStripPadding">4,4,4,0</Thickness>
     <Thickness x:Key="TabStripScrollingPadding">4,0,4,0</Thickness>
     <Thickness x:Key="TabMargin">0</Thickness>
-    <Thickness x:Key="TabPadding">6,0,0,0</Thickness>
+    <!-- Видимые отступы как в VS2022 (10,2,4,2): добавлены 4 DIP по бокам
+         для вертикальных граней изогнутой рамки EditorTabBorder. -->
+    <Thickness x:Key="TabPadding">14,2,8,2</Thickness>
     <sys:Double x:Key="TabMinHeight">24</sys:Double>
     <Thickness x:Key="TabBorderThickness">1</Thickness>
     <CornerRadius x:Key="TabCornerRadius">4</CornerRadius>
     <FontWeight x:Key="TabSelectedFontWeight">Normal</FontWeight>
-    <Thickness x:Key="TabTextMargin">0</Thickness>
+    <Thickness x:Key="TabTextMargin">0,0,8,0</Thickness>
     <sys:Double x:Key="TabCloseButtonSize">24</sys:Double>
     <sys:Double x:Key="TabScrollBarHeight">4</sys:Double>
     <CornerRadius x:Key="TabCloseCornerRadius">0,4,0,0</CornerRadius>
