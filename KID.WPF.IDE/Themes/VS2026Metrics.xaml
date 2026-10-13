@@ -34,9 +34,11 @@
     <Thickness x:Key="TabStripPadding">4,4,4,0</Thickness>
     <Thickness x:Key="TabStripScrollingPadding">4,0,4,0</Thickness>
     <Thickness x:Key="TabMargin">0</Thickness>
-    <!-- Видимые отступы как в VS2022 (10,2,4,2): добавлены 4 DIP по бокам
-         для вертикальных граней изогнутой рамки EditorTabBorder. -->
-    <Thickness x:Key="TabPadding">14,2,8,2</Thickness>
+    <!-- Видимые боковые отступы как в VS2022 (10 и 4): добавлены 4 DIP
+         для вертикальных граней изогнутой рамки EditorTabBorder.
+         Кнопка закрытия 24 DIP уже задаёт высоту содержимого; вертикальные
+         отступы 0 дают высоту вкладки 26 DIP с учётом рамки. -->
+    <Thickness x:Key="TabPadding">14,0,8,0</Thickness>
     <sys:Double x:Key="TabMinHeight">24</sys:Double>
     <Thickness x:Key="TabBorderThickness">1</Thickness>
     <CornerRadius x:Key="TabCornerRadius">4</CornerRadius>
