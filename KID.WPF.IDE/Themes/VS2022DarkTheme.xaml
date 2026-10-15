@@ -33,7 +33,9 @@
     <Color x:Key="MenuBorder">#606060</Color>
     <Color x:Key="MenuSeparator">#606060</Color>
     <Color x:Key="MenuIndicator">#FFFFFF</Color>
-    <Color x:Key="WindowButtonHoverBackground">#3A3A3A</Color>
+    <!-- VS2022 17.14, Theme.Dark.pkgdef: MainWindowButtonHoverActive / MainWindowButtonHoverActiveGlyph. -->
+    <Color x:Key="WindowButtonHoverBackground">#3D3D3D</Color>
+    <Color x:Key="WindowButtonHoverForeground">#D6D6D6</Color>
     <Color x:Key="WindowButtonPressedForeground">#FFFFFF</Color>
 
     <!-- Цвета вкладок редактора -->
@@ -65,6 +67,7 @@
     <SolidColorBrush x:Key="MenuSeparatorBrush" Color="{StaticResource MenuSeparator}" />
     <SolidColorBrush x:Key="MenuIndicatorBrush" Color="{StaticResource MenuIndicator}" />
     <SolidColorBrush x:Key="WindowButtonHoverBrush" Color="{StaticResource WindowButtonHoverBackground}" />
+    <SolidColorBrush x:Key="WindowButtonHoverForegroundBrush" Color="{StaticResource WindowButtonHoverForeground}" />
     <SolidColorBrush x:Key="WindowButtonPressedForegroundBrush" Color="{StaticResource WindowButtonPressedForeground}" />
     <SolidColorBrush x:Key="TabActiveBrush" Color="{StaticResource TabActiveBackground}" />
     <SolidColorBrush x:Key="TabInactiveBrush" Color="{StaticResource TabInactiveBackground}" />
@@ -109,6 +112,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="{DynamicResource WindowButtonHoverBrush}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource WindowButtonHoverForegroundBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Foreground" Value="{DynamicResource WindowButtonPressedForegroundBrush}"/>
