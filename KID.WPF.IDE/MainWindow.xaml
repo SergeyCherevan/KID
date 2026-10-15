@@ -15,6 +15,7 @@
         WindowState="{Binding WindowState, Mode=TwoWay}"
         WindowStyle="None"
         AllowsTransparency="False"
+        UseLayoutRounding="True"
         ResizeMode="CanResize"
         Icon="Resources/KID.ico"
         Background="{DynamicResource SpecialElementsBrush}">
