@@ -2,6 +2,10 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:sys="clr-namespace:System;assembly=mscorlib">
 
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="MenuIcons.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
     <!--
         Общие шаблоны меню. Конкретные цвета намеренно находятся в словарях тем,
         а здесь используются только семантические DynamicResource-ключи.
@@ -76,6 +80,10 @@
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
                         VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                <ContentPresenter x:Name="IconPresenter"
+                                  ContentSource="Icon"
+                                  Margin="0,0,6,0"
+                                  VerticalAlignment="Center" />
                 <ContentPresenter ContentSource="Header"
                                   RecognizesAccessKey="True"
                                   VerticalAlignment="Center" />
@@ -87,6 +95,9 @@
         </Border>
 
         <ControlTemplate.Triggers>
+            <Trigger Property="Icon" Value="{x:Null}">
+                <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed" />
+            </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
                 <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource MenuItemHoverBrush}" />
                 <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource MenuItemHoverBorderBrush}" />
@@ -97,6 +108,7 @@
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
                 <Setter Property="Foreground" Value="{DynamicResource MenuItemDisabledTextBrush}" />
+                <Setter TargetName="IconPresenter" Property="Opacity" Value="0.45" />
             </Trigger>
         </ControlTemplate.Triggers>
     </ControlTemplate>

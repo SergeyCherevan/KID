@@ -95,10 +95,10 @@
     <value>Redo</value>
   </data>
   <data name="Menu_Run" xml:space="preserve">
-    <value>▶️ Run</value>
+    <value>Run</value>
   </data>
   <data name="Menu_Stop" xml:space="preserve">
-    <value>■ Stop</value>
+    <value>Stop</value>
   </data>
   <data name="Window_Title" xml:space="preserve">
     <value>.KID - C#/.NET IDE for Kids</value>

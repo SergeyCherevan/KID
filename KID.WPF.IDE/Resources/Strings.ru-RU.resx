@@ -95,10 +95,10 @@
     <value>Повторить</value>
   </data>
   <data name="Menu_Run" xml:space="preserve">
-    <value>▶️ Запустить</value>
+    <value>Запустить</value>
   </data>
   <data name="Menu_Stop" xml:space="preserve">
-    <value>■ Стоп</value>
+    <value>Стоп</value>
   </data>
   <data name="Window_Title" xml:space="preserve">
     <value>.KID - C#/.NET IDE для детей</value>

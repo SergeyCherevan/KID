@@ -12,6 +12,10 @@
     <codeEditor:VS2022LightClassificationHighlightColors
         x:Key="{x:Static codeEditor:ClassificationHighlightColorsProvider.CodeEditorClassificationColors}" />
 
+    <!-- Цвета геометрических значков запуска и остановки. -->
+    <Color x:Key="MenuRunIconColor">#168A16</Color>
+    <Color x:Key="MenuStopIconColor">#D83030</Color>
+
     <!-- Цвета -->
     <Color x:Key="WindowBackground">#CCD5F0</Color>
     <Color x:Key="MenuBackground">#CCD5F0</Color>

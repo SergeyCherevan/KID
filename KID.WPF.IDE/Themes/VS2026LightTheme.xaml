@@ -11,6 +11,9 @@
         <ResourceDictionary Source="EditorScrollStyles.xaml" />
     </ResourceDictionary.MergedDictionaries>
     <codeEditor:VS2026LightClassificationHighlightColors x:Key="{x:Static codeEditor:ClassificationHighlightColorsProvider.CodeEditorClassificationColors}" />
+    <!-- Цвета геометрических значков запуска и остановки. -->
+    <Color x:Key="MenuRunIconColor">#168A16</Color>
+    <Color x:Key="MenuStopIconColor">#D83030</Color>
     <Color x:Key="WindowBackground">#FFEEEEF2</Color>
     <Color x:Key="WindowTitleForeground">#FF525252</Color>
     <Color x:Key="WindowTitleInactiveForeground">#99525252</Color>
