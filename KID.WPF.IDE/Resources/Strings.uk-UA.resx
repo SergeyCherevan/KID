@@ -191,10 +191,10 @@
     <value>Українська</value>
   </data>
   <data name="Theme_VS2022Light" xml:space="preserve">
-    <value>Visual Studio 2022 — світла</value>
+    <value>Світла VS2022</value>
   </data>
   <data name="Theme_VS2022Dark" xml:space="preserve">
-    <value>Visual Studio 2022 — темна</value>
+    <value>Темна VS2022</value>
   </data>
   <data name="Menu_Font" xml:space="preserve">
     <value>Шрифт</value>
@@ -230,10 +230,10 @@
     <value>Не вдалося безпечно закрити застосунок: {0}</value>
   </data>
   <data name="Theme_VS2026Light" xml:space="preserve">
-    <value>Visual Studio 2026 — світла</value>
+    <value>Світла VS2026</value>
   </data>
   <data name="Theme_VS2026Dark" xml:space="preserve">
-    <value>Visual Studio 2026 — темна</value>
+    <value>Темна VS2026</value>
   </data>
 </root>
 

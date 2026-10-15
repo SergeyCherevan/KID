@@ -191,10 +191,10 @@
     <value>Ukrainian</value>
   </data>
   <data name="Theme_VS2022Light" xml:space="preserve">
-    <value>Visual Studio 2022 — Light</value>
+    <value>VS2022 Light</value>
   </data>
   <data name="Theme_VS2022Dark" xml:space="preserve">
-    <value>Visual Studio 2022 — Dark</value>
+    <value>VS2022 Dark</value>
   </data>
   <data name="Menu_Font" xml:space="preserve">
     <value>Font</value>
@@ -230,10 +230,10 @@
     <value>Failed to close the application safely: {0}</value>
   </data>
   <data name="Theme_VS2026Light" xml:space="preserve">
-    <value>Visual Studio 2026 — Light</value>
+    <value>VS2026 Light</value>
   </data>
   <data name="Theme_VS2026Dark" xml:space="preserve">
-    <value>Visual Studio 2026 — Dark</value>
+    <value>VS2026 Dark</value>
   </data>
 </root>
 
