@@ -15,7 +15,7 @@
     <Thickness x:Key="WorkspaceContentMargin">4</Thickness>
     <Thickness x:Key="MenuBottomMargin">0</Thickness>
     <sys:Double x:Key="MenuMinHeight">30</sys:Double>
-    <Thickness x:Key="MenuTopItemPadding">6,0,6,0</Thickness>
+    <Thickness x:Key="MenuTopItemPadding">6,2,6,2</Thickness>
     <Thickness x:Key="MenuTopItemMargin">1,0,1,0</Thickness>
     <Thickness x:Key="MenuSubContentPadding">2,0,2,0</Thickness>
     <sys:Double x:Key="MenuItemMinHeight">24</sys:Double>
