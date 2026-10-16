@@ -11,6 +11,9 @@
 
   <ItemGroup>
     <None Remove="Resources\KID.ico" />
+    <None Remove="Resources\Menu_Edit.ico" />
+    <None Remove="Resources\Menu_File.ico" />
+    <None Remove="Resources\Menu_View.ico" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,6 +39,9 @@
 
   <ItemGroup>
     <Resource Include="Resources\KID.ico" />
+    <Resource Include="Resources\Menu_Edit.ico" />
+    <Resource Include="Resources\Menu_File.ico" />
+    <Resource Include="Resources\Menu_View.ico" />
     <None Include="DefaultWindowConfiguration.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
