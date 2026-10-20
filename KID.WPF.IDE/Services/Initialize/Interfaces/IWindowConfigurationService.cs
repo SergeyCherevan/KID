@@ -22,6 +22,16 @@ namespace KID.Services.Initialize.Interfaces
         event EventHandler UILanguageSettingsChanged;
 
         /// <summary>
+        /// Событие при изменении видимости иконок меню.
+        /// </summary>
+        event EventHandler IconsVisibilityChanged;
+
+        /// <summary>
+        /// Меняет видимость иконок меню, уведомляет подписчиков и сохраняет настройки.
+        /// </summary>
+        Task SetIconsVisibilityAsync(bool isIconsVisible);
+
+        /// <summary>
         /// Устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков.
         /// Если fontFamilyName или fontSize равны null, сохраняет текущие значения из Settings.
         /// </summary>

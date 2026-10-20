@@ -53,6 +53,7 @@ public sealed class FileServiceTests
             var settings = await service.ReadJsonAsync<WindowConfigurationData>(path);
             Assert.NotNull(settings);
             Assert.Equal("ru-RU", settings.UILanguage);
+            Assert.True(settings.IsIconsVisible);
             Assert.Equal(new WindowConfigurationData().TemplateCode, settings.TemplateCode);
             Assert.Equal(14, settings.FontSize);
         });
@@ -97,9 +98,13 @@ public sealed class FileServiceTests
             await service.WriteJsonAsync(path, data);
             Assert.Equal(expected, await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
             data.FontSize = 22;
+            data.IsIconsVisible = false;
             expected = JsonSerializer.Serialize(data, expectedOptions);
             await service.WriteJsonAsync(path, data);
             Assert.Equal(expected, await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
+            var restored = await service.ReadJsonAsync<WindowConfigurationData>(path);
+            Assert.NotNull(restored);
+            Assert.False(restored.IsIconsVisible);
         });
     }
 

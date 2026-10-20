@@ -14,6 +14,61 @@ namespace KID.Tests.Themes;
 public sealed class ThemeSwitchingTests
 {
     [Fact]
+    public async Task HidingMenuIcons_RemovesTheirSpaceAndKeepsRunAndStopVisibleInEveryTheme()
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            foreach (var theme in new ThemeProviderService().GetAvailableThemes())
+            {
+                var host = new Border();
+                host.Resources.MergedDictionaries.Add(new ResourceDictionary
+                {
+                    Source = new Uri($"/KID.WPF.IDE;component/{theme.ResourcePath}", UriKind.Relative)
+                });
+                var menu = new Menu();
+                host.Child = menu;
+                var header = new MenuItem
+                {
+                    Header = "File",
+                    Icon = new Image { Width = 16, Height = 16 }
+                };
+                header.Items.Add(new MenuItem { Header = "New" });
+                menu.Items.Add(header);
+                foreach (var name in new[] { "Run", "Stop" })
+                    menu.Items.Add(new MenuItem
+                    {
+                        Header = name,
+                        Icon = new Image { Width = 16, Height = 16 }
+                    });
+
+                double visibleWidth = 0;
+                foreach (var isIconsVisible in new[] { true, false, true })
+                {
+                    host.DataContext = new { IsIconsVisible = isIconsVisible };
+                    await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+                    host.Measure(new Size(600, 200));
+                    host.Arrange(new Rect(0, 0, 600, 200));
+                    host.UpdateLayout();
+
+                    foreach (MenuItem item in menu.Items)
+                    {
+                        var icon = Assert.IsType<ContentPresenter>(item.Template.FindName("IconPresenter", item));
+                        Assert.Equal(item == header && !isIconsVisible
+                            ? Visibility.Collapsed : Visibility.Visible, icon.Visibility);
+                    }
+
+                    if (isIconsVisible && visibleWidth == 0)
+                        visibleWidth = header.ActualWidth;
+                    else
+                        Assert.Equal(isIconsVisible ? visibleWidth : visibleWidth - 22, header.ActualWidth, 3);
+
+                    new RenderTargetBitmap(600, 200, 96, 96, PixelFormats.Pbgra32).Render(host);
+                }
+            }
+        });
+    }
+
+    [Fact]
     public async Task ExistingControlsAndCapturedMenuStyle_UpdateAcrossBothGenerations()
     {
         // Не создаём Application: ресурсы принадлежат локальному host и не оставляют

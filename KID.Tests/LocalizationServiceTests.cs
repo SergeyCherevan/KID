@@ -95,6 +95,14 @@ public sealed class LocalizationServiceTests
         }
 
         public Task SetColorThemeAsync(string themeKey) => throw new NotSupportedException();
+
+        public event EventHandler? IconsVisibilityChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public Task SetIconsVisibilityAsync(bool isIconsVisible) => throw new NotSupportedException();
     }
 }
 

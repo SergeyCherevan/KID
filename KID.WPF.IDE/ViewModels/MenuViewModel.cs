@@ -67,6 +67,8 @@ namespace KID.ViewModels
         /// </summary>
         public double SelectedFontSize => windowConfigurationService?.Settings?.FontSize ?? 0.0;
 
+        public bool IsIconsVisible => windowConfigurationService.Settings.IsIconsVisible;
+
 
 
         public ICommand NewFileCommand { get; }
@@ -82,6 +84,7 @@ namespace KID.ViewModels
         public RelayCommand<ThemeDefinition> ChangeThemeCommand { get; }
         public ICommand ChangeFontCommand { get; }
         public ICommand ChangeFontSizeCommand { get; }
+        public ICommand ToggleIconsVisibilityCommand { get; }
 
 
 
@@ -156,6 +159,7 @@ namespace KID.ViewModels
             ChangeThemeCommand = new RelayCommand<ThemeDefinition>(ChangeTheme);
             ChangeFontCommand = new RelayCommand<string>(font => ChangeFont(font));
             ChangeFontSizeCommand = new RelayCommand<double>(fontSize => ChangeFontSize(fontSize));
+            ToggleIconsVisibilityCommand = new RelayCommand(ToggleIconsVisibility);
 
             codeExecutionService.StateChanged += CodeExecutionService_StateChanged;
             codeExecutionService.StopResponseDelayed += CodeExecutionService_StopResponseDelayed;
@@ -180,6 +184,9 @@ namespace KID.ViewModels
                 OnPropertyChanged(nameof(SelectedFontFamily));
                 OnPropertyChanged(nameof(SelectedFontSize));
             };
+
+            windowConfigurationService.IconsVisibilityChanged += (s, e) =>
+                OnPropertyChanged(nameof(IsIconsVisible));
 
             RefreshSelectedSettings();
         }
@@ -391,6 +398,13 @@ namespace KID.ViewModels
                 "Error_SettingsSaveFailed");
         }
 
+        private void ToggleIconsVisibility()
+        {
+            _ = asyncOperationErrorHandler.ExecuteAsync(
+                () => windowConfigurationService.SetIconsVisibilityAsync(!IsIconsVisible),
+                "Error_SettingsSaveFailed");
+        }
+
         private void ChangeFontSize(double fontSize)
         {
             if (fontSize <= 0 || windowConfigurationService?.Settings == null)
@@ -413,6 +427,7 @@ namespace KID.ViewModels
             OnPropertyChanged(nameof(SelectedLanguageKey));
             OnPropertyChanged(nameof(SelectedFontFamily));
             OnPropertyChanged(nameof(SelectedFontSize));
+            OnPropertyChanged(nameof(IsIconsVisible));
         }
 
         private void CodeEditorViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)

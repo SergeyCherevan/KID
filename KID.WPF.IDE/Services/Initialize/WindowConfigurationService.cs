@@ -33,6 +33,8 @@ namespace KID.Services.Initialize
         public event EventHandler? FontSettingsChanged;
         /// <inheritdoc />
         public event EventHandler? UILanguageSettingsChanged;
+        /// <inheritdoc />
+        public event EventHandler? IconsVisibilityChanged;
 
         public WindowConfigurationService(
             IFileService fileService,
@@ -70,6 +72,7 @@ namespace KID.Services.Initialize
                         _settingsPath);
                     Settings = new WindowConfigurationData();
                 }
+                IconsVisibilityChanged?.Invoke(this, EventArgs.Empty);
                 return;
             }
 
@@ -94,6 +97,7 @@ namespace KID.Services.Initialize
             }
 
             // Сохраняем настройки в AppData для следующего запуска.
+            IconsVisibilityChanged?.Invoke(this, EventArgs.Empty);
             await SaveSettingsAsync();
         }
 
@@ -274,6 +278,14 @@ namespace KID.Services.Initialize
         {
             internal TaskCompletionSource Completion { get; } =
                 new(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        /// <inheritdoc />
+        public async Task SetIconsVisibilityAsync(bool isIconsVisible)
+        {
+            Settings.IsIconsVisible = isIconsVisible;
+            IconsVisibilityChanged?.Invoke(this, EventArgs.Empty);
+            await SaveSettingsAsync();
         }
 
         /// <inheritdoc />

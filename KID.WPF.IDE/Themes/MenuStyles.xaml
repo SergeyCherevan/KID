@@ -61,6 +61,9 @@
         </Grid>
 
         <ControlTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsIconsVisible}" Value="False">
+                <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
             <Trigger Property="Icon" Value="{x:Null}">
                 <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed" />
             </Trigger>

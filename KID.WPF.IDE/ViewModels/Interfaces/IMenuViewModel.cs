@@ -15,6 +15,7 @@ namespace KID.ViewModels.Interfaces
         bool CanRequestStop { get; }
         bool CanUndo { get; }
         bool CanRedo { get; }
+        bool IsIconsVisible { get; }
         ObservableCollection<ThemeDefinition> AvailableThemes { get; }
 
         ICommand NewFileCommand { get; }
@@ -30,5 +31,6 @@ namespace KID.ViewModels.Interfaces
         RelayCommand<ThemeDefinition> ChangeThemeCommand { get; }
         ICommand ChangeFontCommand { get; }
         ICommand ChangeFontSizeCommand { get; }
+        ICommand ToggleIconsVisibilityCommand { get; }
     }
 }

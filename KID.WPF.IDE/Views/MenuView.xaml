@@ -145,6 +145,10 @@
                         </Style>
                     </MenuItem.ItemContainerStyle>
                 </MenuItem>
+                <MenuItem Header="{localization:Localization Menu_ShowIcons}"
+                          IsCheckable="True"
+                          IsChecked="{Binding IsIconsVisible, Mode=OneWay}"
+                          Command="{Binding ToggleIconsVisibilityCommand}" />
             </MenuItem>
             <MenuItem Header="{localization:Localization Menu_Run}" InputGestureText="Ctrl+F5" Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}">
                 <MenuItem.Icon>

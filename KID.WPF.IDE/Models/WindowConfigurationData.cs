@@ -11,6 +11,9 @@ namespace KID.Models
         // Язык интерфейса
         public string UILanguage { get; set; } = "ru-RU"; // ru-RU, en-US, uk-UA
 
+        // Иконки меню (кроме запуска и остановки)
+        public bool IsIconsVisible { get; set; } = true;
+
         // Настройки редактора кода
         public string ProgrammingLanguage { get; set; } = "C#";
         public string FontFamily { get; set; } = "Consolas";

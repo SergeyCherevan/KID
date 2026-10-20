@@ -14,7 +14,7 @@ public sealed class WindowConfigurationServiceTests
     [Fact]
     public async Task SetConfigurationFromFileAsync_UsesFileServiceForExistenceAndRead()
     {
-        var expectedSettings = new WindowConfigurationData { UILanguage = "en-US" };
+        var expectedSettings = new WindowConfigurationData { UILanguage = "en-US", IsIconsVisible = false };
         var fileService = new RecordingFileService
         {
             FileExistsImplementation = path => path.EndsWith("settings.json", StringComparison.Ordinal),
@@ -25,10 +25,13 @@ public sealed class WindowConfigurationServiceTests
             }
         };
         var service = new WindowConfigurationService(fileService);
+        bool? notifiedIconsVisibility = null;
+        service.IconsVisibilityChanged += (_, _) => notifiedIconsVisibility = service.Settings.IsIconsVisible;
 
         await service.SetConfigurationFromFileAsync();
 
         Assert.Same(expectedSettings, service.Settings);
+        Assert.Equal(false, notifiedIconsVisibility);
         var settingsPath = Assert.Single(fileService.CheckedPaths);
         Assert.Equal(settingsPath, fileService.ReadJsonPath);
     }

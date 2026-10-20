@@ -199,6 +199,9 @@
   <data name="Menu_Font" xml:space="preserve">
     <value>Font</value>
   </data>
+  <data name="Menu_ShowIcons" xml:space="preserve">
+    <value>Show icons</value>
+  </data>
   <data name="Menu_FontSize" xml:space="preserve">
     <value>Font Size</value>
   </data>

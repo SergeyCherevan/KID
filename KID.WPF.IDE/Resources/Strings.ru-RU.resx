@@ -199,6 +199,9 @@
   <data name="Menu_Font" xml:space="preserve">
     <value>Шрифт</value>
   </data>
+  <data name="Menu_ShowIcons" xml:space="preserve">
+    <value>Показывать иконки</value>
+  </data>
   <data name="Menu_FontSize" xml:space="preserve">
     <value>Размер шрифта</value>
   </data>
