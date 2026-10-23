@@ -1,6 +1,11 @@
 using KID.Models;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize;
+using KID.Services.Initialize.Interfaces;
+using KID.Services.Localization;
+using KID.Services.Localization.Interfaces;
+using KID.Tests.TestDoubles;
+using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System.Threading.Channels;
 using System.Text.Json;
@@ -14,7 +19,7 @@ public sealed class WindowConfigurationServiceTests
     [Fact]
     public async Task SetConfigurationFromFileAsync_UsesFileServiceForExistenceAndRead()
     {
-        var expectedSettings = new WindowConfigurationData { UILanguage = "en-US", IsIconsVisible = false };
+        var expectedSettings = new WindowConfigurationData { UILanguage = "en", IsIconsVisible = false };
         var fileService = new RecordingFileService
         {
             FileExistsImplementation = path => path.EndsWith("settings.json", StringComparison.Ordinal),
@@ -24,7 +29,7 @@ public sealed class WindowConfigurationServiceTests
                 return expectedSettings;
             }
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
         bool? notifiedIconsVisibility = null;
         service.IconsVisibilityChanged += (_, _) => notifiedIconsVisibility = service.Settings.IsIconsVisible;
 
@@ -39,7 +44,7 @@ public sealed class WindowConfigurationServiceTests
     [Fact]
     public async Task SetConfigurationFromFileAsync_WhenUserSettingsAreMissing_UsesDefaultConfigurationFromAppBaseDirectory()
     {
-        var expectedSettings = new WindowConfigurationData { UILanguage = "en-US" };
+        var expectedSettings = new WindowConfigurationData { UILanguage = "en" };
         var expectedDefaultPath = Path.Combine(
             AppContext.BaseDirectory,
             "DefaultWindowConfiguration.json");
@@ -53,7 +58,7 @@ public sealed class WindowConfigurationServiceTests
                 return expectedSettings;
             }
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
 
         await service.SetConfigurationFromFileAsync();
 
@@ -73,7 +78,7 @@ public sealed class WindowConfigurationServiceTests
                 TemplateName = "ProjectTemplates/ru-RU/HelloWorld.cs"
             }
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
 
         await service.SetConfigurationFromFileAsync();
 
@@ -90,7 +95,7 @@ public sealed class WindowConfigurationServiceTests
             FileExistsImplementation = path => path == templatePath,
             ReadFileResult = templateCode
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
         service.Settings.TemplateName = templatePath;
 
         await service.SetDefaultCodeAsync();
@@ -120,7 +125,7 @@ public sealed class WindowConfigurationServiceTests
                 templateExists = true;
             }
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
         service.Settings.TemplateName = "HelloWorld.cs";
 
         await service.SetDefaultCodeAsync();
@@ -144,7 +149,7 @@ public sealed class WindowConfigurationServiceTests
             FileExistsImplementation = path => path == expectedTemplatePath,
             ReadFileResult = existingTemplateCode
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
         service.Settings.TemplateName = "HelloWorld.cs";
 
         await service.SetDefaultCodeAsync();
@@ -163,7 +168,7 @@ public sealed class WindowConfigurationServiceTests
             FileExistsImplementation = _ => false,
             WriteFileImplementation = (_, _) => throw new IOException("template write failed")
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
         service.Settings.TemplateName = "HelloWorld.cs";
 
         await service.SetDefaultCodeAsync();
@@ -175,7 +180,7 @@ public sealed class WindowConfigurationServiceTests
     public async Task SaveSettingsAsync_QueuesConcurrentWritesAndPersistsLatestState()
     {
         var fileService = new BlockingWriteFileService();
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
 
         var fontChange = service.SetFontAsync("Fira Code", null);
         await fileService.FirstWriteStarted.Task.WaitAsync(
@@ -209,7 +214,7 @@ public sealed class WindowConfigurationServiceTests
     [Fact]
     public async Task SaveSettingsAsync_PropagatesWriteFailureInsteadOfReportingSuccess()
     {
-        var service = new WindowConfigurationService(new FailingWriteFileService());
+        var service = new WindowConfigurationService(new FailingWriteFileService(), new StubLocalizationService());
 
         await Assert.ThrowsAsync<IOException>(() => service.SaveSettingsAsync());
     }
@@ -228,7 +233,7 @@ public sealed class WindowConfigurationServiceTests
             ReadJsonImplementation = (_, _) => settings
         };
         var logger = new RecordingLogger();
-        var service = new WindowConfigurationService(fileService, logger);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService(), logger);
 
         await service.SetConfigurationFromFileAsync();
 
@@ -252,12 +257,12 @@ public sealed class WindowConfigurationServiceTests
                 FontSize = 22
             }
         };
-        var service = new WindowConfigurationService(fileService);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
 
         await service.SetConfigurationFromFileAsync();
 
         Assert.Equal("Consolas", service.Settings.FontFamily);
-        Assert.Equal("ru-RU", service.Settings.UILanguage);
+        Assert.Equal("ru", service.Settings.UILanguage);
         Assert.Equal(22, service.Settings.FontSize);
     }
 
@@ -274,7 +279,7 @@ public sealed class WindowConfigurationServiceTests
                 ? new WindowConfigurationData { FontFamily = null! }
                 : throw new JsonException("Invalid settings JSON")
         };
-        var service = new WindowConfigurationService(fileService, logger);
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService(), logger);
 
         await service.SetConfigurationFromFileAsync();
 
@@ -286,6 +291,184 @@ public sealed class WindowConfigurationServiceTests
         await service.SaveSettingsAsync();
 
         Assert.Single(fileService.WrittenJsonPaths);
+    }
+
+    [Theory]
+    [InlineData("en-US", "en")]
+    [InlineData("ru-RU", "ru")]
+    [InlineData("uk-UA", "uk")]
+    [InlineData("en-GB", "en")]
+    [InlineData("ru-BY", "ru")]
+    [InlineData("RU", "ru")]
+    public async Task Load_MigratesLegacyLanguageAndPersistsOnlyOnce(string input, string expected)
+    {
+        var settings = new WindowConfigurationData { UILanguage = input, FontSize = 22, FontFamily = "Fira Code" };
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => true,
+            ReadJsonImplementation = (_, _) => settings
+        };
+        var logger = new RecordingLogger();
+        using var provider = new ServiceCollection()
+            .AddSingleton<ILocalizationService, LocalizationService>()
+            .AddSingleton<IFileService>(fileService)
+            .AddSingleton<IWindowConfigurationService>(services => new WindowConfigurationService(
+                services.GetRequiredService<IFileService>(), services.GetRequiredService<ILocalizationService>(), logger))
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+        var service = provider.GetRequiredService<IWindowConfigurationService>();
+        var events = 0;
+        service.UILanguageSettingsChanged += (_, _) => events++;
+
+        await service.SetConfigurationFromFileAsync();
+        await provider.GetRequiredService<ILocalizationService>().SetCultureAsync(input);
+        await service.SetConfigurationFromFileAsync();
+
+        Assert.Equal(expected, service.Settings.UILanguage);
+        Assert.Equal([expected], fileService.WrittenLanguages);
+        Assert.Equal(22, service.Settings.FontSize);
+        Assert.Equal("Fira Code", service.Settings.FontFamily);
+        Assert.Equal(1, events);
+        Assert.Empty(logger.Events);
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("not/a/culture")]
+    [InlineData("")]
+    public async Task Load_UnsupportedLanguageUsesAvailableDefault(string input)
+    {
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => true,
+            ReadJsonImplementation = (_, _) => new WindowConfigurationData { UILanguage = input }
+        };
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
+        await service.SetConfigurationFromFileAsync();
+        Assert.Equal("ru", service.Settings.UILanguage);
+        Assert.Equal(["ru"], fileService.WrittenLanguages);
+    }
+
+    [Fact]
+    public async Task Load_EmergencyCatalogUsesEnglishDefault()
+    {
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => false
+        };
+        var service = new WindowConfigurationService(fileService,
+            new StubLocalizationService { SupportedCultures = ["en"] });
+        await service.SetConfigurationFromFileAsync();
+        Assert.Equal("en", service.Settings.UILanguage);
+        Assert.Equal(["en"], fileService.WrittenLanguages);
+    }
+
+    [Fact]
+    public async Task LanguageSaveFailure_CanBeRetriedWithoutAnotherLanguageChange()
+    {
+        var failWrite = true;
+        var fileService = new RecordingFileService
+        {
+            WriteJsonImplementation = () => { if (failWrite) throw new IOException("settings write failed"); }
+        };
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
+        var events = 0;
+        service.UILanguageSettingsChanged += (_, _) => events++;
+
+        await Assert.ThrowsAsync<IOException>(() => service.SetUILanguageAsync("uk-UA"));
+        Assert.Equal("uk", service.Settings.UILanguage);
+        Assert.Equal(0, events);
+        failWrite = false;
+        await service.SetUILanguageAsync("uk-UA");
+        await service.SetUILanguageAsync("uk");
+
+        Assert.Equal(["uk", "uk"], fileService.WrittenLanguages);
+        Assert.Equal(1, events);
+    }
+
+    [Fact]
+    public async Task MigrationWriteFailure_PropagatesAndPreservesLoadedSettings()
+    {
+        var failWrite = true;
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => true,
+            ReadJsonImplementation = (_, _) => new WindowConfigurationData { UILanguage = "ru-RU", FontSize = 22 },
+            WriteJsonImplementation = () => { if (failWrite) throw new IOException("migration write failed"); }
+        };
+        var logger = new RecordingLogger();
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService(), logger);
+
+        await Assert.ThrowsAsync<IOException>(() => service.SetConfigurationFromFileAsync());
+        Assert.Equal("ru", service.Settings.UILanguage);
+        Assert.Equal(22, service.Settings.FontSize);
+        Assert.DoesNotContain(DiagnosticEventIds.SettingsFallback, logger.Events);
+        failWrite = false;
+        await service.SetUILanguageAsync("ru");
+        Assert.Equal(2, fileService.WrittenLanguages.Count);
+    }
+
+    [Fact]
+    public async Task ConcurrentLanguageChanges_OlderSaveDoesNotCompleteNewerChange()
+    {
+        var fileService = new BlockingWriteFileService();
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
+        var events = 0;
+        service.UILanguageSettingsChanged += (_, _) => events++;
+        var first = service.SetUILanguageAsync("en-US");
+        await fileService.FirstWriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var second = service.SetUILanguageAsync("uk-UA");
+        fileService.ReleaseFirstWrite();
+        await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.Equal(["en", "uk"], fileService.WrittenSettings.Select(settings => settings.UILanguage));
+        Assert.Equal(1, events);
+        Assert.Equal(1, fileService.MaximumConcurrentWrites);
+        await service.SetUILanguageAsync("uk");
+        Assert.Equal(2, fileService.WriteCount);
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("not/a/culture")]
+    public async Task SetUILanguageAsync_UnsupportedInputHasNoSideEffects(string input)
+    {
+        var fileService = new RecordingFileService();
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
+        var events = 0;
+        service.UILanguageSettingsChanged += (_, _) => events++;
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SetUILanguageAsync(input));
+
+        Assert.Equal("ru", service.Settings.UILanguage);
+        Assert.Empty(fileService.WrittenJsonPaths);
+        Assert.Equal(0, events);
+    }
+
+    [Fact]
+    public async Task OlderSuccessfulWrite_DoesNotHideNewerFailedLanguageSave()
+    {
+        var fileService = new BlockingWriteFileService { FailWriteNumber = 2 };
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService());
+        var events = 0;
+        service.UILanguageSettingsChanged += (_, _) => events++;
+        var first = service.SetUILanguageAsync("en");
+        await fileService.FirstWriteStarted.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var second = service.SetUILanguageAsync("uk");
+        fileService.ReleaseFirstWrite();
+        await first.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        try
+        {
+            await second;
+            Assert.Fail("The second write must fail.");
+        }
+        catch (IOException) { }
+        Assert.Equal(0, events);
+
+        await service.SetUILanguageAsync("uk");
+
+        Assert.Equal(3, fileService.WriteCount);
+        Assert.Equal(1, events);
+        Assert.Equal("uk", service.Settings.UILanguage);
     }
 
     private sealed class RecordingLogger : ILogger<WindowConfigurationService>
@@ -304,12 +487,14 @@ public sealed class WindowConfigurationServiceTests
             (_, _) => null;
         internal Func<string, string>? ReadFileImplementation { get; init; }
         internal Action<string, string>? WriteFileImplementation { get; init; }
+        internal Action? WriteJsonImplementation { get; init; }
         internal string ReadFileResult { get; init; } = string.Empty;
 
         internal List<string> CheckedPaths { get; } = [];
         internal List<string> WrittenFilePaths { get; } = [];
         internal List<string> WrittenFileContents { get; } = [];
         internal List<string> WrittenJsonPaths { get; } = [];
+        internal List<string> WrittenLanguages { get; } = [];
         internal string? ReadFilePath { get; private set; }
         internal string? ReadJsonPath { get; private set; }
 
@@ -342,12 +527,16 @@ public sealed class WindowConfigurationServiceTests
         public Task WriteJsonAsync<T>(string filePath, T data)
         {
             WrittenJsonPaths.Add(filePath);
+            if (data is WindowConfigurationData settings)
+                WrittenLanguages.Add(settings.UILanguage);
+            WriteJsonImplementation?.Invoke();
             return Task.CompletedTask;
         }
     }
 
     private sealed class BlockingWriteFileService : IFileService
     {
+        internal int FailWriteNumber { get; init; }
         private readonly object sync = new();
         private readonly Channel<bool> firstWriteReleaseQueue =
             Channel.CreateBounded<bool>(1);
@@ -426,6 +615,8 @@ public sealed class WindowConfigurationServiceTests
                     FirstWriteStarted.TrySetResult();
                     await firstWriteReleaseQueue.Reader.ReadAsync();
                 }
+                if (currentWrite == FailWriteNumber)
+                    throw new IOException("queued write failed");
             }
             finally
             {

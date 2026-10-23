@@ -37,7 +37,7 @@ public sealed class AsyncOperationErrorHandlerTests
 
     private sealed class TestLocalizationService : ILocalizationService
     {
-        public string CurrentCulture => "en-US";
+        public string CurrentCulture => "en";
         public event EventHandler? CultureChanged
         {
             add { }

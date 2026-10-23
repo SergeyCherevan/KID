@@ -176,20 +176,20 @@ private static SoundNote[] Snapshot(
 
 ### Добавление нового языка
 
-1. Создайте файл `Resources/Strings.XX-XX.resx` (например, `Strings.de-DE.resx`)
+1. Создайте файл `Resources/Strings.xx.resx` (например, `Strings.de.resx`)
 2. Скопируйте структуру из существующего файла и задайте собственные
-   `Metadata_CultureCode` (например, `de-DE`) и `Metadata_EnglishName`.
+   `Metadata_CultureCode` (например, `de`) и `Metadata_EnglishName`.
 3. Переведите все строки, включая названия всех доступных языков.
 4. Добавьте объект в массив `KID.WPF.IDE/Resources/AvailableLanguages.json`:
 
 ```json
 {
-  "cultureCode": "de-DE",
+  "cultureCode": "de",
   "displayNameKey": "Language_German"
 }
 ```
 
-5. Добавьте непустую подпись `Language_German` **во все** `Strings.*.resx`,
+5. Добавьте непустую подпись `Language_German` **во все** `Strings*.resx`,
    включая новый перевод. Регистр ключа должен точно совпадать с JSON:
 
 ```xml
@@ -215,8 +215,25 @@ dotnet KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.
 При первом обращении сервис проверяет весь каталог: уникальность культур и
 ключей, собственный `Strings` каждой культуры, `Metadata_CultureCode` и все
 подписи языков в каждом переводе. При любой ошибке он один раз записывает
-`LocalizationFallback` и публикует только `en-US / Language_English`.
-Текущая культура и сохранённая настройка при этом не меняются.
+`LocalizationFallback` и публикует только `en / Language_English`.
+Конструктор разрешает исходную UI-культуру по каталогу; при отсутствии
+поддерживаемого языка выбирает `en`. При загрузке настроек недоступный язык
+заменяется на default `ru`, а при аварийном каталоге — на доступный `en`.
+
+Английские строки находятся в базовом `Strings.resx` основной сборки;
+`[assembly: NeutralResourcesLanguage("en")]` задаёт общий английский резерв.
+Русский и украинский находятся в `Strings.ru.resx` и `Strings.uk.resx`.
+Все три файла содержат собственный `Metadata_CultureCode` (`en`, `ru`, `uk`).
+
+Старые региональные настройки (`ru-RU`, `uk-UA`, `en-US`) и другие региональные
+варианты поддерживаемых языков разрешаются через цепочку `CultureInfo.Parent`
+и однократно сохраняются как языковые коды. Ключи меню остаются прежними.
+Ошибка записи миграции распространяется отдельно от ошибки чтения; повторный
+выбор того же языка позволяет повторить неудачное сохранение.
+`SetCultureAsync` отклоняет непустую неподдерживаемую культуру до изменения UI.
+Для форматирования используется связанная региональная культура через
+`CultureInfo.CreateSpecificCulture`; существующее ограничение ambient-культур
+в async-коде остаётся отдельным пунктом LOC-02.
 
 ### Добавление новой темы
 
@@ -234,7 +251,7 @@ dotnet KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.
 ```
 
 3. Добавьте `Theme_MyTheme` с отображаемым названием в три локализации
-   `Strings.en-US.resx`, `Strings.ru-RU.resx`, `Strings.uk-UA.resx`.
+   `Strings.resx`, `Strings.ru.resx`, `Strings.uk.resx`.
 4. `ThemeProviderService` прочитает каталог; меню строится автоматически.
    Изменять `ThemeService.ApplyTheme`, DI или ViewModel для новой записи не нужно.
    SDK автоматически включает новый XAML; явный `Page Include` не требуется.
@@ -427,7 +444,7 @@ public async Task DoSomethingAsync()
 - При закрытии не полагайтесь на таймеры: остановите их и дождитесь принудительного `IEditorSessionService.SaveAsync()`.
 - `Discard` при закрытии приложения должен вернуть вкладку к `SavedContent` до финального снимка; иначе отвергнутый текст восстановится при следующем запуске.
 
-Если меняется схема `EditorSessionData`, увеличьте `CurrentVersion` и добавьте явную миграцию либо документированный отказ от старой версии. Новые локализованные сообщения добавляйте одновременно в `Strings.ru-RU.resx`, `Strings.en-US.resx` и `Strings.uk-UA.resx`.
+Если меняется схема `EditorSessionData`, увеличьте `CurrentVersion` и добавьте явную миграцию либо документированный отказ от старой версии. Новые локализованные сообщения добавляйте одновременно в `Strings.ru.resx`, `Strings.resx` и `Strings.uk.resx`.
 
 ### Файловое хранилище и настройки
 

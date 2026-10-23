@@ -12,8 +12,8 @@ public sealed class LanguageCatalogTests
 {
     private const string ValidJson = """
         [
-          {"cultureCode":"en-US","displayNameKey":"Language_English"},
-          {"cultureCode":"ru-RU","displayNameKey":"Language_Russian"}
+          {"cultureCode":"en","displayNameKey":"Language_English"},
+          {"cultureCode":"ru","displayNameKey":"Language_Russian"}
         ]
         """;
 
@@ -38,23 +38,23 @@ public sealed class LanguageCatalogTests
         Assert.Equal(1, reads);
         Assert.Empty(logger.Entries);
         Assert.False(catalog.IsFallback);
-        Assert.Equal(["en-US", "ru-RU"], catalog.Languages.Select(language => language.CultureCode));
+        Assert.Equal(["en", "ru"], catalog.Languages.Select(language => language.CultureCode));
         Assert.Equal(["Language_English", "Language_Russian"], catalog.LanguageKeys);
-        Assert.Equal("ru-RU", catalog.KeyToCulture["language_russian"]);
-        Assert.Equal("Language_Russian", catalog.CultureToKey["RU-ru"]);
+        Assert.Equal("ru", catalog.KeyToCulture["language_russian"]);
+        Assert.Equal("Language_Russian", catalog.CultureToKey["RU"]);
         AssertConsistent(catalog);
 
         var keys = (IList<string>)catalog.LanguageKeys;
         Assert.Throws<NotSupportedException>(() => keys[0] = "corrupted");
         Assert.Throws<NotSupportedException>(() => ((IList<LanguageDefinition>)catalog.Languages).Clear());
         Assert.Throws<NotSupportedException>(() =>
-            ((IDictionary<string, string>)catalog.KeyToCulture)["Language_English"] = "ru-RU");
+            ((IDictionary<string, string>)catalog.KeyToCulture)["Language_English"] = "ru");
         Assert.Throws<NotSupportedException>(() =>
             ((IDictionary<string, string>)catalog.CultureToKey).Clear());
         AssertConsistent(lazy.Value);
 
         // The loader must leave shared ResourceManager-owned sets usable.
-        Assert.Equal("English", resources.Get(CultureInfo.GetCultureInfo("en-US"))!
+        Assert.Equal("English", resources.Get(CultureInfo.GetCultureInfo("en"))!
             .GetString("Language_English"));
     }
 
@@ -66,19 +66,19 @@ public sealed class LanguageCatalogTests
     [InlineData("[null]")]
     [InlineData("[1]")]
     [InlineData("[{}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\"}]")]
+    [InlineData("[{\"cultureCode\":\"en\"}]")]
     [InlineData("[{\"displayNameKey\":\"Language_English\"}]")]
     [InlineData("[{\"cultureCode\":null,\"displayNameKey\":\"Language_English\"}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\",\"displayNameKey\":null}]")]
+    [InlineData("[{\"cultureCode\":\"en\",\"displayNameKey\":null}]")]
     [InlineData("[{\"cultureCode\":7,\"displayNameKey\":\"Language_English\"}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\",\"displayNameKey\":false}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\",\"displayNameKeey\":\"Language_English\"}]")]
-    [InlineData("[{\"CultureCode\":\"en-US\",\"displayNameKey\":\"Language_English\"}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\",\"displayNameKey\":\"Language_English\",\"extra\":1}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\",\"cultureCode\":\"ru-RU\",\"displayNameKey\":\"Language_English\"}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\",\"displayNameKey\":\"Language_English\",}]")]
-    [InlineData("[/* comment */{\"cultureCode\":\"en-US\",\"displayNameKey\":\"Language_English\"}]")]
-    [InlineData("[{\"cultureCode\":\"en-US\",\"displayNameKey\":\"Language_English\"},]")]
+    [InlineData("[{\"cultureCode\":\"en\",\"displayNameKey\":false}]")]
+    [InlineData("[{\"cultureCode\":\"en\",\"displayNameKeey\":\"Language_English\"}]")]
+    [InlineData("[{\"CultureCode\":\"en\",\"displayNameKey\":\"Language_English\"}]")]
+    [InlineData("[{\"cultureCode\":\"en\",\"displayNameKey\":\"Language_English\",\"extra\":1}]")]
+    [InlineData("[{\"cultureCode\":\"en\",\"cultureCode\":\"ru\",\"displayNameKey\":\"Language_English\"}]")]
+    [InlineData("[{\"cultureCode\":\"en\",\"displayNameKey\":\"Language_English\",}]")]
+    [InlineData("[/* comment */{\"cultureCode\":\"en\",\"displayNameKey\":\"Language_English\"}]")]
+    [InlineData("[{\"cultureCode\":\"en\",\"displayNameKey\":\"Language_English\"},]")]
     public void CreateLazy_InvalidJsonRejectsWholeCatalog(string json)
     {
         using var resources = new CatalogTestResources();
@@ -91,13 +91,13 @@ public sealed class LanguageCatalogTests
     [Theory]
     [InlineData("", "Language_English", "cultureCode")]
     [InlineData(" ", "Language_English", "cultureCode")]
-    [InlineData(" en-US", "Language_English", "cultureCode")]
-    [InlineData("en-US ", "Language_English", "cultureCode")]
+    [InlineData(" en", "Language_English", "cultureCode")]
+    [InlineData("en ", "Language_English", "cultureCode")]
     [InlineData("invalid/culture", "Language_English", "cultureCode")]
-    [InlineData("en-US", "", "displayNameKey")]
-    [InlineData("en-US", " ", "displayNameKey")]
-    [InlineData("en-US", " Language_English", "displayNameKey")]
-    [InlineData("en-US", "Language_English ", "displayNameKey")]
+    [InlineData("en", "", "displayNameKey")]
+    [InlineData("en", " ", "displayNameKey")]
+    [InlineData("en", " Language_English", "displayNameKey")]
+    [InlineData("en", "Language_English ", "displayNameKey")]
     public void CreateLazy_InvalidValueReportsIndexFieldAndValue(string culture, string key, string field)
     {
         using var resources = new CatalogTestResources();
@@ -111,17 +111,17 @@ public sealed class LanguageCatalogTests
     }
 
     [Theory]
-    [InlineData("en-US", "Other_Key", "cultureCode")]
-    [InlineData("EN-us", "Other_Key", "cultureCode")]
-    [InlineData("ru-RU", "Language_English", "displayNameKey")]
-    [InlineData("ru-RU", "language_english", "displayNameKey")]
+    [InlineData("en", "Other_Key", "cultureCode")]
+    [InlineData("EN", "Other_Key", "cultureCode")]
+    [InlineData("ru", "Language_English", "displayNameKey")]
+    [InlineData("ru", "language_english", "displayNameKey")]
     public void CreateLazy_DuplicateAfterValidEntryDiscardsPartialResult(string culture, string key, string field)
     {
         using var resources = new CatalogTestResources();
         var logger = new CatalogTestLogger();
         var json = $$"""
             [
-              {"cultureCode":"en-US","displayNameKey":"Language_English"},
+              {"cultureCode":"en","displayNameKey":"Language_English"},
               {"cultureCode":"{{culture}}","displayNameKey":"{{key}}"}
             ]
             """;
@@ -136,12 +136,12 @@ public sealed class LanguageCatalogTests
     public void CreateLazy_NormalizesCultureBeforeStoringIt()
     {
         using var resources = new CatalogTestResources();
-        var json = """[{"cultureCode":"EN-us","displayNameKey":"Language_English"}]""";
+        var json = """[{"cultureCode":"EN","displayNameKey":"Language_English"}]""";
         var catalog = LanguageCatalog.CreateLazy(() => JsonStream(json), resources.Get).Value;
 
         Assert.False(catalog.IsFallback);
-        Assert.Equal("en-US", Assert.Single(catalog.Languages).CultureCode);
-        Assert.Equal("en-US", catalog.KeyToCulture["Language_English"]);
+        Assert.Equal("en", Assert.Single(catalog.Languages).CultureCode);
+        Assert.Equal("en", catalog.KeyToCulture["Language_English"]);
     }
 
     [Fact]
@@ -150,22 +150,22 @@ public sealed class LanguageCatalogTests
         using var resources = new CatalogTestResources();
         var logger = new CatalogTestLogger();
         var lazy = LanguageCatalog.CreateLazy(() => JsonStream(ValidJson),
-            culture => culture.Name == "ru-RU" ? null : resources.Get(culture), logger);
+            culture => culture.Name == "ru" ? null : resources.Get(culture), logger);
 
         AssertFallback(lazy.Value, logger);
-        Assert.Contains("Entry[1].cultureCode='ru-RU'", Assert.Single(logger.Entries).Message);
+        Assert.Contains("Entry[1].cultureCode='ru'", Assert.Single(logger.Entries).Message);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    [InlineData("en-US")]
-    [InlineData("ru")]
-    [InlineData(" ru-RU ")]
+    [InlineData("en")]
+    [InlineData("ru-RU")]
+    [InlineData(" ru ")]
     public void CreateLazy_MissingOrMismatchedMetadataRejectsCatalog(string? metadata)
     {
         using var resources = new CatalogTestResources();
-        resources.Set("ru-RU", "Metadata_CultureCode", metadata);
+        resources.Set("ru", "Metadata_CultureCode", metadata);
         var logger = new CatalogTestLogger();
 
         AssertFallback(LanguageCatalog.CreateLazy(() => JsonStream(ValidJson), resources.Get, logger).Value, logger);
@@ -177,11 +177,11 @@ public sealed class LanguageCatalogTests
     {
         using var resources = new CatalogTestResources();
         var logger = new CatalogTestLogger();
-        var english = resources.Get(CultureInfo.GetCultureInfo("en-US"));
+        var english = resources.Get(CultureInfo.GetCultureInfo("en"));
         var lazy = LanguageCatalog.CreateLazy(() => JsonStream(ValidJson), _ => english, logger);
 
         AssertFallback(lazy.Value, logger);
-        Assert.Contains("Entry[1].cultureCode='ru-RU'", Assert.Single(logger.Entries).Message);
+        Assert.Contains("Entry[1].cultureCode='ru'", Assert.Single(logger.Entries).Message);
     }
 
     [Theory]
@@ -192,13 +192,13 @@ public sealed class LanguageCatalogTests
     public void CreateLazy_EnglishFallbackDoesNotSupplyMissingOwnDisplayName(object? value)
     {
         using var resources = new CatalogTestResources();
-        resources.Set("ru-RU", "Language_English", value);
+        resources.Set("ru", "Language_English", value);
         var logger = new CatalogTestLogger();
 
         AssertFallback(LanguageCatalog.CreateLazy(() => JsonStream(ValidJson), resources.Get, logger).Value, logger);
         Assert.Contains("Entry[0].displayNameKey='Language_English'", Assert.Single(logger.Entries).Message);
-        Assert.Contains("'ru-RU'", Assert.Single(logger.Entries).Message);
-        Assert.Equal("English", resources.Get(CultureInfo.GetCultureInfo("en-US"))!
+        Assert.Contains("'ru'", Assert.Single(logger.Entries).Message);
+        Assert.Equal("English", resources.Get(CultureInfo.GetCultureInfo("en"))!
             .GetString("Language_English"));
     }
 
@@ -207,7 +207,7 @@ public sealed class LanguageCatalogTests
     {
         using var resources = new CatalogTestResources();
         var logger = new CatalogTestLogger();
-        var json = """[{"cultureCode":"en-US","displayNameKey":"language_english"}]""";
+        var json = """[{"cultureCode":"en","displayNameKey":"language_english"}]""";
 
         AssertFallback(LanguageCatalog.CreateLazy(() => JsonStream(json), resources.Get, logger).Value, logger);
         Assert.Contains("language_english", Assert.Single(logger.Entries).Message);
@@ -271,12 +271,32 @@ public sealed class LanguageCatalogTests
         Assert.Empty(logger.Entries);
     }
 
+    [Theory]
+    [InlineData("en", "en")]
+    [InlineData("EN-us", "en")]
+    [InlineData("en-GB", "en")]
+    [InlineData("en-Latn-US", "en")]
+    [InlineData("ru-RU", "ru")]
+    [InlineData("ru-BY", "ru")]
+    [InlineData(null, null)]
+    [InlineData("", null)]
+    [InlineData(" ", null)]
+    [InlineData("de-DE", null)]
+    [InlineData("not/a/culture", null)]
+    public void ResolveCultureCode_UsesCatalogAndParentChain(string? input, string? expected)
+    {
+        using var resources = new CatalogTestResources();
+        var catalog = LanguageCatalog.CreateLazy(() => JsonStream(ValidJson), resources.Get).Value;
+
+        Assert.Equal(expected, catalog.ResolveCultureCode(input));
+    }
+
     private static MemoryStream JsonStream(string json) => new(Encoding.UTF8.GetBytes(json));
 
     private static void AssertFallback(LanguageCatalog catalog, CatalogTestLogger logger)
     {
         Assert.True(catalog.IsFallback);
-        Assert.Equal(new LanguageDefinition("en-US", "Language_English"), Assert.Single(catalog.Languages));
+        Assert.Equal(new LanguageDefinition("en", "Language_English"), Assert.Single(catalog.Languages));
         Assert.Equal("Language_English", Assert.Single(catalog.LanguageKeys));
         AssertConsistent(catalog);
         var warning = Assert.Single(logger.Entries);
@@ -315,7 +335,7 @@ internal sealed class CatalogTestResources : IDisposable
 
     internal CatalogTestResources()
     {
-        foreach (var culture in new[] { "en-US", "ru-RU", "uk-UA" })
+        foreach (var culture in new[] { "en", "ru", "uk" })
         {
             values.Add(culture, new Dictionary<string, object>(StringComparer.Ordinal)
             {

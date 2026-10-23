@@ -15,6 +15,7 @@ internal sealed record LanguageDefinition(string CultureCode, string DisplayName
 internal sealed class LanguageCatalog
 {
     internal const string ResourceName = "KID.Resources.AvailableLanguages.json";
+    internal const string FallbackCultureCode = "en";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -45,6 +46,31 @@ internal sealed class LanguageCatalog
     internal FrozenDictionary<string, string> KeyToCulture { get; }
     internal FrozenDictionary<string, string> CultureToKey { get; }
     internal bool IsFallback { get; }
+
+    internal string? ResolveCultureCode(string? cultureCode)
+    {
+        if (string.IsNullOrWhiteSpace(cultureCode))
+            return null;
+
+        CultureInfo culture;
+        try
+        {
+            culture = CultureInfo.GetCultureInfo(cultureCode);
+        }
+        catch (CultureNotFoundException)
+        {
+            return null;
+        }
+
+        while (!culture.Equals(CultureInfo.InvariantCulture))
+        {
+            if (CultureToKey.TryGetValue(culture.Name, out var languageKey))
+                return KeyToCulture[languageKey];
+            culture = culture.Parent;
+        }
+
+        return null;
+    }
 
     internal static Lazy<LanguageCatalog> CreateLazy(
         Func<Stream?> openStream,
@@ -151,7 +177,7 @@ internal sealed class LanguageCatalog
                 exception.Message);
 
             return new LanguageCatalog(
-                [new LanguageDefinition("en-US", "Language_English")],
+                [new LanguageDefinition(FallbackCultureCode, "Language_English")],
                 isFallback: true);
         }
     }

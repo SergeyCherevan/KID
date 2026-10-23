@@ -59,184 +59,184 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Metadata_EnglishName" xml:space="preserve">
-    <value>English</value>
-  </data>
-  <data name="Metadata_CultureCode" xml:space="preserve">
-    <value>en-US</value>
-  </data>
-  <data name="Menu_File" xml:space="preserve">
-    <value>File</value>
-  </data>
-  <data name="Menu_Edit" xml:space="preserve">
-    <value>Edit</value>
-  </data>
-  <data name="Menu_View" xml:space="preserve">
-    <value>View</value>
-  </data>
-  <data name="Menu_Theme" xml:space="preserve">
-    <value>Theme</value>
-  </data>
-  <data name="Menu_New" xml:space="preserve">
-    <value>New</value>
-  </data>
-  <data name="Menu_Open" xml:space="preserve">
-    <value>Open</value>
-  </data>
-  <data name="Menu_Save" xml:space="preserve">
-    <value>Save</value>
-  </data>
-  <data name="Menu_SaveAs" xml:space="preserve">
-    <value>Save As</value>
-  </data>
-  <data name="Menu_Undo" xml:space="preserve">
-    <value>Undo</value>
-  </data>
-  <data name="Menu_Redo" xml:space="preserve">
-    <value>Redo</value>
-  </data>
-  <data name="Menu_Run" xml:space="preserve">
-    <value>Run</value>
-  </data>
-  <data name="Menu_Stop" xml:space="preserve">
-    <value>Stop</value>
-  </data>
-  <data name="Window_Title" xml:space="preserve">
-    <value>.KID - C#/.NET IDE for Kids</value>
-  </data>
-  <data name="Console_Output" xml:space="preserve">
-    <value>Console output...</value>
-  </data>
-  <data name="Error_Compilation" xml:space="preserve">
-    <value>Error on line {0}: {1}</value>
-  </data>
-  <data name="Error_Execution" xml:space="preserve">
-    <value>Execution error: {0}</value>
-  </data>
-  <data name="Error_StackTrace" xml:space="preserve">
-    <value>Stack: {0}</value>
-  </data>
-  <data name="Notification_ProgramStopped" xml:space="preserve">
-    <value>Program stopped</value>
-  </data>
-  <data name="Notification_ProgramFinished" xml:space="preserve">
-    <value>Program finished execution</value>
-  </data>
-  <data name="ExecutionStatus_Ready" xml:space="preserve">
-    <value>Ready</value>
-  </data>
-  <data name="ExecutionStatus_Compiling" xml:space="preserve">
-    <value>Compiling…</value>
-  </data>
-  <data name="ExecutionStatus_Running" xml:space="preserve">
-    <value>Running…</value>
-  </data>
-  <data name="ExecutionStatus_Stopping" xml:space="preserve">
-    <value>Stopping…</value>
-  </data>
-  <data name="ExecutionStatus_CleaningUp" xml:space="preserve">
-    <value>Cleaning up…</value>
-  </data>
-  <data name="Notification_StopResponseDelayed" xml:space="preserve">
-    <value>The program has not responded to the stop request yet. Waiting continues; forced termination is unavailable for in-process execution.</value>
-  </data>
-  <data name="Error_StopFailed" xml:space="preserve">
-    <value>Failed to request program stop: {0}</value>
-  </data>
-  <data name="FileFilter_CSharp" xml:space="preserve">
-    <value>C# Files (*.cs)|*.cs|All Files (*.*)|*.*</value>
-  </data>
-  <data name="Error_ConfigLoadFailed" xml:space="preserve">
-    <value>Failed to load configuration file. Default settings will be used.</value>
-  </data>
-  <data name="Error_TemplateLoadFailed" xml:space="preserve">
-    <value>Failed to load template code file. Built-in template will be used.</value>
-  </data>
-  <data name="Error_Title" xml:space="preserve">
-    <value>Error</value>
-  </data>
-  <data name="Error_FilePathEmpty" xml:space="preserve">
-    <value>File path cannot be empty</value>
-  </data>
-  <data name="Error_FileOpenFailed" xml:space="preserve">
-    <value>Failed to open file: {0}</value>
-  </data>
-  <data name="Error_FileSaveFailed" xml:space="preserve">
-    <value>Failed to save file: {0}</value>
-  </data>
-  <data name="Error_SettingsSaveFailed" xml:space="preserve">
-    <value>Failed to save settings: {0}</value>
-  </data>
-  <data name="Error_ThemeLoadFailed" xml:space="preserve">
-    <value>Failed to load the selected theme: {0}</value>
-  </data>
-  <data name="Error_RunFailed" xml:space="preserve">
-    <value>Execution error: {0}</value>
-  </data>
-  <data name="Error_EditorInitializationFailed" xml:space="preserve">
-    <value>Failed to initialize the code editor: {0}</value>
-  </data>
-  <data name="Error_InitializationFailed" xml:space="preserve">
-    <value>Failed to initialize the application: {0}</value>
-  </data>
-  <data name="Menu_ChangeLanguage" xml:space="preserve">
-    <value>Change Language</value>
-  </data>
-  <data name="Language_Russian" xml:space="preserve">
     <value>Russian</value>
   </data>
+  <data name="Metadata_CultureCode" xml:space="preserve">
+    <value>ru</value>
+  </data>
+  <data name="Menu_File" xml:space="preserve">
+    <value>Файл</value>
+  </data>
+  <data name="Menu_Edit" xml:space="preserve">
+    <value>Правка</value>
+  </data>
+  <data name="Menu_View" xml:space="preserve">
+    <value>Вид</value>
+  </data>
+  <data name="Menu_Theme" xml:space="preserve">
+    <value>Тема</value>
+  </data>
+  <data name="Menu_New" xml:space="preserve">
+    <value>Новый</value>
+  </data>
+  <data name="Menu_Open" xml:space="preserve">
+    <value>Открыть</value>
+  </data>
+  <data name="Menu_Save" xml:space="preserve">
+    <value>Сохранить</value>
+  </data>
+  <data name="Menu_SaveAs" xml:space="preserve">
+    <value>Сохранить как</value>
+  </data>
+  <data name="Menu_Undo" xml:space="preserve">
+    <value>Отменить</value>
+  </data>
+  <data name="Menu_Redo" xml:space="preserve">
+    <value>Повторить</value>
+  </data>
+  <data name="Menu_Run" xml:space="preserve">
+    <value>Запустить</value>
+  </data>
+  <data name="Menu_Stop" xml:space="preserve">
+    <value>Стоп</value>
+  </data>
+  <data name="Window_Title" xml:space="preserve">
+    <value>.KID - C#/.NET IDE для детей</value>
+  </data>
+  <data name="Console_Output" xml:space="preserve">
+    <value>Консольный вывод...</value>
+  </data>
+  <data name="Error_Compilation" xml:space="preserve">
+    <value>Ошибка на строке {0}: {1}</value>
+  </data>
+  <data name="Error_Execution" xml:space="preserve">
+    <value>Ошибка выполнения: {0}</value>
+  </data>
+  <data name="Error_StackTrace" xml:space="preserve">
+    <value>Стек: {0}</value>
+  </data>
+  <data name="Notification_ProgramStopped" xml:space="preserve">
+    <value>Программа остановлена</value>
+  </data>
+  <data name="Notification_ProgramFinished" xml:space="preserve">
+    <value>Программа закончила выполнение</value>
+  </data>
+  <data name="ExecutionStatus_Ready" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="ExecutionStatus_Compiling" xml:space="preserve">
+    <value>Компиляция…</value>
+  </data>
+  <data name="ExecutionStatus_Running" xml:space="preserve">
+    <value>Выполнение…</value>
+  </data>
+  <data name="ExecutionStatus_Stopping" xml:space="preserve">
+    <value>Остановка…</value>
+  </data>
+  <data name="ExecutionStatus_CleaningUp" xml:space="preserve">
+    <value>Очистка ресурсов…</value>
+  </data>
+  <data name="Notification_StopResponseDelayed" xml:space="preserve">
+    <value>Программа пока не отреагировала на запрос остановки. Ожидание продолжается; принудительная остановка недоступна для выполнения внутри процесса.</value>
+  </data>
+  <data name="Error_StopFailed" xml:space="preserve">
+    <value>Не удалось запросить остановку программы: {0}</value>
+  </data>
+  <data name="FileFilter_CSharp" xml:space="preserve">
+    <value>C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*</value>
+  </data>
+  <data name="Error_ConfigLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить конфигурационный файл. Будут использованы настройки по умолчанию.</value>
+  </data>
+  <data name="Error_TemplateLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить файл с шаблонным кодом. Будет использован встроенный шаблон.</value>
+  </data>
+  <data name="Error_Title" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="Error_FilePathEmpty" xml:space="preserve">
+    <value>Путь к файлу не может быть пустым</value>
+  </data>
+  <data name="Error_FileOpenFailed" xml:space="preserve">
+    <value>Не удалось открыть файл: {0}</value>
+  </data>
+  <data name="Error_FileSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить файл: {0}</value>
+  </data>
+  <data name="Error_SettingsSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить настройки: {0}</value>
+  </data>
+  <data name="Error_ThemeLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить выбранную тему: {0}</value>
+  </data>
+  <data name="Error_RunFailed" xml:space="preserve">
+    <value>Ошибка при выполнении: {0}</value>
+  </data>
+  <data name="Error_EditorInitializationFailed" xml:space="preserve">
+    <value>Не удалось инициализировать редактор кода: {0}</value>
+  </data>
+  <data name="Error_InitializationFailed" xml:space="preserve">
+    <value>Не удалось инициализировать приложение: {0}</value>
+  </data>
+  <data name="Menu_ChangeLanguage" xml:space="preserve">
+    <value>Сменить язык</value>
+  </data>
+  <data name="Language_Russian" xml:space="preserve">
+    <value>Русский</value>
+  </data>
   <data name="Language_English" xml:space="preserve">
-    <value>English</value>
+    <value>Английский</value>
   </data>
   <data name="Language_Ukrainian" xml:space="preserve">
-    <value>Ukrainian</value>
+    <value>Украинский</value>
   </data>
   <data name="Theme_VS2022Light" xml:space="preserve">
-    <value>VS2022 Light</value>
+    <value>Светлая VS2022</value>
   </data>
   <data name="Theme_VS2022Dark" xml:space="preserve">
-    <value>VS2022 Dark</value>
+    <value>Тёмная VS2022</value>
   </data>
   <data name="Menu_Font" xml:space="preserve">
-    <value>Font</value>
+    <value>Шрифт</value>
   </data>
   <data name="Menu_ShowIcons" xml:space="preserve">
-    <value>Show icons</value>
+    <value>Показывать иконки</value>
   </data>
   <data name="Menu_FontSize" xml:space="preserve">
-    <value>Font Size</value>
+    <value>Размер шрифта</value>
   </data>
   <data name="TabContext_Close" xml:space="preserve">
-    <value>Close</value>
+    <value>Закрыть</value>
   </data>
   <data name="TabContext_MoveLeft" xml:space="preserve">
-    <value>Move Left</value>
+    <value>Передвинуть влево</value>
   </data>
   <data name="TabContext_MoveRight" xml:space="preserve">
-    <value>Move Right</value>
+    <value>Передвинуть вправо</value>
   </data>
   <data name="TabContext_SaveAndSetAsTemplate" xml:space="preserve">
-    <value>Set as default&#10;template (and save)</value>
+    <value>Назначить шаблоном&#10;по умолчанию (и сохранить)</value>
   </data>
   <data name="UnsavedChanges_Title" xml:space="preserve">
-    <value>Unsaved changes</value>
+    <value>Несохранённые изменения</value>
   </data>
   <data name="UnsavedChanges_Message" xml:space="preserve">
-    <value>Save changes to “{0}”?</value>
+    <value>Сохранить изменения в файле «{0}»?</value>
   </data>
   <data name="Error_SessionSaveFailed" xml:space="preserve">
-    <value>Failed to automatically save the editor state: {0}</value>
+    <value>Не удалось автоматически сохранить состояние редактора: {0}</value>
   </data>
   <data name="Error_SessionRestoreFailed" xml:space="preserve">
-    <value>Failed to restore the previous editor session: {0}</value>
+    <value>Не удалось восстановить предыдущую сессию редактора: {0}</value>
   </data>
   <data name="Error_ClosePreparationFailed" xml:space="preserve">
-    <value>Failed to close the application safely: {0}</value>
+    <value>Не удалось безопасно закрыть приложение: {0}</value>
   </data>
   <data name="Theme_VS2026Light" xml:space="preserve">
-    <value>VS2026 Light</value>
+    <value>Светлая VS2026</value>
   </data>
   <data name="Theme_VS2026Dark" xml:space="preserve">
-    <value>VS2026 Dark</value>
+    <value>Тёмная VS2026</value>
   </data>
 </root>
 

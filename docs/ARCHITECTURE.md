@@ -239,11 +239,12 @@ native/сторонний вызов, неинструментированный
 **LocalizationService** (`LocalizationService.cs`)
 - Управление локализацией интерфейса
 - Загрузка строк из .resx файлов
-- Поддержка множественных языков (ru-RU, en-US, uk-UA)
+- Поддержка множественных языков (ru, en, uk)
 - Возвращает список доступных языков как ключи локализации (`Language_*`)
 - Однократно загружает внутренний `LanguageCatalog` через `Lazy<LanguageCatalog>`
 - Событие CultureChanged для обновления UI
-- `SetCultureAsync()` сразу применяет культуру и уведомляет UI, затем ожидает сохранение через `IWindowConfigurationService.SetUILanguageAsync()`
+- `SetCultureAsync()` разрешает региональные алиасы по каталогу, применяет языковую культуру и уведомляет UI, затем ожидает сохранение канонического кода через `IWindowConfigurationService.SetUILanguageAsync()`
+- Совпавший язык не вызывает повторное `CultureChanged`, но позволяет сохранить старый код или повторить неудачную запись
 
 **LanguageCatalog / LanguageDefinition** (`LanguageCatalog.cs`)
 - Внутренняя запись `LanguageDefinition(CultureCode, DisplayNameKey)` и неизменяемый снимок каталога
@@ -251,7 +252,7 @@ native/сторонний вызов, неинструментированный
 - Хранит записи и ключи в `ImmutableArray`, оба направления поиска — в `FrozenDictionary` с `OrdinalIgnoreCase`
 - Отклоняет некорректный JSON, неизвестные поля, дубли и значения с пробелами по краям
 - Для каждой культуры проверяет собственный `Strings` через `GetResourceSet(..., tryParents: false)`, метаданные культуры и все ключи названий с точным регистром
-- При ошибке загрузки или данных один раз предупреждает через `LocalizationFallback` и кэширует цельный резерв `en-US / Language_English`
+- При ошибке загрузки или данных один раз предупреждает через `LocalizationFallback` и кэширует цельный резерв `en / Language_English`
 - Защищает инициализацию каталога; общий потоковый контракт сервиса этим не меняется
 
 **LocalizationMarkupExtension** (`LocalizationMarkupExtension.cs`)
@@ -260,9 +261,16 @@ native/сторонний вызов, неинструментированный
 
 **Ресурсы:**
 - `Resources/AvailableLanguages.json` — каталог; `EmbeddedResource` с логическим именем `KID.Resources.AvailableLanguages.json`, требует пересборки
-- `Resources/Strings.ru-RU.resx` — русские строки
-- `Resources/Strings.en-US.resx` — английские строки
-- `Resources/Strings.uk-UA.resx` — украинские строки
+- `Resources/Strings.ru.resx` — русские строки
+- `Resources/Strings.resx` — английские строки в основной сборке и общий резерв, объявленный `NeutralResourcesLanguage("en")`
+- `Resources/Strings.uk.resx` — украинские строки
+
+`WindowConfigurationService` использует существующие методы `ILocalizationService`
+для канонизации настроек до применения языка: `ru-RU → ru`, `uk-UA → uk`,
+`en-US → en`. Успешная миграция сохраняется через существующую очередь;
+ошибки записи не попадают в обработчик ошибок чтения. По умолчанию выбран `ru`,
+при аварийном английском каталоге — `en`. Политика разрешения через родителей
+не подменяет строгую проверку собственных наборов ресурсов каталога.
 
 #### 3.4. Themes (Темы оформления)
 

@@ -2,10 +2,10 @@ using KID.Models;
 using KID.Services.Diagnostics;
 using KID.Services.Files.Interfaces;
 using KID.Services.Initialize.Interfaces;
+using KID.Services.Localization.Interfaces;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +19,7 @@ namespace KID.Services.Initialize
         private const string LegacyTemplateName = "ProjectTemplates/ru-RU/HelloWorld.cs";
 
         private readonly IFileService _fileService;
+        private readonly ILocalizationService _localizationService;
         private readonly ILogger<WindowConfigurationService>? _logger;
         private readonly string _appDataDirectory;
         private readonly string _settingsPath;
@@ -26,6 +27,10 @@ namespace KID.Services.Initialize
         private readonly Lock _settingsSaveQueueLock = new();
         private readonly Queue<SettingsSaveRequest> _settingsSaveQueue = new();
         private bool _isProcessingSettingsSaveQueue;
+        // Track the version actually written, so an older save cannot hide a newer failure.
+        private long _uiLanguageRevision;
+        private long _persistedUiLanguageRevision;
+        private long _notifiedUiLanguageRevision;
 
         public WindowConfigurationData Settings { get; set; } = new WindowConfigurationData();
 
@@ -38,9 +43,11 @@ namespace KID.Services.Initialize
 
         public WindowConfigurationService(
             IFileService fileService,
+            ILocalizationService localizationService,
             ILogger<WindowConfigurationService>? logger = null)
         {
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
+            _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             _logger = logger;
 
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -55,12 +62,13 @@ namespace KID.Services.Initialize
         {
             if (_fileService.FileExists(_settingsPath))
             {
+                var languageChanged = false;
                 try
                 {
                     // Загружаем пользовательские настройки
                     Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>(_settingsPath)
                         ?? new WindowConfigurationData();
-                    ValidateLoadedSettings(_settingsPath);
+                    languageChanged = ValidateLoadedSettings(_settingsPath);
                     NormalizeTemplateName();
                 }
                 catch (Exception exception)
@@ -71,8 +79,15 @@ namespace KID.Services.Initialize
                         "User settings could not be loaded. Path={Path}; defaults will be used.",
                         _settingsPath);
                     Settings = new WindowConfigurationData();
+                    Settings.UILanguage = GetDefaultUILanguage();
                 }
                 IconsVisibilityChanged?.Invoke(this, EventArgs.Empty);
+                // A migration write failure must propagate independently of settings-read recovery.
+                if (languageChanged)
+                {
+                    await SaveSettingsAsync();
+                    NotifyUILanguageSaved();
+                }
                 return;
             }
 
@@ -94,11 +109,13 @@ namespace KID.Services.Initialize
                     "Default settings file could not be loaded. Path={Path}",
                     _defaultConfigurationPath);
                 Settings = new WindowConfigurationData();
+                Settings.UILanguage = GetDefaultUILanguage();
             }
 
             // Сохраняем настройки в AppData для следующего запуска.
             IconsVisibilityChanged?.Invoke(this, EventArgs.Empty);
             await SaveSettingsAsync();
+            NotifyUILanguageSaved();
         }
 
         public async Task SetDefaultCodeAsync()
@@ -148,7 +165,7 @@ namespace KID.Services.Initialize
             }
         }
 
-        private void ValidateLoadedSettings(string sourcePath)
+        private bool ValidateLoadedSettings(string sourcePath)
         {
             // Also validate objects returned by alternative IFileService implementations.
             if (Settings.ColorTheme is null || Settings.UILanguage is null
@@ -170,22 +187,19 @@ namespace KID.Services.Initialize
                 Settings.FontFamily = defaults.FontFamily;
                 normalized = true;
             }
-            bool validCulture = !string.IsNullOrWhiteSpace(Settings.UILanguage);
-            if (validCulture)
+            var originalLanguage = Settings.UILanguage;
+            var canonicalLanguage = ResolveUILanguage(originalLanguage);
+            if (string.IsNullOrEmpty(canonicalLanguage))
             {
-                try
-                {
-                    _ = CultureInfo.GetCultureInfo(Settings.UILanguage);
-                }
-                catch (CultureNotFoundException)
-                {
-                    validCulture = false;
-                }
-            }
-            if (!validCulture)
-            {
-                Settings.UILanguage = defaults.UILanguage;
+                canonicalLanguage = GetDefaultUILanguage();
                 normalized = true;
+            }
+            var languageChanged = !string.Equals(originalLanguage, canonicalLanguage, StringComparison.Ordinal);
+            if (languageChanged)
+            {
+                Settings.UILanguage = canonicalLanguage;
+                lock (_settingsSaveQueueLock)
+                    _uiLanguageRevision++;
             }
 
             if (normalized)
@@ -195,6 +209,29 @@ namespace KID.Services.Initialize
                     "Invalid font or culture settings were replaced with defaults. Path={Path}",
                     sourcePath);
             }
+            return languageChanged;
+        }
+
+        private string ResolveUILanguage(string cultureCode) =>
+            _localizationService.GetCultureCodeByLanguageKey(
+                _localizationService.GetLanguageKeyByCultureCode(cultureCode));
+
+        private string GetDefaultUILanguage()
+        {
+            var defaultLanguage = ResolveUILanguage(new WindowConfigurationData().UILanguage);
+            return string.IsNullOrEmpty(defaultLanguage) ? "en" : defaultLanguage;
+        }
+
+        private void NotifyUILanguageSaved()
+        {
+            lock (_settingsSaveQueueLock)
+            {
+                if (_persistedUiLanguageRevision != _uiLanguageRevision
+                    || _notifiedUiLanguageRevision == _uiLanguageRevision)
+                    return;
+                _notifiedUiLanguageRevision = _uiLanguageRevision;
+            }
+            UILanguageSettingsChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void NormalizeTemplateName()
@@ -245,6 +282,7 @@ namespace KID.Services.Initialize
             while (true)
             {
                 SettingsSaveRequest request;
+                long languageRevision;
                 lock (_settingsSaveQueueLock)
                 {
                     if (_settingsSaveQueue.Count == 0)
@@ -254,11 +292,14 @@ namespace KID.Services.Initialize
                     }
 
                     request = _settingsSaveQueue.Dequeue();
+                    languageRevision = _uiLanguageRevision;
                 }
 
                 try
                 {
                     await _fileService.WriteJsonAsync(_settingsPath, Settings).ConfigureAwait(false);
+                    lock (_settingsSaveQueueLock)
+                        _persistedUiLanguageRevision = languageRevision;
                     request.Completion.TrySetResult();
                 }
                 catch (Exception exception)
@@ -305,12 +346,22 @@ namespace KID.Services.Initialize
             if (string.IsNullOrWhiteSpace(cultureCode))
                 return;
 
-            if (string.Equals(Settings.UILanguage, cultureCode, StringComparison.OrdinalIgnoreCase))
-                return;
+            var canonicalLanguage = ResolveUILanguage(cultureCode);
+            if (string.IsNullOrEmpty(canonicalLanguage))
+                throw new ArgumentException("The UI culture is not supported by the language catalog.", nameof(cultureCode));
 
-            Settings.UILanguage = cultureCode;
+            lock (_settingsSaveQueueLock)
+            {
+                if (!string.Equals(Settings.UILanguage, canonicalLanguage, StringComparison.Ordinal))
+                {
+                    Settings.UILanguage = canonicalLanguage;
+                    _uiLanguageRevision++;
+                }
+                else if (_persistedUiLanguageRevision == _uiLanguageRevision)
+                    return;
+            }
             await SaveSettingsAsync();
-            UILanguageSettingsChanged?.Invoke(this, EventArgs.Empty);
+            NotifyUILanguageSaved();
         }
 
         /// <inheritdoc />

@@ -49,7 +49,9 @@ namespace KID.Services.Localization
                 () => typeof(LocalizationService).Assembly.GetManifestResourceStream(LanguageCatalog.ResourceName),
                 culture => _resourceManager.GetResourceSet(culture, createIfNotExists: true, tryParents: false),
                 _logger);
-            _currentCulture = CultureInfo.CurrentUICulture;
+            _currentCulture = CultureInfo.GetCultureInfo(
+                _languageCatalog.Value.ResolveCultureCode(CultureInfo.CurrentUICulture.Name)
+                    ?? LanguageCatalog.FallbackCultureCode);
             _currentCultureName = _currentCulture.Name;
         }
 
@@ -60,9 +62,7 @@ namespace KID.Services.Localization
 
             try
             {
-                return _resourceManager.GetString(key, _currentCulture)
-                    ?? _resourceManager.GetString(key, new CultureInfo("en-US"))
-                    ?? $"[{key}]";
+                return GetStringTemplate(key);
             }
             catch (Exception exception)
             {
@@ -83,7 +83,7 @@ namespace KID.Services.Localization
 
             try
             {
-                var format = _resourceManager.GetString(key, _currentCulture) ?? $"[{key}]";
+                var format = GetStringTemplate(key);
                 return args != null && args.Length > 0 
                     ? string.Format(format, args) 
                     : format;
@@ -105,24 +105,33 @@ namespace KID.Services.Localization
             if (string.IsNullOrEmpty(cultureCode))
                 return;
 
-            var newCulture = CultureInfo.GetCultureInfo(cultureCode);
-            if (_currentCulture.Name != newCulture.Name)
+            var resolvedCode = _languageCatalog.Value.ResolveCultureCode(cultureCode)
+                ?? throw new ArgumentException("The UI culture is not supported by the language catalog.", nameof(cultureCode));
+            var newCulture = CultureInfo.GetCultureInfo(resolvedCode);
+            var formattingCulture = CultureInfo.CreateSpecificCulture(resolvedCode);
+            var cultureChanged = _currentCulture.Name != newCulture.Name;
+            CultureInfo.CurrentUICulture = newCulture;
+            CultureInfo.CurrentCulture = formattingCulture;
+            if (cultureChanged)
             {
                 _currentCulture = newCulture;
-                CultureInfo.CurrentUICulture = newCulture;
-                CultureInfo.CurrentCulture = newCulture;
 
                 // Обновляем свойство CurrentCulture и вызываем PropertyChanged
                 CurrentCulture = newCulture.Name;
+            }
 
-                var windowConfigurationService = _serviceProvider.GetService<IWindowConfigurationService>();
-                var saveSettingsTask = windowConfigurationService?.SetUILanguageAsync(newCulture.Name);
+            // Persist canonical aliases and retry failed saves even when the UI language is unchanged.
+            var windowConfigurationService = _serviceProvider.GetService<IWindowConfigurationService>();
+            var saveSettingsTask = windowConfigurationService?.SetUILanguageAsync(newCulture.Name);
+            if (cultureChanged)
                 CultureChanged?.Invoke(this, EventArgs.Empty);
 
-                if (saveSettingsTask != null)
-                    await saveSettingsTask;
-            }
+            if (saveSettingsTask != null)
+                await saveSettingsTask;
         }
+
+        private string GetStringTemplate(string key) =>
+            _resourceManager.GetString(key, _currentCulture) ?? $"[{key}]";
 
         public IEnumerable<string> GetAvailableLanguages()
         {
@@ -147,7 +156,8 @@ namespace KID.Services.Localization
             if (string.IsNullOrWhiteSpace(cultureCode))
                 return string.Empty;
 
-            if (_languageCatalog.Value.CultureToKey.TryGetValue(cultureCode, out var languageKey))
+            var resolvedCode = _languageCatalog.Value.ResolveCultureCode(cultureCode);
+            if (resolvedCode != null && _languageCatalog.Value.CultureToKey.TryGetValue(resolvedCode, out var languageKey))
             {
                 return languageKey;
             }

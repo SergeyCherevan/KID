@@ -437,14 +437,15 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 **Особенности:**
 - Использует ResourceManager для загрузки строк
 - Кэширует список доступных языков
-- Генерирует `CultureChanged` сразу после применения культуры, до завершения асинхронной записи настройки
+- Генерирует `CultureChanged` при изменении языка, до завершения асинхронной записи настройки
+- Разрешает региональные алиасы через каталог и сохраняет языковые коды; повторяет неудачную запись при повторном выборе того же языка
 - Fallback на английский язык, если строка не найдена
 - Возвращает `[key]` если строка не найдена
 
 **Поддерживаемые языки:**
-- ru-RU (Русский)
-- en-US (Английский)
-- uk-UA (Украинский)
+- ru (Русский)
+- en (Английский)
+- uk (Украинский)
 
 #### 3.2. LocalizationMarkupExtension
 **Файл:** `KID.WPF.IDE/Services/Localization/LocalizationMarkupExtension.cs`
@@ -465,9 +466,9 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 #### 3.3. Ресурсы локализации
 
 **Файлы:**
-- `KID.WPF.IDE/Resources/Strings.ru-RU.resx` — русские строки
-- `KID.WPF.IDE/Resources/Strings.en-US.resx` — английские строки
-- `KID.WPF.IDE/Resources/Strings.uk-UA.resx` — украинские строки
+- `KID.WPF.IDE/Resources/Strings.ru.resx` — русские строки
+- `KID.WPF.IDE/Resources/Strings.resx` — английские строки основной сборки и общий резерв (`NeutralResourcesLanguage("en")`)
+- `KID.WPF.IDE/Resources/Strings.uk.resx` — украинские строки
 
 **Структура ключей:**
 - `Menu_*` — пункты меню

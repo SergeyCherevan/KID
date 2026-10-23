@@ -17,19 +17,19 @@ public sealed class LocalizationServiceTests
         var keys = service.GetAvailableLanguages();
 
         Assert.Equal(["Language_English", "Language_Russian", "Language_Ukrainian"], keys);
-        Assert.Equal("en-US", service.GetCultureCodeByLanguageKey("language_english"));
-        Assert.Equal("ru-RU", service.GetCultureCodeByLanguageKey("Language_Russian"));
-        Assert.Equal("uk-UA", service.GetCultureCodeByLanguageKey("Language_Ukrainian"));
-        Assert.Equal("Language_English", service.GetLanguageKeyByCultureCode("EN-us"));
-        Assert.Equal("Language_Russian", service.GetLanguageKeyByCultureCode("ru-RU"));
-        Assert.Equal("Language_Ukrainian", service.GetLanguageKeyByCultureCode("uk-UA"));
+        Assert.Equal("en", service.GetCultureCodeByLanguageKey("language_english"));
+        Assert.Equal("ru", service.GetCultureCodeByLanguageKey("Language_Russian"));
+        Assert.Equal("uk", service.GetCultureCodeByLanguageKey("Language_Ukrainian"));
+        Assert.Equal("Language_English", service.GetLanguageKeyByCultureCode("EN"));
+        Assert.Equal("Language_Russian", service.GetLanguageKeyByCultureCode("ru"));
+        Assert.Equal("Language_Ukrainian", service.GetLanguageKeyByCultureCode("uk"));
 
         var list = Assert.IsAssignableFrom<IList<string>>(keys);
         Assert.Throws<NotSupportedException>(() => list[0] = "corrupted");
         Assert.Throws<NotSupportedException>(() => list.Clear());
         Assert.Equal(["Language_English", "Language_Russian", "Language_Ukrainian"], service.GetAvailableLanguages());
-        Assert.Equal("en-US", service.GetCultureCodeByLanguageKey("Language_English"));
-        Assert.Equal("Language_English", service.GetLanguageKeyByCultureCode("en-US"));
+        Assert.Equal("en", service.GetCultureCodeByLanguageKey("Language_English"));
+        Assert.Equal("Language_English", service.GetLanguageKeyByCultureCode("en"));
     }
 
     [Theory]
@@ -51,17 +51,12 @@ public sealed class LocalizationServiceTests
     {
         var originalCulture = CultureInfo.CurrentCulture;
         var originalUiCulture = CultureInfo.CurrentUICulture;
-        var targetCulture = string.Equals(
-            originalUiCulture.Name,
-            "en-US",
-            StringComparison.OrdinalIgnoreCase)
-                ? "de-DE"
-                : "en-US";
         var configurationService = new BlockingWindowConfigurationService();
         using var serviceProvider = new ServiceCollection()
             .AddSingleton<IWindowConfigurationService>(configurationService)
             .BuildServiceProvider();
         var service = new LocalizationService(serviceProvider);
+        var targetCulture = service.CurrentCulture == "en" ? "ru" : "en";
         var cultureChanged = false;
         service.CultureChanged += (_, _) => cultureChanged = true;
 
@@ -90,6 +85,96 @@ public sealed class LocalizationServiceTests
         }
     }
 
+    [Theory]
+    [InlineData("en-US", "en", "en-US")]
+    [InlineData("en-GB", "en", "en-US")]
+    [InlineData("ru-RU", "ru", "ru-RU")]
+    [InlineData("ru-BY", "ru", "ru-RU")]
+    [InlineData("uk-UA", "uk", "uk-UA")]
+    public async Task SetCultureAsync_ResolvesAliasesAndKeepsSpecificFormatting(
+        string input, string canonical, string formatting)
+    {
+        using var provider = new ServiceCollection().BuildServiceProvider();
+        var service = new LocalizationService(provider);
+        await service.SetCultureAsync(canonical == "en" ? "ru" : "en");
+        string? observedUiCulture = null;
+        string? observedFormatting = null;
+        service.CultureChanged += (_, _) =>
+        {
+            observedUiCulture = CultureInfo.CurrentUICulture.Name;
+            observedFormatting = CultureInfo.CurrentCulture.Name;
+        };
+
+        await service.SetCultureAsync(input);
+
+        Assert.Equal(canonical, service.CurrentCulture);
+        Assert.Equal(canonical, observedUiCulture);
+        Assert.Equal(formatting, observedFormatting);
+        Assert.Equal(service.GetLanguageKeyByCultureCode(canonical), service.GetLanguageKeyByCultureCode(input));
+        Assert.DoesNotContain("[", service.GetString("Menu_File"));
+        Assert.Contains("12", service.GetString("Error_Compilation", 12, "example"));
+        Assert.Equal("[Missing_Test_Key]", service.GetString("Missing_Test_Key"));
+        Assert.Equal("[Missing_Test_Key]", service.GetString("Missing_Test_Key", 12));
+    }
+
+    [Theory]
+    [InlineData("de-DE")]
+    [InlineData("not/a/culture")]
+    public async Task SetCultureAsync_RejectsUnsupportedInputWithoutChangingState(string input)
+    {
+        using var provider = new ServiceCollection().BuildServiceProvider();
+        var service = new LocalizationService(provider);
+        var original = service.CurrentCulture;
+        var events = 0;
+        service.CultureChanged += (_, _) => events++;
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SetCultureAsync(input));
+
+        Assert.Equal(original, service.CurrentCulture);
+        Assert.Equal(0, events);
+        Assert.Equal(string.Empty, service.GetLanguageKeyByCultureCode(input));
+    }
+
+    [Fact]
+    public async Task SetCultureAsync_UnchangedLanguageStillAwaitsSaveAndRetriesFailure()
+    {
+        var configuration = new BlockingWindowConfigurationService { FailNextSave = true };
+        using var provider = new ServiceCollection()
+            .AddSingleton<IWindowConfigurationService>(configuration).BuildServiceProvider();
+        var service = new LocalizationService(provider);
+        var events = 0;
+        service.CultureChanged += (_, _) => events++;
+        var alias = CultureInfo.CreateSpecificCulture(service.CurrentCulture).Name;
+
+        configuration.ReleaseSave();
+        await Assert.ThrowsAsync<System.IO.IOException>(() => service.SetCultureAsync(alias));
+        var retry = service.SetCultureAsync(alias);
+        Assert.False(retry.IsCompleted);
+        configuration.ReleaseSave();
+        await retry;
+
+        Assert.Equal(service.CurrentCulture, configuration.SavedCultureCode);
+        Assert.Equal(2, configuration.SaveCalls);
+        Assert.Equal(0, events);
+    }
+
+    [Theory]
+    [InlineData("ru-BY", "ru")]
+    [InlineData("de-DE", "en")]
+    public void Constructor_ResolvesSystemUiCulture(string systemCulture, string expected)
+    {
+        var original = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(systemCulture);
+            using var provider = new ServiceCollection().BuildServiceProvider();
+            var service = new LocalizationService(provider);
+            Assert.Equal(expected, service.CurrentCulture);
+            Assert.DoesNotContain("[", service.GetString("Menu_File"));
+        }
+        finally { CultureInfo.CurrentUICulture = original; }
+    }
+
     private sealed class BlockingWindowConfigurationService : IWindowConfigurationService
     {
         internal TaskCompletionSource SaveStarted { get; } =
@@ -98,6 +183,8 @@ public sealed class LocalizationServiceTests
         private readonly SemaphoreSlim saveBarrier = new(0);
 
         internal string? SavedCultureCode { get; private set; }
+        internal bool FailNextSave { get; set; }
+        internal int SaveCalls { get; private set; }
 
         internal void ReleaseSave() => saveBarrier.Release();
 
@@ -127,8 +214,14 @@ public sealed class LocalizationServiceTests
         public async Task SetUILanguageAsync(string cultureCode)
         {
             SavedCultureCode = cultureCode;
+            SaveCalls++;
             SaveStarted.TrySetResult();
             await saveBarrier.WaitAsync();
+            if (FailNextSave)
+            {
+                FailNextSave = false;
+                throw new System.IO.IOException("settings write failed");
+            }
         }
 
         public Task SetColorThemeAsync(string themeKey) => throw new NotSupportedException();

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Resources;
+using System.Reflection;
 using KID.Services.Localization;
 
 namespace KID.Tests.Localization;
@@ -24,7 +25,7 @@ public sealed class LanguageCatalogResourceTests
 
             Assert.False(catalog.IsFallback);
             Assert.Empty(logger.Entries);
-            Assert.Equal(["en-US", "ru-RU", "uk-UA"],
+            Assert.Equal(["en", "ru", "uk"],
                 catalog.Languages.Select(language => language.CultureCode));
             Assert.Equal(["Language_English", "Language_Russian", "Language_Ukrainian"], catalog.LanguageKeys);
 
@@ -51,16 +52,60 @@ public sealed class LanguageCatalogResourceTests
         var manager = new ResourceManager("KID.Resources.Strings", typeof(LocalizationService).Assembly);
         try
         {
-            var english = manager.GetResourceSet(CultureInfo.GetCultureInfo("en-US"),
+            var english = manager.GetResourceSet(CultureInfo.GetCultureInfo("en"),
                 createIfNotExists: true, tryParents: false);
 
             Assert.NotNull(english);
-            Assert.Equal("en-US", english.GetString("Metadata_CultureCode", ignoreCase: false));
+            Assert.Equal("en", english.GetString("Metadata_CultureCode", ignoreCase: false));
             Assert.False(string.IsNullOrWhiteSpace(english.GetString("Language_English", ignoreCase: false)));
         }
         finally
         {
             manager.ReleaseAllResources();
         }
+    }
+
+    [Fact]
+    public void EnglishFallbackAndOtherBaseResourcesAreInMainAssembly()
+    {
+        var assembly = typeof(LocalizationService).Assembly;
+        var attribute = assembly.GetCustomAttribute<NeutralResourcesLanguageAttribute>();
+        Assert.NotNull(attribute);
+        Assert.Equal("en", attribute.CultureName);
+        Assert.Equal(UltimateResourceFallbackLocation.MainAssembly, attribute.Location);
+        Assert.Contains("KID.Resources.Strings.resources", assembly.GetManifestResourceNames());
+        foreach (var (resourceName, key) in new[]
+        {
+            ("AvailableThemes", "Theme_Count"),
+            ("AvailableFontsAndSizes", "Font_Count")
+        })
+        {
+            var manager = new ResourceManager($"KID.Resources.{resourceName}", assembly);
+            try
+            {
+                Assert.False(string.IsNullOrWhiteSpace(manager.GetString(key, CultureInfo.InvariantCulture)));
+                Assert.False(string.IsNullOrWhiteSpace(manager.GetString(key, CultureInfo.GetCultureInfo("uk-UA"))));
+            }
+            finally { manager.ReleaseAllResources(); }
+        }
+    }
+
+    [Theory]
+    [InlineData("en-US", "en")]
+    [InlineData("en-GB", "en")]
+    [InlineData("ru-RU", "ru")]
+    [InlineData("ru-BY", "ru")]
+    [InlineData("uk-UA", "uk")]
+    [InlineData("de-DE", "en")]
+    public void ResourceLookup_UsesLanguageParentsAndEnglishFallback(string requested, string expected)
+    {
+        var manager = new ResourceManager("KID.Resources.Strings", typeof(LocalizationService).Assembly);
+        try
+        {
+            Assert.Equal(expected, manager.GetString("Metadata_CultureCode", CultureInfo.GetCultureInfo(requested)));
+            Assert.Equal(manager.GetString("Menu_File", CultureInfo.GetCultureInfo(expected)),
+                manager.GetString("Menu_File", CultureInfo.GetCultureInfo(requested)));
+        }
+        finally { manager.ReleaseAllResources(); }
     }
 }

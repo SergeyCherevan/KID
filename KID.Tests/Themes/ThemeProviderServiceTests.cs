@@ -20,7 +20,7 @@ public sealed class ThemeProviderServiceTests
         var names = new ResourceManager("KID.Resources.Strings", typeof(KID.App).Assembly);
         foreach (var theme in provider.GetAvailableThemes())
         {
-            foreach (var culture in new[] { "en-US", "ru-RU", "uk-UA" })
+            foreach (var culture in new[] { "en", "ru", "uk" })
             {
                 var name = names.GetString(theme.LocalizationKey, CultureInfo.GetCultureInfo(culture));
                 Assert.False(string.IsNullOrWhiteSpace(name));

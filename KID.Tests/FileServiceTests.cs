@@ -52,10 +52,26 @@ public sealed class FileServiceTests
         {
             var settings = await service.ReadJsonAsync<WindowConfigurationData>(path);
             Assert.NotNull(settings);
-            Assert.Equal("ru-RU", settings.UILanguage);
+            Assert.Equal("ru", settings.UILanguage);
             Assert.True(settings.IsIconsVisible);
             Assert.Equal(new WindowConfigurationData().TemplateCode, settings.TemplateCode);
             Assert.Equal(14, settings.FontSize);
+        });
+    }
+
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("ru-RU")]
+    [InlineData("uk-UA")]
+    public async Task ReadJsonAsync_LeavesLegacyLanguageForConfigurationServiceToMigrate(string culture)
+    {
+        var json = JsonSerializer.Serialize(new { UILanguage = culture });
+        await WithJsonFileAsync(json, async (service, path) =>
+        {
+            var settings = await service.ReadJsonAsync<WindowConfigurationData>(path);
+            Assert.NotNull(settings);
+            Assert.Equal(culture, settings.UILanguage);
+            Assert.Equal(json, await File.ReadAllTextAsync(path, TestContext.Current.CancellationToken));
         });
     }
 

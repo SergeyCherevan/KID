@@ -9,7 +9,7 @@ namespace KID.Models
         public string ColorTheme { get; set; } = "Theme_VS2022Light";
 
         // Язык интерфейса
-        public string UILanguage { get; set; } = "ru-RU"; // ru-RU, en-US, uk-UA
+        public string UILanguage { get; set; } = "ru"; // ru, en, uk
 
         // Иконки меню (кроме запуска и остановки)
         public bool IsIconsVisible { get; set; } = true;

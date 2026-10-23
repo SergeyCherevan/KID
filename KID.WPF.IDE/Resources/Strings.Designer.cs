@@ -10,8 +10,8 @@
 
 namespace KID.Resources {
     using System;
-    
-    
+
+
     /// <summary>
     ///   Класс ресурса со строгой типизацией для поиска локализованных строк и т.д.
     /// </summary>
@@ -19,19 +19,19 @@ namespace KID.Resources {
     // с помощью такого средства, как ResGen или Visual Studio.
     // Чтобы добавить или удалить член, измените файл .ResX и снова запустите ResGen
     // с параметром /str или перестройте свой проект VS.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "17.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "18.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Strings {
-        
+
         private static global::System.Resources.ResourceManager resourceMan;
-        
+
         private static global::System.Globalization.CultureInfo resourceCulture;
-        
+
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
         internal Strings() {
         }
-        
+
         /// <summary>
         ///   Возвращает кэшированный экземпляр ResourceManager, использованный этим классом.
         /// </summary>
@@ -45,7 +45,7 @@ namespace KID.Resources {
                 return resourceMan;
             }
         }
-        
+
         /// <summary>
         ///   Перезаписывает свойство CurrentUICulture текущего потока для всех
         ///   обращений к ресурсу с помощью этого класса ресурса со строгой типизацией.
@@ -59,207 +59,541 @@ namespace KID.Resources {
                 resourceCulture = value;
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Консольный вывод....
+        ///   Ищет локализованную строку, похожую на Console output....
         /// </summary>
         internal static string Console_Output {
             get {
                 return ResourceManager.GetString("Console_Output", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Ошибка на строке {0}: {1}.
+        ///   Ищет локализованную строку, похожую на Failed to close the application safely: {0}.
+        /// </summary>
+        internal static string Error_ClosePreparationFailed {
+            get {
+                return ResourceManager.GetString("Error_ClosePreparationFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Error on line {0}: {1}.
         /// </summary>
         internal static string Error_Compilation {
             get {
                 return ResourceManager.GetString("Error_Compilation", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Не удалось загрузить конфигурационный файл. Будут использованы настройки по умолчанию..
+        ///   Ищет локализованную строку, похожую на Failed to load configuration file. Default settings will be used..
         /// </summary>
         internal static string Error_ConfigLoadFailed {
             get {
                 return ResourceManager.GetString("Error_ConfigLoadFailed", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Ошибка выполнения: {0}.
+        ///   Ищет локализованную строку, похожую на Failed to initialize the code editor: {0}.
+        /// </summary>
+        internal static string Error_EditorInitializationFailed {
+            get {
+                return ResourceManager.GetString("Error_EditorInitializationFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Execution error: {0}.
         /// </summary>
         internal static string Error_Execution {
             get {
                 return ResourceManager.GetString("Error_Execution", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Путь к файлу не может быть пустым.
+        ///   Ищет локализованную строку, похожую на Failed to open file: {0}.
+        /// </summary>
+        internal static string Error_FileOpenFailed {
+            get {
+                return ResourceManager.GetString("Error_FileOpenFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на File path cannot be empty.
         /// </summary>
         internal static string Error_FilePathEmpty {
             get {
                 return ResourceManager.GetString("Error_FilePathEmpty", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Программа остановлена.
+        ///   Ищет локализованную строку, похожую на Failed to save file: {0}.
         /// </summary>
-        internal static string Notification_ProgramStopped {
+        internal static string Error_FileSaveFailed {
             get {
-                return ResourceManager.GetString("Notification_ProgramStopped", resourceCulture);
+                return ResourceManager.GetString("Error_FileSaveFailed", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Стек: {0}.
+        ///   Ищет локализованную строку, похожую на Failed to initialize the application: {0}.
+        /// </summary>
+        internal static string Error_InitializationFailed {
+            get {
+                return ResourceManager.GetString("Error_InitializationFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Execution error: {0}.
+        /// </summary>
+        internal static string Error_RunFailed {
+            get {
+                return ResourceManager.GetString("Error_RunFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Failed to restore the previous editor session: {0}.
+        /// </summary>
+        internal static string Error_SessionRestoreFailed {
+            get {
+                return ResourceManager.GetString("Error_SessionRestoreFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Failed to automatically save the editor state: {0}.
+        /// </summary>
+        internal static string Error_SessionSaveFailed {
+            get {
+                return ResourceManager.GetString("Error_SessionSaveFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Failed to save settings: {0}.
+        /// </summary>
+        internal static string Error_SettingsSaveFailed {
+            get {
+                return ResourceManager.GetString("Error_SettingsSaveFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Stack: {0}.
         /// </summary>
         internal static string Error_StackTrace {
             get {
                 return ResourceManager.GetString("Error_StackTrace", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Не удалось загрузить файл с шаблонным кодом. Будет использован встроенный шаблон..
+        ///   Ищет локализованную строку, похожую на Failed to request program stop: {0}.
+        /// </summary>
+        internal static string Error_StopFailed {
+            get {
+                return ResourceManager.GetString("Error_StopFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Failed to load template code file. Built-in template will be used..
         /// </summary>
         internal static string Error_TemplateLoadFailed {
             get {
                 return ResourceManager.GetString("Error_TemplateLoadFailed", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Ошибка.
+        ///   Ищет локализованную строку, похожую на Failed to load the selected theme: {0}.
+        /// </summary>
+        internal static string Error_ThemeLoadFailed {
+            get {
+                return ResourceManager.GetString("Error_ThemeLoadFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Error.
         /// </summary>
         internal static string Error_Title {
             get {
                 return ResourceManager.GetString("Error_Title", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на C# файлы (*.cs)|*.cs|Все файлы (*.*)|*.*.
+        ///   Ищет локализованную строку, похожую на Cleaning up….
+        /// </summary>
+        internal static string ExecutionStatus_CleaningUp {
+            get {
+                return ResourceManager.GetString("ExecutionStatus_CleaningUp", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Compiling….
+        /// </summary>
+        internal static string ExecutionStatus_Compiling {
+            get {
+                return ResourceManager.GetString("ExecutionStatus_Compiling", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Ready.
+        /// </summary>
+        internal static string ExecutionStatus_Ready {
+            get {
+                return ResourceManager.GetString("ExecutionStatus_Ready", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Running….
+        /// </summary>
+        internal static string ExecutionStatus_Running {
+            get {
+                return ResourceManager.GetString("ExecutionStatus_Running", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Stopping….
+        /// </summary>
+        internal static string ExecutionStatus_Stopping {
+            get {
+                return ResourceManager.GetString("ExecutionStatus_Stopping", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на C# Files (*.cs)|*.cs|All Files (*.*)|*.*.
         /// </summary>
         internal static string FileFilter_CSharp {
             get {
                 return ResourceManager.GetString("FileFilter_CSharp", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Правка.
+        ///   Ищет локализованную строку, похожую на English.
+        /// </summary>
+        internal static string Language_English {
+            get {
+                return ResourceManager.GetString("Language_English", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Russian.
+        /// </summary>
+        internal static string Language_Russian {
+            get {
+                return ResourceManager.GetString("Language_Russian", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Ukrainian.
+        /// </summary>
+        internal static string Language_Ukrainian {
+            get {
+                return ResourceManager.GetString("Language_Ukrainian", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Change Language.
+        /// </summary>
+        internal static string Menu_ChangeLanguage {
+            get {
+                return ResourceManager.GetString("Menu_ChangeLanguage", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Edit.
         /// </summary>
         internal static string Menu_Edit {
             get {
                 return ResourceManager.GetString("Menu_Edit", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Файл.
+        ///   Ищет локализованную строку, похожую на File.
         /// </summary>
         internal static string Menu_File {
             get {
                 return ResourceManager.GetString("Menu_File", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Новый.
+        ///   Ищет локализованную строку, похожую на Font.
+        /// </summary>
+        internal static string Menu_Font {
+            get {
+                return ResourceManager.GetString("Menu_Font", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Font Size.
+        /// </summary>
+        internal static string Menu_FontSize {
+            get {
+                return ResourceManager.GetString("Menu_FontSize", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на New.
         /// </summary>
         internal static string Menu_New {
             get {
                 return ResourceManager.GetString("Menu_New", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Открыть.
+        ///   Ищет локализованную строку, похожую на Open.
         /// </summary>
         internal static string Menu_Open {
             get {
                 return ResourceManager.GetString("Menu_Open", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Повторить.
+        ///   Ищет локализованную строку, похожую на Redo.
         /// </summary>
         internal static string Menu_Redo {
             get {
                 return ResourceManager.GetString("Menu_Redo", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на ▶️ Запустить.
+        ///   Ищет локализованную строку, похожую на Run.
         /// </summary>
         internal static string Menu_Run {
             get {
                 return ResourceManager.GetString("Menu_Run", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Сохранить.
+        ///   Ищет локализованную строку, похожую на Save.
         /// </summary>
         internal static string Menu_Save {
             get {
                 return ResourceManager.GetString("Menu_Save", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Сохранить как.
+        ///   Ищет локализованную строку, похожую на Save As.
         /// </summary>
         internal static string Menu_SaveAs {
             get {
                 return ResourceManager.GetString("Menu_SaveAs", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на ■ Стоп.
+        ///   Ищет локализованную строку, похожую на Show icons.
+        /// </summary>
+        internal static string Menu_ShowIcons {
+            get {
+                return ResourceManager.GetString("Menu_ShowIcons", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Stop.
         /// </summary>
         internal static string Menu_Stop {
             get {
                 return ResourceManager.GetString("Menu_Stop", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Тема.
+        ///   Ищет локализованную строку, похожую на Theme.
         /// </summary>
         internal static string Menu_Theme {
             get {
                 return ResourceManager.GetString("Menu_Theme", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Отменить.
+        ///   Ищет локализованную строку, похожую на Undo.
         /// </summary>
         internal static string Menu_Undo {
             get {
                 return ResourceManager.GetString("Menu_Undo", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на Вид.
+        ///   Ищет локализованную строку, похожую на View.
         /// </summary>
         internal static string Menu_View {
             get {
                 return ResourceManager.GetString("Menu_View", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Ищет локализованную строку, похожую на .KID - C#/.NET IDE для детей.
+        ///   Ищет локализованную строку, похожую на en.
+        /// </summary>
+        internal static string Metadata_CultureCode {
+            get {
+                return ResourceManager.GetString("Metadata_CultureCode", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на English.
+        /// </summary>
+        internal static string Metadata_EnglishName {
+            get {
+                return ResourceManager.GetString("Metadata_EnglishName", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Program finished execution.
+        /// </summary>
+        internal static string Notification_ProgramFinished {
+            get {
+                return ResourceManager.GetString("Notification_ProgramFinished", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Program stopped.
+        /// </summary>
+        internal static string Notification_ProgramStopped {
+            get {
+                return ResourceManager.GetString("Notification_ProgramStopped", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на The program has not responded to the stop request yet. Waiting continues; forced termination is unavailable for in-process execution..
+        /// </summary>
+        internal static string Notification_StopResponseDelayed {
+            get {
+                return ResourceManager.GetString("Notification_StopResponseDelayed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Close.
+        /// </summary>
+        internal static string TabContext_Close {
+            get {
+                return ResourceManager.GetString("TabContext_Close", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Move Left.
+        /// </summary>
+        internal static string TabContext_MoveLeft {
+            get {
+                return ResourceManager.GetString("TabContext_MoveLeft", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Move Right.
+        /// </summary>
+        internal static string TabContext_MoveRight {
+            get {
+                return ResourceManager.GetString("TabContext_MoveRight", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Set as default
+        ///template (and save).
+        /// </summary>
+        internal static string TabContext_SaveAndSetAsTemplate {
+            get {
+                return ResourceManager.GetString("TabContext_SaveAndSetAsTemplate", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на VS2022 Dark.
+        /// </summary>
+        internal static string Theme_VS2022Dark {
+            get {
+                return ResourceManager.GetString("Theme_VS2022Dark", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на VS2022 Light.
+        /// </summary>
+        internal static string Theme_VS2022Light {
+            get {
+                return ResourceManager.GetString("Theme_VS2022Light", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на VS2026 Dark.
+        /// </summary>
+        internal static string Theme_VS2026Dark {
+            get {
+                return ResourceManager.GetString("Theme_VS2026Dark", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на VS2026 Light.
+        /// </summary>
+        internal static string Theme_VS2026Light {
+            get {
+                return ResourceManager.GetString("Theme_VS2026Light", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Save changes to “{0}”?.
+        /// </summary>
+        internal static string UnsavedChanges_Message {
+            get {
+                return ResourceManager.GetString("UnsavedChanges_Message", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на Unsaved changes.
+        /// </summary>
+        internal static string UnsavedChanges_Title {
+            get {
+                return ResourceManager.GetString("UnsavedChanges_Title", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Ищет локализованную строку, похожую на .KID - C#/.NET IDE for Kids.
         /// </summary>
         internal static string Window_Title {
             get {

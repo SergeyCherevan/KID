@@ -1,14 +1,14 @@
 [
   {
-    "cultureCode": "en-US",
+    "cultureCode": "en",
     "displayNameKey": "Language_English"
   },
   {
-    "cultureCode": "ru-RU",
+    "cultureCode": "ru",
     "displayNameKey": "Language_Russian"
   },
   {
-    "cultureCode": "uk-UA",
+    "cultureCode": "uk",
     "displayNameKey": "Language_Ukrainian"
   }
 ]
