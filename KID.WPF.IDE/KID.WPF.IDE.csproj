@@ -10,6 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Resources\AvailableLanguages.json" />
+    <EmbeddedResource Include="Resources\AvailableLanguages.json"
+                      LogicalName="KID.Resources.AvailableLanguages.json" />
     <None Remove="Resources\KID.ico" />
     <None Remove="Resources\Menu_Edit.ico" />
     <None Remove="Resources\Menu_File.ico" />

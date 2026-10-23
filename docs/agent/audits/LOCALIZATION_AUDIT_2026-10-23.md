@@ -320,20 +320,50 @@ ILocalizationService`. Прямое добавление `IWindowConfigurationSe
 
 ### LOC-09 · P3 · Каталог языков хрупок при добавлении переводов
 
-[Каталог](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Localization/LocalizationService.cs:163>)
-строится из `Language_Count` и индексированных строк, а ключ перевода —
-из `EnglishName`. Пропущенная запись молча пропускается; неверный count
-даёт пустой список без предупреждения; повреждённый результат кэшируется.
-[Возвращаемый список](<D:/Visual Studio Projects/KID/KID.WPF.IDE/Services/Localization/LocalizationService.cs:127>)
-остаётся фактическим изменяемым `List<string>`, хотя объявлен IEnumerable.
+**Обновлено 2026-10-24:** код и автоматизированные проверки реализованы по
+[плану JSON-каталога](../plans/LANGUAGE_CATALOG_JSON.plan.md).
+Ручная приёмка меню ожидается; пункт пока не отмечен полностью завершённым.
 
-Сегодня встроенный каталог корректен, а текущий ViewModel копирует список:
-воспроизведённого пользовательского дефекта здесь нет.
+Исходный риск: каталог зависел от `Language_Count`, индексированных строк
+и построения ключа из `EnglishName`; ошибки могли дать пустой или частичный
+кэш, а наружу выдавался изменяемый `List<string>`. При аудите текущие три
+записи были корректны, воспроизведённого пользовательского дефекта не было.
 
-**Рекомендация:** явные неизменяемые записи `CultureCode / DisplayNameKey`,
-проверки дублей, соответствия ресурсам и fallback-каталог при ошибке.
-Для трёх языков достаточно небольшого каталога и теста; сервер переводов
-или отдельная платформа управления переводами не нужны.
+**Решение:** единственный основной перечень теперь задан во встроенном
+[AvailableLanguages.json](../../../KID.WPF.IDE/Resources/AvailableLanguages.json)
+с логическим именем `KID.Resources.AvailableLanguages.json`.
+[LanguageCatalog](../../../KID.WPF.IDE/Services/Localization/LanguageCatalog.cs)
+проверяет строгий JSON, канонические культуры, дубли, собственный `Strings`
+каждой культуры, `Metadata_CultureCode` и все подписи с точным регистром.
+`GetResourceSet(..., tryParents: false)` дополнен проверкой метаданных,
+поэтому родительский или закэшированный fallback не подтверждает перевод.
+`Lazy<LanguageCatalog>` публикует один снимок `ImmutableArray` и двух
+`FrozenDictionary`; при ошибке — только `en-US / Language_English` с одним
+предупреждением `LocalizationFallback`. Старый `AvailableLanguage.resx` удалён.
+
+**Доказательства, 2026-10-24:**
+
+- `dotnet build KID.sln -c Release --nologo` — успешно, 0 предупреждений, 0 ошибок.
+- `dotnet KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.Localization -noLogo -noColor`
+  — 64 теста, 0 ошибок, 0 падений, 0 пропусков.
+- [LanguageCatalogTests](../../../KID.Tests/Localization/LanguageCatalogTests.cs)
+  проверяет ошибочные входы, отсутствие собственных переводов, изолированный
+  английский fallback, диагностику, однократную загрузку и неизменяемость.
+- [LanguageCatalogResourceTests](../../../KID.Tests/Localization/LanguageCatalogResourceTests.cs)
+  подтверждает ресурс в основной сборке, три записи без fallback, все девять
+  пар «культура × ключ названия» и наличие английских ресурсов аварийной записи.
+- [LocalizationServiceTests](../../../KID.Tests/LocalizationServiceTests.cs)
+  закрепляет порядок, оба направления поиска без учёта регистра, пустую строку
+  для неизвестных значений и невозможность изменить выданную коллекцию;
+  существующая проверка `SetCultureAsync` сохранена.
+- `git diff --check` — без замечаний.
+
+**Ограничения:** ручное переключение трёх языков, галочки меню и сохранение
+выбора после перезапуска не проверялись. Сборка выполнена в обычные Release-пути
+с доступом вне песочницы: внутри неё NuGet был недоступен, а повторная запись
+сгенерированных WPF-файлов `obj` ограничивалась правами. Внешний JSON не нужен;
+общий потоковый контракт LOC-08, `SetCultureAsync` и другие пункты аудита
+этим изменением не исправлялись.
 
 ## ⏸️ Ранее отложенный R15
 

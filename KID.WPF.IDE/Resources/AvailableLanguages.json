@@ -1,0 +1,14 @@
+[
+  {
+    "cultureCode": "en-US",
+    "displayNameKey": "Language_English"
+  },
+  {
+    "cultureCode": "ru-RU",
+    "displayNameKey": "Language_Russian"
+  },
+  {
+    "cultureCode": "uk-UA",
+    "displayNameKey": "Language_Ukrainian"
+  }
+]

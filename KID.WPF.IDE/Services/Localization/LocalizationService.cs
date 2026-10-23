@@ -16,13 +16,10 @@ namespace KID.Services.Localization
     public class LocalizationService : ILocalizationService, INotifyPropertyChanged
     {
         private readonly ResourceManager _resourceManager;
-        private readonly ResourceManager _availableLanguageResourceManager;
+        private readonly Lazy<LanguageCatalog> _languageCatalog;
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger<LocalizationService>? _logger;
         private CultureInfo _currentCulture;
-        private List<string>? _cachedAvailableLanguageKeys;
-        private Dictionary<string, string>? _languageKeyToCultureCode;
-        private Dictionary<string, string>? _cultureCodeToLanguageKey;
         private string _currentCultureName;
 
         public string CurrentCulture
@@ -48,7 +45,10 @@ namespace KID.Services.Localization
             _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
             _logger = logger;
             _resourceManager = new ResourceManager("KID.Resources.Strings", typeof(Strings).Assembly);
-            _availableLanguageResourceManager = new ResourceManager("KID.Resources.AvailableLanguage", typeof(Strings).Assembly);
+            _languageCatalog = LanguageCatalog.CreateLazy(
+                () => typeof(LocalizationService).Assembly.GetManifestResourceStream(LanguageCatalog.ResourceName),
+                culture => _resourceManager.GetResourceSet(culture, createIfNotExists: true, tryParents: false),
+                _logger);
             _currentCulture = CultureInfo.CurrentUICulture;
             _currentCultureName = _currentCulture.Name;
         }
@@ -126,8 +126,7 @@ namespace KID.Services.Localization
 
         public IEnumerable<string> GetAvailableLanguages()
         {
-            EnsureLanguageMappings();
-            return _cachedAvailableLanguageKeys ?? new List<string>();
+            return _languageCatalog.Value.LanguageKeys;
         }
 
         public string GetCultureCodeByLanguageKey(string languageKey)
@@ -135,9 +134,7 @@ namespace KID.Services.Localization
             if (string.IsNullOrWhiteSpace(languageKey))
                 return string.Empty;
 
-            EnsureLanguageMappings();
-            if (_languageKeyToCultureCode != null
-                && _languageKeyToCultureCode.TryGetValue(languageKey, out var cultureCode))
+            if (_languageCatalog.Value.KeyToCulture.TryGetValue(languageKey, out var cultureCode))
             {
                 return cultureCode;
             }
@@ -150,65 +147,12 @@ namespace KID.Services.Localization
             if (string.IsNullOrWhiteSpace(cultureCode))
                 return string.Empty;
 
-            EnsureLanguageMappings();
-            if (_cultureCodeToLanguageKey != null
-                && _cultureCodeToLanguageKey.TryGetValue(cultureCode, out var languageKey))
+            if (_languageCatalog.Value.CultureToKey.TryGetValue(cultureCode, out var languageKey))
             {
                 return languageKey;
             }
 
             return string.Empty;
-        }
-
-        private void EnsureLanguageMappings()
-        {
-            if (_cachedAvailableLanguageKeys != null
-                && _languageKeyToCultureCode != null
-                && _cultureCodeToLanguageKey != null)
-            {
-                return;
-            }
-
-            var languageKeys = new List<string>();
-            var keyToCulture = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var cultureToKey = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-            try
-            {
-                var countStr = _availableLanguageResourceManager.GetString("Language_Count", CultureInfo.InvariantCulture);
-                if (string.IsNullOrEmpty(countStr) || !int.TryParse(countStr, out var count))
-                {
-                    _cachedAvailableLanguageKeys = languageKeys;
-                    _languageKeyToCultureCode = keyToCulture;
-                    _cultureCodeToLanguageKey = cultureToKey;
-                    return;
-                }
-
-                for (var i = 0; i < count; i++)
-                {
-                    var cultureCode = _availableLanguageResourceManager.GetString($"Language_{i}_CultureCode", CultureInfo.InvariantCulture);
-                    var englishName = _availableLanguageResourceManager.GetString($"Language_{i}_EnglishName", CultureInfo.InvariantCulture);
-
-                    if (string.IsNullOrWhiteSpace(cultureCode) || string.IsNullOrWhiteSpace(englishName))
-                        continue;
-
-                    var key = $"Language_{englishName}";
-                    languageKeys.Add(key);
-                    keyToCulture[key] = cultureCode;
-                    cultureToKey[cultureCode] = key;
-                }
-            }
-            catch (Exception exception)
-            {
-                _logger?.LogWarning(
-                    DiagnosticEventIds.LocalizationFallback,
-                    exception,
-                    "Available language mapping could not be loaded.");
-            }
-
-            _cachedAvailableLanguageKeys = languageKeys;
-            _languageKeyToCultureCode = keyToCulture;
-            _cultureCodeToLanguageKey = cultureToKey;
         }
 
         protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)

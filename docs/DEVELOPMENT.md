@@ -177,26 +177,46 @@ private static SoundNote[] Snapshot(
 ### Добавление нового языка
 
 1. Создайте файл `Resources/Strings.XX-XX.resx` (например, `Strings.de-DE.resx`)
-2. Скопируйте структуру из существующего файла
-3. Переведите все строки
-4. Добавьте язык в `Resources/AvailableLanguage.resx`:
+2. Скопируйте структуру из существующего файла и задайте собственные
+   `Metadata_CultureCode` (например, `de-DE`) и `Metadata_EnglishName`.
+3. Переведите все строки, включая названия всех доступных языков.
+4. Добавьте объект в массив `KID.WPF.IDE/Resources/AvailableLanguages.json`:
 
-```xml
-<data name="Language_2_CultureCode" xml:space="preserve">
-    <value>de-DE</value>
-</data>
-<data name="Language_2_EnglishName" xml:space="preserve">
-    <value>German</value>
-</data>
+```json
+{
+  "cultureCode": "de-DE",
+  "displayNameKey": "Language_German"
+}
 ```
 
-5. Добавьте локализованное название в `Strings.XX-XX.resx`:
+5. Добавьте непустую подпись `Language_German` **во все** `Strings.*.resx`,
+   включая новый перевод. Регистр ключа должен точно совпадать с JSON:
 
 ```xml
 <data name="Language_German" xml:space="preserve">
     <value>Немецкий</value>
 </data>
 ```
+
+6. Пересоберите приложение и запустите профильные тесты локализации:
+
+```powershell
+dotnet build KID.sln -c Release --nologo
+dotnet KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.Localization -noLogo -noColor
+```
+
+Порядок объектов JSON определяет порядок языков в меню. Каталог встроен в
+основную сборку как `EmbeddedResource` с именем `KID.Resources.AvailableLanguages.json`;
+внешний файл рядом с приложением не нужен. Для обычного добавления языка
+менять C# не требуется. Тест поставки фиксирует текущий перечень: при его
+расширении обновите ожидаемые значения в `LanguageCatalogResourceTests` и
+`LocalizationServiceTests`.
+
+При первом обращении сервис проверяет весь каталог: уникальность культур и
+ключей, собственный `Strings` каждой культуры, `Metadata_CultureCode` и все
+подписи языков в каждом переводе. При любой ошибке он один раз записывает
+`LocalizationFallback` и публикует только `en-US / Language_English`.
+Текущая культура и сохранённая настройка при этом не меняются.
 
 ### Добавление новой темы
 

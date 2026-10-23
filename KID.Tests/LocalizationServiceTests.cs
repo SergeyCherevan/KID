@@ -10,6 +10,43 @@ namespace KID.Tests.Localization;
 public sealed class LocalizationServiceTests
 {
     [Fact]
+    public void LanguageCatalog_PreservesPublicOrderMappingsAndImmutableState()
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var service = new LocalizationService(serviceProvider);
+        var keys = service.GetAvailableLanguages();
+
+        Assert.Equal(["Language_English", "Language_Russian", "Language_Ukrainian"], keys);
+        Assert.Equal("en-US", service.GetCultureCodeByLanguageKey("language_english"));
+        Assert.Equal("ru-RU", service.GetCultureCodeByLanguageKey("Language_Russian"));
+        Assert.Equal("uk-UA", service.GetCultureCodeByLanguageKey("Language_Ukrainian"));
+        Assert.Equal("Language_English", service.GetLanguageKeyByCultureCode("EN-us"));
+        Assert.Equal("Language_Russian", service.GetLanguageKeyByCultureCode("ru-RU"));
+        Assert.Equal("Language_Ukrainian", service.GetLanguageKeyByCultureCode("uk-UA"));
+
+        var list = Assert.IsAssignableFrom<IList<string>>(keys);
+        Assert.Throws<NotSupportedException>(() => list[0] = "corrupted");
+        Assert.Throws<NotSupportedException>(() => list.Clear());
+        Assert.Equal(["Language_English", "Language_Russian", "Language_Ukrainian"], service.GetAvailableLanguages());
+        Assert.Equal("en-US", service.GetCultureCodeByLanguageKey("Language_English"));
+        Assert.Equal("Language_English", service.GetLanguageKeyByCultureCode("en-US"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("unknown")]
+    public void LanguageCatalog_UnknownKeyOrCultureReturnsEmptyString(string? value)
+    {
+        using var serviceProvider = new ServiceCollection().BuildServiceProvider();
+        var service = new LocalizationService(serviceProvider);
+
+        Assert.Equal(string.Empty, service.GetCultureCodeByLanguageKey(value!));
+        Assert.Equal(string.Empty, service.GetLanguageKeyByCultureCode(value!));
+    }
+
+    [Fact]
     public async Task SetCultureAsync_AppliesCultureImmediatelyAndAwaitsSettingsSave()
     {
         var originalCulture = CultureInfo.CurrentCulture;

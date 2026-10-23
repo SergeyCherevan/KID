@@ -241,14 +241,25 @@ native/сторонний вызов, неинструментированный
 - Загрузка строк из .resx файлов
 - Поддержка множественных языков (ru-RU, en-US, uk-UA)
 - Возвращает список доступных языков как ключи локализации (`Language_*`)
+- Однократно загружает внутренний `LanguageCatalog` через `Lazy<LanguageCatalog>`
 - Событие CultureChanged для обновления UI
 - `SetCultureAsync()` сразу применяет культуру и уведомляет UI, затем ожидает сохранение через `IWindowConfigurationService.SetUILanguageAsync()`
+
+**LanguageCatalog / LanguageDefinition** (`LanguageCatalog.cs`)
+- Внутренняя запись `LanguageDefinition(CultureCode, DisplayNameKey)` и неизменяемый снимок каталога
+- Основной перечень и порядок читает из встроенного `Resources/AvailableLanguages.json`
+- Хранит записи и ключи в `ImmutableArray`, оба направления поиска — в `FrozenDictionary` с `OrdinalIgnoreCase`
+- Отклоняет некорректный JSON, неизвестные поля, дубли и значения с пробелами по краям
+- Для каждой культуры проверяет собственный `Strings` через `GetResourceSet(..., tryParents: false)`, метаданные культуры и все ключи названий с точным регистром
+- При ошибке загрузки или данных один раз предупреждает через `LocalizationFallback` и кэширует цельный резерв `en-US / Language_English`
+- Защищает инициализацию каталога; общий потоковый контракт сервиса этим не меняется
 
 **LocalizationMarkupExtension** (`LocalizationMarkupExtension.cs`)
 - XAML расширение для привязки локализованных строк
 - Использование: `{localization:Localization KeyName}`
 
 **Ресурсы:**
+- `Resources/AvailableLanguages.json` — каталог; `EmbeddedResource` с логическим именем `KID.Resources.AvailableLanguages.json`, требует пересборки
 - `Resources/Strings.ru-RU.resx` — русские строки
 - `Resources/Strings.en-US.resx` — английские строки
 - `Resources/Strings.uk-UA.resx` — украинские строки
@@ -360,9 +371,9 @@ native/сторонний вызов, неинструментированный
 - DTO recovery-снимка с версией схемы, индексом активной вкладки и упорядоченным списком вкладок
 - Для каждой вкладки хранит `FilePath`, `Content` и `SavedContent`; пара текстов восстанавливает вычисляемое dirty-состояние
 
-**AvailableLanguage** (`AvailableLanguage.cs`)
-- Модель доступного языка
-- Свойства: CultureCode, EnglishName, LocalizedDisplayName
+Определение доступного языка — внутренняя запись **LanguageDefinition**
+(`Services/Localization/LanguageCatalog.cs`), описанная в разделе локализации.
+Она хранит `CultureCode` и `DisplayNameKey`; переведённая подпись остаётся в `.resx`.
 
 **AvailableTheme** (`AvailableTheme.cs`)
 - Модель доступной темы
