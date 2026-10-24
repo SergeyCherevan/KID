@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.VisualStudio.Threading;
 using KID.Services.CodeExecution.Errors;
+using System.Globalization;
 
 namespace KID.Services.CodeExecution.Runtime
 {
@@ -36,14 +37,19 @@ namespace KID.Services.CodeExecution.Runtime
         private WeakReference? loadContextReference;
         private JoinableTask<ExecutionResult>? completion;
         private int lifecycleStateValue = (int)LifecycleState.Ready;
+        private readonly CultureInfo uiCulture;
+        private readonly CultureInfo formattingCulture;
 
         /// <summary>
         /// Создаёт экземпляр, который пока владеет только неизменяемым PE/PDB-артефактом.
         /// </summary>
         /// <param name="artifact">Артефакт успешной компиляции.</param>
-        public CollectibleCodeRunningInstance(CompilationArtifact artifact)
+        /// <param name="uiCulture">Снимок выбранного языка интерфейса для этого запуска.</param>
+        public CollectibleCodeRunningInstance(CompilationArtifact artifact, CultureInfo uiCulture)
         {
             this.artifact = artifact ?? throw new ArgumentNullException(nameof(artifact));
+            this.uiCulture = uiCulture ?? throw new ArgumentNullException(nameof(uiCulture));
+            formattingCulture = CultureInfo.CreateSpecificCulture(uiCulture.Name);
         }
 
         /// <summary>
@@ -114,7 +120,7 @@ namespace KID.Services.CodeExecution.Runtime
                  * возможный Task-результат entry point ожидается до публикации исхода.
                  */
                 var invocation = await Task.Run(
-                        () => LoadAndInvokeEntryPoint(cancellationToken),
+                        () => InvokeWithSelectedCulture(cancellationToken),
                         cancellationToken)
                     .ConfigureAwait(false);
                 return await AwaitEntryPointAsync(invocation, cancellationToken)
@@ -193,6 +199,27 @@ namespace KID.Services.CodeExecution.Runtime
         /// <param name="newState">Состояние, которое требуется опубликовать.</param>
         private void WriteLifecycleState(LifecycleState newState) =>
             Volatile.Write(ref lifecycleStateValue, (int)newState);
+
+        /// <summary>
+        /// Применяет культуру запуска в worker-контексте; пользовательские async-операции
+        /// наследуют её, а выход и исключения восстанавливают исходные значения worker-а.
+        /// </summary>
+        private EntryPointInvocation InvokeWithSelectedCulture(CancellationToken cancellationToken)
+        {
+            var previousCulture = CultureInfo.CurrentCulture;
+            var previousUiCulture = CultureInfo.CurrentUICulture;
+            try
+            {
+                CultureInfo.CurrentCulture = formattingCulture;
+                CultureInfo.CurrentUICulture = uiCulture;
+                return LoadAndInvokeEntryPoint(cancellationToken);
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = previousCulture;
+                CultureInfo.CurrentUICulture = previousUiCulture;
+            }
+        }
 
         /// <summary>
         /// Создаёт collectible context, загружает PE/PDB и вызывает entry point.

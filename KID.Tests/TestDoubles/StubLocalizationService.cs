@@ -7,7 +7,7 @@ internal sealed class StubLocalizationService : ILocalizationService
 {
     internal string[] SupportedCultures { get; init; } = ["en", "ru", "uk"];
 
-    public string CurrentCulture => "en";
+    public string CurrentCulture { get; set; } = "en";
 
     public event EventHandler? CultureChanged
     {

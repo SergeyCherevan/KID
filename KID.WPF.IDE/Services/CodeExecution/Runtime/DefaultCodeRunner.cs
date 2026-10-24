@@ -1,6 +1,7 @@
 using KID.Services.CodeExecution.Runtime.Interfaces;
 using KID.Services.Localization.Interfaces;
 using Microsoft.VisualStudio.Threading;
+using System.Globalization;
 
 namespace KID.Services.CodeExecution.Runtime
 {
@@ -14,12 +15,14 @@ namespace KID.Services.CodeExecution.Runtime
     public class DefaultCodeRunner : ICodeRunner
     {
         private readonly JoinableTaskFactory joinableTaskFactory;
+        private readonly ILocalizationService localizationService;
 
         public DefaultCodeRunner(
             ILocalizationService localizationService,
             JoinableTaskFactory joinableTaskFactory)
         {
-            ArgumentNullException.ThrowIfNull(localizationService);
+            this.localizationService = localizationService ??
+                throw new ArgumentNullException(nameof(localizationService));
             this.joinableTaskFactory = joinableTaskFactory ??
                 throw new ArgumentNullException(nameof(joinableTaskFactory));
         }
@@ -38,7 +41,9 @@ namespace KID.Services.CodeExecution.Runtime
             CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(artifact);
-            var runningInstance = new CollectibleCodeRunningInstance(artifact);
+            // Each run gets a snapshot of the selected language rather than the caller's ambient culture.
+            var uiCulture = CultureInfo.GetCultureInfo(localizationService.CurrentCulture);
+            var runningInstance = new CollectibleCodeRunningInstance(artifact, uiCulture);
             runningInstance.Start(joinableTaskFactory, cancellationToken);
             return runningInstance;
         }
