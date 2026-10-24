@@ -6,6 +6,7 @@ using KID.Services.Localization;
 using KID.Services.Localization.Interfaces;
 using KID.Tests.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using System.Globalization;
 using System.IO;
 using System.Threading.Channels;
 using System.Text.Json;
@@ -65,6 +66,126 @@ public sealed class WindowConfigurationServiceTests
         Assert.Same(expectedSettings, service.Settings);
         Assert.Equal(expectedDefaultPath, fileService.ReadJsonPath);
         Assert.Single(fileService.WrittenJsonPaths);
+    }
+
+    [Theory]
+    [InlineData("en-US", "en")]
+    [InlineData("en-GB", "en")]
+    [InlineData("en-CA", "en")]
+    [InlineData("ru-RU", "ru")]
+    [InlineData("ru-BY", "ru")]
+    [InlineData("ru-UA", "ru")]
+    [InlineData("ru-KZ", "ru")]
+    [InlineData("uk-UA", "uk")]
+    [InlineData("uk-CA", "uk")]
+    [InlineData("sk-SK", "en")]
+    public async Task FirstLaunch_UsesSystemUiLanguageAndPersistsIt(string systemCulture, string expected)
+    {
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(systemCulture);
+            using var provider = new ServiceCollection().BuildServiceProvider();
+            var localization = new LocalizationService(provider);
+            var fileService = new RecordingFileService
+            {
+                ReadJsonImplementation = (_, _) => JsonSerializer.Deserialize<WindowConfigurationData>(
+                    """{"FontSize":22,"FontFamily":"Fira Code"}""")
+            };
+            var logger = new RecordingLogger();
+            var service = new WindowConfigurationService(fileService, localization, logger);
+            var notifiedLanguages = new List<string>();
+            service.UILanguageSettingsChanged += (_, _) =>
+                notifiedLanguages.Add(Assert.Single(fileService.WrittenLanguages));
+
+            await service.SetConfigurationFromFileAsync();
+
+            Assert.Equal(expected, service.Settings.UILanguage);
+            Assert.Equal([expected], fileService.WrittenLanguages);
+            Assert.Equal([expected], notifiedLanguages);
+            Assert.Equal(22, service.Settings.FontSize);
+            Assert.Equal("Fira Code", service.Settings.FontFamily);
+            Assert.Empty(logger.Events);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task FirstLaunch_WhenDefaultConfigurationIsUnavailable_StillUsesSystemUiLanguage(bool unreadable)
+    {
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("uk-UA");
+            using var provider = new ServiceCollection().BuildServiceProvider();
+            var fileService = new RecordingFileService
+            {
+                ReadJsonImplementation = (_, _) => unreadable
+                    ? throw new JsonException("Invalid default settings JSON")
+                    : null
+            };
+            var service = new WindowConfigurationService(fileService, new LocalizationService(provider));
+
+            await service.SetConfigurationFromFileAsync();
+
+            Assert.Equal("uk", service.Settings.UILanguage);
+            Assert.Equal(["uk"], fileService.WrittenLanguages);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Theory]
+    [InlineData("en-US", "ru")]
+    [InlineData("ru-RU", "uk")]
+    [InlineData("uk-UA", "en")]
+    [InlineData("sk-SK", "uk")]
+    public async Task Load_SavedLanguageOverridesSystemUiLanguage(string systemCulture, string savedLanguage)
+    {
+        var originalUiCulture = CultureInfo.CurrentUICulture;
+        try
+        {
+            CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo(systemCulture);
+            using var provider = new ServiceCollection().BuildServiceProvider();
+            var fileService = new RecordingFileService
+            {
+                FileExistsImplementation = _ => true,
+                ReadJsonImplementation = (_, _) => new WindowConfigurationData { UILanguage = savedLanguage }
+            };
+            var service = new WindowConfigurationService(fileService, new LocalizationService(provider));
+
+            await service.SetConfigurationFromFileAsync();
+
+            Assert.Equal(savedLanguage, service.Settings.UILanguage);
+            Assert.Empty(fileService.WrittenJsonPaths);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture = originalUiCulture;
+        }
+    }
+
+    [Fact]
+    public async Task FirstLaunch_WhenSettingsSaveFails_DoesNotNotifyLanguageChange()
+    {
+        var fileService = new RecordingFileService
+        {
+            WriteJsonImplementation = () => throw new IOException("settings write failed")
+        };
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService { CurrentCulture = "uk" });
+        var events = 0;
+        service.UILanguageSettingsChanged += (_, _) => events++;
+
+        await Assert.ThrowsAsync<IOException>(() => service.SetConfigurationFromFileAsync());
+
+        Assert.Equal(0, events);
     }
 
     [Fact]
