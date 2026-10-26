@@ -235,7 +235,7 @@ dotnet KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.
 Региональный формат чисел и дат Windows сам по себе не выбирает язык интерфейса:
 исходный выбор определяется `CurrentUICulture`.
 Сценарий и подтверждённые результаты описаны в
-[ручной проверке первого запуска](testing/FirstLaunchLanguageSmoke.md).
+[ручной проверке первого запуска](testing/FIRST_LAUNCH_LANGUAGE.smoke.md).
 
 Английские строки находятся в базовом `Strings.resx` основной сборки;
 `[assembly: NeutralResourcesLanguage("en")]` задаёт общий английский резерв.
