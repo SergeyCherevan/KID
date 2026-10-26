@@ -52,7 +52,8 @@ public sealed class FileServiceTests
         {
             var settings = await service.ReadJsonAsync<WindowConfigurationData>(path);
             Assert.NotNull(settings);
-            Assert.Equal("ru", settings.UILanguage);
+            // FileService leaves an absent language for WindowConfigurationService to resolve.
+            Assert.Equal(string.Empty, settings.UILanguage);
             Assert.True(settings.IsIconsVisible);
             Assert.Equal(new WindowConfigurationData().TemplateCode, settings.TemplateCode);
             Assert.Equal(14, settings.FontSize);
