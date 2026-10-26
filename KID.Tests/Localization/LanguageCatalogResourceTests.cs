@@ -66,7 +66,7 @@ public sealed class LanguageCatalogResourceTests
     }
 
     [Fact]
-    public void EnglishFallbackAndOtherBaseResourcesAreInMainAssembly()
+    public void EnglishFallbackResourcesAreInMainAssembly()
     {
         var assembly = typeof(LocalizationService).Assembly;
         var attribute = assembly.GetCustomAttribute<NeutralResourcesLanguageAttribute>();
@@ -74,20 +74,6 @@ public sealed class LanguageCatalogResourceTests
         Assert.Equal("en", attribute.CultureName);
         Assert.Equal(UltimateResourceFallbackLocation.MainAssembly, attribute.Location);
         Assert.Contains("KID.Resources.Strings.resources", assembly.GetManifestResourceNames());
-        foreach (var (resourceName, key) in new[]
-        {
-            ("AvailableThemes", "Theme_Count"),
-            ("AvailableFontsAndSizes", "Font_Count")
-        })
-        {
-            var manager = new ResourceManager($"KID.Resources.{resourceName}", assembly);
-            try
-            {
-                Assert.False(string.IsNullOrWhiteSpace(manager.GetString(key, CultureInfo.InvariantCulture)));
-                Assert.False(string.IsNullOrWhiteSpace(manager.GetString(key, CultureInfo.GetCultureInfo("uk-UA"))));
-            }
-            finally { manager.ReleaseAllResources(); }
-        }
     }
 
     [Theory]

@@ -493,9 +493,9 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 **Файл:** `KID.WPF.IDE/Services/Themes/ThemeProviderService.cs`
 
 **Ответственность:**
-- Чтение каталога из `Resources/AvailableThemes.resx`
-- Валидация пар `LocalizationKey` / `ResourcePath`
-- Сохранение порядка тем, устранение дубликатов и Light-fallback
+- Однократная загрузка встроенного `Resources/AvailableThemes.json` через `Lazy<ThemeCatalog>`
+- Строгая валидация пар `localizationKey` / `resourcePath`, уникальности ключей по `Ordinal`, относительных XAML URI и обязательной стартовой темы
+- Неизменяемый снимок в порядке JSON; при ошибке всего каталога — резерв `Theme_VS2022Light` и однократный `SettingsFallback`
 - Поиск определения темы по стабильному ключу локализации
 - Миграция двух старых ключей в `Theme_VS2022Light` / `Theme_VS2022Dark`, без дублирования пунктов меню
 
@@ -550,6 +550,25 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 - `WindowButtonStyle` — стиль кнопок окна
 - `TabActiveBrush`, `TabInactiveBrush`, `TabBarBackgroundBrush` — цвета вкладок редактора
 - `TabActiveTextBrush`, `TabInactiveTextBrush` — цвета текста вкладок
+
+## Каталоги шрифтов и размеров (Fonts)
+
+#### FontProviderService / FontCatalog
+
+**Файлы:** `KID.WPF.IDE/Services/Fonts/FontProviderService.cs`, `FontCatalog.cs`
+
+**Ответственность:**
+- Однократная загрузка `Resources/AvailableFontsAndSizes.json` в неизменяемый снимок с массивами `fonts` и `fontSizes`
+- Проверка непустых уникальных имён без пробелов по краям (`OrdinalIgnoreCase`) и уникальных конечных положительных чисел; порядок JSON сохраняется
+- Фильтрация по установленным шрифтам Windows при каждом `GetAvailableFonts()`, без учёта регистра
+- Возврат `Consolas` при пустом пересечении; ошибка перечисления шрифтов не заменяет валидные размеры
+- При повреждении JSON — цельный резерв `Consolas` и `[10, 11, 12, 13, 14, 16, 18, 20]` с однократным `SettingsFallback`
+
+Оба JSON-каталога встроены в основную сборку как `EmbeddedResource` с именами
+`KID.Resources.AvailableThemes.json` и `KID.Resources.AvailableFontsAndSizes.json`.
+Изменения требуют пересборки. Строгий формат запрещает неизвестные и повторные
+поля, комментарии и завершающие запятые. Переводы названий тем остаются в
+`Strings*.resx`, их полноту проверяют тесты ресурсов.
 
 ## 6. Подсистема инициализации (Initialize)
 

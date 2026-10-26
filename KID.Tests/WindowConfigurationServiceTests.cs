@@ -366,6 +366,27 @@ public sealed class WindowConfigurationServiceTests
     }
 
     [Fact]
+    public async Task SetConfigurationFromFileAsync_PreservesPositiveSizeOutsideMenuCatalog()
+    {
+        Assert.DoesNotContain(22.0, new KID.Services.Fonts.FontProviderService().GetAvailableFontSizes());
+        var settings = new WindowConfigurationData { UILanguage = "en", FontSize = 22, FontFamily = "Fira Code" };
+        var fileService = new RecordingFileService
+        {
+            FileExistsImplementation = _ => true,
+            ReadJsonImplementation = (_, _) => settings
+        };
+        var logger = new RecordingLogger();
+        var service = new WindowConfigurationService(fileService, new StubLocalizationService(), logger);
+
+        await service.SetConfigurationFromFileAsync();
+
+        Assert.Equal(22, service.Settings.FontSize);
+        Assert.Equal("Fira Code", service.Settings.FontFamily);
+        Assert.Empty(logger.Events);
+        Assert.Empty(fileService.WrittenJsonPaths);
+    }
+
+    [Fact]
     public async Task SetConfigurationFromFileAsync_NormalizesBlankFontAndInvalidCulture()
     {
         var fileService = new RecordingFileService

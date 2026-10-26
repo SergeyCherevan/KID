@@ -287,10 +287,16 @@ native/сторонний вызов, неинструментированный
 - Использует безопасную Light-тему как fallback
 
 **ThemeProviderService** (`ThemeProviderService.cs`)
-- Читает упорядоченный каталог тем из `Resources/AvailableThemes.resx`
-- Валидирует пары `LocalizationKey` / `ResourcePath`, устраняет дубликаты и предоставляет fallback
+- Получает неизменяемый упорядоченный снимок `ThemeCatalog` из встроенного `Resources/AvailableThemes.json` через `Lazy<ThemeCatalog>`
 - Отделяет список доступных тем от логики их применения
 - Разрешает старые `Theme_Light` / `Theme_Dark` в канонические ключи VS2022; после применения сохраняется новый ключ
+
+**ThemeCatalog** (`ThemeCatalog.cs`)
+- Однократно читает `KID.Resources.AvailableThemes.json` из основной сборки; порядок массива задаёт порядок меню
+- Строго проверяет JSON, непустые поля `localizationKey` / `resourcePath` без пробелов по краям, уникальность ключей по `Ordinal` и относительный XAML URI
+- Требует сохранения стартовой записи `Theme_VS2022Light / Themes/VS2022LightTheme.xaml`
+- При ошибке отклоняет весь каталог, один раз предупреждает через `SettingsFallback` и кэширует резерв из стартовой темы
+- Проверки поставки подтверждают наличие JSON, собственных переводов названий во всех языках и загрузку настоящих XAML-словарей на STA
 
 **Файлы тем:**
 - `Themes/VS2022LightTheme.xaml` — светлая тема
@@ -301,6 +307,17 @@ native/сторонний вызов, неинструментированный
 - `EditorScrollStyles.xaml` — полосы прокрутки VS2026 с цветами темы, системными размерами WPF и стандартными командами
 - Общие словари вложены в корневой словарь темы; существующий `ThemeService` заменяет всю эту группу. Резервная/стартовая тема — `Theme_VS2022Light`
 - `Controls/EditorTabBorder.cs` рисует форму вкладки VS2026 с нижними внешними сопряжениями; в VS2022 использует обычный `Border`
+
+#### Каталоги шрифтов и размеров (Fonts)
+
+**FontProviderService / FontCatalog** (`Services/Fonts/`)
+- `FontCatalog` однократно читает встроенный `KID.Resources.AvailableFontsAndSizes.json` через `Lazy<FontCatalog>` и хранит `fonts` / `fontSizes` в `ImmutableArray`
+- Названия уникальны по `OrdinalIgnoreCase`, непусты и без пробелов по краям; размеры уникальны, конечны и положительны; порядок обоих массивов сохраняется
+- Оба каталога запрещают неизвестные и повторные JSON-поля, комментарии, завершающие запятые и неверные типы; данные не зависят от текущей культуры
+- При ошибке любого массива используется цельный резерв `Consolas` и `[10, 11, 12, 13, 14, 16, 18, 20]` с однократным `SettingsFallback`
+- `FontProviderService.GetAvailableFonts()` при каждом запросе фильтрует исходные имена по установленным шрифтам Windows без учёта регистра; пустое пересечение возвращает `Consolas`
+- Ошибка перечисления системных шрифтов диагностируется отдельно и не меняет размеры из валидного каталога; интерфейсы и формат настроек сохраняются
+- Оба JSON являются `EmbeddedResource`, изменение требует пересборки; внешние файлы рядом с приложением не используются
 
 #### 3.5. Code Editor (Редактор кода)
 
@@ -390,9 +407,10 @@ native/сторонний вызов, неинструментированный
 (`Services/Localization/LanguageCatalog.cs`), описанная в разделе локализации.
 Она хранит `CultureCode` и `DisplayNameKey`; переведённая подпись остаётся в `.resx`.
 
-**AvailableTheme** (`AvailableTheme.cs`)
-- Модель доступной темы
-- Свойства: ThemeKey, EnglishName, LocalizedDisplayName
+**ThemeDefinition** (`Models/ThemeDefinition.cs`)
+- Неизменяемая запись темы из `ThemeCatalog`
+- `LocalizationKey` — стабильный ключ темы и её названия в `Strings*.resx`
+- `ResourcePath` — относительный путь к XAML-словарю
 
 **WindowConfigurationData** (`Models/WindowConfigurationData.cs`)
 - Модель данных для настроек

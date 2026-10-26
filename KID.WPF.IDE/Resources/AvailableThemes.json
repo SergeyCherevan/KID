@@ -1,0 +1,18 @@
+[
+  {
+    "localizationKey": "Theme_VS2022Light",
+    "resourcePath": "Themes/VS2022LightTheme.xaml"
+  },
+  {
+    "localizationKey": "Theme_VS2022Dark",
+    "resourcePath": "Themes/VS2022DarkTheme.xaml"
+  },
+  {
+    "localizationKey": "Theme_VS2026Light",
+    "resourcePath": "Themes/VS2026LightTheme.xaml"
+  },
+  {
+    "localizationKey": "Theme_VS2026Dark",
+    "resourcePath": "Themes/VS2026DarkTheme.xaml"
+  }
+]

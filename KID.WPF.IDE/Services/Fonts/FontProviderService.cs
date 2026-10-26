@@ -1,103 +1,67 @@
-using KID.Resources;
+using System.Collections.Immutable;
+using System.IO;
+using System.Runtime.InteropServices;
 using KID.Services.Diagnostics;
 using KID.Services.Fonts.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Resources;
-using System.Windows.Media;
 
-namespace KID.Services.Fonts
+namespace KID.Services.Fonts;
+
+/// <summary>
+/// Предоставляет установленные шрифты и размеры из встроенного JSON-каталога.
+/// </summary>
+public class FontProviderService : IFontProviderService
 {
-    /// <summary>
-    /// Реализация сервиса предоставления списка шрифтов и размеров.
-    /// </summary>
-    public class FontProviderService : IFontProviderService
+    private readonly Lazy<FontCatalog> catalog;
+    private readonly Func<IEnumerable<string>> getInstalledFontNames;
+    private readonly ILogger? logger;
+
+    public FontProviderService(ILogger<FontProviderService>? logger = null)
+        : this(
+            () => typeof(FontProviderService).Assembly.GetManifestResourceStream(FontCatalog.ResourceName),
+            () => System.Windows.Media.Fonts.SystemFontFamilies.Select(font => font.Source),
+            logger)
     {
-        private static readonly ResourceManager _resourceManager =
-            new ResourceManager("KID.Resources.AvailableFontsAndSizes", typeof(Strings).Assembly);
-        private readonly ILogger<FontProviderService>? _logger;
+    }
 
-        public FontProviderService(ILogger<FontProviderService>? logger = null)
+    internal FontProviderService(Func<Stream?> openStream, Func<IEnumerable<string>> getInstalledFontNames, ILogger? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(getInstalledFontNames);
+        catalog = FontCatalog.CreateLazy(openStream, logger);
+        this.getInstalledFontNames = getInstalledFontNames;
+        this.logger = logger;
+    }
+
+    /// <inheritdoc />
+    public IEnumerable<string> GetAvailableFonts()
+    {
+        var snapshot = catalog.Value;
+        if (snapshot.IsFallback)
+            return snapshot.Fonts;
+
+        try
         {
-            _logger = logger;
+            return FilterInstalledFonts(snapshot.Fonts, getInstalledFontNames());
         }
-
-        /// <inheritdoc />
-        public IEnumerable<string> GetAvailableFonts()
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+            or ExternalException or InvalidOperationException or NotSupportedException or FormatException)
         {
-            var result = new List<string>();
-
-            try
-            {
-                var countStr = _resourceManager.GetString("Font_Count", CultureInfo.InvariantCulture);
-                if (string.IsNullOrEmpty(countStr) || !int.TryParse(countStr, out int count))
-                    return GetDefaultFonts();
-
-                var installedFontNames = System.Windows.Media.Fonts.SystemFontFamilies
-                    .Select(f => f.Source)
-                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-                var added = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                for (int i = 0; i < count; i++)
-                {
-                    var fontName = _resourceManager.GetString($"Font_{i}", CultureInfo.InvariantCulture);
-                    if (!string.IsNullOrEmpty(fontName) && installedFontNames.Contains(fontName) && added.Add(fontName))
-                    {
-                        result.Add(fontName);
-                    }
-                }
-
-                if (result.Count == 0)
-                    result.Add("Consolas");
-            }
-            catch (Exception exception)
-            {
-                _logger?.LogWarning(
-                    DiagnosticEventIds.SettingsFallback,
-                    exception,
-                    "Available font list could not be loaded; using the default font.");
-                return GetDefaultFonts();
-            }
-
-            return result;
+            logger?.LogWarning(
+                DiagnosticEventIds.SettingsFallback,
+                exception,
+                "Installed fonts could not be enumerated; using the default font.");
+            return FontCatalog.DefaultFonts;
         }
+    }
 
-        /// <inheritdoc />
-        public IEnumerable<double> GetAvailableFontSizes()
-        {
-            var result = new List<double>();
+    /// <inheritdoc />
+    public IEnumerable<double> GetAvailableFontSizes() => catalog.Value.FontSizes;
 
-            try
-            {
-                var countStr = _resourceManager.GetString("FontSize_Count", CultureInfo.InvariantCulture);
-                if (string.IsNullOrEmpty(countStr) || !int.TryParse(countStr, out int count))
-                    return GetDefaultFontSizes();
-
-                for (int i = 0; i < count; i++)
-                {
-                    var sizeStr = _resourceManager.GetString($"FontSize_{i}", CultureInfo.InvariantCulture);
-                    if (!string.IsNullOrEmpty(sizeStr) && double.TryParse(sizeStr, CultureInfo.InvariantCulture, out double size) && size > 0)
-                        result.Add(size);
-                }
-            }
-            catch (Exception exception)
-            {
-                _logger?.LogWarning(
-                    DiagnosticEventIds.SettingsFallback,
-                    exception,
-                    "Available font size list could not be loaded; using defaults.");
-                return GetDefaultFontSizes();
-            }
-
-            return result.Count > 0 ? result : GetDefaultFontSizes();
-        }
-
-        private static IEnumerable<string> GetDefaultFonts() => ["Consolas"];
-
-        private static IEnumerable<double> GetDefaultFontSizes() =>
-            [10.0, 11.0, 12.0, 13.0, 14.0, 16.0, 18.0, 20.0];
+    internal static ImmutableArray<string> FilterInstalledFonts(
+        ImmutableArray<string> fonts, IEnumerable<string> installedFontNames)
+    {
+        var installed = installedFontNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var result = fonts.Where(installed.Contains).ToImmutableArray();
+        return result.IsEmpty ? FontCatalog.DefaultFonts : result;
     }
 }

@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Resources;
 using KID.Models;
 using KID.Services.Themes;
+using KID.Tests.Infrastructure;
+using static KID.Tests.Infrastructure.ResourceCatalogTestSupport;
 
 namespace KID.Tests.Themes;
 
@@ -53,5 +55,27 @@ public sealed class ThemeProviderServiceTests
         var provider = new ThemeProviderService();
         Assert.False(provider.TryGetTheme(key, out _));
         Assert.Equal(4, provider.GetAvailableThemes().Count);
+    }
+
+    [Fact]
+    public void BrokenCatalog_UsesCachedDefaultAndKeepsLegacyLightAlias()
+    {
+        var logger = new ResourceCatalogTestLogger();
+        var reads = 0;
+        var provider = new ThemeProviderService(() =>
+        {
+            reads++;
+            return JsonStream("[]");
+        }, logger);
+        Assert.Equal(0, reads);
+        Assert.Equal(new ThemeDefinition("Theme_VS2022Light", "Themes/VS2022LightTheme.xaml"), provider.GetDefaultTheme());
+        Assert.True(provider.TryGetTheme("Theme_Light", out var light));
+        Assert.Equal(provider.GetDefaultTheme(), light);
+        Assert.False(provider.TryGetTheme("Theme_Dark", out _));
+        Assert.False(provider.TryGetTheme("theme_vs2022light", out _));
+        Assert.Single(provider.GetAvailableThemes());
+        Assert.Equal(1, reads);
+        Assert.Throws<NotSupportedException>(() => ((IList<ThemeDefinition>)provider.GetAvailableThemes()).Clear());
+        logger.AssertCatalogWarning(ThemeCatalog.ResourceName);
     }
 }

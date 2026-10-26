@@ -1,0 +1,14 @@
+{
+  "fonts": [
+    "Consolas",
+    "Cascadia Code",
+    "Cascadia Mono",
+    "JetBrains Mono",
+    "Fira Code",
+    "Source Code Pro",
+    "Courier New",
+    "Lucida Console",
+    "Segoe UI Mono"
+  ],
+  "fontSizes": [10, 11, 12, 13, 14, 16, 18, 20]
+}
