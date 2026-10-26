@@ -8,8 +8,8 @@ namespace KID.Models
         // Цветовая тема
         public string ColorTheme { get; set; } = "Theme_VS2022Light";
 
-        // Язык интерфейса
-        public string UILanguage { get; set; } = "ru"; // ru, en, uk
+        // Пустое значение разрешается конфигурационным сервисом по исходному языку системы.
+        public string UILanguage { get; set; } = string.Empty; // ru, en, uk после загрузки настроек
 
         // Иконки меню (кроме запуска и остановки)
         public bool IsIconsVisible { get; set; } = true;

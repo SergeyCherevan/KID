@@ -24,6 +24,7 @@ namespace KID.Services.Initialize
         private readonly string _appDataDirectory;
         private readonly string _settingsPath;
         private readonly string _defaultConfigurationPath;
+        private readonly string _defaultUILanguage;
         private readonly Lock _settingsSaveQueueLock = new();
         private readonly Queue<SettingsSaveRequest> _settingsSaveQueue = new();
         private bool _isProcessingSettingsSaveQueue;
@@ -49,6 +50,11 @@ namespace KID.Services.Initialize
             _fileService = fileService ?? throw new ArgumentNullException(nameof(fileService));
             _localizationService = localizationService ?? throw new ArgumentNullException(nameof(localizationService));
             _logger = logger;
+
+            // Capture the system language before a saved or manually selected UI language is applied.
+            var initialLanguage = ResolveUILanguage(_localizationService.CurrentCulture);
+            _defaultUILanguage = string.IsNullOrEmpty(initialLanguage) ? "en" : initialLanguage;
+            Settings.UILanguage = _defaultUILanguage;
 
             var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             _appDataDirectory = Path.Combine(appDataPath, "KID");
@@ -94,10 +100,13 @@ namespace KID.Services.Initialize
             // Если файла нет, пробуем загрузить из DefaultWindowConfiguration.json
             // как fallback, затем сохраняем в AppData. Ошибка этой записи должна дойти
             // до вызывающего startup/error boundary, а не превратиться в ложный успех.
+            // LocalizationService has already resolved the system UI language through the catalog.
+            var initialUILanguage = GetDefaultUILanguage();
             try
             {
                 Settings = await _fileService.ReadJsonAsync<WindowConfigurationData>(_defaultConfigurationPath)
                     ?? new WindowConfigurationData();
+                Settings.UILanguage = initialUILanguage;
                 ValidateLoadedSettings(_defaultConfigurationPath);
                 NormalizeTemplateName();
             }
@@ -109,8 +118,12 @@ namespace KID.Services.Initialize
                     "Default settings file could not be loaded. Path={Path}",
                     _defaultConfigurationPath);
                 Settings = new WindowConfigurationData();
-                Settings.UILanguage = GetDefaultUILanguage();
+                Settings.UILanguage = initialUILanguage;
             }
+
+            // Refresh the menu after persistence even when the detected UI language is unchanged.
+            lock (_settingsSaveQueueLock)
+                _uiLanguageRevision++;
 
             // Сохраняем настройки в AppData для следующего запуска.
             IconsVisibilityChanged?.Invoke(this, EventArgs.Empty);
@@ -216,11 +229,7 @@ namespace KID.Services.Initialize
             _localizationService.GetCultureCodeByLanguageKey(
                 _localizationService.GetLanguageKeyByCultureCode(cultureCode));
 
-        private string GetDefaultUILanguage()
-        {
-            var defaultLanguage = ResolveUILanguage(new WindowConfigurationData().UILanguage);
-            return string.IsNullOrEmpty(defaultLanguage) ? "en" : defaultLanguage;
-        }
+        private string GetDefaultUILanguage() => _defaultUILanguage;
 
         private void NotifyUILanguageSaved()
         {
