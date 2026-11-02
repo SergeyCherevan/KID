@@ -13,6 +13,7 @@ internal sealed class ExecutionEnvironment
 {
     private readonly Lock capabilityGate = new();
     private DispatcherScope? dispatcherScope;
+    private Dispatcher? uiDispatcher;
     private int cleanupStarted;
 
     internal ExecutionEnvironment(
@@ -26,13 +27,45 @@ internal sealed class ExecutionEnvironment
         this.diagnosticSink = diagnosticSink;
     }
 
-    private readonly Action<ExecutionDiagnostic>? diagnosticSink;
+    private Action<ExecutionDiagnostic>? diagnosticSink;
+
+    internal void ClearDiagnosticSink() => Volatile.Write(ref diagnosticSink, null);
 
     internal long ExecutionId { get; }
     internal CancellationToken CancellationToken { get; }
     internal bool IsAcceptingNewWork => Volatile.Read(ref cleanupStarted) == 0;
 
-    internal void BeginCleanup() => Interlocked.Exchange(ref cleanupStarted, 1);
+    internal void BeginCleanup()
+    {
+        lock (capabilityGate) Interlocked.Exchange(ref cleanupStarted, 1);
+    }
+
+    // Serialize component publication with ingress closure, including legacy public Init calls.
+    internal Lock.Scope EnterAttachment(Dispatcher? dispatcher = null)
+    {
+        var attachment = capabilityGate.EnterScope();
+        try
+        {
+            ThrowIfCancellationRequested();
+            if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(this))
+                throw new InvalidOperationException("Execution does not own the current environment.");
+            if (dispatcher != null)
+            {
+                dispatcher.VerifyAccess();
+                if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+                    throw new InvalidOperationException("The UI Dispatcher is shutting down.");
+                BindDispatcher(dispatcher);
+            }
+            return attachment;
+        }
+        catch
+        {
+            attachment.Dispose();
+            throw;
+        }
+    }
+
+    internal DispatcherScope? AttachedDispatcher => Volatile.Read(ref dispatcherScope);
 
     /// <summary>Единственная реализация проверки Stop для состояния execution.</summary>
     internal void ThrowIfCancellationRequested() => CancellationToken.ThrowIfCancellationRequested();
@@ -45,33 +78,45 @@ internal sealed class ExecutionEnvironment
 
         try
         {
-            diagnosticSink?.Invoke(new ExecutionDiagnostic(ExecutionId, component, operation, exception));
+            Volatile.Read(ref diagnosticSink)?.Invoke(new ExecutionDiagnostic(ExecutionId, component, operation, exception));
         }
         catch (Exception sinkException)
         {
-            Trace.TraceError(
-                "Execution diagnostic sink failed. ExecutionId={0}; Component={1}; Operation={2}; Exception={3}",
-                ExecutionId,
-                component,
-                operation,
-                sinkException);
+            try
+            {
+                Trace.TraceError(
+                    "Execution diagnostic sink failed. ExecutionId={0}; Component={1}; Operation={2}; Exception={3}",
+                    ExecutionId,
+                    component,
+                    operation,
+                    sinkException);
+            }
+            catch (Exception)
+            {
+                // A host TraceListener must not make diagnostics interrupt mandatory cleanup.
+            }
         }
     }
 
     internal DispatcherScope AttachDispatcher(Dispatcher dispatcher)
     {
         ArgumentNullException.ThrowIfNull(dispatcher);
-        lock (capabilityGate)
-        {
-            if (!IsAcceptingNewWork)
-                throw new ObjectDisposedException(nameof(ExecutionEnvironment));
-            if (dispatcherScope != null)
-                throw new InvalidOperationException("A dispatcher is already attached to this execution.");
+        using var attachment = EnterAttachment();
+        if (dispatcherScope != null)
+            throw new InvalidOperationException("A dispatcher is already attached to this execution.");
+        // The low-level scope also supports testing Dispatcher shutdown from another thread.
+        // UI control access/liveness is validated by the session and component entry points.
+        BindDispatcher(dispatcher);
+        var scope = new DispatcherScope(this, dispatcher);
+        Volatile.Write(ref dispatcherScope, scope);
+        return scope;
+    }
 
-            var scope = new DispatcherScope(this, dispatcher);
-            Volatile.Write(ref dispatcherScope, scope);
-            return scope;
-        }
+    private void BindDispatcher(Dispatcher dispatcher)
+    {
+        if (uiDispatcher != null && !ReferenceEquals(uiDispatcher, dispatcher))
+            throw new ArgumentException("All runtime controls must use the same Dispatcher.", nameof(dispatcher));
+        uiDispatcher = dispatcher;
     }
 
     internal DispatcherScope GetDispatcher() =>

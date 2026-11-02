@@ -22,20 +22,34 @@ dotnet run --project samples/KID.Library.StandaloneProbe -c Release
 Холст и ambient token остаются нетронутыми. Это проверка текущего ограничения,
 **не** подтверждение восстановленной самостоятельности.
 
-## 🏗️ После этапа 2: публичная сессия
+## 🏗️ Этап 2: публичная сессия
 
 ```powershell
 dotnet build samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=Session
 dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=Session
 ```
 
-На этапе 1 сборка этого режима должна завершаться ошибкой отсутствующего
-`KIDRuntimeSession`/`KIDRuntimeOptions`/`KIDRuntimeDiagnostic`. Сохранённый исходник
-выражает неподдерживаемый сейчас сценарий непосредственно через будущий API.
-После этапа 2 он обязан собираться и проходить без подмены типов: свой холст,
+На этапе 1 сборка этого режима завершалась ошибкой отсутствующего API.
+После реализации этапа 2 он собирается и проходит без подмены типов: свой холст,
 ввод с явно заданными источниками, необязательная консоль и её streams,
 общий token, STOP, повторное/конкурентное завершение, музыка без UI-контролов
 и успешное повторное открытие. Реальное воспроизведение звука не проверяется.
+
+## ⛔ Этап 2: ошибка очистки
+
+```powershell
+dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=SessionFailure
+```
+
+Отдельный процесс ставит в Dispatcher принятую `void`-команду с ошибкой,
+проверяет общий результат повторного `DisposeAsync`, диагностику, восстановление
+трёх потоков консоли и отказ нового открытия с исходной причиной.
+Здесь намеренно блокируется admission до конца процесса; reset не предусмотрен.
+Целевые `RuntimeSessionTests` дополнительно проверяют частичное перенаправление,
+отмену открытия, независимость компонентов, drain, двухфазное завершение и гонки.
+`RuntimeSessionFailureTests` запускает изолированные дочерние процессы для
+cleanup failure, rollback failure, отменённого rollback, ошибки host cleanup и
+ошибки cancellation callback. Эти проверки не добавляют friend-доступ probe.
 
 ## 🎨 После этапа 3: несколько холстов
 

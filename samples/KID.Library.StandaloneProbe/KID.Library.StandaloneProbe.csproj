@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <Target Name="ValidateStandaloneContractStage" BeforeTargets="PrepareForBuild">
-    <Error Condition="'$(StandaloneContractStage)' != 'Regression' and '$(StandaloneContractStage)' != 'Session' and '$(StandaloneContractStage)' != 'CanvasSwitching'"
-           Text="StandaloneContractStage must be Regression, Session or CanvasSwitching." />
+    <Error Condition="'$(StandaloneContractStage)' != 'Regression' and '$(StandaloneContractStage)' != 'Session' and '$(StandaloneContractStage)' != 'SessionFailure' and '$(StandaloneContractStage)' != 'CanvasSwitching'"
+           Text="StandaloneContractStage must be Regression, Session, SessionFailure or CanvasSwitching." />
   </Target>
 </Project>

@@ -58,6 +58,7 @@ public static partial class TextBoxConsole
 
         lock (initLock)
         {
+            using var attachment = environment.EnterAttachment(textBox.Dispatcher);
             if (Volatile.Read(ref executionScope) != null)
                 throw new InvalidOperationException("TextBoxConsole is already initialized.");
             if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(environment))
@@ -109,9 +110,7 @@ public static partial class TextBoxConsole
                 if (scope != null && ReferenceEquals(Volatile.Read(ref executionScope), scope))
                 {
                     BeginCleanup(environment);
-                    // Инициализация всё ещё удерживает initLock. Асинхронный cleanup стартует
-                    // после выхода из текущего стека и потому не может синхронно войти в Release.
-                    _ = Task.Run(() => ShutdownAsync(environment).AsTask());
+                    // The lifecycle owner awaits rollback, preserving any cleanup failures.
                 }
                 else
                 {

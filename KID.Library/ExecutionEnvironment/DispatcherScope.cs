@@ -34,7 +34,8 @@ internal sealed class DispatcherScope : IAsyncDisposable
     {
         Environment.ThrowIfCancellationRequested();
         lock (gate)
-            if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(Environment) ||
+            if (!ExecutionEnvironmentManager.IsCurrent(Environment) ||
+                (!nested && !Environment.IsAcceptingNewWork) ||
                 !Environment.OwnsDispatcher(this) ||
                 (closing && !nested))
             {

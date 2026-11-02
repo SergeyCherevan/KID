@@ -28,6 +28,7 @@ public static partial class Music
 
         lock (_lockObject)
         {
+            using var attachment = environment.EnterAttachment();
             if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(environment))
                 throw new InvalidOperationException("Execution does not own the current environment.");
             if (executionScope != null)

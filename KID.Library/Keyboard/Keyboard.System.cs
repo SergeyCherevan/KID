@@ -59,6 +59,7 @@ namespace KID
 
             lock (_initLock)
             {
+                using var attachment = environment.EnterAttachment(window.Dispatcher);
                 if (_executionScope != null)
                     throw new InvalidOperationException("Keyboard is already initialized.");
                 if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(environment))

@@ -9,6 +9,9 @@ internal static class ExecutionEnvironmentManager
 {
     private static readonly Lock gate = new();
     private static ExecutionEnvironment? current;
+    private static Reservation? reservation;
+    private static Exception? admissionFailure;
+    private static long nextExecutionId;
 
     internal static ExecutionEnvironment? Current => Volatile.Read(ref current);
 
@@ -20,12 +23,59 @@ internal static class ExecutionEnvironmentManager
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(executionId);
         lock (gate)
         {
-            if (current != null)
-                throw new InvalidOperationException("An execution is already active.");
+            CheckAdmission();
+            nextExecutionId = Math.Max(nextExecutionId, executionId);
 
             var environment = new ExecutionEnvironment(executionId, cancellationToken, diagnosticSink);
             Volatile.Write(ref current, environment);
             return new ExecutionEnvironmentLease(environment);
+        }
+    }
+
+    // Reservation precedes publication and survives library cleanup until host/ALC cleanup ends.
+    internal static Reservation ReserveExecution(
+        CancellationToken cancellationToken,
+        Action<ExecutionDiagnostic>? diagnosticSink)
+    {
+        lock (gate)
+        {
+            CheckAdmission();
+            var environment = new ExecutionEnvironment(checked(++nextExecutionId), cancellationToken, diagnosticSink);
+            return reservation = new Reservation(environment);
+        }
+    }
+
+    private static void CheckAdmission()
+    {
+        if (admissionFailure != null)
+            throw new InvalidOperationException("Runtime admission is blocked because cleanup failed.", admissionFailure);
+        if (current != null || reservation != null)
+            throw new InvalidOperationException("An execution is already active.");
+    }
+
+    internal sealed class Reservation(ExecutionEnvironment environment)
+    {
+        internal ExecutionEnvironment Environment => environment;
+
+        internal void Publish()
+        {
+            lock (gate)
+            {
+                if (!ReferenceEquals(reservation, this))
+                    throw new InvalidOperationException("The execution reservation is no longer active.");
+                Volatile.Write(ref current, environment);
+            }
+        }
+
+        internal void Complete(Exception? cleanupFailure)
+        {
+            lock (gate)
+            {
+                if (!ReferenceEquals(reservation, this)) return;
+                if (cleanupFailure != null) admissionFailure = cleanupFailure;
+                if (ReferenceEquals(current, environment)) Volatile.Write(ref current, null);
+                reservation = null;
+            }
         }
     }
 
@@ -55,6 +105,7 @@ internal static class ExecutionEnvironmentManager
                 throw new InvalidOperationException("No execution is active.");
             if (environment.ExecutionId != executionId)
                 throw new InvalidOperationException("Execution does not own the current environment.");
+            environment.ThrowIfCancellationRequested();
             if (!environment.IsAcceptingNewWork)
                 throw new ObjectDisposedException(nameof(ExecutionEnvironment));
             return environment.AttachDispatcher(dispatcher);
