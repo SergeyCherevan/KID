@@ -14,6 +14,7 @@ Harness объединяет контекст продукта, работу н�
   [D005](work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md) хранит историю
   завершённого восстановления самостоятельной библиотеки.
 - **checks/** — [тесты](checks/automated/KID.Tests/README.md),
+  [проверки runner](checks/automated/runner/README.md),
   [внешний probe](checks/probes/KID.Library.StandaloneProbe/README.md),
   [WPF demo](checks/probes/KID.Library.StandaloneDemo/README.md) и
   [ручные сценарии](checks/manual/).

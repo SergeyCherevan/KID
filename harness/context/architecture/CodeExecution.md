@@ -133,7 +133,7 @@ bridge. `Compilation` также является именем типа Roslyn, 
 
 ```powershell
 dotnet build KID.sln -c Release
-dotnet test harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build
+dotnet test --project harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build
 ```
 
 Тесты `Compiler/` проверяют компиляцию, semantic rewrite и metadata dependencies;

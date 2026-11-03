@@ -49,7 +49,7 @@ WPF-подписки, static events/shortcuts/scopes, Console streams, audio tas
 
 ```powershell
 dotnet build KID.sln -c Release
-dotnet test harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build
+dotnet test --project harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build
 ```
 
 Структура production-кода описана в [CodeExecution](../../../context/architecture/CodeExecution.md). Тестовые каталоги группируют сценарии: `Compiler/`, `Execution/`, `Console/` и `Lifecycle/`. Импорты используют пространства имён соответствующих частей и их подпапок `Interfaces/`.

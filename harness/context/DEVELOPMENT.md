@@ -1,5 +1,60 @@
 # Руководство разработчика
 
+## ⚙️ Общие команды harness
+
+Используйте PowerShell 7+ на Windows. Корневой global.json выбирает .NET SDK
+и Microsoft.Testing.Platform. Runner определяет checkout от собственного пути,
+сохраняет текущий каталог вызывающего процесса и передаёт аргументы массивами.
+
+```powershell
+./harness/tools/Invoke-Harness.ps1 -Command doctor
+./harness/tools/Invoke-Harness.ps1 -Command build
+./harness/tools/Invoke-Harness.ps1 -Command test
+./harness/tools/Invoke-Harness.ps1 -Command probe -Mode All
+./harness/tools/Invoke-Harness.ps1 -Command demo -ConsoleMode Both
+./harness/tools/Invoke-Harness.ps1 -Command check -Profile Headless
+./harness/tools/Invoke-Harness.ps1 -Command check -Profile Full -TimeoutSeconds 900
+./harness/tools/Invoke-Harness.ps1 -Command manual -Scenario editor-session-recovery
+```
+
+Без аргументов или с `-Help` выводится справка, без dotnet и артефактов.
+Doctor проверяет пути, Windows/PowerShell и выбранный SDK без restore/build.
+Build собирает solution; test добавляет все тесты с `--no-build --no-restore`.
+Probe отдельно пересобирает и запускает Regression, Session, SessionFailure,
+CanvasSwitching и CanvasObjects; бинарник одного режима не используется другим.
+Demo собирается один раз и проходит `--verify` без/с `--with-console` в разных
+процессах. Эти операции открывают реальные WPF-окна и требуют desktop-сеанс.
+
+Check Headless объединяет solution build, все тесты и все пять probe без видимых
+окон. Full добавляет обе самопроверки demo; desktop проверяется до сборок.
+Manual только показывает README и команды подготовки/восстановления выбранного
+сценария, а All перечисляет пять сценариев. Физический ввод, звук и recovery
+не считаются пройденными по автоматическому прогону.
+
+Рабочие команды поддерживают `-Configuration Release|Debug` (Release по умолчанию),
+`-NoRestore` (без сетевого fallback и без подразумеваемого no-build),
+`-TimeoutSeconds 1..86400` (600 по умолчанию, на каждый дочерний процесс).
+Mode допустим только для probe, ConsoleMode — demo, Profile — check, Scenario —
+manual. При первой ошибке оставшиеся операции получают not-run.
+
+В `artifacts/harness/<UTC timestamp>-<run id>/` сохраняются логи операций, TRX
+через встроенный `--report-xunit-trx` и summary.json с revision/dirty, окружением,
+аргументами, рабочим каталогом, временем и исходными exit codes. Эти файлы
+игнорируются Git. Обычные bin/obj остаются рядом с проектами.
+Runner удерживает exclusive lock `artifacts/harness/runner.lock`; оставшийся
+файл без открытого handle не блокирует новый запуск. Прямые dotnet-команды
+нужно согласовывать самостоятельно. Timeout и Ctrl+C останавливают только
+дочернее дерево текущего запуска, освобождают lock и сохраняют сводку.
+
+Коды завершения: 0 — выбранный набор прошёл либо INFO; 1 — отказ проверки;
+2 — параметры; 3 — окружение/desktop/lock; 4 — runner/обязательные артефакты;
+124 — timeout; 130 — отмена. Ошибка или недоступная обязательная операция
+не превращается в PASS. `build` и `manual` не означают прохождение полного набора.
+
+Поведенческие [проверки runner](../checks/automated/runner/README.md) выполняются
+в изолированном checkout без пользовательских настроек. Полный контракт и
+журнал переноса находятся в [плане](../work/plans/HARNESS_STRUCTURE.plan.md).
+
 ## 🔌 Самостоятельная библиотека D005
 
 Для внешнего `net10.0-windows` WPF-хоста используйте
@@ -56,7 +111,7 @@ callback обязан захватывать exact scope; нельзя повт�
 Для Music нельзя создавать static fire-and-forget playback/fade task или второй registry execution identity. Любой звук должен принадлежать `MusicExecutionScope`, каждая async-операция — получать playback/session token и находиться в task registry, а временный файл — регистрироваться до первой отменяемой записи. Host shutdown закрывает регистрацию синхронно, пытается остановить все outputs и только затем отменяет и ожидает задачи; `SoundPlayerOFF()` этот host-контракт не заменяет.
 
 Из корня: `dotnet restore KID.sln`, `dotnet build KID.sln -c Release --no-restore`, затем
-`dotnet test KID.sln -c Release --no-restore`. Для локальной диагностики используйте focused-наборы
+`dotnet test --solution KID.sln -c Release --no-restore`. Для локальной диагностики используйте focused-наборы
 `TextBoxConsoleSpecifications`, `DispatcherGraphicsTests`, `KeyboardMouseTests`,
 `MusicLifecycleTests`, `Stage9ReliabilityTests` и execution lifecycle/error tests.
 
@@ -564,7 +619,7 @@ Headless runtime smoke подтверждает путь compile → Run → Sto
 
 ### Автоматизированные проверки консоли
 
-`dotnet test harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build --no-restore --filter FullyQualifiedName~KID.Tests.Console`
+`dotnet test --project harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build --no-restore --filter FullyQualifiedName~KID.Tests.Console`
 проверяет отмену Read/ReadLine без клавиатуры, запрет ввода на UI-потоке, Unicode и клавиши,
 stale scope/read request, FIFO и параллельный output, lifecycle `OutputReceived`, WPF/Dispatcher
 failures и восстановление streams при всех execution-исходах.
