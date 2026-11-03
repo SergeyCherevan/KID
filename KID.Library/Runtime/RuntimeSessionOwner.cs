@@ -9,7 +9,7 @@ namespace KID;
 /// Shared library lifecycle. CleanupAsync releases library resources; CompleteAsync additionally
 /// finalizes host cleanup and admission. The IDE can retain the reservation while unloading its ALC.
 /// </summary>
-internal sealed class RuntimeSessionOwner
+internal sealed class RuntimeSessionOwner : IAsyncDisposable
 {
     private readonly Lock gate = new();
     private readonly Lock stopGate = new();
@@ -35,10 +35,40 @@ internal sealed class RuntimeSessionOwner
         this.stopSource = stopSource;
         this.reservation = reservation;
         CancellationToken = stopSource.Token;
+        Environment.RuntimeOwner = this;
     }
 
     internal CancellationToken CancellationToken { get; }
     internal ExecutionEnvironment Environment => reservation.Environment;
+    public ValueTask DisposeAsync() => CompleteAsync();
+
+    // The IDE reserves before creating its controls/context and keeps this owner until ALC cleanup.
+    internal static RuntimeSessionOwner Reserve(
+        CancellationToken cancellationToken = default,
+        Action<ExecutionDiagnostic>? diagnosticSink = null,
+        CancellationTokenSource? cancellationSource = null)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var source = cancellationSource ?? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        RuntimeSessionOwner owner;
+        try
+        {
+            owner = new RuntimeSessionOwner(source,
+                ExecutionEnvironmentManager.ReserveExecution(source.Token, diagnosticSink));
+        }
+        catch
+        {
+            source.Dispose();
+            throw;
+        }
+        owner.reservation.Publish();
+        owner.stopRegistration = source.Token.Register(owner.CloseIngress);
+        return owner;
+    }
+
+    internal static RuntimeSessionOwner GetCurrent(long executionId) =>
+        ExecutionEnvironmentManager.GetCurrent(executionId).RuntimeOwner ??
+        throw new InvalidOperationException("The execution has no runtime session owner.");
 
     internal static async ValueTask<RuntimeSessionOwner> OpenAsync(
         KIDRuntimeOptions options,
@@ -47,30 +77,16 @@ internal sealed class RuntimeSessionOwner
     {
         ArgumentNullException.ThrowIfNull(options);
         cancellationToken.ThrowIfCancellationRequested();
-        var dispatcher = ValidateOptions(options);
-        var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        RuntimeSessionOwner owner;
-        try
-        {
-            Action<ExecutionDiagnostic>? diagnostics = options.DiagnosticSink is { } sink
+        ValidateOptions(options);
+        Action<ExecutionDiagnostic>? diagnostics = options.DiagnosticSink is { } sink
                 ? diagnostic => sink(new KIDRuntimeDiagnostic(
                     diagnostic.ExecutionId, diagnostic.Component, diagnostic.Operation, diagnostic.Exception))
                 : null;
-            owner = new RuntimeSessionOwner(source,
-                ExecutionEnvironmentManager.ReserveExecution(source.Token, diagnostics));
-        }
-        catch
-        {
-            source.Dispose();
-            throw;
-        }
+        var owner = Reserve(cancellationToken, diagnostics);
 
         try
         {
-            owner.reservation.Publish();
-            owner.stopRegistration = source.Token.Register(owner.CloseIngress);
-            owner.Initialize(options, dispatcher, redirectStreams);
-            source.Token.ThrowIfCancellationRequested();
+            owner.Initialize(options, redirectStreams);
             return owner;
         }
         catch (Exception openingFailure)
@@ -109,20 +125,26 @@ internal sealed class RuntimeSessionOwner
         return dispatcher;
     }
 
-    private void Initialize(
+    internal void Initialize(
         KIDRuntimeOptions options,
-        Dispatcher? dispatcher,
-        Action<TextWriter, TextReader, TextWriter>? redirectStreams)
+        Action<TextWriter, TextReader, TextWriter>? redirectStreams = null,
+        Action<ExecutionEnvironment>? initializeRuntime = null)
     {
+        var dispatcher = ValidateOptions(options);
+        if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(Environment))
+            throw new ObjectDisposedException(nameof(RuntimeSessionOwner));
         CancellationToken.ThrowIfCancellationRequested();
         if (dispatcher != null)
         {
-            var scope = DispatcherManager.AttachDispatcher(Environment.ExecutionId, dispatcher);
+            var scope = Environment.AttachedDispatcher ?? DispatcherManager.AttachDispatcher(Environment.ExecutionId, dispatcher);
+            if (!ReferenceEquals(scope.Dispatcher, dispatcher))
+                throw new ArgumentException("All runtime controls must use the same Dispatcher.", nameof(options));
             if (options.Canvas != null) Graphics.Init(options.Canvas, scope, options.CanvasSizeHandler);
         }
         if (options.MouseCanvas != null) Mouse.Init(options.MouseCanvas, Environment);
         if (options.KeyboardWindow != null) Keyboard.Init(options.KeyboardWindow, Environment);
         if (options.EnableMusic) Music.Init(Environment);
+        initializeRuntime?.Invoke(Environment);
         if (options.ConsoleTextBox != null)
         {
             var console = TextBoxConsole.Init(options.ConsoleTextBox, Environment);
@@ -136,6 +158,7 @@ internal sealed class RuntimeSessionOwner
                     TextBoxConsole.GetOut(console), TextBoxConsole.GetIn(console), TextBoxConsole.GetError(console));
             }
         }
+        CancellationToken.ThrowIfCancellationRequested();
     }
 
     private static void RedirectStreams(TextWriter output, TextReader input, TextWriter error)
@@ -155,6 +178,8 @@ internal sealed class RuntimeSessionOwner
             CloseIngress();
         }
     }
+
+    internal void BeginCleanup() => CloseIngress();
 
     private void CloseIngress()
     {
@@ -190,7 +215,17 @@ internal sealed class RuntimeSessionOwner
         {
             start = !completionStarted;
             completionStarted = true;
-            if (start && hostFailure != null) RecordFailure("Host", "Cleanup", hostFailure);
+            if (start && hostFailure != null)
+            {
+                // A context may have awaited CleanupAsync already. Preserve each failure once.
+                var hostErrors = hostFailure is AggregateException aggregate
+                    ? aggregate.Flatten().InnerExceptions.AsEnumerable()
+                    : [hostFailure];
+                foreach (var error in hostErrors)
+                    if (!failures.Any(existing => ReferenceEquals(existing, error) ||
+                        existing is AggregateException recorded && recorded.Flatten().InnerExceptions.Contains(error)))
+                        RecordFailure("Host", "Cleanup", error);
+            }
         }
         if (start) _ = CompleteCoreAsync(cleanup);
         return new ValueTask(completed.Task);

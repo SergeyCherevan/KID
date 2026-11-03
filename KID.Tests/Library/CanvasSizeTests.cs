@@ -117,10 +117,10 @@ public sealed class CanvasSizeTests
             var b = new Canvas();
             var (window, workspace, output) = CreateLayout(a, b);
             output.Margin = new Thickness(7, 0, 11, 0);
-            using (var lease = ExecutionEnvironmentManager.BeginExecution(401, TestContext.Current.CancellationToken))
+            await using (var lease = RuntimeSessionOwner.Reserve(TestContext.Current.CancellationToken))
             {
                 await using var context = new CanvasGraphicsContext(a);
-                context.Init(401, a.Dispatcher);
+                context.Init(lease.Environment.ExecutionId, a.Dispatcher);
                 Graphics.SetCanvasMinSize(123, 234);
                 Assert.Equal(141, workspace.ColumnDefinitions[2].MinWidth);
                 Assert.Equal(234, output.RowDefinitions[2].MinHeight);

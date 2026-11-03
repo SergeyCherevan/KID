@@ -4,6 +4,9 @@ using System.Windows;
 using System.Windows.Controls;
 using KID.Tests.Execution;
 using KID.Tests.Infrastructure;
+using KID.Services;
+using KID.Services.CodeExecution;
+using KID.Tests.TestDoubles;
 
 namespace KID.Tests.Library;
 
@@ -136,9 +139,10 @@ public sealed class RuntimeSessionFailureTests
             var admissionError = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
                 await KIDRuntimeSession.OpenAsync(new KIDRuntimeOptions(), TestContext.Current.CancellationToken));
             Assert.NotNull(admissionError.InnerException);
-            // IDE's current entry point observes the same process-wide failure gate.
-            var ideAdmissionError = Assert.Throws<InvalidOperationException>(() =>
-                ExecutionEnvironmentManager.BeginExecution(9999, TestContext.Current.CancellationToken));
+            var service = new CodeExecutionService(
+                FakeCodeCompiler.Returning(CompilationResult.FromErrors([])), new FakeCodeRunner());
+            var ideAdmissionError = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                service.ExecuteAsync("script", _ => throw new InvalidOperationException("Factory must not run.")));
             Assert.Same(admissionError.InnerException, ideAdmissionError.InnerException);
         });
     }

@@ -2,12 +2,12 @@
 
 ## 📌 Статус и назначение
 
-- **Статус:** `in progress`; Этапы 1–4 выполнены, Этапы 5–6 ещё не реализованы.
-- **Дата:** 2026-11-02.
+- **Статус:** `in progress`; Этапы 1–5 выполнены, Этап 6 ещё не реализован.
+- **Дата:** 2026-11-03.
 - **Исходное состояние:** HEAD `e377dc9`; план основан на обсуждении с автором проекта, чтении текущего кода и истории Git.
 - **Цель:** восстановить самостоятельное использование `KID.Library` в собственном WPF-приложении, включая переключение нескольких `Canvas` во время выполнения, сохранив гарантии C2/C3.
 - **Результат подготовки плана:** определены требования, предлагаемый способ исправления, этапы и критерии приёмки. Реализация, сборка и тесты при подготовке этого документа не выполнялись.
-- **Контракт Этапа 1:** [D005_KID.Library_STANDALONE_CONTRACT.md](D005_KID.Library_STANDALONE_CONTRACT.md). Публичная сессия реализована на Этапе 2, `Graphics.SetCanvas` — на Этапе 3, правила объектов/спрайтов/размеров — на Этапе 4; дальнейшие изменения относятся к Этапам 5–6.
+- **Контракт Этапа 1:** [D005_KID.Library_STANDALONE_CONTRACT.md](D005_KID.Library_STANDALONE_CONTRACT.md). Публичная сессия реализована на Этапе 2, `Graphics.SetCanvas` — на Этапе 3, правила объектов/спрайтов/размеров — на Этапе 4; IDE переведена на общий lifecycle на Этапе 5; итоговый пример и сводная документация относятся к Этапу 6.
 
 Основное решение: [D005 — выделение KID.Library в отдельный проект](../decisions/D005_KID.Library_SEPARATE_PROJECT.md).
 
@@ -75,9 +75,9 @@ git show 993cd69 -- KID.Library/Graphics/Graphics.System.cs KID.Library/Dispatch
 
 ## 🔬 4. Текущее несоответствие и области изменения
 
-Ниже сохранён исходный срез до реализации. Изменения Этапов 1–4 и реальные
-результаты проверок приведены в разделе 10; перевод IDE на общего владельца
-остаётся задачей Этапа 5.
+Ниже сохранён исходный срез до реализации. Изменения Этапов 1–5 и реальные
+результаты проверок приведены в разделе 10. IDE и внешний хост используют
+общего владельца; итоговая документация остаётся задачей Этапа 6.
 
 ### 🔌 Публичное подключение
 
@@ -265,11 +265,11 @@ public static Rectangle Plot(double x, double y)
 
 ### Этап 5. Перевести IDE на общий механизм
 
-- [ ] Адаптировать `CanvasGraphicsContext`, `TextBoxConsoleContext`, `CodeExecutionContext` и `CodeExecutionService` к общему владельцу ресурсов без дублирования lifecycle.
-- [ ] Сохранить общий токен библиотеки, compiler и runner; определить единственного владельца lease и каждого шага cleanup.
-- [ ] Сохранить порядок остановки, восстановления потоков и выгрузки пользовательской ALC; FSM допускает новый Run только после успешного завершения всех ресурсов IDE и библиотеки.
-- [ ] Проверить, что профиль пользовательской компиляции не получил ссылку на IDE, а библиотека — зависимости на compiler/editor.
-- [ ] Сохранить простой сценарий одного скрипта и подготовку окружения силами IDE.
+- [x] Адаптировать `CanvasGraphicsContext`, `TextBoxConsoleContext`, `CodeExecutionContext` и `CodeExecutionService` к общему владельцу ресурсов без дублирования lifecycle.
+- [x] Сохранить общий токен библиотеки, compiler и runner; определить единственного владельца lease и каждого шага cleanup.
+- [x] Сохранить порядок остановки, восстановления потоков и выгрузки пользовательской ALC; FSM допускает новый Run только после успешного завершения всех ресурсов IDE и библиотеки.
+- [x] Проверить, что профиль пользовательской компиляции не получил ссылку на IDE, а библиотека — зависимости на compiler/editor.
+- [x] Сохранить простой сценарий одного скрипта и подготовку окружения силами IDE.
 
 **Выход:** самостоятельное приложение и IDE используют общую реализацию библиотечного lifecycle.
 
@@ -634,3 +634,85 @@ dotnet sln KID.sln list
 артефактам. Проверки использовали headless STA Dispatcher, синтетические WPF
 события и явную раскладку. Видимое окно, физический ввод и реальное воспроизведение
 звука не проверялись. Этап 4 завершён; Этапы 5–6 и план в целом остаются в работе.
+
+
+### 10.6. Этап 5 — общий lifecycle IDE и самостоятельного хоста (2026-11-03)
+
+Этап 5 выполнен. `CodeExecutionService` резервирует `RuntimeSessionOwner` до
+создания контекста. ID выдаёт единственный `ExecutionEnvironmentManager`;
+отдельный счётчик IDE удалён. `ExecutionSession` хранит FSM и completion task,
+получает identity/token от общего владельца и передаёт ему Stop. Собственного
+CTS и отдельного environment lease у IDE больше нет.
+
+`CanvasGraphicsContext` и `TextBoxConsoleContext` стали адаптерами ресурсов:
+первый задаёт Canvas, фиксированные источники ввода, музыку и callback размеров,
+второй — TextBox и перенаправление Console. Инициализация, rollback, закрытие
+приёма, ожидание workers/Dispatcher, восстановление In/Out/Error и снятие
+статических привязок реализованы общим владельцем библиотеки. Контексты сохраняют
+проверки повторного Init, identity и UI target; конфликтующий адаптер не очищает
+ресурсы уже подключённого владельца. `CodeExecutionContext` сохраняет снимок
+дочерних адаптеров и обращается к той же идемпотентной очистке, включая partial Init.
+
+Порядок координатора: окончание compiler/user code → закрытие приёма →
+очистка контекста и библиотечных ресурсов → Dispose running instance / запрос
+Unload ALC → `CompleteAsync` общего владельца с результатом host cleanup →
+освобождение CTS/резервирования → Idle при полном успехе. Между библиотечной
+очисткой и Dispose running instance резервирование остаётся занятым. Ошибка
+любой ресурсной очистки оставляет IDE в CleaningUp и блокирует также публичную
+сессию и новый экземпляр координатора; повторный Run текущего сервиса отклоняется.
+Первичная ошибка выполнения сохраняется отдельно от ошибок cleanup, а один и
+тот же library failure не дублируется при ожидании через несколько адаптеров.
+
+Переход выявил ранее скрывавшуюся проблему Music: ошибки playback/download,
+которые уже передаются пользовательскому коду через task/SoundWait, попадали
+также в результат очистки. Теперь они диагностируются как `Music/Playback`
+или `Music/Auxiliary`, сохраняя fault исходной задачи. Реальные ошибки Stop,
+Dispose, удаления файлов и других шагов освобождения по-прежнему дают cleanup
+failure и запрещают следующий запуск. Существующий тест обработанной ошибки
+загрузки проверяет успешный следующий Run при новом общем владельце.
+
+Добавлены **8 интеграционных случаев** в
+[RuntimeSessionIntegrationTests](../../../KID.Tests/Execution/RuntimeSessionIntegrationTests.cs):
+общий token/ID compiler–runner–library, взаимный admission IDE/standalone,
+удержание резервирования до границы ALC, rollback фабрик и частичного
+перенаправления, ошибки библиотеки/экземпляра/STOP callback. Тесты необратимой
+блокировки admission запускаются в отдельных процессах без reset production
+state. Существующие тесты адаптеров переведены на общего владельца. В проверке
+старого console writer устранено недетерминированное ожидание: `WriteAsync`
+подтверждает приём, а чтение TextBox теперь выполняется после normal drain;
+lease освобождается в finally даже при сбое проверки.
+
+Фактически выполненные итоговые команды:
+
+```powershell
+dotnet restore KID.sln
+dotnet build KID.sln -c Release --no-restore
+dotnet test KID.sln -c Release --no-restore --no-build
+
+dotnet restore samples/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj
+dotnet run --project samples/KID.Library.StandaloneProbe -c Release --no-restore -p:StandaloneContractStage=Session
+dotnet run --project samples/KID.Library.StandaloneProbe -c Release --no-restore -p:StandaloneContractStage=SessionFailure
+dotnet run --project samples/KID.Library.StandaloneProbe -c Release --no-restore -p:StandaloneContractStage=CanvasSwitching
+dotnet run --project samples/KID.Library.StandaloneProbe -c Release --no-restore -p:StandaloneContractStage=CanvasObjects
+dotnet run --project samples/KID.Library.StandaloneProbe -c Release --no-restore -p:StandaloneContractStage=Regression
+dotnet list samples/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj reference
+```
+
+- Restore успешен; итоговая Release-сборка: **0 предупреждений, 0 ошибок**.
+- Полный свежий прогон: **716 passed, 0 failed, 0 skipped** (включая lifecycle,
+  50 Run/Stop, ALC, console, graphics, input, music и compilation profile).
+- Все **5 режимов** внешнего probe: `PASS`, exit code **0**.
+- Единственная ProjectReference probe — `KID.Library`. Профиль пользовательской
+  компиляции не содержит IDE/compiler/editor; зависимости и friend-разрешения
+  библиотеки не расширены.
+
+Штатная sandbox-сборка получила MSB3491 / Access denied при записи существующего
+obj; успешные .NET-команды выполнены с доступом к этим артефактам. Фильтр
+`dotnet test --filter` не поддержан текущим запуском Microsoft Testing Platform;
+focused-диагностика выполнялась напрямую xUnit exe, итоговый полный gate —
+обычным `dotnet test` выше. Первый полный прогон обнаружил описанную гонку теста
+console writer; после исправления полный набор пройден заново.
+
+Проверки использовали headless STA Dispatcher и синтетические события. Видимое
+окно IDE, физический ввод, интерактивное закрытие и реальное воспроизведение
+звука не проверялись. Этап 6 и весь план остаются в работе. Push не выполнялся.

@@ -323,13 +323,11 @@ public sealed class KeyboardMouseTests
     {
         await StaTest.RunAsync(async () =>
         {
-            using var environmentLease = ExecutionEnvironmentManager.BeginExecution(
-                1,
-                TestContext.Current.CancellationToken);
+            await using var environmentLease = RuntimeSessionOwner.Reserve(TestContext.Current.CancellationToken);
             var canvas = new Canvas();
             var window = new Window { Content = canvas };
             var context = new CanvasGraphicsContext(canvas);
-            context.Init(1, canvas.Dispatcher);
+            context.Init(environmentLease.Environment.ExecutionId, canvas.Dispatcher);
             var mouseScope = Assert.IsType<MouseExecutionScope>(Mouse.CurrentScope);
             var keyboardScope = Assert.IsType<KeyboardExecutionScope>(Keyboard.CurrentScope);
             var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -362,9 +360,7 @@ public sealed class KeyboardMouseTests
     {
         await StaTest.RunAsync(async () =>
         {
-            using var environmentLease = ExecutionEnvironmentManager.BeginExecution(
-                1,
-                TestContext.Current.CancellationToken);
+            await using var environmentLease = RuntimeSessionOwner.Reserve(TestContext.Current.CancellationToken);
             var canvas = new Canvas();
             var failure = new InvalidOperationException("after Mouse.Init");
             var context = new CanvasGraphicsContext(canvas, currentCanvas =>
@@ -374,7 +370,7 @@ public sealed class KeyboardMouseTests
             });
 
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
-                context.Init(1, canvas.Dispatcher)));
+                context.Init(environmentLease.Environment.ExecutionId, canvas.Dispatcher)));
             var partialScope = Assert.IsType<MouseExecutionScope>(Mouse.CurrentScope);
 
             await context.DisposeAsync().AsTask()

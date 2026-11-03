@@ -32,6 +32,7 @@ internal sealed class ExecutionEnvironment
     internal void ClearDiagnosticSink() => Volatile.Write(ref diagnosticSink, null);
 
     internal long ExecutionId { get; }
+    internal RuntimeSessionOwner? RuntimeOwner { get; set; }
     internal CancellationToken CancellationToken { get; }
     internal bool IsAcceptingNewWork => Volatile.Read(ref cleanupStarted) == 0;
 

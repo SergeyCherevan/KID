@@ -31,6 +31,7 @@ namespace KID.Services.CodeExecution.Contexts
         private IConsoleContext? initializedConsoleContext;
         private object? initializedGraphicsTarget;
         private object? initializedConsoleTarget;
+        private RuntimeSessionOwner? runtime;
 
         /// <summary>Идентификатор сессии, передаваемый графическому и консольному контекстам.</summary>
         public long ExecutionId { get; set; }
@@ -89,6 +90,13 @@ namespace KID.Services.CodeExecution.Contexts
 
                 try
                 {
+                    var environment = ExecutionEnvironmentManager.Current;
+                    if (environment?.RuntimeOwner is { } owner && environment.ExecutionId == ExecutionId)
+                    {
+                        if (owner.CancellationToken != CancellationToken)
+                            throw new InvalidOperationException("Execution context token does not match the runtime.");
+                        runtime = owner;
+                    }
                     GraphicsContext?.Init(ExecutionId, Dispatcher);
                     ConsoleContext?.Init(ExecutionId, CancellationToken);
                     initialized = true;
@@ -151,6 +159,9 @@ namespace KID.Services.CodeExecution.Contexts
             beginCleanupFailures.DrainTo(failures);
             await failures.CaptureAsync(() => ownedGraphicsContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
             await failures.CaptureAsync(() => ownedConsoleContext?.DisposeAsync().AsTask() ?? Task.CompletedTask);
+            // Covers partial Init as well as optional/custom adapters. Library cleanup is shared
+            // with the child adapters and runs once; finalization belongs to the coordinator.
+            await failures.CaptureAsync(() => runtime?.CleanupAsync().AsTask() ?? Task.CompletedTask);
             var failure = failures.CreateException("Execution context cleanup failed.");
             if (failure == null) disposeCompletion.TrySetResult();
             else disposeCompletion.TrySetException(failure);
@@ -167,6 +178,7 @@ namespace KID.Services.CodeExecution.Contexts
                     return;
 
                 cleanupStarted = true;
+                beginCleanupFailures.Capture(() => runtime?.BeginCleanup());
                 ownedGraphicsContext = initializedGraphicsContext ?? GraphicsContext;
                 ownedConsoleContext = initializedConsoleContext ?? ConsoleContext;
 

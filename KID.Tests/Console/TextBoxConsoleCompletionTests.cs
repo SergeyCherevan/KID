@@ -132,6 +132,7 @@ public sealed class TextBoxConsoleCompletionTests
     [Fact]
     public async Task OutputActionFailure_IsReportedWhileContextRestoresStreamsAndSharesDisposeFailure()
     {
+        if (await IsolatedTest.RunAsync(typeof(TextBoxConsoleCompletionTests))) return;
         await StaTest.RunAsync(async () =>
         {
             var originalOut = global::System.Console.Out;
@@ -142,13 +143,13 @@ public sealed class TextBoxConsoleCompletionTests
             TextChangedEventHandler throwingHandler = (_, _) => throw failure;
             box.TextChanged += throwingHandler;
             using var stop = new CancellationTokenSource();
-            var environmentLease = ExecutionEnvironmentManager.BeginExecution(1, stop.Token);
-            var environment = ExecutionEnvironmentManager.GetCurrent(1);
+            var environmentLease = RuntimeSessionOwner.Reserve(stop.Token);
+            var environment = environmentLease.Environment;
             var context = new TextBoxConsoleContext(box);
 
             try
             {
-                context.Init(1, stop.Token);
+                context.Init(environment.ExecutionId, environmentLease.CancellationToken);
                 var scope = Assert.IsType<ConsoleExecutionScope>(TextBoxConsole.CurrentScope);
                 global::System.Console.Write("trigger");
                 environmentLease.BeginCleanup();
@@ -186,7 +187,7 @@ public sealed class TextBoxConsoleCompletionTests
                     _ = await Record.ExceptionAsync(
                         () => TextBoxConsole.ShutdownAsync(environment).AsTask());
                 }
-                environmentLease.Dispose();
+                _ = await Record.ExceptionAsync(() => environmentLease.CompleteAsync().AsTask());
                 global::System.Console.SetOut(originalOut);
                 global::System.Console.SetIn(originalIn);
                 global::System.Console.SetError(originalError);

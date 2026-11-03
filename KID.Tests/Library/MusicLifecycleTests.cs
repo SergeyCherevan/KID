@@ -292,10 +292,8 @@ public sealed class MusicLifecycleTests
     {
         await StaTest.RunAsync(async () =>
         {
-            using var lease = ExecutionEnvironmentManager.BeginExecution(
-                1,
-                TestContext.Current.CancellationToken);
-            var environment = ExecutionEnvironmentManager.GetCurrent(1);
+            await using var lease = RuntimeSessionOwner.Reserve(TestContext.Current.CancellationToken);
+            var environment = lease.Environment;
             var runtime = new FakeMusicRuntime();
             var failure = new InvalidOperationException("after Music.Init");
             var canvas = new Canvas();
@@ -306,7 +304,7 @@ public sealed class MusicLifecycleTests
             });
 
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
-                context.Init(1, canvas.Dispatcher)));
+                context.Init(environment.ExecutionId, canvas.Dispatcher)));
             Assert.NotNull(Music.CurrentScope);
 
             await context.DisposeAsync().AsTask()
