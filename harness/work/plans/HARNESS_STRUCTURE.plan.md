@@ -536,14 +536,14 @@ API не изменены. Полные build/test выполняются на �
 
 ### Этап 4. Собрать ручные сценарии вместе с их инструментами
 
-- [ ] Перенести standalone, music-download и first-launch-language инструкции
+- [x] Перенести standalone, music-download и first-launch-language инструкции
   в README соответствующих каталогов `harness/checks/manual/`.
-- [ ] Переместить музыкальные `.cs` fixtures рядом с инструкцией, а каждый
+- [x] Переместить музыкальные `.cs` fixtures рядом с инструкцией, а каждый
   recovery `.ps1` — в каталог своего сценария.
-- [ ] Добавить README для persistence-recovery и editor-session-recovery:
+- [x] Добавить README для persistence-recovery и editor-session-recovery:
   параметры `-Case`, подготовка, ожидаемый результат, восстановление состояния.
   Исправить пути в подсказках скриптов, включая команды `-Case Restore`.
-- [ ] Обновить команды запуска и ссылки всех сценариев; проверить синтаксис
+- [x] Обновить команды запуска и ссылки всех сценариев; проверить синтаксис
   PowerShell без изменения пользовательских settings/session. Для музыкальных
   file-based программ проверить команды сборки по новым путям.
 
@@ -732,3 +732,20 @@ README и project references обоих внешних проектов, standal
   AppContext.BaseDirectory и отсутствие зависимостей от старого корня.
   Имена сборок, namespaces, friend-разрешения и C#-код не менялись.
 - Полные build/test, пять probe и demo выполняются через runner на Этапе 6.
+
+### 2026-11-03 — Этап 4
+
+- Все пять ручных сценариев находятся в checks/manual. Music fixtures и
+  recovery-скрипты перенесены рядом с README; два новых README описывают Case,
+  подготовку, ожидаемый результат, backup/state и Restore. Пути в recovery
+  подсказках обновлены. Исходные пользовательские settings/session не менялись.
+- Parser.ParseFile обоих ps1: 0 ошибок. `dotnet build
+  harness/checks/manual/music-download/Serve-MusicDownloadFixture.cs -c Release
+  --nologo`: code 0. Исходный fixture выдаёт CA2208 на аргументе port; C#-код
+  не менялся при переносе. `dotnet run --file ./harness/checks/manual/music-download/
+  Serve-MusicDownloadFixture.cs -- --self-check`: code 0, PASS WAV/Content-Length/
+  chunked/slow/404, сервер корректно завершён.
+- MusicDownloadSmoke.cs остаётся программой для редактора KID, а не автономной
+  dotnet file-based программой. Его исходник сохранён. Ручная проверка звука,
+  физического ввода, первого запуска и recovery здесь не выполнялась; перенос
+  не объявляет их PASS. Приёмка существующих пользовательских данных не нужна.

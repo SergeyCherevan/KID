@@ -58,4 +58,4 @@ $json = switch ($Case) {
 }
 [IO.File]::WriteAllText($settingsPath, $json, [Text.UTF8Encoding]::new($false))
 Write-Output "Prepared '$Case' in '$settingsPath'. Start KID and check that defaults load with no crash."
-Write-Output "After closing KID, restore the original with: ./scripts/manual-checks/Prepare-PersistenceRecovery.ps1 -Case Restore"
+Write-Output "After closing KID, restore the original with: ./harness/checks/manual/persistence-recovery/Prepare-PersistenceRecovery.ps1 -Case Restore"

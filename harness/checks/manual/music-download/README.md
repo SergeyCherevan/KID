@@ -9,11 +9,17 @@
 
 Используй KID, собранный после R02. Сервер — отдельное однофайловое ASP.NET Core-приложение:
 в начале `.cs` указано `#:sdk Microsoft.NET.Sdk.Web`, маршруты объявлены через `app.MapGet`.
-Для запуска нужен .NET 10 SDK (в текущей среде установлен 10.0.401). Запусти его из PowerShell
+Для запуска нужен .NET 10 SDK, выбранный корневым global.json. Запусти его из PowerShell
 в корне репозитория:
 
 ```powershell
-dotnet run --file .\scripts\manual-checks\Serve-MusicDownloadFixture.cs
+dotnet run --file .\harness\checks\manual\music-download\Serve-MusicDownloadFixture.cs
+```
+
+Проверка сборки без запуска сервера:
+
+```powershell
+dotnet build harness/checks/manual/music-download/Serve-MusicDownloadFixture.cs -c Release
 ```
 
 Сервер слушает только `127.0.0.1:8765`, не создаёт файлов и не раздаёт файлы компьютера.
@@ -24,7 +30,7 @@ dotnet run --file .\scripts\manual-checks\Serve-MusicDownloadFixture.cs
 Самопроверка сервера выполняется на том же порту. Останови работающий сервер, затем запусти:
 
 ```powershell
-dotnet run --file .\scripts\manual-checks\Serve-MusicDownloadFixture.cs -- --self-check
+dotnet run --file .\harness\checks\manual\music-download\Serve-MusicDownloadFixture.cs -- --self-check
 ```
 
 Ожидаемый итог: `Fixture self-check passed`. Для другого порта добавь `--port 8766` после `--self-check`.
@@ -32,7 +38,7 @@ dotnet run --file .\scripts\manual-checks\Serve-MusicDownloadFixture.cs -- --sel
 
 ## 2. Подготовить пример и наблюдение за файлами
 
-Открой [пример MusicDownloadSmoke.cs](../../scripts/manual-checks/MusicDownloadSmoke.cs) в редакторе KID и нажми Run.
+Открой [пример MusicDownloadSmoke.cs](MusicDownloadSmoke.cs) в редакторе KID и нажми Run.
 В консоли появится меню: введи номер сценария и нажми Enter. После завершения сценария меню появляется снова;
 `0` завершает проверку. Некорректный ввод повторяет запрос. Код между сценариями менять не требуется.
 Не запускай файл через dotnet: Music требует execution-сессию KID и её graphics runtime.
@@ -103,8 +109,8 @@ Get-ChildItem -LiteralPath $musicSmokeTemp -Filter 'kid-audio-*.tmp' -File |
 скриншота, затем подтвердил слышимость звука и ожидаемое поведение. После Stop в 6/8 выполнены новые
 запуски; выход через 0 завершился штатным сообщением. Предположение о заблокированном следующем Run
 в этом прогоне не воспроизведено и затем опровергнуто интеграционной проверкой текущего host.
-Подробности — в [итогах модернизации](../agent/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-results),
-источники и границы доказательности — в разделе [аудио smoke](../agent/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-evidence) production-readiness аудита.
+Подробности — в [итогах модернизации](../../../work/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-results),
+источники и границы доказательности — в разделе [аудио smoke](../../../work/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#modernization-evidence) production-readiness аудита.
 
 ## 5. Завершить и сообщить результат
 
@@ -129,6 +135,6 @@ Get-ChildItem -LiteralPath $musicSmokeTemp -Filter 'kid-audio-*.tmp' -File |
 Оставшиеся новые temp-файлы: нет / имена и размеры
 ```
 
-Сервер [Serve-MusicDownloadFixture.cs](../../scripts/manual-checks/Serve-MusicDownloadFixture.cs)
+Сервер [Serve-MusicDownloadFixture.cs](Serve-MusicDownloadFixture.cs)
 поддерживает `--self-check`: он проверяет WAV/Content-Length/chunked/slow/404
 и завершает работу; KID и аудиоустройство не запускает.

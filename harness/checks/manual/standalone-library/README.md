@@ -2,12 +2,12 @@
 
 Нужны Windows, .NET 10 SDK и аудиоустройство для шага звука. Проверка дополняет
 автоматические тесты; результаты фиксируются отдельно. Используйте
-[StandaloneDemo](../../samples/KID.Library.StandaloneDemo/README.md).
+[StandaloneDemo](../../probes/KID.Library.StandaloneDemo/README.md).
 
 ## 🎨 Собственное окно без консоли
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release
 ```
 
 1. Проверьте два круга на A и прямоугольник на B после A → B → A.
@@ -24,7 +24,7 @@ dotnet run --project samples/KID.Library.StandaloneDemo -c Release
 ## 🖥️ Необязательная консоль
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release -- --with-console
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release -- --with-console
 ```
 
 1. Убедитесь, что появились TextBox и Read line; сообщение о рисовании приходит
@@ -47,12 +47,12 @@ Console.WriteLine/ReadLine и звук; затем STOP во время цикл
 ## 🧪 Автоматические дополнения
 
 Release gate и пять режимов probe перечислены в
-[журнале плана](../agent/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md).
+[журнале плана](../../../work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md).
 Для окна дополнительно выполните:
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release -- --verify
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release --no-build -- --verify --with-console
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release -- --verify
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release --no-build -- --verify --with-console
 ```
 
 Эти режимы автоматически проверяют Closing, ожидание задач и очистку **до**

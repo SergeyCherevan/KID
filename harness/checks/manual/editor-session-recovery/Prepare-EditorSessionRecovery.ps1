@@ -105,4 +105,4 @@ else {
     Write-Output "Prepared two tabs in '$sessionPath'. Start KID; expect both markers, the first tab marked modified, and the last tab active (index clamped from 99)."
 }
 
-Write-Output "After closing KID, restore the original with: ./scripts/manual-checks/Prepare-EditorSessionRecovery.ps1 -Case Restore"
+Write-Output "After closing KID, restore the original with: ./harness/checks/manual/editor-session-recovery/Prepare-EditorSessionRecovery.ps1 -Case Restore"

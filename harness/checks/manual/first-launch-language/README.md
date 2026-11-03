@@ -67,11 +67,11 @@
 и переключение языковых пакетов Windows не проверялись. Обычный перезапуск,
 переключение всех языков, диалоги файлов и остальная общая приёмка локализации
 остаются отдельно. История и границы подтверждения перенесены в
-[общий аудит](../agent/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#localization-language-selection).
+[общий аудит](../../../work/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md#localization-language-selection).
 
 ## 🧪 Автоматизированное покрытие
 
-В [WindowConfigurationServiceTests](../../KID.Tests/WindowConfigurationServiceTests.cs)
+В [WindowConfigurationServiceTests](../../automated/KID.Tests/WindowConfigurationServiceTests.cs)
 сценарии `FirstLaunch_*` проверяют поддерживаемые региональные варианты,
 резервный английский, отсутствие или ошибку чтения стандартной конфигурации,
 сохранение и уведомления меню. `Load_SavedLanguageOverridesSystemUiLanguage`
