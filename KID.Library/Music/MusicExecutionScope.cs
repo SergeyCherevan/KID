@@ -323,7 +323,8 @@ internal sealed class MusicExecutionScope : IAsyncDisposable
                     foreach (var exception in completed.Exception.Flatten().InnerExceptions)
                     {
                         if (exception is not OperationCanceledException)
-                            data.Scope.RecordFailure(exception);
+                            data.Scope.Environment.ReportDiagnostic("Music",
+                                data.Playback == null ? "Playback" : "Auxiliary", exception);
                     }
                 }
 
@@ -364,7 +365,8 @@ internal sealed class MusicExecutionScope : IAsyncDisposable
             catch (OperationCanceledException) when (lifetimeSource.IsCancellationRequested) { }
             catch (Exception)
             {
-                // Каждая unexpected task fault уже наблюдается ObserveTask и попадает в failures.
+                // Operation faults remain on their tasks and are reported by ObserveTask.
+                // Resource teardown failures are recorded separately by CompletePlayback, etc.
             }
         }
 

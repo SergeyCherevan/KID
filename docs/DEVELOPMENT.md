@@ -1,5 +1,33 @@
 # Руководство разработчика
 
+## 🔌 Самостоятельная библиотека D005
+
+Для внешнего `net10.0-windows` WPF-хоста используйте
+[KIDRuntimeSession и KIDRuntimeOptions](Runtime-API.md), а не внутренние Init.
+[Пример с двумя полями](../samples/KID.Library.StandaloneDemo/README.md) и
+[probe публичного контракта](../samples/KID.Library.StandaloneProbe/README.md)
+собираются отдельно от solution и ссылаются только на KID.Library.
+Открытие выполняется на UI-потоке контролов одного Dispatcher; закрытие ожидает
+задачи хоста и DisposeAsync до shutdown Dispatcher.
+
+IDE-контексты только адаптируют ресурсы к RuntimeSessionOwner. Не переносите
+в них CTS, выдачу execution id, lease, rollback, shutdown компонентов или
+восстановление streams: это ответственность общего владельца библиотеки.
+Координатор удерживает его резервирование до Dispose экземпляра/Unload ALC и
+CompleteAsync; ошибка любого cleanup блокирует также внешний OpenAsync.
+
+Новая графическая команда захватывает Canvas **вместе с исходным scope** до
+постановки в Dispatcher. Вложенные helpers получают то же назначение. Нельзя
+читать Graphics.Canvas заново внутри callback. Методы над существующим элементом
+проверяют Dispatcher объекта и изменяют его независимо от выбранного поля.
+Разметка IDE обслуживается только CanvasLayoutAdapter; библиотека работает
+с обычным Canvas. Смена назначения не меняет MouseCanvas/KeyboardWindow.
+
+Дополнительная приёмка: [ручной сценарий](testing/STANDALONE_LIBRARY.smoke.md).
+Проверки `--verify` примера проходят Window lifecycle, но физический ввод и звук
+проверяются отдельно. Полные результаты — в
+[журнале D005](agent/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md).
+
 ## Надёжность in-process выполнения (C2/C3, этапы 1–10)
 
 KID рассчитан на доверенный учебный код и сохраняет in-process WPF-модель. Не описывайте
@@ -21,8 +49,9 @@ token в поддерживающий cancellation API. Нельзя приме�
 `ConsoleExecutionScope`. Любой сохраняемый reader/writer, read request, output item и Dispatcher
 callback обязан захватывать exact scope; нельзя повторно разрешать current scope из retained stream.
 `BeginCleanup` синхронно закрывает admission, а `ShutdownAsync` ожидает UI teardown, readers и
-`ExecutionEventWorker` до release. `TextBoxConsoleContext` владеет только process-wide
-`System.Console` streams и восстанавливает каждый из них даже после runtime shutdown failure.
+`ExecutionEventWorker` до release. `RuntimeSessionOwner` владеет process-wide
+`System.Console` streams и восстанавливает каждый из них даже после runtime shutdown failure;
+`TextBoxConsoleContext` передаёт только TextBox и настройку перенаправления.
 
 Для Music нельзя создавать static fire-and-forget playback/fade task или второй registry execution identity. Любой звук должен принадлежать `MusicExecutionScope`, каждая async-операция — получать playback/session token и находиться в task registry, а временный файл — регистрироваться до первой отменяемой записи. Host shutdown закрывает регистрацию синхронно, пытается остановить все outputs и только затем отменяет и ожидает задачи; `SoundPlayerOFF()` этот host-контракт не заменяет.
 
@@ -472,7 +501,10 @@ var result = DispatcherManager.InvokeOnUI<ReturnType>(() =>
 });
 ```
 
-**Важно:** `CodeExecutionService` сначала публикует единый `ExecutionEnvironment`, после чего `CanvasGraphicsContext.Init()` автоматически подключает к нему Dispatcher capability. Пользовательский код не инициализирует managers самостоятельно.
+**Важно:** `CodeExecutionService` сначала резервирует общий RuntimeSessionOwner,
+после чего CanvasGraphicsContext передаёт ему контролы. Владелец подключает Dispatcher
+capability и компоненты. В IDE пользователь не вызывает host-методы подключения;
+внешний хост использует KIDRuntimeSession.OpenAsync.
 
 ### Асинхронность
 
@@ -590,9 +622,9 @@ ICodeExecutionContext реализуют IAsyncDisposable; coordinator обяз�
 ### Типичные проблемы
 
 1. **Canvas не инициализирован**
-   - Проверьте, что `Graphics.Init()` вызывается перед использованием
+   - Во внешнем хосте проверьте успешное KIDRuntimeSession.OpenAsync с Canvas перед использованием
    - Проверьте, что Canvas передан в контекст выполнения
-   - Проверьте, что `CanvasGraphicsContext.Init()` вызывается при создании контекста
+   - В IDE проверьте передачу Canvas через CanvasGraphicsContext общему RuntimeSessionOwner
 
 2. **Ошибки компиляции**
    - Проверьте версию .NET

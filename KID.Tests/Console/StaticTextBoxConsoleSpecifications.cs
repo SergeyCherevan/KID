@@ -112,12 +112,16 @@ public sealed class StaticTextBoxConsoleSpecifications
                 oldWriter.GetType().GetMethods(),
                 method => method.Name == nameof(TextBoxConsole.Clear));
 
-            await oldWriter.WriteAsync("old");
+            try
+            {
+                await oldWriter.WriteAsync("old");
+                oldLease.BeginCleanup();
+                TextBoxConsole.BeginCleanup(oldEnvironment);
+                await TextBoxConsole.ShutdownAsync(oldEnvironment);
+            }
+            finally { oldLease.Dispose(); }
+            // TextWriter.WriteAsync accepts output; shutdown confirms the UI drain.
             Assert.Equal("old", oldBox.Text);
-            oldLease.BeginCleanup();
-            TextBoxConsole.BeginCleanup(oldEnvironment);
-            await TextBoxConsole.ShutdownAsync(oldEnvironment);
-            oldLease.Dispose();
 
             var nextBox = new TextBox { IsReadOnly = true };
             using var nextLease = ExecutionEnvironmentManager.BeginExecution(2, CancellationToken.None);
@@ -191,14 +195,14 @@ public sealed class StaticTextBoxConsoleSpecifications
         {
             var originalOut = global::System.Console.Out;
             var box = new TextBox();
-            using var environment = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
+            await using var environment = RuntimeSessionOwner.Reserve();
             await using var owner = new TextBoxConsoleContext(box);
             var conflicting = new TextBoxConsoleContext(new TextBox());
-            owner.Init(1, CancellationToken.None);
+            owner.Init(environment.Environment.ExecutionId, environment.CancellationToken);
             var ownerScope = TextBoxConsole.CurrentScope;
 
             Assert.Throws<InvalidOperationException>(() =>
-                conflicting.Init(1, CancellationToken.None));
+                conflicting.Init(environment.Environment.ExecutionId, environment.CancellationToken));
             await conflicting.DisposeAsync();
 
             Assert.Same(ownerScope, TextBoxConsole.CurrentScope);

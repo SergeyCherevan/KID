@@ -1,131 +1,60 @@
-using KID.Services.Errors;
-using System.IO;
-using System.Threading;
-using System.Windows.Controls;
 using KID.Services.CodeExecution.Contexts.Interfaces;
+using System.IO;
+using System.Windows.Controls;
 
 namespace KID.Services.CodeExecution.Contexts;
 
-/// <summary>
-/// Host-владелец process-wide перенаправления System.Console одной execution-сессии.
-/// Runtime, WPF-подписки и per-run streams принадлежат статическому TextBoxConsole и его
-/// ConsoleExecutionScope; context только сохраняет исходные In/Out/Error, подключает
-/// scope-bound adapters и восстанавливает каждый исходный поток после runtime shutdown.
-/// </summary>
-/// <remarks>
-/// <see cref="BeginCleanup"/> синхронно закрывает console admission и пробуждает readers.
-/// <see cref="DisposeAsync"/> возвращает одну общую completion task, ожидает полный shutdown
-/// и пытается восстановить все три process-wide stream даже при ошибке runtime cleanup.
-/// </remarks>
+/// <summary>Supplies the IDE console to the shared runtime owner, including stream restoration.</summary>
 public sealed class TextBoxConsoleContext : IConsoleContext
 {
-    private readonly Lock lifecycleLock = new();
-    private readonly Action<TextWriter, TextReader, TextWriter> redirectStreams;
-    private TextWriter? originalConsoleOut;
-    private TextReader? originalConsoleIn;
-    private TextWriter? originalConsoleError;
-    private ExecutionEnvironment? environment;
-    private ConsoleExecutionScope? consoleScope;
-    private bool initialized;
+    private readonly Lock gate = new();
+    private readonly Action<TextWriter, TextReader, TextWriter>? redirectStreams;
+    private RuntimeSessionOwner? owner;
+    private TextBox? initializedTarget;
     private bool initializationFailed;
     private bool cleanupStarted;
-    private readonly ExecutionFailureCollector beginCleanupFailures = new();
-    private readonly TaskCompletionSource disposeCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private bool disposeStarted;
-    private long initializedExecutionId;
-    private CancellationToken initializedCancellationToken;
-    private object? initializedTarget;
 
     public object ConsoleTarget { get; set; }
 
-    public TextBoxConsoleContext(TextBox textBox) : this(textBox, (output, input, error) =>
-    {
-        System.Console.SetOut(output);
-        System.Console.SetIn(input);
-        System.Console.SetError(error);
-    })
-    {
-    }
-
-    // Тестовая точка ошибки посередине перенаправления без замены глобального Console API.
-    internal TextBoxConsoleContext(
-        TextBox textBox,
-        Action<TextWriter, TextReader, TextWriter> redirectStreams)
+    public TextBoxConsoleContext(TextBox textBox)
     {
         ArgumentNullException.ThrowIfNull(textBox);
-        ArgumentNullException.ThrowIfNull(redirectStreams);
         ConsoleTarget = textBox;
-        this.redirectStreams = redirectStreams;
     }
 
-    /// <summary>
-    /// Идемпотентный для той же session identity Init; исходные потоки доступны cleanup
-    /// даже при частичной ошибке.
-    /// </summary>
+    internal TextBoxConsoleContext(TextBox textBox, Action<TextWriter, TextReader, TextWriter> redirectStreams)
+        : this(textBox) => this.redirectStreams = redirectStreams ?? throw new ArgumentNullException(nameof(redirectStreams));
+
     public void Init(long executionId, CancellationToken cancellationToken)
     {
-        lock (lifecycleLock)
+        lock (gate)
         {
-            ObjectDisposedException.ThrowIf(disposeStarted || cleanupStarted, this);
-            if (initialized)
+            ObjectDisposedException.ThrowIf(cleanupStarted, this);
+            if (initializedTarget != null)
             {
-                if (initializedExecutionId == executionId &&
-                    initializedCancellationToken == cancellationToken &&
-                    ReferenceEquals(initializedTarget, ConsoleTarget))
-                {
-                    return;
-                }
-
-                throw new InvalidOperationException(
-                    "Console context is already initialized for another session or UI target.");
+                if (owner!.Environment.ExecutionId == executionId && owner.CancellationToken == cancellationToken &&
+                    ReferenceEquals(initializedTarget, ConsoleTarget)) return;
+                throw new InvalidOperationException("Console context is already initialized for another session or UI target.");
             }
             if (initializationFailed)
-            {
-                throw new InvalidOperationException(
-                    "Console context cannot be initialized after a partial initialization failure.");
-            }
+                throw new InvalidOperationException("Console context cannot be initialized after a partial initialization failure.");
             if (ConsoleTarget is not TextBox textBox)
                 throw new InvalidOperationException("ConsoleTarget must be a TextBox.");
-            textBox.Dispatcher.VerifyAccess();
-            initializedExecutionId = executionId;
-            initializedCancellationToken = cancellationToken;
-            initializedTarget = textBox;
-            originalConsoleOut = System.Console.Out;
-            originalConsoleIn = System.Console.In;
-            originalConsoleError = System.Console.Error;
+            textBox.VerifyAccess();
+            var runtime = RuntimeSessionOwner.GetCurrent(executionId);
+            if (runtime.CancellationToken != cancellationToken)
+                throw new InvalidOperationException("Console context cancellation token does not match the current execution.");
+            var hadConsole = TextBoxConsole.CurrentScope != null;
             try
             {
-                environment = ExecutionEnvironmentManager.GetCurrent(executionId);
-                if (environment.CancellationToken != cancellationToken)
-                    throw new InvalidOperationException(
-                        "Console context cancellation token does not match the current execution.");
-                var scopeBeforeInit = TextBoxConsole.CurrentScope;
-                try
-                {
-                    consoleScope = TextBoxConsole.Init(textBox, environment);
-                }
-                catch
-                {
-                    // Init может опубликовать полностью подготовленный scope и лишь затем
-                    // обнаружить cancellation. Такой partial owner должен быть доступен Dispose,
-                    // но конфликт с уже существующим scope не даёт этому context права его снять.
-                    var publishedScope = TextBoxConsole.CurrentScope;
-                    if (scopeBeforeInit == null &&
-                        publishedScope != null &&
-                        ReferenceEquals(publishedScope.Environment, environment))
-                    {
-                        consoleScope = publishedScope;
-                    }
-                    throw;
-                }
-                redirectStreams(
-                    TextBoxConsole.GetOut(consoleScope),
-                    TextBoxConsole.GetIn(consoleScope),
-                    TextBoxConsole.GetError(consoleScope));
-                initialized = true;
+                runtime.Initialize(new KIDRuntimeOptions { ConsoleTextBox = textBox, RedirectSystemConsole = true }, redirectStreams);
+                owner = runtime;
+                initializedTarget = textBox;
             }
             catch
             {
+                if (!hadConsole && ReferenceEquals(TextBoxConsole.CurrentScope?.Environment, runtime.Environment))
+                    owner = runtime;
                 initializationFailed = true;
                 throw;
             }
@@ -134,58 +63,17 @@ public sealed class TextBoxConsoleContext : IConsoleContext
 
     public void BeginCleanup()
     {
-        lock (lifecycleLock)
+        lock (gate)
         {
-            if (cleanupStarted)
-                return;
-
+            if (cleanupStarted) return;
             cleanupStarted = true;
-            var ownedEnvironment = environment;
-            if (ownedEnvironment != null && consoleScope != null)
-                beginCleanupFailures.Capture(() => TextBoxConsole.BeginCleanup(ownedEnvironment));
+            owner?.BeginCleanup();
         }
     }
 
-    /// <summary>
-    /// Ожидает одну общую очистку. Отменённый session token не отменяет восстановление
-    /// потоков, а ошибка адаптера не пропускает попытку восстановить каждый из них.
-    /// </summary>
     public ValueTask DisposeAsync()
     {
         BeginCleanup();
-        lock (lifecycleLock)
-        {
-            if (disposeStarted) return new ValueTask(disposeCompletion.Task);
-            disposeStarted = true;
-        }
-        // Completion опубликована до вызова callback: повторный Dispose видит ту же task.
-        _ = DisposeCoreAsync();
-        return new ValueTask(disposeCompletion.Task);
-    }
-
-    private async Task DisposeCoreAsync()
-    {
-        var failures = new ExecutionFailureCollector();
-        beginCleanupFailures.DrainTo(failures);
-        var ownedEnvironment = environment;
-        var ownedScope = consoleScope;
-        await failures.CaptureAsync(
-            () => ownedEnvironment == null || ownedScope == null
-                ? Task.CompletedTask
-                : TextBoxConsole.ShutdownAsync(ownedEnvironment).AsTask(),
-            finallyAction: () =>
-            {
-                if (originalConsoleOut != null) failures.Capture(() => System.Console.SetOut(originalConsoleOut));
-                if (originalConsoleIn != null) failures.Capture(() => System.Console.SetIn(originalConsoleIn));
-                if (originalConsoleError != null) failures.Capture(() => System.Console.SetError(originalConsoleError));
-                consoleScope = null;
-                environment = null;
-                originalConsoleOut = null;
-                originalConsoleIn = null;
-                originalConsoleError = null;
-            });
-        var failure = failures.CreateException("Console streams cleanup failed.");
-        if (failure == null) disposeCompletion.TrySetResult();
-        else disposeCompletion.TrySetException(failure);
+        return owner?.CleanupAsync() ?? ValueTask.CompletedTask;
     }
 }

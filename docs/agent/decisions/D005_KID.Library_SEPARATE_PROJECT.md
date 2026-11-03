@@ -25,15 +25,49 @@
 ## 📌 Последствия и границы
 
 - Библиотека и IDE образуют отдельные проекты с направлением зависимости `KID.WPF.IDE → KID.Library`.
-- Самостоятельное использование библиотеки является целью решения; готовность соответствующего публичного API требует отдельной оценки.
+- Самостоятельное подключение восстановлено публичной `KIDRuntimeSession`; хост предоставляет контролы и ожидает завершение до shutdown Dispatcher.
 - Независимость от IDE не означает независимость от WPF и Windows: текущая графическая реализация использует WPF `Canvas`.
 
-## 🔬 Проверка текущей реализации
+## 🕰️ Первоначальная реализация, регрессия и восстановление
 
-Проверено 2026-11-01 чтением кода: разделение проектов реализовано, однако сценарий подключения собственного холста через публичный API сейчас ограничен.
+Выделение библиотеки реализовано в `2060e13` (2026-01-29). В срезе `77b25fa`
+до C2/C3 собственное приложение могло подключить Canvas через публичные
+Graphics.Init и DispatcherManager.Init и задать StopManager.CurrentToken.
+Следовательно, самостоятельный сценарий уже работал; последующая потеря
+публичного bootstrap была регрессией первоначального решения.
 
-- [KID.Library.csproj](../../../KID.Library/KID.Library.csproj) не содержит ссылки на IDE; [KID.WPF.IDE.csproj](../../../KID.WPF.IDE/KID.WPF.IDE.csproj) ссылается на библиотеку. Библиотека нацелена на `net10.0-windows` и использует WPF.
-- В [Graphics.System.cs](../../../KID.Library/Graphics/Graphics.System.cs) метод `Graphics.Init` имеет доступ `internal`, а свойство `Graphics.Canvas` — закрытый setter. Доступ IDE к внутренним членам предоставлен через `InternalsVisibleTo` в [AssemblyInfo.cs](../../../KID.Library/Properties/AssemblyInfo.cs).
-- [Graphics.CanvasSize.cs](../../../KID.Library/Graphics/Graphics.CanvasSize.cs) содержит привязку к именам элементов разметки IDE. Поэтому отсутствие ссылки на проект IDE не означает полного отсутствия предположений о её устройстве.
+При C2/C3 управление STOP, Dispatcher и ресурсами было переведено на внутренний
+ExecutionEnvironment. После `993cd69` Graphics.Init требует внутренний scope,
+а публичные Init ввода/музыки не создают environment. Чтение кода 2026-11-01
+зафиксировало это ограничение, но само разделение проектов сохранялось.
 
-Тесты и запуск отдельного приложения с библиотекой не проводились. Образовательная цель и будущее выполнение в отдельном процессе этой проверкой не подтверждались.
+Восстановление 2026-11-02–03 предоставляет новый поддерживаемый lifecycle,
+сохраняя гарантии C2/C3; старый host-bootstrap не возвращается:
+
+- [KIDRuntimeSession](../../../KID.Library/Runtime/KIDRuntimeSession.cs) и
+  [KIDRuntimeOptions](../../../KID.Library/Runtime/KIDRuntimeOptions.cs) публично
+  подключают собственные графику, ввод, звук и необязательную консоль.
+- [Graphics.SetCanvas](../../../KID.Library/Graphics/Graphics.System.cs)
+  поддерживает A → B → A в одном Dispatcher и одной сессии. Принятая команда
+  сохраняет Canvas и scope; выбор не очищает поля и не перезапускает компоненты.
+- Методы над элементом и Sprite используют фактические объекты/родителей.
+  [Graphics.CanvasSize](../../../KID.Library/Graphics/Graphics.CanvasSize.cs)
+  работает с обычным Canvas; Grid-панели обслуживает
+  [CanvasLayoutAdapter](../../../KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasLayoutAdapter.cs) IDE.
+- [RuntimeSessionOwner](../../../KID.Library/Runtime/RuntimeSessionOwner.cs)
+  общий для IDE и внешней сессии: rollback, STOP, ожидаемая очистка, streams
+  и блокировка нового запуска после cleanup failure. IDE удерживает владельца
+  до Dispose running instance и запроса Unload ALC.
+- [KID.Library.csproj](../../../KID.Library/KID.Library.csproj) по-прежнему
+  не ссылается на IDE/compiler/editor и использует `net10.0-windows`/WPF.
+  Новые внешние проекты не имеют friend-разрешений.
+
+## 🔬 Воспроизводимость и границы проверки
+
+[Публичное подключение](../../Runtime-API.md),
+[WPF-пример](../../../samples/KID.Library.StandaloneDemo/README.md),
+[внешний probe](../../../samples/KID.Library.StandaloneProbe/README.md) и
+[ручной сценарий](../../testing/STANDALONE_LIBRARY.smoke.md) описывают применение.
+Фактические команды, результаты и непроверенные вручную пункты записаны отдельно
+для каждого этапа в [журнале плана](../plans/D005_KID.Library_STANDALONE_RESTORE.plan.md).
+Восстановление библиотеки не реализует запуск App-Window & Console из IDE.

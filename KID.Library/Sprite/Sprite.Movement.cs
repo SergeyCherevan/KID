@@ -12,14 +12,14 @@ namespace KID
         /// <returns>Текущий спрайт (для цепочки вызовов).</returns>
         public virtual Sprite Move(double dx, double dy)
         {
-            return InvokeOnUI(() =>
+            return InvokeOnUI(elements =>
             {
-                if (Graphics.Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
+                if (dx == 0 && dy == 0) return this;
 
                 _x += dx;
                 _y += dy;
 
-                foreach (var element in GraphicElements)
+                foreach (var element in elements.All)
                 {
                     executionScope.Environment.ThrowIfCancellationRequested();
                     if (element == null) continue;
@@ -43,9 +43,6 @@ namespace KID
             executionScope.CheckAccess(DispatcherManager.IsExecuting(executionScope));
             var dx = x - _x;
             var dy = y - _y;
-
-            if (dx == 0 && dy == 0)
-                return;
 
             Move(dx, dy);
         }

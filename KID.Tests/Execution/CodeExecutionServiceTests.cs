@@ -1,3 +1,4 @@
+using KID.Tests.Infrastructure;
 using KID.Services;
 using KID.Services.CodeExecution;
 using KID.Services.CodeExecution.Contexts.Interfaces;
@@ -149,6 +150,7 @@ public sealed class CodeExecutionServiceTests
     [Fact]
     public async Task ExecuteAsync_ContextDisposeFails_StillDisposesRunningInstanceAfterContext()
     {
+        if (await IsolatedTest.RunAsync(typeof(CodeExecutionServiceTests))) return;
         var cleanupOrder = new List<string>();
         var contextException = new InvalidOperationException("context dispose failed");
         var runner = new FakeCodeRunner(
@@ -177,12 +179,12 @@ public sealed class CodeExecutionServiceTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_AllCleanupStepsFail_AttemptsEveryStepAndKeepsRunBlocked()
+    public async Task ExecuteAsync_HostCleanupAndTokenDisposalFail_AttemptsEveryStepAndKeepsRunBlocked()
     {
+        if (await IsolatedTest.RunAsync(typeof(CodeExecutionServiceTests))) return;
         var cleanupOrder = new List<string>();
         var contextException = new InvalidOperationException("context dispose failed");
         var runningInstanceException = new InvalidOperationException("running instance dispose failed");
-        var leaseException = new InvalidOperationException("lease dispose failed");
         var sessionException = new InvalidOperationException("session dispose failed");
         var compiler = FakeCodeCompiler.Returning(
             CompilationResult.FromArtifact(CreateArtifact()));
@@ -199,20 +201,14 @@ public sealed class CodeExecutionServiceTests
         var service = new CodeExecutionService(
             compiler,
             runner,
-            executionId => new ExecutionSession(
-                executionId,
-                new ThrowingCancellationTokenSource(() =>
+            runtime => new ExecutionSession(runtime),
+            runtimeFactory: diagnostics => RuntimeSessionOwner.Reserve(
+                diagnosticSink: diagnostics,
+                cancellationSource: new ThrowingCancellationTokenSource(() =>
                 {
                     cleanupOrder.Add("session");
                     throw sessionException;
-                })),
-            (executionId, cancellationToken) => new DelegatingDisposable(
-                ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken),
-                () =>
-                {
-                    cleanupOrder.Add("execution environment lease");
-                    throw leaseException;
-                }));
+                })));
 
         var exception = await Record.ExceptionAsync(() =>
             service.ExecuteAsync("valid code", _ => context).WaitAsync(
@@ -225,16 +221,14 @@ public sealed class CodeExecutionServiceTests
             {
                 contextException,
                 runningInstanceException,
-                leaseException,
                 sessionException
             },
-            aggregateException.InnerExceptions);
+            aggregateException.Flatten().InnerExceptions);
         Assert.Equal(
             new[]
             {
                 "execution context",
                 "running instance",
-                "execution environment lease",
                 "session"
             },
             cleanupOrder);
@@ -261,6 +255,7 @@ public sealed class CodeExecutionServiceTests
     [Fact]
     public async Task ExecuteAsync_ExecutionAndCleanupFail_PreservesPrimaryAndSecondaryErrors()
     {
+        if (await IsolatedTest.RunAsync(typeof(CodeExecutionServiceTests))) return;
         var executionException = new InvalidOperationException("execution failed");
         var cleanupException = new InvalidOperationException("cleanup failed");
         var runner = new FakeCodeRunner(
@@ -279,7 +274,7 @@ public sealed class CodeExecutionServiceTests
         var aggregateException = Assert.IsType<AggregateException>(exception);
         Assert.Equal(
             new Exception[] { executionException, cleanupException },
-            aggregateException.InnerExceptions);
+            aggregateException.Flatten().InnerExceptions);
         Assert.Equal(1, runner.DisposeCount);
         Assert.Equal(ExecutionState.CleaningUp, service.State);
         Assert.True(service.IsExecutionActive);
@@ -289,6 +284,7 @@ public sealed class CodeExecutionServiceTests
     [Fact]
     public async Task ExecuteAsync_StopAndCleanupFail_ReportsCleanupFailureInsteadOfCancellation()
     {
+        if (await IsolatedTest.RunAsync(typeof(CodeExecutionServiceTests))) return;
         var compilationStarted = new TaskCompletionSource<object?>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var compiler = new FakeCodeCompiler(async (_, cancellationToken) =>
@@ -375,9 +371,7 @@ public sealed class CodeExecutionServiceTests
         var service = new CodeExecutionService(
             compiler,
             new FakeCodeRunner(),
-            executionId => createdSession = new ExecutionSession(executionId),
-            static (executionId, cancellationToken) =>
-                ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken));
+            runtime => createdSession = new ExecutionSession(runtime));
         service.StateChanged += (_, eventArgs) =>
         {
             if (eventArgs.CurrentState == ExecutionState.CleaningUp)
@@ -572,9 +566,7 @@ public sealed class CodeExecutionServiceTests
         var service = new CodeExecutionService(
             FakeCodeCompiler.Returning(CompilationResult.FromArtifact(CreateArtifact())),
             runner,
-            executionId => new ExecutionSession(executionId),
-            static (executionId, cancellationToken) =>
-                ExecutionEnvironmentManager.BeginExecution(executionId, cancellationToken),
+            runtime => new ExecutionSession(runtime),
             async _ =>
                 await releaseWarning.Task.WaitAsync(TestContext.Current.CancellationToken));
         service.StopResponseDelayed += (_, eventArgs) =>
@@ -727,26 +719,6 @@ public sealed class CodeExecutionServiceTests
         {
             cleanupEntered.TrySetResult();
             await releaseCleanup.Task.WaitAsync(TestContext.Current.CancellationToken);
-        }
-    }
-
-    private sealed class DelegatingDisposable : IExecutionEnvironmentLease
-    {
-        private readonly IExecutionEnvironmentLease inner;
-        private readonly Action afterDispose;
-
-        public DelegatingDisposable(IExecutionEnvironmentLease inner, Action afterDispose)
-        {
-            this.inner = inner;
-            this.afterDispose = afterDispose;
-        }
-
-        public void BeginCleanup() => inner.BeginCleanup();
-
-        public void Dispose()
-        {
-            inner.Dispose();
-            afterDispose();
         }
     }
 

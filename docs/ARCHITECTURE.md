@@ -1,5 +1,24 @@
 # Архитектура проекта .KID
 
+## 🔌 Самостоятельный WPF-хост и общий lifecycle D005
+
+KID.Library предоставляет публичные KIDRuntimeSession/KIDRuntimeOptions для
+собственных контролов без ссылки на IDE. Внутренний RuntimeSessionOwner общий
+для внешней сессии и IDE: он резервирует execution, владеет CTS, подключением,
+rollback и cleanup Graphics/Input/Music/Console, восстанавливает In/Out/Error.
+IDE-контексты адаптируют ресурсы; координатор сохраняет резервирование до
+Dispose running instance/запроса Unload ALC и CompleteAsync. Ошибка library или
+host cleanup запрещает новый Run и внешний OpenAsync до конца процесса.
+
+Graphics.SetCanvas поддерживает несколько полей одного Dispatcher; принятая
+операция сохраняет исходное назначение. Цвет/шрифт общие, MouseCanvas и
+KeyboardWindow фиксированы. Sprite использует фактических родителей элементов;
+разные поля не сталкиваются. Размеры обычного Canvas не зависят от разметки IDE.
+
+[Публичный контракт](Runtime-API.md) ·
+[WPF-пример](../samples/KID.Library.StandaloneDemo/README.md) ·
+[ручная проверка](testing/STANDALONE_LIBRARY.smoke.md).
+
 ## Общая архитектура
 
 **.KID** построен на основе архитектурного паттерна **MVVM (Model-View-ViewModel)** с использованием **Dependency Injection** для управления зависимостями. Проект разделён на несколько основных слоёв:
@@ -107,14 +126,14 @@
 
 **Расположение:** `KID.WPF.IDE/Services/CodeExecution/`
 
-Подсистема разделена на `Compilation/` (включая `Rewriters/`), `Runtime/`, `Contexts/` и `Errors/`. Координатор и состояние сессии остаются в корне; интерфейсы размещены в `Interfaces/` соответствующей части. Console runtime находится в `KID.Library/Console/`, а IDE-слой содержит только владеющий process-wide streams `TextBoxConsoleContext`. Полное дерево файлов и границы ответственности описаны в [структуре подсистемы выполнения кода](CodeExecution.md).
+Подсистема разделена на `Compilation/` (включая `Rewriters/`), `Runtime/`, `Contexts/` и `Errors/`. Координатор и состояние сессии остаются в корне; интерфейсы размещены в `Interfaces/` соответствующей части. Console runtime находится в `KID.Library/Console/`, а IDE-слой передаёт консоль через адаптер `TextBoxConsoleContext` общему `RuntimeSessionOwner`. Полное дерево файлов и границы ответственности описаны в [структуре подсистемы выполнения кода](CodeExecution.md).
 
 **CodeExecutionService** (`CodeExecutionService.cs`)
 - Координирует процесс выполнения кода
 - Использует ICodeCompiler для компиляции
 - Вызывает `ICodeRunner.Start(artifact, token)` и ожидает `runningInstance.Completion`
 - Управляет жизненным циклом контекста выполнения
-- Назначает контексту ExecutionId/token и ожидает его DisposeAsync до выгрузки ALC и освобождения session CTS
+- Передаёт контексту ID/token общего RuntimeSessionOwner и ожидает CleanupAsync до выгрузки ALC; затем CompleteAsync освобождает принадлежащие владельцу CTS и резервирование
 - Пытается выполнить каждый независимый cleanup-шаг даже после ошибки предыдущего; primary exception сохраняется, secondary exceptions доступны через `AggregateException`
 - Использует общий `ExecutionFailureCollector` для выполнения защищённых lifecycle-шагов и агрегации ошибок; observer failures накапливаются отдельно в сессии и переносятся последними
 - Публикует `StateChanged` каждому observer независимо; ошибка подписчика доставляется через lifecycle task, но не отменяет уже подтверждённый переход FSM
@@ -155,8 +174,8 @@
 - **CodeExecutionContext** — контекст выполнения, объединяющий графический и консольный контексты
   - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
   - Передаёт execution id в оба контекста, token — консольному; графический контекст получает token из ambient environment
-- **CanvasGraphicsContext** — инициализирует Graphics API с Canvas
-- **TextBoxConsoleContext** — подключает статический console runtime к TextBox и владеет перенаправлением process-wide `System.Console` streams
+- **CanvasGraphicsContext** — передаёт Canvas, источники ввода, музыку и CanvasLayoutAdapter общему владельцу
+- **TextBoxConsoleContext** — передаёт TextBox и настройку перенаправления System.Console общему владельцу
 - **CanvasTextBoxContextFabric** — фабрика для создания контекстов
   - Получает `App` из DI контейнера
   - Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
@@ -433,7 +452,7 @@ native/сторонний вызов, неинструментированный
 - Публикует immutable execution id и CancellationToken одной сессии
 - Подключает и освобождает Dispatcher как временную capability
 - Lease использует reference compare: поздний Dispose старого запуска не очищает новый environment
-- Полным lifecycle и FSM по-прежнему владеют `CodeExecutionService` и `ExecutionSession`
+- Библиотечным lifecycle, CTS и резервированием владеет RuntimeSessionOwner; CodeExecutionService координирует compiler/runner/ALC, ExecutionSession хранит FSM
 
 ##### ExecutionEventWorker
 
@@ -494,7 +513,9 @@ task фиксируется и помечается `Observed`. Ошибки п�
 **Расположение:** `KID.Library/Graphics/`
 
 **Graphics.System.cs**
-- Внутренний `Graphics.Init(Canvas, scope)` — инициализация Canvas в execution scope
+- Публичное подключение — KIDRuntimeSession.OpenAsync; внутренний Graphics.Init вызывается общим владельцем
+- Graphics.SetCanvas выбирает Canvas того же Dispatcher; каждая команда захватывает Canvas и scope до очереди UI
+- Размеры обычного Canvas задаются напрямую; разметка IDE изменяется только её CanvasLayoutAdapter
 - `Graphics.Clear()` — очистка холста
 - Использует `DispatcherManager.InvokeOnUI()` для выполнения действий в UI потоке
 
@@ -647,7 +668,7 @@ Console API → TextBox (UI поток)
 
 `CodeExecutionService` сохраняет экземпляр до `await runningInstance.Completion`. После завершения
 выполнения сервис независимо пытается очистить контекст Console/Graphics/Input, вызвать
-`runningInstance.Dispose()`, снять lease ambient ExecutionEnvironment и освободить сессию. `Completion` не
+`runningInstance.Dispose()` и запросить Unload ALC, затем CompleteAsync общего владельца с результатом host cleanup освобождает CTS и резервирование. `Completion` не
 включает этот внешний cleanup. Только успешная очистка всех lifecycle owners разрешает переход в
 `Idle`; иначе публичная lifecycle task завершается ошибкой, а новый Run остаётся заблокированным.
 Общая `JoinableTaskFactory` создаётся из singleton `JoinableTaskContext` и передаётся runner через DI.
@@ -735,14 +756,14 @@ Save / Discard / Cancel для каждой изменённой вкладки
 ## Потокобезопасность
 
 - Все операции с UI выполняются через централизованный `DispatcherManager`
-- `CodeExecutionService` публикует единый `ExecutionEnvironment`; `CanvasGraphicsContext` подключает его Dispatcher capability
+- CodeExecutionService резервирует RuntimeSessionOwner; CanvasGraphicsContext адаптирует ресурсы, владелец подключает Dispatcher capability
 - Dispatcher scope ссылается на environment вместо хранения копий id/token; DisposeAsync закрывает приём, ожидает принятые операции и освобождает Graphics до выгрузки ALC
 - Keyboard и Mouse создают отдельные per-run scopes поверх общего `ExecutionEventWorker`; очереди и pulse-задачи связаны с token/identity исходного environment
 - Graphics API использует `DispatcherManager.InvokeOnUI()` для безопасного доступа к Canvas
 - Music API не обращается к UI: playback, fade, HTTP и file I/O привязаны к token и task registry исходной execution
 - Mouse API собирает события в UI-потоке и последовательно доставляет обработчики worker-ом своей execution; cleanup снимает Canvas-подписки и очищает delegates/state
 - Keyboard API делает то же для Window, дополнительно сбрасывая shortcuts и `CapturePolicy`; worker текущего Run никогда не видит очередь следующего
-- Статический TextBoxConsole использует Dispatcher своего scope и отбрасывает stale streams/read requests/work items; `TextBoxConsoleContext.DisposeAsync` восстанавливает все process-wide streams до следующего Run даже при runtime shutdown failure
+- Статический TextBoxConsole использует Dispatcher своего scope и отбрасывает stale streams/read requests/work items; RuntimeSessionOwner восстанавливает все process-wide streams до следующего Run даже при runtime shutdown failure
 - `DispatcherTimer` планирует снимок сессии в UI-потоке, где безопасно читать `ObservableCollection` и содержимое редакторов
 - `EditorSessionService` сериализует файловые операции через `SemaphoreSlim`; блокировка действует только внутри одного процесса
 - `WindowConfigurationService` сериализует конкурентные сохранения настроек собственной FIFO-очередью; физическая публикация каждого снимка атомарна благодаря `FileService`

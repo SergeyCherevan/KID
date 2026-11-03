@@ -12,10 +12,8 @@ namespace KID
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
-
                 if (!File.Exists(path))
                     throw new FileNotFoundException($"Image file not found: {path}");
 
@@ -40,7 +38,7 @@ namespace KID
 
                 Canvas.SetLeft(image, x);
                 Canvas.SetTop(image, y);
-                Canvas.Children.Add(image);
+                targetCanvas.Children.Add(image);
 
                 return image;
             });
@@ -58,10 +56,8 @@ namespace KID
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnElement(image, () =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
-
                 if (!File.Exists(path))
                     throw new FileNotFoundException($"Image file not found: {path}");
 

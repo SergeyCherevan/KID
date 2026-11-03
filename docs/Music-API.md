@@ -1,5 +1,18 @@
 # Music API - Документация
 
+## 🔌 Подключение и lifecycle
+
+В IDE музыку подключает среда через общий RuntimeSessionOwner. Внешний хост
+задаёт EnableMusic = true в [KIDRuntimeOptions](Runtime-API.md); Canvas, Window
+и TextBox не обязательны. Graphics.SetCanvas не перезапускает музыку и не
+меняет playback scope. Исторический Music.Init сам сессию не создаёт.
+
+Хост ожидает свои задачи и DisposeAsync. Ошибки playback/download сохраняются
+в исходных задачах/SoundWait и диагностируются как Music/Playback или
+Music/Auxiliary. Ошибки Stop/Dispose/удаления файлов при освобождении остаются
+cleanup failure и блокируют следующее открытие, включая Run IDE.
+[Пример с кнопкой звука](../samples/KID.Library.StandaloneDemo/README.md).
+
 ## Обзор
 
 Music API предоставляет функциональность для воспроизведения звуков, аналогичную команде `sound` в BASIC256. API поддерживает воспроизведение тонов, полифонию, проигрывание аудиофайлов и расширенное управление воспроизведением.

@@ -1,8 +1,23 @@
 # Console API
 
+## 🔌 Необязательная консоль собственного приложения
+
+В [KIDRuntimeOptions](Runtime-API.md) ConsoleTextBox подключает TextBoxConsole,
+а RedirectSystemConsole = true отдельно включает перенаправление Console.In,
+Out и Error всего процесса. Без консоли графика/ввод/музыка работают независимо;
+без флага streams не меняются. RuntimeSessionOwner сохраняет и восстанавливает
+каждый поток, включая partial Init и runtime shutdown failure. IDE-контекст
+передаёт только контрол и настройку перенаправления, не владея streams.
+
+Чтение выполняйте на worker-потоке. RequestStop пробуждает readers; хост
+ожидает свои задачи и DisposeAsync до закрытия Dispatcher. Graphics.SetCanvas
+не меняет консоль или streams. Во внешнем коде вызывайте TextBoxConsole.Clear()
+явно: преобразование System.Console.Clear() принадлежит Roslyn pipeline IDE.
+[Пример с --with-console](../samples/KID.Library.StandaloneDemo/README.md).
+
 ## Обзор
 
-Console API предоставляет стандартный интерфейс для консольного ввода и вывода в пользовательском коде. Все операции с консолью автоматически перенаправляются в панель консольного вывода приложения .KID.
+Console API предоставляет стандартный интерфейс для консольного ввода и вывода в пользовательском коде. В IDE операции со стандартными streams перенаправляются в панель консольного вывода; во внешнем хосте это включается явно.
 
 Stop прерывает `Read()`/`ReadLine()` без следующей клавиши и без Enter, а cleanup восстанавливает
 стандартные потоки до следующего Run. Эта гарантия относится к Console adapter; она не означает
@@ -269,14 +284,14 @@ Console.WriteLine("Время вышло!");
 
 ## Архитектура и паттерны (реализация модуля Console)
 
-Модуль консоли разделён между библиотечным runtime и host-интеграцией IDE.
+Модуль консоли и общий lifecycle находятся в библиотеке; IDE содержит адаптер ресурсов.
 
 - `KID.TextBoxConsole` — публичный статический facade в `KID.Library` для `Read`, `ReadLine`,
   `Write`, `Clear` и `OutputReceived`.
 - `ConsoleExecutionScope` — внутренний пассивный паспорт запуска: он хранит точные
   `ExecutionEnvironment`, WPF `TextBox` и `ExecutionEventWorker`.
-- `TextBoxConsoleContext` остаётся в `KID.WPF.IDE` и один владеет process-wide перенаправлением
-  `System.Console.In/Out/Error` и восстановлением исходных streams.
+- RuntimeSessionOwner в KID.Library владеет перенаправлением System.Console.In/Out/Error
+  и восстановлением streams; TextBoxConsoleContext в IDE передаёт ему настройки.
 - Instance `TextBoxConsole`, `IConsole` и вложенный `StaticConsole` удалены.
 
 ### Execution-scoped static runtime
@@ -318,13 +333,13 @@ delegates, поэтому подписка compiled user program не удерж
 1. `BeginCleanup` синхронно закрывает admission, event worker и пробуждает readers.
 2. `ShutdownAsync` ожидает UI teardown, event worker и readers, закрывает token registration и
    wait handles, затем освобождает static ownership.
-3. `TextBoxConsoleContext.DisposeAsync` после runtime shutdown пытается восстановить каждый из
+3. RuntimeSessionOwner после runtime shutdown пытается восстановить каждый из
    трёх process-wide streams даже при ошибке WPF/Dispatcher cleanup. Повторные и конкурентные
    вызовы наблюдают одну completion task и одно итоговое исключение.
 
 Ошибки WPF action сохраняются в cleanup diagnostics. Даже недоступный Dispatcher не пропускает
-освобождение worker, registrations и не-WPF ресурсов; после завершения cleanup разрешён следующий
-Run.
+освобождение worker, registrations и не-WPF ресурсов. Только успешный cleanup разрешает
+следующее OpenAsync/Run; ошибка блокирует admission до конца процесса.
 
 ### Compiler rewrite и зависимости
 

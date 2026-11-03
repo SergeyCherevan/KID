@@ -11,7 +11,8 @@ namespace KID
     {
         // Спрайт сохраняет owner создания: ссылка из старой программы не получает новый scope.
         private readonly DispatcherScope executionScope = DispatcherManager.GetScope();
-        private T InvokeOnUI<T>(Func<T> action) => DispatcherManager.InvokeOnUI(executionScope, action);
+        private T InvokeOnUI<T>(Func<SpriteElements, T> action) =>
+            DispatcherManager.InvokeOnUI(executionScope, () => action(ValidateElements()));
 
         private List<UIElement> CollectElements(IEnumerable<UIElement>? elements)
         {
@@ -37,9 +38,6 @@ namespace KID
             set
             {
                 executionScope.CheckAccess(DispatcherManager.IsExecuting(executionScope));
-                if (_isVisible == value)
-                    return;
-
                 if (value)
                     Show();
                 else

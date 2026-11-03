@@ -11,11 +11,9 @@ namespace KID
         /// <returns>Текущий спрайт (для цепочки вызовов).</returns>
         public virtual Sprite Show()
         {
-            return InvokeOnUI(() =>
+            return InvokeOnUI(elements =>
             {
-                if (Graphics.Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
-
-                foreach (var element in GraphicElements)
+                foreach (var element in elements.All)
                 {
                     executionScope.Environment.ThrowIfCancellationRequested();
                     if (element == null) continue;
@@ -33,11 +31,9 @@ namespace KID
         /// <returns>Текущий спрайт (для цепочки вызовов).</returns>
         public virtual Sprite Hide()
         {
-            return InvokeOnUI(() =>
+            return InvokeOnUI(elements =>
             {
-                if (Graphics.Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
-
-                foreach (var element in GraphicElements)
+                foreach (var element in elements.All)
                 {
                     executionScope.Environment.ThrowIfCancellationRequested();
                     if (element == null) continue;

@@ -38,17 +38,16 @@ namespace KID.Services.CodeExecution
         // управляет последовательностью, не смешивая orchestration с деталями этих операций.
         private readonly ICodeCompiler compiler;
         private readonly ICodeRunner runner;
-        private readonly Func<long, ExecutionSession> sessionFactory;
-        private readonly Func<long, CancellationToken, IExecutionEnvironmentLease> executionEnvironmentLeaseFactory;
+        private readonly Func<RuntimeSessionOwner, ExecutionSession> sessionFactory;
+        private readonly Func<Action<ExecutionDiagnostic>, RuntimeSessionOwner> runtimeFactory;
         private readonly Func<TimeSpan, Task> stopResponseDelayFactory;
         private readonly ILogger<CodeExecutionService>? logger;
         private static readonly TimeSpan StopResponseWarningDelay = TimeSpan.FromSeconds(2);
 
         // Monitor / Critical Section: этот объект синхронизирует чтение и изменение
-        // currentSession, счётчика id и переходов state machine.
+        // currentSession и переходов state machine.
         private readonly Lock sessionLock = new();
         private ExecutionSession? currentSession;
-        private long lastExecutionId;
         private ExecutionResult? lastResult;
 
         /// <summary>
@@ -71,33 +70,22 @@ namespace KID.Services.CodeExecution
             : this(
                 compiler,
                 runner,
-                static executionId => new ExecutionSession(executionId),
-                (executionId, cancellationToken) =>
-                    ExecutionEnvironmentManager.BeginExecution(
-                        executionId,
-                        cancellationToken,
-                        diagnostic => logger?.LogError(
-                            DiagnosticEventIds.ExecutionEventHandlerFailed,
-                            diagnostic.Exception,
-                            "Execution event callback failed. ExecutionId={ExecutionId} Component={Component} Operation={Operation}",
-                            diagnostic.ExecutionId,
-                            diagnostic.Component,
-                            diagnostic.Operation)),
+                static runtime => new ExecutionSession(runtime),
                 static delay => Task.Delay(delay),
                 logger)
         {
         }
 
         /// <summary>
-        /// Создаёт coordinator с заменяемыми lifecycle factories для проверки отказов cleanup.
+        /// Создаёт coordinator с заменяемыми factories сессии, runtime и задержки диагностики.
         /// </summary>
         internal CodeExecutionService(
             ICodeCompiler compiler,
             ICodeRunner runner,
-            Func<long, ExecutionSession> sessionFactory,
-            Func<long, CancellationToken, IExecutionEnvironmentLease> executionEnvironmentLeaseFactory,
+            Func<RuntimeSessionOwner, ExecutionSession> sessionFactory,
             Func<TimeSpan, Task>? stopResponseDelayFactory = null,
-            ILogger<CodeExecutionService>? logger = null)
+            ILogger<CodeExecutionService>? logger = null,
+            Func<Action<ExecutionDiagnostic>, RuntimeSessionOwner>? runtimeFactory = null)
         {
             /* Fail fast: Coordinator не может поддерживать lifecycle без обеих обязательных
              * стратегий. Проверка конструктора не позволяет создать частично рабочий сервис.
@@ -106,8 +94,7 @@ namespace KID.Services.CodeExecution
             this.runner = runner ?? throw new ArgumentNullException(nameof(runner));
             this.sessionFactory = sessionFactory ??
                 throw new ArgumentNullException(nameof(sessionFactory));
-            this.executionEnvironmentLeaseFactory = executionEnvironmentLeaseFactory ??
-                throw new ArgumentNullException(nameof(executionEnvironmentLeaseFactory));
+            this.runtimeFactory = runtimeFactory ?? (diagnostics => RuntimeSessionOwner.Reserve(diagnosticSink: diagnostics));
             this.stopResponseDelayFactory = stopResponseDelayFactory ??
                 (static delay => Task.Delay(delay));
             this.logger = logger;
@@ -222,7 +209,7 @@ namespace KID.Services.CodeExecution
         /// </para>
         /// <para>
         /// Возвращённая задача завершается только после попыток освободить контекст, экземпляр
-        /// выполнения, lease ambient execution environment и принадлежащий сессии
+        /// выполнения и финализировать общий runtime, включая его резервирование и
         /// <see cref="CancellationTokenSource"/>. При подтверждённом cleanup сервис переходит в
         /// <see cref="ExecutionState.Idle"/>; ошибка освобождения оставляет его в CleaningUp и
         /// блокирует новый Run. Ожидаемый Stop завершается успешно только при успешном cleanup.
@@ -245,16 +232,12 @@ namespace KID.Services.CodeExecution
         /// <paramref name="code"/> или <paramref name="contextFactory"/> имеют значение
         /// <see langword="null"/>.
         /// </exception>
-        /// <exception cref="OverflowException">
-        /// Счётчик execution id достиг <see cref="long.MaxValue"/> и больше не может быть увеличен
-        /// без нарушения уникальности положительных идентификаторов.
-        /// </exception>
         public Task<ExecutionResult> ExecuteAsync(
             string code,
             Func<CancellationToken, ICodeExecutionContext> contextFactory)
         {
             /* Проверяем обязательные аргументы до входа в критическую секцию. При ошибке здесь
-             * активная сессия и счётчик execution id остаются полностью неизменными.
+             * активная сессия и резервирование runtime остаются полностью неизменными.
              */
             ArgumentNullException.ThrowIfNull(code);
             ArgumentNullException.ThrowIfNull(contextFactory);
@@ -267,7 +250,7 @@ namespace KID.Services.CodeExecution
             ExecutionStateChangedEventArgs stateChange;
 
             /* В одной IDE в каждый момент времени допускается только одна execution-сессия.
-             * Блокировка атомарно объединяет проверку currentSession, выдачу нового id,
+             * Блокировка атомарно объединяет проверку currentSession, резервирование общего runtime,
              * создание сессии, прикрепление completion task и первый переход состояния.
              */
             lock (sessionLock)
@@ -279,16 +262,29 @@ namespace KID.Services.CodeExecution
                 if (currentSession != null)
                     return Task.FromResult(ExecutionResult.Rejected);
 
-                /* checked не позволяет счётчику молча переполниться и переиспользовать
-                 * отрицательные либо прежние идентификаторы после long.MaxValue.
-                 */
-                var executionId = checked(++lastExecutionId);
-
-                /* Сессия является владельцем своего неизменяемого execution id,
-                 * CancellationTokenSource, состояния и задачи полного lifecycle.
-                 */
-                session = sessionFactory(executionId) ??
-                    throw new InvalidOperationException("Execution session is null.");
+                RuntimeSessionOwner runtime;
+                try
+                {
+                    runtime = runtimeFactory(diagnostic => logger?.LogError(
+                        DiagnosticEventIds.ExecutionEventHandlerFailed,
+                        diagnostic.Exception,
+                        "Execution runtime diagnostic. ExecutionId={ExecutionId} Component={Component} Operation={Operation}",
+                        diagnostic.ExecutionId, diagnostic.Component, diagnostic.Operation));
+                }
+                catch (Exception exception)
+                {
+                    return Task.FromException<ExecutionResult>(exception);
+                }
+                try
+                {
+                    session = sessionFactory(runtime) ?? throw new InvalidOperationException("Execution session is null.");
+                    if (!ReferenceEquals(session.Runtime, runtime))
+                        throw new InvalidOperationException("Execution session does not own the reserved runtime.");
+                }
+                catch (Exception exception)
+                {
+                    return FailSessionCreationAsync(runtime, exception);
+                }
 
                 /* TaskCompletionSource создаёт управляемую сервисом completion task.
                  * RunContinuationsAsynchronously не позволяет коду после чужого await
@@ -339,7 +335,7 @@ namespace KID.Services.CodeExecution
         /// <para>
         /// Метод реализует <b>Cooperative Cancellation</b>: он не завершает поток насильно,
         /// а переводит state machine в <see cref="ExecutionState.StopRequested"/> и отменяет
-        /// принадлежащий сессии token. Фактическое завершение наступает, когда compiler,
+        /// единый runtime token. Фактическое завершение наступает, когда compiler,
         /// runner или пользовательский код наблюдает отмену.
         /// </para>
         /// <para>
@@ -388,7 +384,7 @@ namespace KID.Services.CodeExecution
             PublishStateChanged(session, stateChange);
 
             /* ExecutionSession применяет Idempotent Operation через Interlocked.Exchange:
-             * только первый принятый запрос вызывает CancellationTokenSource.Cancel().
+             * только первый принятый запрос передаёт Stop общему владельцу runtime.
              */
             _ = PublishStopResponseDelayIfNeededAsync(session);
             return session.RequestStop();
@@ -400,7 +396,7 @@ namespace KID.Services.CodeExecution
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Метод является внутренним pipeline Coordinator. ExecutionEnvironment lease применяет
+        /// Метод является внутренним pipeline Coordinator. Общий владелец runtime применяет
         /// <b>Lease / Scope Guard</b>, фабрика контекста — <b>Factory</b>, completion source —
         /// <b>Promise / Future</b>, а единый токен — <b>Cooperative Cancellation</b>.
         /// </para>
@@ -414,7 +410,7 @@ namespace KID.Services.CodeExecution
         /// Публикация ExecutionEnvironment → создание контекста → инициализация контекста →
         /// компиляция → при успешной компиляции Start и ожидание Completion →
         /// CleaningUp → независимые попытки освободить контекст, экземпляр выполнения,
-        /// environment lease и сессию → при полном успехе Idle → завершение внешней задачи.
+        /// общий runtime → при полном успехе Idle → завершение внешней задачи.
         /// </para>
         /// <para>
         /// Нормальная отмена текущим session token не считается ошибкой сама по себе. Любое
@@ -424,7 +420,7 @@ namespace KID.Services.CodeExecution
         /// </para>
         /// </remarks>
         /// <param name="session">
-        /// Уже зарегистрированная активная сессия, владеющая execution id, токеном,
+        /// Уже зарегистрированная активная сессия с runtime identity и token,
         /// состоянием и lifecycle task.
         /// </param>
         /// <param name="code">Исходный C#-код, который необходимо скомпилировать и выполнить.</param>
@@ -448,7 +444,6 @@ namespace KID.Services.CodeExecution
              */
             ICodeExecutionContext? context = null;
             ICodeRunningInstance? runningInstance = null;
-            IExecutionEnvironmentLease? executionEnvironmentLease = null;
             ExecutionResult executionResult = ExecutionResult.CompilationFailed;
 
             /* Все обычные ошибки откладываются до окончания cleanup. Первая причина остаётся
@@ -458,14 +453,6 @@ namespace KID.Services.CodeExecution
 
             try
             {
-                /* Публикуем единую ambient identity текущей сессии в KID.Library.
-                 * Возвращённый lease снимает только environment этой сессии.
-                 */
-                executionEnvironmentLease = executionEnvironmentLeaseFactory(
-                    session.ExecutionId,
-                    session.CancellationToken) ??
-                    throw new InvalidOperationException("Execution environment lease is null.");
-
                 /* Контекст создаётся после принятия сессии и получает её токен уже на этапе
                  * конструирования. null означает нарушение реализации фабрики, а не ошибку
                  * пользовательского C#-кода.
@@ -564,6 +551,7 @@ namespace KID.Services.CodeExecution
             }
             finally
             {
+                var cleanupFailures = new ExecutionFailureCollector();
                 bool cleanupSucceeded = true;
                 var terminalResultAvailable = failures.CreateException(
                     "Execution failed before cleanup.") == null;
@@ -572,18 +560,18 @@ namespace KID.Services.CodeExecution
                 /* Сессия остаётся currentSession, но Run и повторный Stop уже запрещены.
                  * Событие публикуется только после синхронного закрытия всех ingress gates.
                  */
-                cleanupSucceeded &= failures.Capture(() =>
+                cleanupSucceeded &= cleanupFailures.Capture(() =>
                     cleanupStateChange = MoveToCleaningUp(session));
 
                 /* Session identity остаётся доступной cleanup, но новая runtime-работа больше
                  * не может получить ambient environment этой сессии.
                  */
-                cleanupSucceeded &= failures.Capture(() => executionEnvironmentLease?.BeginCleanup());
+                cleanupSucceeded &= cleanupFailures.Capture(session.Runtime.BeginCleanup);
 
                 /* Console, Keyboard, Mouse, Music и Dispatcher закрывают admission до первого
                  * await. Само освобождение ресурсов продолжится ниже через DisposeAsync.
                  */
-                cleanupSucceeded &= failures.Capture(() => context?.BeginCleanup());
+                cleanupSucceeded &= cleanupFailures.Capture(() => context?.BeginCleanup());
 
                 if (cleanupStateChange != null)
                     PublishStateChanged(session, cleanupStateChange);
@@ -591,20 +579,17 @@ namespace KID.Services.CodeExecution
                 /* Context освобождается первым: ожидаем выход консольных readers и WPF-очистку.
                  * Session token остаётся живым до завершения зависимых ожиданий и отписок.
                  */
-                cleanupSucceeded &= await failures.CaptureAsync(() => context?.DisposeAsync().AsTask() ?? Task.CompletedTask);
+                cleanupSucceeded &= await cleanupFailures.CaptureAsync(() => context?.DisposeAsync().AsTask() ?? Task.CompletedTask);
+                // Also covers a factory/Init failure and contexts without library adapters.
+                cleanupSucceeded &= await cleanupFailures.CaptureAsync(() => session.Runtime.CleanupAsync().AsTask());
 
                 /* Затем разрываются ссылки running instance и инициируется выгрузка ALC. */
-                cleanupSucceeded &= failures.Capture(() => runningInstance?.Dispose());
+                cleanupSucceeded &= cleanupFailures.Capture(() => runningInstance?.Dispose());
 
-                /* Environment lease снимается даже после ошибок предыдущих шагов.
-                 * Reference compare не позволяет stale cleanup очистить новый environment.
-                 */
-                cleanupSucceeded &= failures.Capture(() => executionEnvironmentLease?.Dispose());
-
-                /* CTS освобождается последним из ресурсов сессии, когда зависимые ожидания уже
-                 * завершены либо получили свою попытку cleanup.
-                 */
-                cleanupSucceeded &= failures.Capture(session.Dispose);
+                // Finalization disposes CTS and releases the reservation only after ALC cleanup.
+                // Host and library cleanup errors block admission for both IDE and public hosts.
+                cleanupSucceeded &= await failures.CaptureAsync(() => session.Runtime.CompleteAsync(
+                    cleanupFailures.CreateException("IDE cleanup failed.")).AsTask());
 
                 if (cleanupSucceeded)
                 {
@@ -648,6 +633,17 @@ namespace KID.Services.CodeExecution
                 else
                     completionSource.TrySetException(lifecycleException);
             }
+        }
+
+        private static async Task<ExecutionResult> FailSessionCreationAsync(RuntimeSessionOwner runtime, Exception failure)
+        {
+            try { await runtime.CompleteAsync(); }
+            catch (Exception cleanupFailure)
+            {
+                throw new AggregateException("Session creation and rollback failed.", failure, cleanupFailure);
+            }
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+            throw new InvalidOperationException("Unreachable.");
         }
 
         /// <summary>
@@ -732,7 +728,7 @@ namespace KID.Services.CodeExecution
         /// и атомарно очищает <c>currentSession</c>.
         /// </summary>
         /// <remarks>
-        /// Вызывается после DisposeAsync контекста и Dispose экземпляра, environment lease и session CTS.
+        /// Вызывается после DisposeAsync контекста, Dispose экземпляра и финализации общего runtime.
         /// До завершения этого метода новый Run остаётся запрещённым.
         /// </remarks>
         /// <param name="session">Полностью очищенная сессия, которую необходимо снять.</param>

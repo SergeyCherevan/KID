@@ -395,23 +395,23 @@ public sealed class TextBoxConsoleSpecifications
                 if (redirectedStreams >= 3) global::System.Console.SetError(error);
                 throw new InvalidOperationException("partial Init");
             });
-            var firstEnvironment = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
+            await using var firstEnvironment = RuntimeSessionOwner.Reserve();
             try
             {
-                Assert.Throws<InvalidOperationException>(() => context.Init(1, CancellationToken.None));
+                Assert.Throws<InvalidOperationException>(() => context.Init(firstEnvironment.Environment.ExecutionId, firstEnvironment.CancellationToken));
             }
             finally
             {
                 firstEnvironment.BeginCleanup();
                 await context.DisposeAsync();
-                firstEnvironment.Dispose();
+                await firstEnvironment.CompleteAsync();
             }
             Assert.Same(originalOut, global::System.Console.Out);
             Assert.Same(originalIn, global::System.Console.In);
             Assert.Same(originalError, global::System.Console.Error);
-            using var nextEnvironment = ExecutionEnvironmentManager.BeginExecution(2, CancellationToken.None);
+            await using var nextEnvironment = RuntimeSessionOwner.Reserve();
             await using var next = new TextBoxConsoleContext(box);
-            next.Init(2, CancellationToken.None);
+            next.Init(nextEnvironment.Environment.ExecutionId, nextEnvironment.CancellationToken);
             var nextOut = global::System.Console.Out;
             await context.DisposeAsync();
             Assert.Same(nextOut, global::System.Console.Out);
@@ -428,28 +428,26 @@ public sealed class TextBoxConsoleSpecifications
             var box = new TextBox { IsReadOnly = true };
             using var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
                 TestContext.Current.CancellationToken);
-            using var environment = ExecutionEnvironmentManager.BeginExecution(
-                17,
-                cancellationSource.Token);
+            await using var environment = RuntimeSessionOwner.Reserve(cancellationSource.Token);
             var context = new TextBoxConsoleContext(box);
             try
             {
-                context.Init(17, cancellationSource.Token);
+                context.Init(environment.Environment.ExecutionId, environment.CancellationToken);
                 var redirectedOut = global::System.Console.Out;
                 var redirectedIn = global::System.Console.In;
                 var redirectedError = global::System.Console.Error;
 
-                context.Init(17, cancellationSource.Token);
+                context.Init(environment.Environment.ExecutionId, environment.CancellationToken);
 
                 Assert.Same(redirectedOut, global::System.Console.Out);
                 Assert.Same(redirectedIn, global::System.Console.In);
                 Assert.Same(redirectedError, global::System.Console.Error);
                 Assert.Throws<InvalidOperationException>(() =>
-                    context.Init(18, cancellationSource.Token));
+                    context.Init(environment.Environment.ExecutionId + 1, environment.CancellationToken));
 
                 context.ConsoleTarget = new TextBox();
                 Assert.Throws<InvalidOperationException>(() =>
-                    context.Init(17, cancellationSource.Token));
+                    context.Init(environment.Environment.ExecutionId, environment.CancellationToken));
             }
             finally
             {
@@ -641,10 +639,11 @@ public sealed class TextBoxConsoleSpecifications
         {
             var original = global::System.Console.Out;
             var graphics = new FailingGraphicsContext();
-            using var environment = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
+            await using var environment = RuntimeSessionOwner.Reserve();
             var context = new CodeExecutionContext
             {
-                ExecutionId = 1,
+                ExecutionId = environment.Environment.ExecutionId,
+                CancellationToken = environment.CancellationToken,
                 ConsoleContext = new TextBoxConsoleContext(new TextBox()),
                 GraphicsContext = graphics,
                 Dispatcher = Dispatcher.CurrentDispatcher
@@ -670,12 +669,12 @@ public sealed class TextBoxConsoleSpecifications
             var failure = new InvalidOperationException("output callback");
             var nextHandlerCalled = new TaskCompletionSource(
                 TaskCreationOptions.RunContinuationsAsynchronously);
-            using var environment = ExecutionEnvironmentManager.BeginExecution(1, CancellationToken.None);
+            await using var environment = RuntimeSessionOwner.Reserve();
             var context = new TextBoxConsoleContext(box, (output, _, _) =>
             {
                 global::System.Console.SetOut(output);
             });
-            context.Init(1, CancellationToken.None);
+            context.Init(environment.Environment.ExecutionId, environment.CancellationToken);
             global::KID.TextBoxConsole.OutputReceived += _ => throw failure;
             global::KID.TextBoxConsole.OutputReceived += _ => nextHandlerCalled.TrySetResult();
             global::KID.TextBoxConsole.Write("text");

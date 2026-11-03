@@ -1,5 +1,14 @@
 # Keyboard API — Документация
 
+## 🔌 Подключение внешнего окна
+
+Внешний хост задаёт KeyboardWindow в [KIDRuntimeOptions](Runtime-API.md), IDE
+передаёт своё окно через адаптер. Источник фиксирован на сессию: Graphics.SetCanvas
+не переподключает клавиатуру и не сбрасывает KeyboardCapturePolicy, shortcuts,
+text buffer или события. Все контролы используют один Dispatcher. Keyboard.Init
+сам сессию не создаёт; за shutdown workers, отписки и очистку отвечает общий
+RuntimeSessionOwner. Хост ожидает DisposeAsync до shutdown Dispatcher.
+
 ## Обзор
 
 Keyboard API предоставляет доступ к состоянию клавиатуры и событиям ввода **на уровне окна приложения** (WPF `Window`):
@@ -203,7 +212,7 @@ Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
 
 ### Завершение execution
 
-`CanvasGraphicsContext.DisposeAsync` запускает cleanup Keyboard и Mouse до освобождения Graphics/Dispatcher. Для Keyboard порядок такой:
+Общий RuntimeSessionOwner (через DisposeAsync публичной сессии или адаптер IDE) запускает cleanup Keyboard и Mouse до освобождения Graphics/Dispatcher. Для Keyboard порядок такой:
 
 1. атомарно запретить новые события;
 2. снять три WPF-подписки с исходного `Window` через его Dispatcher;

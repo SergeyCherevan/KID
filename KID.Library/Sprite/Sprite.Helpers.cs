@@ -10,6 +10,34 @@ namespace KID
     {
         private readonly Dictionary<UIElement, TranslateTransform> _translateByElement = new();
 
+        private sealed record SpriteElements(Canvas? Canvas, List<UIElement> All, List<UIElement> Attached);
+
+        // GraphicElements is mutable: validate the entire snapshot before touching any element.
+        private SpriteElements ValidateElements()
+        {
+            executionScope.CheckAccess(DispatcherManager.IsExecuting(executionScope));
+            Canvas? canvas = null;
+            List<UIElement> all = [];
+            List<UIElement> attached = [];
+            foreach (var element in GraphicElements)
+            {
+                executionScope.Environment.ThrowIfCancellationRequested();
+                if (element == null) continue;
+                GraphicsElementAccess.ValidateDispatcher(element, executionScope);
+                var parent = GraphicsElementAccess.GetParentCanvas(element);
+                if (parent != null)
+                {
+                    if (canvas != null && !ReferenceEquals(canvas, parent))
+                        throw new InvalidOperationException("All attached sprite elements must belong to the same Canvas.");
+                    canvas = parent;
+                    attached.Add(element);
+                }
+                all.Add(element);
+            }
+            executionScope.Environment.ThrowIfCancellationRequested();
+            return new SpriteElements(canvas, all, attached);
+        }
+
         private static bool IsElementVisible(UIElement element)
         {
             return element.Visibility == Visibility.Visible;
@@ -17,25 +45,9 @@ namespace KID
 
         private static Rect GetElementBoundsInCanvas(UIElement element, Canvas canvas)
         {
-            if (element == null)
-                return Rect.Empty;
-
-            try
-            {
-                // 1) локальные bounds элемента
-                var localBounds = VisualTreeHelper.GetDescendantBounds(element);
-                if (localBounds.IsEmpty)
-                    return Rect.Empty;
-
-                // 2) перевод в координаты canvas (учитывает RenderTransform)
-                var transformToCanvas = element.TransformToAncestor(canvas);
-                return transformToCanvas.TransformBounds(localBounds);
-            }
-            catch
-            {
-                // Элемент может быть не в визуальном дереве или ещё не измерен.
-                return Rect.Empty;
-            }
+            var localBounds = VisualTreeHelper.GetDescendantBounds(element);
+            if (localBounds.IsEmpty) return Rect.Empty;
+            return element.TransformToAncestor(canvas).TransformBounds(localBounds);
         }
 
         private TranslateTransform GetOrCreateTranslateTransform(UIElement element)

@@ -305,8 +305,8 @@ public sealed class DispatcherGraphicsTests
         {
             var canvas = new Canvas();
             var context = new CanvasGraphicsContext(canvas);
-            using var environment = ExecutionEnvironmentManager.BeginExecution(1, default);
-            context.Init(1, canvas.Dispatcher);
+            await using var environment = RuntimeSessionOwner.Reserve(default);
+            context.Init(environment.Environment.ExecutionId, canvas.Dispatcher);
             Graphics.Color = "Red";
             Graphics.SetFont("Consolas", 55);
             var shape = Graphics.Circle(3, 3, 2);
@@ -315,10 +315,10 @@ public sealed class DispatcherGraphicsTests
             Assert.Null(context.GraphicsTarget);
             Assert.Contains(shape, canvas.Children.Cast<UIElement>());
             Assert.Throws<ObjectDisposedException>(() => context.Init(2, canvas.Dispatcher));
-            environment.Dispose();
-            using var nextEnvironment = ExecutionEnvironmentManager.BeginExecution(2, default);
+            await environment.CompleteAsync();
+            await using var nextEnvironment = RuntimeSessionOwner.Reserve();
             await using var next = new CanvasGraphicsContext(canvas);
-            next.Init(2, canvas.Dispatcher);
+            next.Init(nextEnvironment.Environment.ExecutionId, canvas.Dispatcher);
             Assert.Same(Brushes.Black, Graphics.Circle(2, 2, 1).Fill);
             Assert.Equal(20, Graphics.Text(0, 0, "default").FontSize);
         });
@@ -330,22 +330,20 @@ public sealed class DispatcherGraphicsTests
         await StaTest.RunAsync(async () =>
         {
             var canvas = new Canvas();
-            using var environment = ExecutionEnvironmentManager.BeginExecution(
-                17,
-                TestContext.Current.CancellationToken);
+            await using var environment = RuntimeSessionOwner.Reserve(TestContext.Current.CancellationToken);
             var context = new CanvasGraphicsContext(canvas);
-            context.Init(17, canvas.Dispatcher);
+            context.Init(environment.Environment.ExecutionId, canvas.Dispatcher);
             var originalScope = DispatcherManager.GetScope();
             var originalMouse = Mouse.CurrentScope;
             var originalMusic = Music.CurrentScope;
 
-            context.Init(17, canvas.Dispatcher);
+            context.Init(environment.Environment.ExecutionId, canvas.Dispatcher);
 
             Assert.Same(originalScope, DispatcherManager.GetScope());
             Assert.Same(originalMouse, Mouse.CurrentScope);
             Assert.Same(originalMusic, Music.CurrentScope);
             Assert.Throws<InvalidOperationException>(() =>
-                context.Init(18, canvas.Dispatcher));
+                context.Init(environment.Environment.ExecutionId + 1, canvas.Dispatcher));
 
             var otherDispatcher = await Task.Run(() =>
             {
@@ -354,11 +352,11 @@ public sealed class DispatcherGraphicsTests
                 return dispatcher;
             }, TestContext.Current.CancellationToken);
             Assert.Throws<InvalidOperationException>(() =>
-                context.Init(17, otherDispatcher));
+                context.Init(environment.Environment.ExecutionId, otherDispatcher));
 
             context.GraphicsTarget = new Canvas();
             Assert.Throws<InvalidOperationException>(() =>
-                context.Init(17, canvas.Dispatcher));
+                context.Init(environment.Environment.ExecutionId, canvas.Dispatcher));
 
             await context.DisposeAsync();
         });
@@ -656,13 +654,11 @@ public sealed class DispatcherGraphicsTests
         var artifact = (await CompilerFactory.Create(localization).CompileAsync(
             "KID.DispatcherManager.InvokeOnUI(() => { KID.Graphics.Circle(10,10,5); });",
             TestContext.Current.CancellationToken)).Artifact!;
-        using var environment = ExecutionEnvironmentManager.BeginExecution(
-            1,
-            TestContext.Current.CancellationToken);
+        await using var environment = RuntimeSessionOwner.Reserve(TestContext.Current.CancellationToken);
         var context = new CanvasGraphicsContext(canvas);
-        context.Init(1, canvas.Dispatcher);
+        context.Init(environment.Environment.ExecutionId, canvas.Dispatcher);
         var runner = new DefaultCodeRunner(localization, TestThreading.JoinableTaskFactory);
-        var running = Assert.IsType<CollectibleCodeRunningInstance>(runner.Start(artifact, TestContext.Current.CancellationToken));
+        var running = Assert.IsType<CollectibleCodeRunningInstance>(runner.Start(artifact, environment.CancellationToken));
         try
         {
             await running.Completion;
@@ -685,15 +681,13 @@ public sealed class DispatcherGraphicsTests
             var canvas = new Canvas();
             var failure = new InvalidOperationException("partial runtime init");
             var context = new CanvasGraphicsContext(canvas, _ => throw failure);
-            var environment = ExecutionEnvironmentManager.BeginExecution(
-                1,
-                TestContext.Current.CancellationToken);
+            await using var environment = RuntimeSessionOwner.Reserve(TestContext.Current.CancellationToken);
             Assert.Same(failure, Assert.Throws<InvalidOperationException>(() =>
-                context.Init(1, canvas.Dispatcher)));
+                context.Init(environment.Environment.ExecutionId, canvas.Dispatcher)));
             Assert.Same(canvas, Graphics.Canvas);
             await context.DisposeAsync();
             Assert.Null(Graphics.Canvas);
-            environment.Dispose();
+            await environment.CompleteAsync();
             await using var next = BeginDispatcherExecution(2, canvas.Dispatcher, default);
             Assert.Equal(7, DispatcherManager.InvokeOnUI(() => 7));
         });

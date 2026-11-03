@@ -42,6 +42,7 @@ namespace KID
 
             lock (_initLock)
             {
+                using var attachment = environment.EnterAttachment(canvas.Dispatcher);
                 if (_executionScope != null)
                     throw new InvalidOperationException("Mouse is already initialized.");
                 if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(environment))

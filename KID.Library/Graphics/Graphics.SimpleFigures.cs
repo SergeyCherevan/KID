@@ -9,9 +9,8 @@ namespace KID
     {
         public static Rectangle Plot(double x, double y)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var point = new Rectangle
                 {
                     Width = 1,
@@ -21,7 +20,7 @@ namespace KID
                 };
                 Canvas.SetLeft(point, x);
                 Canvas.SetTop(point, y);
-                Canvas.Children.Add(point);
+                targetCanvas.Children.Add(point);
                 return point;
             });
         }
@@ -32,9 +31,8 @@ namespace KID
 
         public static Ellipse Circle(double x, double y, double radius)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var ellipse = new Ellipse
                 {
                     Width = radius * 2,
@@ -44,7 +42,7 @@ namespace KID
                 };
                 Canvas.SetLeft(ellipse, x - radius);
                 Canvas.SetTop(ellipse, y - radius);
-                Canvas.Children.Add(ellipse);
+                targetCanvas.Children.Add(ellipse);
                 return ellipse;
             });
         }
@@ -55,9 +53,8 @@ namespace KID
 
         public static Ellipse Ellipse(double x, double y, double radiusX, double radiusY)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var ellipse = new Ellipse
                 {
                     Width = radiusX * 2,
@@ -67,7 +64,7 @@ namespace KID
                 };
                 Canvas.SetLeft(ellipse, x - radiusX);
                 Canvas.SetTop(ellipse, y - radiusY);
-                Canvas.Children.Add(ellipse);
+                targetCanvas.Children.Add(ellipse);
                 return ellipse;
             });
         }
@@ -78,9 +75,8 @@ namespace KID
 
         public static Rectangle Rectangle(double x, double y, double width, double height)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var rect = new Rectangle
                 {
                     Width = width,
@@ -90,7 +86,7 @@ namespace KID
                 };
                 Canvas.SetLeft(rect, x);
                 Canvas.SetTop(rect, y);
-                Canvas.Children.Add(rect);
+                targetCanvas.Children.Add(rect);
                 return rect;
             });
         }
@@ -105,9 +101,8 @@ namespace KID
 
         public static Line Line(double x1, double y1, double x2, double y2)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var line = new Line
                 {
                     X1 = x1,
@@ -116,7 +111,7 @@ namespace KID
                     Y2 = y2,
                     Stroke = strokeBrush
                 };
-                Canvas.Children.Add(line);
+                targetCanvas.Children.Add(line);
                 return line;
             });
         }
@@ -131,9 +126,8 @@ namespace KID
             if (points.Length < 3)
                 throw new ArgumentException("At least three points are required.", nameof(points));
 
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var path = new Path
                 {
                     Stroke = strokeBrush,
@@ -159,7 +153,7 @@ namespace KID
 
                 path.Data = geometry;
 
-                Canvas.Children.Add(path);
+                targetCanvas.Children.Add(path);
                 return path;
             });
         }
@@ -169,9 +163,8 @@ namespace KID
             if (points.Length < 4)
                 throw new ArgumentException("At least four points are required.", nameof(points));
 
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var path = new Path
                 {
                     Stroke = strokeBrush,
@@ -198,9 +191,9 @@ namespace KID
 
                 path.Data = geometry;
 
-                    Canvas.Children.Add(path);
-                    return path;
-                });
+                targetCanvas.Children.Add(path);
+                return path;
+            });
         }
         
         public static Polygon Polygon(Point[] points)
@@ -209,37 +202,36 @@ namespace KID
             if (points.Length < 1)
                 throw new ArgumentException("At least one point is required.", nameof(points));
 
-            var scope = DispatcherManager.GetScope();
-            return Polygon(scope, points);
+            var target = CaptureTarget();
+            return Polygon(target, points);
         }
 
-        private static Polygon Polygon(DispatcherScope scope, IEnumerable<Point> points)
+        private static Polygon Polygon(CanvasTarget target, IEnumerable<Point> points)
         {
-            return DispatcherManager.InvokeOnUI(scope, () =>
+            return DispatcherManager.InvokeOnUI(target.Scope, () =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var polygon = new Polygon
                 {
-                    Points = CreatePoints(points, scope.Environment),
+                    Points = CreatePoints(points, target.Scope.Environment),
                     Fill = fillBrush,
                     Stroke = strokeBrush
                 };
-                Canvas.Children.Add(polygon);
+                target.Canvas.Children.Add(polygon);
                 return polygon;
             });
         }
         public static Polygon Polygon((double x, double y)[] points)
         {
-            var scope = DispatcherManager.GetScope();
-            scope.Environment.ThrowIfCancellationRequested();
+            var target = CaptureTarget();
+            target.Scope.Environment.ThrowIfCancellationRequested();
             ArgumentNullException.ThrowIfNull(points);
             var converted = new Point[points.Length];
             for (var i = 0; i < points.Length; i++)
             {
-                scope.Environment.ThrowIfCancellationRequested();
+                target.Scope.Environment.ThrowIfCancellationRequested();
                 converted[i] = new Point(points[i].x, points[i].y);
             }
-            return Polygon(scope, converted);
+            return Polygon(target, converted);
         }
 
         private static PointCollection CreatePoints(

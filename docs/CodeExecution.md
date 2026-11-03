@@ -5,7 +5,13 @@ KID использует осознанную in-process trust model для до
 ограничивает файлы, сеть, реестр или процессы. Stop — кооперативный запрос, а не безопасный
 process kill. Worker-процесс и OS-level containment потребуют отдельного продуктового решения.
 
-Оба контекста получают execution id, консольный также получает token напрямую, а графический получает его из текущего `ExecutionEnvironment`. Контексты реализуют асинхронное освобождение. CanvasGraphicsContext владеет Dispatcher scope: закрывает приём команд, дожидается принятых операций и сбрасывает Graphics. CodeExecutionContext затем освобождает консоль даже после ошибки графики. Coordinator ожидает обе очистки до выгрузки ALC, освобождения session CTS и перехода в Idle. Ошибка очистки не маскируется успешным завершением.
+Общий `RuntimeSessionOwner` в библиотеке владеет id/token, резервированием,
+Dispatcher и ресурсами Graphics/Input/Music/Console. IDE-контексты передают
+ему Canvas, Window, TextBox и callback размеров. Они делегируют асинхронную
+очистку тому же владельцу, включая partial Init; собственного lifecycle и
+восстановления streams у адаптеров нет. FSM и ожидание пользовательского кода/ALC
+остаются у координатора IDE. Внешний хост использует публичную
+[KIDRuntimeSession](Runtime-API.md) поверх того же владельца.
 
 Host-координация находится в `KID.WPF.IDE/Services/CodeExecution/`, а доступный пользовательскому
 коду console runtime — в `KID.Library/Console/`. Поэтому скомпилированная программа использует
@@ -13,6 +19,11 @@ Host-координация находится в `KID.WPF.IDE/Services/CodeExec
 
 ```text
 KID.Library/
+├── Runtime/
+│   ├── KIDRuntimeSession.cs
+│   ├── KIDRuntimeOptions.cs
+│   ├── KIDRuntimeDiagnostic.cs
+│   └── RuntimeSessionOwner.cs
 ├── Console/
 │   ├── ConsoleExecutionScope.cs
 │   ├── TextBoxConsole.System.cs
@@ -39,6 +50,7 @@ KID.WPF.IDE/Services/CodeExecution/
 ├── Contexts/
 │   ├── CodeExecutionContext.cs
 │   ├── CanvasGraphicsContext.cs
+│   ├── CanvasLayoutAdapter.cs
 │   ├── CanvasTextBoxContextFabric.cs
 │   └── TextBoxConsoleContext.cs
 └── Errors/
@@ -54,9 +66,10 @@ KID.WPF.IDE/Services/CodeExecution/
   FIFO-вывод, очистку и `OutputReceived`. Внутренний `ConsoleExecutionScope` связывает runtime с
   точными `ExecutionEnvironment`, `TextBox` и `ExecutionEventWorker`; instance console,
   `IConsole` и `StaticConsole` удалены.
-- **Contexts:** фабрика собирает окружение запуска, общий контекст инициализирует графику и
-  консоль и освобождает их. `TextBoxConsoleContext` не реализует runtime: он сохраняет,
-  перенаправляет на scope-bound adapters и восстанавливает process-wide `System.Console` streams.
+- **Contexts:** фабрика создаёт адаптеры контролов; CodeExecutionContext хранит
+  их снимок. CanvasGraphicsContext передаёт графику, фиксированные источники ввода,
+  музыку и CanvasLayoutAdapter, TextBoxConsoleContext — консоль и настройку
+  перенаправления. Подключение, rollback, streams и cleanup выполняет RuntimeSessionOwner.
 - **Errors:** `ExecutionExceptionClassifier` определяет ожидаемую остановку для координатора и runtime; это правило относится к выполнению пользовательского кода.
 - **Общая обработка ошибок:** `ExecutionFailureCollector` находится вне подсистемы, в `Services/Errors/ExecutionFailureCollector.cs` (пространство имён `KID.Services.Errors`). Он собирает исключения независимых шагов и используется координатором, сессией и контекстами. Правило ожидаемой остановки остаётся в `CodeExecution/Errors/ExecutionExceptionClassifier.cs`.
 
@@ -64,7 +77,13 @@ KID.WPF.IDE/Services/CodeExecution/
 
 ## Порядок выполнения и владение ресурсами
 
-`ExecuteAsync(string code, Func<CancellationToken, ICodeExecutionContext> contextFactory)` сначала резервирует сессию и публикует её immutable id/token через единый `ExecutionEnvironment` в KID.Library. Только после принятия запуска вызывается фабрика контекста: отклонённый параллельный Run не создаёт UI-ресурсы. StopManager читает token environment, а CanvasGraphicsContext подключает к нему Dispatcher capability. Сессия, контекст, компилятор и runner используют тот же токен отмены.
+`ExecuteAsync(string code, Func<CancellationToken, ICodeExecutionContext> contextFactory)`
+сначала резервирует RuntimeSessionOwner. ExecutionEnvironmentManager выдаёт ID и
+публикует id/token; ExecutionSession хранит FSM и completion task, получая identity
+и отмену от общего владельца. Только после допуска вызывается фабрика контекста:
+конкурентный Run не создаёт ресурсы. Адаптеры подключают контролы через владельца.
+StopManager, compiler, runner и библиотека используют один token. IDE и публичное
+OpenAsync конкурируют за одно process-wide резервирование.
 
 После инициализации контекста сервис вызывает компилятор. При успешной компиляции и подтверждённом переходе в `Running` он вызывает `ICodeRunner.Start`, сохраняет экземпляр и ожидает его `Completion`.
 
@@ -79,7 +98,16 @@ KID.WPF.IDE/Services/CodeExecution/
 Worker восстанавливает прежние культуры в `finally`; глобальные
 `DefaultThreadCurrentCulture` / `DefaultThreadCurrentUICulture` не изменяются.
 
-Сервис отвечает за последующую очистку: контекст и его Dispatcher capability → экземпляр выполнения и запрос выгрузки ALC → lease ambient environment → сессия. Каждый независимый шаг очистки получает попытку выполнения даже после ошибки предыдущего. Возврат в `Idle` разрешён только после успешной очистки; ошибки подписчиков на события собираются отдельно от ошибок освобождения ресурсов.
+Порядок завершения: compiler/user code → закрытие ingress → CleanupAsync общего
+владельца (контекст/библиотечные ресурсы, восстановление In/Out/Error) → Dispose
+running instance и запрос Unload ALC → CompleteAsync с результатом host cleanup →
+освобождение CTS/резервирования → Idle при полном успехе. Между CleanupAsync и
+CompleteAsync резервирование остаётся занятым. Все независимые шаги получают
+попытку очистки; library failure не дублируется при ожидании через адаптеры.
+Ошибка library или host cleanup блокирует новый Run, новый координатор и публичное
+OpenAsync до конца процесса. Ошибки выполнения сохраняются отдельно; наблюдаемая
+ошибка playback/download диагностируется Music/Playback или Music/Auxiliary и
+сохраняется в исходной задаче, не подменяя результат освобождения ресурсов.
 
 Перенос файлов не меняет этот порядок. `AssemblyLoadContext.Unload()` остаётся кооперативным запросом, а остановка пользовательской программы — кооперативной отменой.
 

@@ -20,9 +20,8 @@ namespace KID
         {
             if (text == null) text = "";
             
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnCanvas(targetCanvas =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 var textBlock = new TextBlock
                 {
                     Text = text,
@@ -34,7 +33,7 @@ namespace KID
                 };
                 Canvas.SetLeft(textBlock, x);
                 Canvas.SetTop(textBlock, y);
-                Canvas.Children.Add(textBlock);
+                targetCanvas.Children.Add(textBlock);
 
                 return textBlock;
             });
@@ -46,16 +45,15 @@ namespace KID
 
         public static TextBlock SetText(this TextBlock textBlock, string text)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnElement(textBlock, () =>
             {
-                if (Canvas == null) throw new InvalidOperationException("Graphics Canvas is not initialized.");
                 textBlock.Text = text;
                 return textBlock;
             });
         }
         public static TextBlock SetFont(this TextBlock textBlock, string fontName, double fontSize)
         {
-            return DispatcherManager.InvokeOnUI(() =>
+            return InvokeOnElement(textBlock, () =>
             {
                 textBlock.FontFamily = new FontFamily(fontName);
                 textBlock.FontSize = fontSize;
