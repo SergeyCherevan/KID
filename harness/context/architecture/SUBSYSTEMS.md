@@ -1,0 +1,1102 @@
+# Подсистемы проекта .KID
+
+## 🔌 Публичная сессия библиотеки
+
+KID.Library/Runtime содержит KIDRuntimeSession, KIDRuntimeOptions,
+KIDRuntimeDiagnostic и общий RuntimeSessionOwner. Внешний WPF-хост и IDE
+разделяют process-wide admission, token/ID и библиотечную очистку. Адаптеры
+контекстов IDE передают ресурсы; coordinator ожидает user code и удерживает
+резервирование до Dispose running instance/Unload ALC и CompleteAsync.
+Ошибка любого ресурсного cleanup блокирует и Run, и внешний OpenAsync.
+
+Компоненты необязательны: музыка не требует UI, консоль и перенаправление
+streams включаются отдельно. Графические поля и остальные контролы имеют один
+Dispatcher; MouseCanvas/KeyboardWindow не следуют Graphics.SetCanvas.
+[Контракт и завершение](../api/Runtime-API.md),
+[внешний пример](../../checks/probes/KID.Library.StandaloneDemo/README.md).
+
+## Обзор подсистем
+
+Проект .KID состоит из нескольких независимых подсистем, каждая из которых отвечает за определённую функциональность. Все подсистемы взаимодействуют через интерфейсы и Dependency Injection.
+
+## 1. Подсистема выполнения кода (Code Execution)
+
+### Назначение
+Компиляция и выполнение C# кода, написанного пользователем в редакторе.
+
+Код IDE разделён на `Compilation/`, `Runtime/`, `Contexts/` и `Errors/`; console runtime и общий владелец находятся в KID.Library. Интерфейсы находятся в подпапках `Interfaces/` своих частей. См. [полную структуру и зависимости](CodeExecution.md).
+
+Подсистема использует осознанную in-process trust model: учебная программа работает с правами
+текущего пользователя внутри процесса IDE. Она не является sandbox и не запрещает файлы, сеть,
+реестр или процессы. Stop кооперативен; новый Run остаётся запрещённым, пока предыдущий lifecycle
+не дошёл до подтверждённого cleanup.
+
+### Компоненты
+
+#### 1.1. CodeExecutionService
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/CodeExecutionService.cs`
+
+**Ответственность:**
+- Координация процесса выполнения кода
+- Управление жизненным циклом контекста выполнения
+- Предотвращение параллельного выполнения
+- Best-effort финализация всех независимых owners с сохранением primary и secondary errors
+- Консервативная блокировка нового Run, если хотя бы один ресурс не подтвердил cleanup
+
+**Основные методы:**
+- `ExecuteAsync(string code, Func<CancellationToken, ICodeExecutionContext> contextFactory)` — принимает запуск и создаёт его контекст через фабрику
+- `RequestStop()` — запрашивает кооперативную остановку активной компиляции или выполнения
+
+**Особенности:**
+- Под sessionLock резервирует RuntimeSessionOwner библиотеки; ExecutionSession хранит FSM/completion task без собственного CTS и счётчика ID
+- Отклоняет повторный Run до вызова фабрики контекста
+- Инициализирует контекст перед выполнением
+- Освобождает контекст после выполнения
+
+#### 1.2. KIDCompilationProfile
+**Файлы:** `KID.WPF.IDE/Services/CompilationProfile/`
+
+**Ответственность:**
+- Единый immutable compile-time контракт для RoslynHost редактора и CSharpCompiler
+- Детерминированное разрешение managed references без зависимости от порядка загрузки CLR
+- Явное владение global imports
+
+**Состав allowlist:**
+- Все managed assemblies текущих `Microsoft.NETCore.App` и `Microsoft.WindowsDesktop.App`
+- `KID.Library`
+- `NAudio.Core` как compatibility exception для публичного `NAudio.Wave.PlaybackState` в KID API
+
+**Особенности:**
+- `KIDCompilationProfileProvider` строит профиль один раз и всегда возвращает ту же identity
+- Framework paths берутся из `TRUSTED_PLATFORM_ASSEMBLIES`, но фильтруются по каталогам текущих двух framework packs
+- Пути абсолютны, уникальны без учёта регистра и отсортированы через `StringComparer.OrdinalIgnoreCase`
+- App-local IDE, RoslynPad, CodeAnalysis, AvalonEdit, DI, VisualStudio.Threading и остальные NAudio assemblies автоматически не добавляются
+- `GlobalImports` изначально пуст: пространства имён становятся доступны только через явные `using` пользовательского документа
+- Ошибка построения приводит к fail-fast; fallback к загруженным assembly отсутствует
+- Allowlist не является security boundary: KID остаётся trusted in-process executor
+
+#### 1.3. CSharpCompiler
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Compilation/CSharpCompiler.cs`
+
+**Ответственность:**
+- Парсинг C# кода
+- Компиляция в PE/PDB-артефакт без `Assembly.Load(byte[])`
+- Обработка ошибок компиляции
+
+**Основные методы:**
+- `CompileAsync(string code, CancellationToken)` — компилирует код
+
+**Особенности:**
+- Использует `Microsoft.CodeAnalysis` для парсинга
+- Применяет `ConsoleClearRewriter` для замены `Console.Clear()`
+- Применяет `CancellationInstrumentationRewriter` для поддержанных циклов, тел функций,
+  `await`/`yield`, `Task.Delay` и `Thread.Sleep`
+- Передаёт один session token в parsing, semantic analysis и emit
+- Не вставляет синтетическую отмену в пользовательский `finally` и не переписывает
+  неподдержанную форму ценой изменения семантики
+- Использует одну коллекцию `MetadataReference` и один список global imports из `KIDCompilationProfile`
+- Не дополняет профиль assembly, найденными локально во время Run
+- Возвращает локализованные ошибки компиляции
+
+**ConsoleClearRewriter:**
+- Отдельный компонент, наследующий `CSharpSyntaxRewriter`
+- Семантически заменяет настоящий безаргументный `System.Console.Clear()` на `global::KID.TextBoxConsole.Clear()`
+- Не переписывает пользовательские одноимённые типы и не добавляет generated assembly зависимость на `KID.WPF.IDE`
+
+#### 1.4. DefaultCodeRunner
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Runtime/DefaultCodeRunner.cs`
+
+**Ответственность:**
+- Создание и запуск отдельного `CollectibleCodeRunningInstance` для PE/PDB-артефакта
+- Передача владения запущенным экземпляром вызывающему сервису через `ICodeRunningInstance`
+
+**Основные методы:**
+- `Start(CompilationArtifact artifact, CancellationToken)` — запускает выполнение и возвращает экземпляр без ожидания его завершения
+
+**Особенности:**
+- `runningInstance.Completion` — одна `JoinableTask` уже начатого выполнения, которую сервис ожидает после сохранения экземпляра; общую фабрику runner получает через DI
+- Reflection-оболочка `TargetInvocationException` разворачивается до исходного пользовательского message/stack trace
+- `OperationCanceledException` означает Stop только после отмены session token; без запроса Stop это обычная пользовательская runtime-ошибка
+- Единое правило ожидаемого Stop находится в `ExecutionExceptionClassifier` и используется как running instance, так и lifecycle coordinator
+- Host-ошибки, не обработанные внутри экземпляра, передаются через `Completion`; экземпляр остаётся доступен для cleanup
+- `CollectibleCodeRunningInstance` выполняет загрузку и вызов `Assembly.EntryPoint` через `Task.Run`, поддерживает `void`/`int`/`Task`/`Task<int>` с пустым списком параметров либо `string[]` и не завершает `Completion` раньше async Main
+- Обработка `TargetInvocationException`, `OperationCanceledException` и локализованных сообщений выполняется до публикации завершения
+- После ожидания `Completion` сервис очищает Console/Graphics, затем вызывает `Dispose()` экземпляра для инициирования выгрузки сборки
+- Исключение одного cleanup-шага не пропускает остальные; несколько ошибок возвращаются как `AggregateException` с первой primary error
+- `ExecutionFailureCollector` централизует capture, порядок и агрегацию lifecycle errors; очередь observer failures остаётся отдельной до окончания cleanup
+- Ошибки отдельных `StateChanged`-подписчиков изолированы от FSM и других observers; `Idle` публикуется только после подтверждённой очистки ресурсов
+- `Dispose()` экземпляра вызывает cooperative `AssemblyLoadContext.Unload()`, но не обещает немедленную или гарантированную сборку ALC; живой пользовательский поток и другие strong references могут отложить её
+- Unload-тесты используют только `WeakReference` и bounded GC-циклы: обычные sync/async запуски обязаны освобождаться, а диагностический background-thread сценарий удерживает ALC до фактического выхода пользовательского потока
+
+#### 1.5. Контексты выполнения
+
+**CodeExecutionContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CodeExecutionContext.cs`)
+- Объединяет графический и консольный контексты
+- Управляет инициализацией и освобождением ресурсов
+- Содержит CancellationToken для отмены
+- Получает ExecutionId от coordinator и передаёт id обоим контекстам, а token — консольному
+- DisposeAsync ожидает графику, затем консоль; ошибка графики не мешает восстановлению потоков
+- Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
+- Передаёт Dispatcher в CanvasGraphicsContext; capability подключает общий RuntimeSessionOwner
+
+**CanvasGraphicsContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs`)
+- Инициализирует Graphics API с Canvas
+- Реализует `IGraphicsContext`
+- Передаёт Canvas, фиксированные источники Mouse/Keyboard, музыку и CanvasLayoutAdapter общему RuntimeSessionOwner; Dispose делегирует ему идемпотентный CleanupAsync
+- Частичная инициализация безопасна: уже подключённые Mouse или Music будут освобождены, даже если следующий runtime-шаг упал
+- Host cleanup не использует отменённый session token для WPF-отписок
+
+**TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
+- Подключает статический `KID.TextBoxConsole` к TextBox и captured `ExecutionEnvironment`
+- Передаёт TextBox и настройку перенаправления владельцу; In/Out/Error сохраняет и восстанавливает RuntimeSessionOwner
+- Ожидает runtime shutdown до восстановления streams; ошибка shutdown не пропускает ни один restore-шаг
+- Реализует `IConsoleContext`
+
+**CanvasTextBoxContextFabric** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasTextBoxContextFabric.cs`)
+- Фабрика для создания контекстов выполнения
+- Создаёт CodeExecutionContext с нужными контекстами
+- Получает `App` из DI контейнера через конструктор
+- Устанавливает `Dispatcher` в `CodeExecutionContext` из `app.Dispatcher`
+
+#### 1.6. TextBoxConsole
+**Файлы:** `KID.Library/Console/TextBoxConsole.*.cs`, `ConsoleExecutionScope.cs`
+
+**Ответственность:**
+- Публичный статический console facade в namespace `KID`
+- Перенаправление `System.Console` streams в WPF TextBox через per-run adapters
+- Ввод, FIFO-вывод, очистка и фоновые пользовательские callbacks в рамках одного execution scope
+
+**Основные компоненты:**
+
+**Вывод:**
+- `Write(char)`, `Write(string)` — вывод текста
+- `Clear()` — очистка консоли
+- UI-команды используют Dispatcher своего TextBox с проверкой execution-owner
+
+**Ввод:**
+- `Read()` — чтение одного символа
+- `ReadLine()` — чтение строки
+- WaitAny ожидает ввод, Stop или Dispose; очередь сохраняет многосимвольный ввод
+- Обрабатывает Backspace и Enter
+- Поддерживает кириллицу и Unicode
+
+**Потоки:**
+- `TextBoxTextWriter` и `TextBoxTextReader` создаются для каждого `Init` и захватывают exact scope
+- Retained stream старого запуска не разрешает current scope повторно и не обращается к новому TextBox
+- `ConsoleExecutionScope` содержит только `ExecutionEnvironment`, `TextBox` и `ExecutionEventWorker`
+
+### Подтверждённый lifecycle и ограничения
+
+- FSM различает `Compiling`, `Running`, `StopRequested`, `CleaningUp` и `Idle`; terminal outcome
+  (`Completed`, `Stopped`, `Faulted`) хранится отдельно от активного состояния.
+- Все восемь форм `void`/`int`/`Task`/`Task<int>` Main ожидаются до cleanup.
+- Console, Dispatcher/Graphics, Keyboard, Mouse и Music очищают per-run ресурсы до выгрузки ALC.
+- Ошибка одного cleanup-шага не отменяет попытки остальных; незавершённая очистка оставляет
+  сервис в `CleaningUp` и блокирует новый Run.
+- Исторический Release-прогон C2/C3 (2026-09-17): build и 188 automated runtime tests подтверждали поддержанный scope; headless smoke и
+  сообщённая пользователем visual acceptance учитываются отдельными evidence layers.
+- Произвольный native/сторонний вызов или неинструментированный пользовательский поток нельзя
+  принудительно завершить безопасно внутри процесса.
+
+## 2. Подсистема консольного ввода/вывода (Console I/O)
+
+### Назначение
+Предоставление консольного интерфейса для пользовательского кода через WPF TextBox, включая вывод и ввод данных.
+
+### Компоненты
+
+#### 2.1. TextBoxConsole
+**Файлы:** `KID.Library/Console/TextBoxConsole.*.cs`, `ConsoleExecutionScope.cs`
+
+**Ответственность:**
+- Статический facade `KID.TextBoxConsole` для WPF TextBox текущей execution-сессии
+- Перенаправление стандартного вывода (Console.WriteLine/Write) в TextBox
+- Поддержка ввода данных через Console.ReadLine/Read
+- Обработка ввода с клавиатуры, включая кириллицу и Unicode
+
+**Основные компоненты:**
+
+**Вывод:**
+- `Write(char)`, `Write(string)` — вывод текста в TextBox
+- `Clear()` — очистка содержимого TextBox
+- UI-команды используют Dispatcher своего TextBox с проверкой execution-owner
+- `TextBoxTextWriter` — реализация TextWriter для вывода
+
+**Ввод:**
+- `Read()` — чтение одного символа
+- `ReadLine()` — чтение строки до нажатия Enter
+- WaitAny ожидает ввод, Stop или Dispose; отмена выбрасывает OperationCanceledException с session token
+- Обрабатывает Backspace для удаления символов
+- Поддерживает кириллицу и Unicode символы
+- `TextBoxTextReader` — реализация TextReader для ввода
+
+**Scope и compiler bridge:**
+- `ConsoleExecutionScope` связывает environment, TextBox и последовательный event worker
+- `ConsoleClearRewriter` направляет `System.Console.Clear()` прямо в `global::KID.TextBoxConsole.Clear()`
+- Instance console, `IConsole` и вложенный `StaticConsole` больше не используются
+
+**Особенности:**
+- Dispatcher своего TextBox и проверка владельца защищают от запоздалых команд старой консоли
+- Обработка событий клавиатуры (PreviewKeyDown, PreviewTextInput)
+- `OutputReceived` выполняется последовательно в фоне через per-run `ExecutionEventWorker`
+- Блокирующий ввод вне UI-потока; Stop/Dispose освобождают его без клавиатуры
+- `BeginCleanup` закрывает admission; `ShutdownAsync` ожидает readers, running handler и UI teardown
+- Cleanup восстанавливает IsReadOnly/фокус, очищает `OutputReceived`, registration, wait handles и static ownership только exact scope
+
+#### 2.2. TextBoxConsoleContext
+**Файл:** `KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`
+
+**Ответственность:**
+- Инициализация статического TextBoxConsole с TextBox из ViewModel и current environment
+- Реализация интерфейса IConsoleContext
+- Адаптация TextBox и перенаправления к общему владельцу (сами streams принадлежат RuntimeSessionOwner)
+
+**Особенности:**
+- Получает TextBox из ConsoleOutputViewModel
+- Передаёт ConsoleTextBox/RedirectSystemConsole в RuntimeSessionOwner.Initialize
+- Общий владелец создаёт scope-bound streams и устанавливает System.Console.Out/In/Error
+- Init проверяет execution id/token; DisposeAsync делегирует общую очистку, которая восстанавливает каждый поток даже после partial Init и runtime shutdown failure
+- IConsoleContext и ICodeExecutionContext реализуют IAsyncDisposable; coordinator ожидает консольную очистку до выгрузки ALC и нового Run
+
+## 3. Подсистема работы с файлами (Files)
+
+### Назначение
+Открытие, сохранение и управление файлами с кодом.
+
+### Компоненты
+
+#### 3.1. OpenFileResult
+**Файл:** `KID.WPF.IDE/Services/Files/OpenFileResult.cs`
+
+**Ответственность:**
+- Результат открытия файла — содержит Code и FilePath
+
+**Свойства:**
+- `Code` — содержимое файла
+- `FilePath` — путь к файлу
+
+#### 3.2. CodeFileService
+**Файл:** `KID.WPF.IDE/Services/Files/CodeFileService.cs`
+
+**Ответственность:**
+- Открытие .cs файлов
+- Сохранение кода в .cs файлы
+- Работа с диалогами открытия/сохранения
+
+**Основные методы:**
+- `OpenCodeFileWithPathAsync(string filter)` — открывает файл через диалог, возвращает `OpenFileResult?` (содержимое и путь)
+- `ReadFromPathAsync(string filePath)` — читает файл без диалога; используется при восстановлении чистых дисковых вкладок
+- `SaveToPathAsync(string filePath, string code)` — сохраняет код в указанный файл без диалога
+- `SaveCodeFileAsync(string code, string filter, string defaultFileName)` — сохраняет через диалог «Сохранить как», возвращает `string?` (путь сохранённого файла)
+- `IsNewFilePath(string path)` — возвращает `true`, если путь равен виртуальному пути `/NewFile.cs`
+- `CodeFileFilter` — единый локализуемый фильтр для диалогов открытия/сохранения кода
+
+**Особенности:**
+- Использует FileDialogService для диалогов
+- Использует FileService для чтения/записи
+- Асинхронные операции
+- Пустой или состоящий только из пробелов текст является допустимым содержимым; отмена `Save As` определяется только отсутствием выбранного пути
+
+#### 3.3. FileDialogService
+**Файл:** `KID.WPF.IDE/Services/Files/FileDialogService.cs`
+
+**Ответственность:**
+- Показ диалогов открытия/сохранения файлов
+- Работа с OpenFileDialog и SaveFileDialog
+
+**Основные методы:**
+- `ShowOpenDialog(string filter)` — показывает диалог открытия
+- `ShowSaveDialog(string filter, string defaultFileName)` — показывает диалог сохранения
+
+#### 3.4. FileService
+**Файл:** `KID.WPF.IDE/Services/Files/FileService.cs`
+
+**Ответственность:**
+- Чтение файлов
+- Проверка существования файлов
+- Атомарная запись файлов с созданием отсутствующего родительского каталога
+- Чтение и запись JSON
+- Асинхронные операции
+
+**Основные методы:**
+- `FileExists(string filePath)` — проверяет существование файла
+- `ReadFileAsync(string filePath)` — возвращает `Task<string>`; ошибки доступа, отсутствия файла и ввода-вывода передаются вызывающему коду, а не преобразуются в `null`
+- `WriteFileAsync(string filePath, string content)` — создаёт родительский каталог при необходимости и атомарно записывает строку через временный файл
+- `ReadJsonAsync<T>(string filePath)` / `WriteJsonAsync<T>(string filePath, T data)` — читают и записывают JSON через общие текстовые операции
+
+**Гарантии записи:**
+- Временный файл создаётся в каталоге назначения, поэтому финальная замена не пересекает файловые тома
+- При неудачной замене существующий файл остаётся прежним; временный файл удаляется best effort
+
+### 3.5. Подсистема редактора кода (Code Editors)
+
+**Назначение:** Управление панелью вкладок, отслеживание несохранённых изменений, autosave recovery-снимка, восстановление сессии и безопасное закрытие документов.
+
+**Компоненты:**
+
+**CodeEditorsViewModel** (`KID.WPF.IDE/ViewModels/CodeEditorsViewModel.cs`)
+- Управление коллекцией `OpenedFileTabs` (`ObservableCollection<OpenedFileTab>`)
+- Активная вкладка `CurrentFileTab`; в recovery-снимке сохраняется её индекс
+- Команды: CloseFile, SelectFile, SaveFile, SaveAsFile, SaveAndSetAsTemplate, MoveTabLeft, MoveTabRight
+- `CreateAndAddFileTabAsync(path, content, savedContent)` — асинхронное создание вкладки через `ICodeEditorFactory`
+- `CloseFileTabAsync(tab)` — проверка dirty-состояния, диалог и закрытие только после успешного Save либо явного Discard
+- `PrepareForApplicationCloseAsync()` — последовательная проверка всех вкладок и принудительная запись финального снимка
+- `RestoreSessionAsync()` — восстановление порядка вкладок, активного индекса, текста и dirty-состояния
+- Autosave использует два `DispatcherTimer`: debounce 750 мс после последнего события и максимальный интервал 5 секунд от первого события серии
+- `hasPendingSessionChanges` не допускает повторной записи, если оба таймера попали в очередь рядом; `isRestoringSession` запрещает запись частично восстановленной сессии
+- Подписка на FontSettingsChanged для обновления шрифта во всех вкладках
+- Подписка на `IThemeService.ThemeChanged` для обновления палитры всех открытых редакторов
+- Обработка ошибок async-операций через IAsyncOperationErrorHandler
+
+#### 3.5.1. OpenedFileTab
+
+**Файл:** `KID.WPF.IDE/Models/OpenedFileTab.cs`
+
+- `CurrentContent` читает текущий текст из `CodeEditor`, а `SavedContent` хранит последнюю подтверждённую версию
+- `IsModified` вычисляется как `CurrentContent != SavedContent`, отдельный изменяемый dirty-флаг отсутствует
+- `DisplayName` добавляет `*` к имени изменённой вкладки
+- `UpdateSavedContent()` отмечает успешный Save, `RestoreSavedContent()` реализует Discard при выходе
+
+#### 3.5.2. EditorSessionData и EditorSessionService
+
+**Файлы:** `KID.WPF.IDE/Models/EditorSessionData.cs`, `KID.WPF.IDE/Services/Files/EditorSessionService.cs`
+
+- `EditorSessionData` хранит версию схемы, `ActiveTabIndex` и упорядоченный список `EditorSessionTabData`
+- `EditorSessionTabData` содержит `FilePath`, `Content` и `SavedContent`; это позволяет восстановить `IsModified`
+- `IEditorSessionService` предоставляет `LoadAsync()` и `SaveAsync(EditorSessionData)`
+- Снимок хранится в `%APPDATA%/KID/editor-session.json` отдельно от пользовательских `.cs`-файлов
+- `EditorSessionService` упорядочивает операции через `SemaphoreSlim`, а JSON-чтение и атомарную публикацию файла делегирует `IFileService`
+- Отсутствие recovery-файла или каталога считается отсутствием сессии (`null`); повреждённый JSON не скрывается
+- При загрузке поддерживается только `EditorSessionData.CurrentVersion`; неизвестная версия приводит к локализованной ошибке восстановления
+- Если чтение чистой дисковой вкладки завершается ошибкой, `CodeEditorsViewModel` показывает `Error_FileOpenFailed`, сохраняет recovery-текст этой вкладки и продолжает цикл
+
+#### 3.5.3. UnsavedChangesDialogService и закрытие окна
+
+**Файлы:** `KID.WPF.IDE/Services/Files/UnsavedChangesDialogService.cs`, `KID.WPF.IDE/MainWindow.xaml.cs`
+
+- `IUnsavedChangesDialogService` возвращает `UnsavedChangesDecision.Save`, `Discard` или `Cancel`
+- Save нового файла переходит в Save As; отмена выбора пути запрещает закрытие
+- При закрытии одной вкладки Discard позволяет удалить объект; при выходе из приложения содержимое возвращается к `SavedContent`, чтобы отвергнутый код не попал в финальный recovery-снимок
+- `MainWindow.OnClosing()` сначала отменяет синхронное закрытие, ожидает `PrepareForApplicationCloseAsync()`, затем ставит подтверждённый повторный `Close()` в очередь Dispatcher
+- Флаги `_isCloseCheckInProgress` и `_isCloseApproved` защищают от параллельных и рекурсивных попыток закрытия
+
+#### 3.5.4. CodeEditorsView
+
+**Файл:** `KID.WPF.IDE/Views/CodeEditorsView.xaml`
+
+- `ItemsControl` отображает вкладки, `ContentControl` — редактор активной вкладки
+- Контекстное меню: Закрыть, Сохранить, Сохранить как, Назначить шаблоном по умолчанию (и сохранить), Переместить влево/вправо
+- Визуальная индикация: жирный шрифт активной вкладки, `*` для несохранённых изменений и кнопка × для закрытия
+
+## 3.6. Подсистема обработки ошибок async-операций (Errors)
+
+### Назначение
+Единообразная обработка исключений асинхронных операций UI-слоя с локализованными сообщениями.
+
+### Компоненты
+
+#### 3.6.1. IAsyncOperationErrorHandler / AsyncOperationErrorHandler
+**Файлы:** `KID.WPF.IDE/Services/Errors/Interfaces/IAsyncOperationErrorHandler.cs`, `KID.WPF.IDE/Services/Errors/AsyncOperationErrorHandler.cs`
+
+**Ответственность:**
+- Выполнение `Func<Task>` с перехватом исключений
+- Показ локализованного MessageBox по ключу ошибки
+- Унификация логики обработки ошибок в `MenuViewModel` и `CodeEditorsViewModel`
+
+#### 3.6.2. ExecutionFailureCollector
+**Файл:** `KID.WPF.IDE/Services/Errors/ExecutionFailureCollector.cs`
+
+Собирает ошибки независимых шагов через `Capture` и `CaptureAsync`, сохраняя порядок причин. Используется координатором выполнения, сессией и контекстами. Классификация ожидаемой остановки остаётся в `KID.WPF.IDE/Services/CodeExecution/Errors/ExecutionExceptionClassifier.cs`.
+
+#### 3.6.3. Structured diagnostics and crash reporting
+
+**Файлы:** `KID.WPF.IDE/Services/Diagnostics/`
+
+- `LoggingConfiguration` создаёт bootstrap Serilog provider до DI и пишет compact JSONL в
+  `%LOCALAPPDATA%\KID\Logs\kid-YYYYMMDD.jsonl`; rolling — ежедневно, лимит файла — 10 МБ,
+  retention — 14 файлов.
+- `DiagnosticEventIds` фиксирует стабильные категории для startup, async operations,
+  settings/localization fallback, execution lifecycle и global exception hooks.
+- `CrashReportWriter` атомарно создаёт `crash-<CrashId>.json` с exception chain, версиями
+  приложения/.NET/OS, process/thread id, log pattern и optional `ExecutionId`.
+- `App` регистрирует dispatcher/AppDomain/unobserved-task hooks до построения DI; fatal
+  dispatcher failure показывает безопасный диалог с CrashId и завершает процесс.
+- `KID.Library` сообщает ошибки event handlers через `ExecutionDiagnostic`; библиотека не
+  зависит от WPF и Serilog.
+
+Не логируются пользовательский исходный код, редактор, console input, токены и environment
+variables. Ограничения `StackOverflowException`, `FailFast`, native crash и внезапного
+завершения процесса остаются явными.
+
+## 4. Подсистема локализации (Localization)
+
+### Назначение
+Многоязычная поддержка интерфейса приложения.
+
+### Компоненты
+
+#### 3.1. LocalizationService
+**Файл:** `KID.WPF.IDE/Services/Localization/LocalizationService.cs`
+
+**Ответственность:**
+- Загрузка локализованных строк из .resx файлов
+- Переключение языка интерфейса
+- Управление списком доступных языков
+
+**Основные методы:**
+- `GetString(string key)` — получает локализованную строку
+- `GetString(string key, params object[] args)` — получает форматированную строку
+- `SetCultureAsync(string cultureCode)` — сразу применяет язык и ожидает сохранение настройки
+- `GetAvailableLanguages()` — получает список языков
+
+**Особенности:**
+- Использует ResourceManager для загрузки строк
+- Кэширует список доступных языков
+- При создании разрешает исходную `CultureInfo.CurrentUICulture` по каталогу; для неподдерживаемого языка использует `en`
+- Генерирует `CultureChanged` при изменении языка, до завершения асинхронной записи настройки
+- Разрешает региональные алиасы через каталог и сохраняет языковые коды; повторяет неудачную запись при повторном выборе того же языка
+- Fallback на английский язык, если строка не найдена
+- Возвращает `[key]` если строка не найдена
+
+**Поддерживаемые языки:**
+- ru (Русский)
+- en (Английский)
+- uk (Украинский)
+
+#### 3.2. LocalizationMarkupExtension
+**Файл:** `KID.WPF.IDE/Services/Localization/LocalizationMarkupExtension.cs`
+
+**Ответственность:**
+- XAML расширение для привязки локализованных строк
+- Автоматическое обновление при смене языка
+
+**Использование:**
+```xaml
+<TextBlock Text="{localization:Localization Window_Title}" />
+```
+
+**Особенности:**
+- Подписывается на событие CultureChanged
+- Автоматически обновляет привязанные значения
+
+#### 3.3. Ресурсы локализации
+
+**Файлы:**
+- `KID.WPF.IDE/Resources/Strings.ru.resx` — русские строки
+- `KID.WPF.IDE/Resources/Strings.resx` — английские строки основной сборки и общий резерв (`NeutralResourcesLanguage("en")`)
+- `KID.WPF.IDE/Resources/Strings.uk.resx` — украинские строки
+
+**Структура ключей:**
+- `Menu_*` — пункты меню
+- `Window_*` — элементы окна
+- `Error_*` — сообщения об ошибках
+- `Language_*` — названия языков
+- `Theme_*` — названия тем
+- `Notification_*` — уведомления
+- `TabContext_*` — пункты контекстного меню вкладок (Close, MoveLeft, MoveRight, SaveAndSetAsTemplate)
+- `UnsavedChanges_*` — заголовок и вопрос диалога сохранения изменённой вкладки
+- `Error_SessionSaveFailed`, `Error_SessionRestoreFailed`, `Error_ClosePreparationFailed` — ошибки autosave, восстановления и безопасного закрытия
+
+## 5. Подсистема тем оформления (Themes)
+
+### Назначение
+Управление визуальным оформлением приложения.
+
+### Компоненты
+
+#### 4.1. ThemeProviderService
+**Файл:** `KID.WPF.IDE/Services/Themes/ThemeProviderService.cs`
+
+**Ответственность:**
+- Однократная загрузка встроенного `Resources/AvailableThemes.json` через `Lazy<ThemeCatalog>`
+- Строгая валидация пар `localizationKey` / `resourcePath`, уникальности ключей по `Ordinal`, относительных XAML URI и обязательной стартовой темы
+- Неизменяемый снимок в порядке JSON; при ошибке всего каталога — резерв `Theme_VS2022Light` и однократный `SettingsFallback`
+- Поиск определения темы по стабильному ключу локализации
+- Миграция двух старых ключей в `Theme_VS2022Light` / `Theme_VS2022Dark`, без дублирования пунктов меню
+
+#### 4.2. ThemeService
+**Файл:** `KID.WPF.IDE/Services/Themes/ThemeService.cs`
+
+**Ответственность:**
+- Применение `ThemeDefinition`, полученного из provider
+- Загрузка XAML-словаря и сохранение только успешно применённой темы
+- Публикация `ThemeChanged`
+
+**Основные методы:**
+- `ApplyTheme(string localizationKey)` — разрешает определение темы и применяет его
+
+**Особенности:**
+- Загружает ResourceDictionary из XAML файлов
+- Очищает предыдущие темы перед применением новой
+- Сохраняет `LocalizationKey` темы только после успешной загрузки
+- При неизвестной или повреждённой теме использует Light-fallback
+
+**Доступные темы:**
+- Visual Studio 2022 — светлая / тёмная (сохранённое оформление KID)
+- Visual Studio 2026 — светлая / тёмная
+- Канонические ключи: `Theme_VS2022Light`, `Theme_VS2022Dark`, `Theme_VS2026Light`, `Theme_VS2026Dark`; default/fallback — VS2022 Light
+
+#### 4.3. Файлы тем
+
+**VS2022LightTheme.xaml** (`KID.WPF.IDE/Themes/VS2022LightTheme.xaml`)
+- Светлая цветовая схема
+- Определяет кисти, цвета, стили для светлой темы
+- Предоставляет `VS2022LightClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
+
+**VS2022DarkTheme.xaml** (`KID.WPF.IDE/Themes/VS2022DarkTheme.xaml`)
+- Предоставляет `VS2022DarkClassificationHighlightColors` для RoslynPad по ключу `CodeEditorClassificationColors`
+- Тёмная цветовая схема
+- Определяет кисти, цвета, стили для тёмной темы
+
+**VS2026LightTheme.xaml / VS2026DarkTheme.xaml**
+- Цвета и геометрия по [справочнику VS2026](../references/VS2026_UI_REFERENCE.md), включая отмеченные ограничения переноса
+- Подключают соответствующие `VS2026LightClassificationHighlightColors` / `VS2026DarkClassificationHighlightColors`
+- Общие шаблоны меню, окна и вкладок используют `DynamicResource`; размеры разделены по `VS2022Metrics.xaml` / `VS2026Metrics.xaml`
+- Все общие словари вложены в активную тему и заменяются вместе с ней
+- `EditorScrollStyles.xaml` подключается только к VS2026: цвета полос прокрутки тематические, размеры системные и команды WPF сохранены
+- Вкладка VS2026 использует `EditorTabBorder`: нейтральный фон, акцентная граница, верхние закругления и внешние нижние сопряжения
+
+**Ресурсы тем:**
+- `WindowBrush` — фон окна
+- `MenuBrush` — фон меню
+- `TitleBrush` — цвет заголовка
+- `SpecialElementsBrush` — фон специальных элементов
+- `SplitterBrush` — цвет разделителей
+- `WindowButtonStyle` — стиль кнопок окна
+- `TabActiveBrush`, `TabInactiveBrush`, `TabBarBackgroundBrush` — цвета вкладок редактора
+- `TabActiveTextBrush`, `TabInactiveTextBrush` — цвета текста вкладок
+
+## Каталоги шрифтов и размеров (Fonts)
+
+#### FontProviderService / FontCatalog
+
+**Файлы:** `KID.WPF.IDE/Services/Fonts/FontProviderService.cs`, `FontCatalog.cs`
+
+**Ответственность:**
+- Однократная загрузка `Resources/AvailableFontsAndSizes.json` в неизменяемый снимок с массивами `fonts` и `fontSizes`
+- Проверка непустых уникальных имён без пробелов по краям (`OrdinalIgnoreCase`) и уникальных конечных положительных чисел; порядок JSON сохраняется
+- Фильтрация по установленным шрифтам Windows при каждом `GetAvailableFonts()`, без учёта регистра
+- Возврат `Consolas` при пустом пересечении; ошибка перечисления шрифтов не заменяет валидные размеры
+- При повреждении JSON — цельный резерв `Consolas` и `[10, 11, 12, 13, 14, 16, 18, 20]` с однократным `SettingsFallback`
+
+Оба JSON-каталога встроены в основную сборку как `EmbeddedResource` с именами
+`KID.Resources.AvailableThemes.json` и `KID.Resources.AvailableFontsAndSizes.json`.
+Изменения требуют пересборки. Строгий формат запрещает неизвестные и повторные
+поля, комментарии и завершающие запятые. Переводы названий тем остаются в
+`Strings*.resx`, их полноту проверяют тесты ресурсов.
+
+## 6. Подсистема инициализации (Initialize)
+
+### Назначение
+Инициализация приложения при запуске и управление настройками.
+
+### Компоненты
+
+#### 6.1. WindowConfigurationService
+**Файл:** `KID.WPF.IDE/Services/Initialize/WindowConfigurationService.cs`
+
+**Ответственность:**
+- Загрузка настроек из файла
+- Сохранение настроек в файл
+- Управление шаблонным кодом
+- Централизованное управление настройками шрифта (редактор и консоль)
+
+**Основные методы:**
+- `SetConfigurationFromFileAsync()` — загружает настройки
+- `SetDefaultCodeAsync()` — загружает шаблонный код
+- `SaveSettingsAsync()` — сохраняет настройки
+- `SetFontAsync(string? fontFamilyName, double? fontSize)` — устанавливает шрифт, сохраняет в Settings и уведомляет подписчиков через событие `FontSettingsChanged`
+- `SetUILanguageAsync(string cultureCode)` — сохраняет язык UI и уведомляет `UILanguageSettingsChanged`
+- `SetColorThemeAsync(string themeKey)` — сохраняет ключ успешно применённой темы
+
+**События:**
+- `FontSettingsChanged` — вызывается при изменении шрифта (из `SetFontAsync`). Подписчики: MenuViewModel, CodeEditorsViewModel, ConsoleOutputViewModel
+
+**Особенности:**
+- Хранит настройки в JSON файле в `AppData/KID/settings.json`
+- Использует `DefaultWindowConfiguration.json` как fallback
+- Если пользовательского `settings.json` нет, задаёт `UILanguage` из начального `LocalizationService.CurrentCulture` и сохраняет канонический код (`en`, `ru` или `uk`)
+- Выбор языка первого запуска сохраняется и при отсутствии или повреждении стандартной конфигурации; существующая поддерживаемая настройка пользователя имеет приоритет
+- Начальный язык запоминается в конструкторе и используется также при восстановлении отсутствующего или некорректного языка и при ошибке чтения всего пользовательского файла; неподдерживаемая локализация даёт `en`
+- Пустой `UILanguage` модели обозначает отсутствие выбора; конфигурационный сервис разрешает его до применения настроек
+- После успешного первого сохранения уведомляет `UILanguageSettingsChanged`, включая случай совпавшего языка; при ошибке записи успешное сохранение не заявляется
+- Делегирует проверку существования, чтение и запись файлов `IFileService`
+- Ставит асинхронные сохранения в последовательную FIFO-очередь и продолжает её после ошибки отдельной записи
+- Благодаря `IFileService` атомарно публикует `settings.json` через временный файл
+- При выходе `App.OnExit` дожидается завершающего сохранения через `JoinableTaskFactory`
+
+**Настройки:**
+- `ProgrammingLanguage` — язык подсветки синтаксиса
+- `FontFamily` — семейство шрифта (редактор и консоль)
+- `FontSize` — размер шрифта (редактор и консоль)
+- `ColorTheme` — тема оформления
+- `UILanguage` — язык интерфейса
+- `TemplateCode` — шаблонный код
+- `TemplateName` — путь к файлу шаблона
+
+#### 6.2. Редактор кода (RoslynCodeEditor, RoslynHostService, compilation profile, фабрика)
+
+**Файлы:**
+- `KID.WPF.IDE/Services/CodeEditor/RoslynCodeEditorFactory.cs` — фабрика редакторов на базе RoslynPad
+- `VS2022LightClassificationHighlightColors` / `VS2022DarkClassificationHighlightColors` — цвета и начертания VS2022 для действующих тем; самостоятельные `VS2026LightClassificationHighlightColors` / `VS2026DarkClassificationHighlightColors` используются соответствующими темами VS2026.
+- `KID.WPF.IDE/Services/CodeEditor/RoslynHostService.cs` — ленивое потокобезопасное создание и кэширование RoslynHost; references/imports берёт из общего `IKIDCompilationProfileProvider`
+- `KID.WPF.IDE/Services/CodeEditor/Interfaces/IRoslynHostService.cs` — интерфейс сервиса хоста
+- `KID.WPF.IDE/Services/CompilationProfile/` — общая immutable-инфраструктура references/imports для editor и compiler
+- `KID.WPF.IDE/Services/CodeEditor/AvalonTextEditorFactory.cs` — запасная фабрика на AvalonEdit (не регистрируется в DI по умолчанию)
+
+**Ответственность:**
+- **IKIDCompilationProfileProvider / KIDCompilationProfileProvider:** один раз формирует детерминированный allowlist framework/KID/NAudio.Core и публикует одну identity профиля обоим consumers.
+- **IRoslynHostService / RoslynHostService:** единый экземпляр RoslynHost; передаёт `MetadataReference` и imports профиля в `RoslynHostReferences.Empty`, а additionalAssemblies RoslynPad использует только для MEF.
+- **ICodeEditorFactory / RoslynCodeEditorFactory:** получает `RoslynHost` и `IClassificationHighlightColors` через сервисы, создаёт `RoslynCodeEditor`, ожидает `InitializeAsync(...)`, включает ShowLineNumbers и WordWrap.
+- **Темы редактора:** XAML-тема предоставляет `IClassificationHighlightColors` по ключу `CodeEditorClassificationColors`; `ClassificationHighlightColorsProvider` читает активный ресурс и использует светлую палитру как fallback. `CodeEditorsViewModel` подписан на `IThemeService.ThemeChanged` и обновляет палитру всех открытых `RoslynCodeEditor`.
+
+**Связи:**
+- RoslynHostService и CSharpCompiler зависят от одного singleton `IKIDCompilationProfileProvider`
+- RoslynCodeEditorFactory зависит от `IRoslynHostService` и `IClassificationHighlightColorsProvider`
+- Используется в `CodeEditorsViewModel.CreateAndAddFileTabAsync()` при асинхронном создании вкладок
+- Стили для RoslynCodeEditor заданы в CodeEditorsView.xaml (Background, Foreground, FontFamily, FontSize, ClassificationHighlightColors)
+
+#### 6.3. WindowInitializationService
+**Файл:** `KID.WPF.IDE/Services/Initialize/WindowInitializationService.cs`
+
+**Ответственность:**
+- Инициализация всех компонентов при запуске
+- Применение настроек из конфигурации
+- Настройка ViewModels
+
+**Основные методы:**
+- `InitializeAsync()` — асинхронно инициализирует все компоненты
+
+**Процесс инициализации:**
+1. Загрузка конфигурации
+2. Загрузка шаблонного кода
+3. Применение темы оформления
+4. Применение языка интерфейса
+5. `codeEditorsViewModel.RestoreSessionAsync()` загружает recovery-снимок и асинхронно создаёт редакторы
+6. Если сессия отсутствует, пуста или не восстановила ни одной вкладки — создаётся NewFile из шаблона
+7. Восстанавливаются порядок и активная вкладка; чистые дисковые файлы перечитываются с диска, dirty-вкладки сохраняют recovery-текст
+8. Инициализация консоли и обновление layout главного окна
+
+**Особенности:**
+- Редактор (`RoslynCodeEditor`) создаётся через `ICodeEditorFactory.CreateAsync()` с шрифтом из стилей и Settings
+- Ошибка восстановления показывается через `IAsyncOperationErrorHandler`; если коллекция осталась пустой, приложение продолжает работу с шаблонной вкладкой
+
+## 7. Подсистема Music API
+
+### Назначение
+Предоставление API для воспроизведения звуков и музыки в пользовательском коде.
+
+### Компоненты
+
+#### 7.1. Структура данных
+**Файл:** `KID.Library/Music/SoundNote.cs`
+
+**SoundNote:**
+- Структура для представления одного звука
+- Свойства: `Frequency` (частота в Hz), `DurationMs` (длительность в мс), `Volume` (громкость 0.0-1.0, опционально)
+- Утилиты: `IsSilence` (проверка паузы), `GetEffectiveVolume()` (эффективная громкость)
+
+#### 7.2. Базовое воспроизведение
+**Файл:** `KID.Library/Music/Music.Sound.cs`
+
+**Методы:**
+- `Sound(frequency, durationMs)` — воспроизведение одного тона
+- `Sound(params SoundNote[] notes)` — последовательность звуков
+- `Sound(IEnumerable<SoundNote> notes)` — последовательность из коллекции
+- `Sound(params SoundNote[][] tracks)` — полифоническое воспроизведение
+- `Sound(IEnumerable<IEnumerable<SoundNote>> tracks)` — полифония из коллекций
+- `Sound(string filePath)` — проигрывание аудиофайлов
+
+**Особенности:**
+- Блокирующее воспроизведение (программа ждёт окончания)
+- Поддержка пауз (Frequency = 0)
+- Индивидуальная громкость для каждого звука
+- Блокирующее ожидание и внутренние циклы прерываются session token текущего `ExecutionEnvironment`
+
+#### 7.3. Управление громкостью
+**Файл:** `KID.Library/Music/Music.Volume.cs`
+
+**Свойство:**
+- `Music.Volume` — глобальная громкость (0-10, по умолчанию 5)
+
+#### 7.4. Генерация тонов
+**Файл:** `KID.Library/Music/Music.ToneGeneration.cs`
+
+**Функции:**
+- Генерация синусоидальных тонов через NAudio
+- Ограничение синтетической частоты диапазоном 20-20000 Hz
+- Генерация пауз (тишины)
+
+#### 7.5. Полифония
+**Файл:** `KID.Library/Music/Music.Polyphony.cs`
+
+**Функции:**
+- Одновременное воспроизведение нескольких дорожек
+- Микширование дорожек через NAudio
+- Поддержка индивидуальной громкости для каждой дорожки
+
+#### 7.6. Проигрывание файлов
+**Файл:** `KID.Library/Music/Music.FilePlayback.cs`
+
+**Функции:**
+- Воспроизведение аудиофайлов (WAV, MP3 и др.)
+- Поддержка локальных путей и URL
+- Автоматическая загрузка и удаление временных файлов для URL
+- HTTP, чтение ответа и запись файла получают session token; временный путь регистрируется за scope до записи
+
+#### 7.7. Расширенное API
+**Файл:** `KID.Library/Music/Music.Advanced.cs`
+
+**Методы управления:**
+- `SoundPlay()`, `SoundLoad()` — асинхронное воспроизведение
+- `SoundPause()`, `SoundStop()`, `SoundWait()` — управление воспроизведением
+- `SoundVolume()`, `SoundLoop()` — настройка звука
+- `SoundLength()`, `SoundPosition()`, `SoundState()` — информация о звуке
+- `SoundSeek()`, `SoundFade()` — дополнительные возможности
+- `SoundPlayerOFF()` — остановка текущих звуков без закрытия Music-сессии
+
+**Особенности:**
+- Асинхронное воспроизведение (не блокирует программу)
+- Числовой ID является handle внутри запуска; управление дополнительно проверяет точные scope/playback-ссылки
+- Зацикливание звуков
+- Плавное изменение громкости
+- Все playback/fade-задачи отслеживаются per-run scope и ожидаются обязательным host `ShutdownAsync`
+- Cleanup останавливает output, отменяет задачи, освобождает player/file resources и удаляет временные файлы; ошибки агрегируются после попытки очистить всё
+
+## 8. Подсистема Graphics API
+
+### Назначение
+Предоставление упрощённого API для рисования в пользовательском коде.
+
+### Компоненты
+
+#### 8.1. Системные функции
+**Файл:** `KID.Library/Graphics/Graphics.System.cs`
+
+**Функции:**
+- Публичное подключение через KIDRuntimeSession.OpenAsync; внутренний Init(Canvas, scope) вызывает общий владелец
+- SetCanvas(Canvas) выбирает поле того же Dispatcher; операции захватывают Canvas и scope до постановки
+- Методы над элементом работают с ним и фактическим родителем, Sprite пропускает столкновения разных полей
+- SetCanvas* меняет размеры обычного Canvas; IDE-панели обслуживает CanvasLayoutAdapter
+- `Clear()` — очистка холста
+- Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
+
+**Особенности:**
+- Все операции с UI выполняются в UI потоке через `DispatcherManager.InvokeOnUI()`
+- `ExecutionEnvironmentManager` — единственный ambient registry id/token в KID.Library
+- `DispatcherManager` подключает временный scope к environment и управляет pending operations, не дублируя execution identity
+
+#### 8.2. Работа с цветами
+**Файлы:** `KID.Library/Graphics/Graphics.Colors.cs`, `KID.Library/Graphics/ColorType.cs`
+
+**Свойства:**
+- `FillColor` — цвет заливки фигур
+- `StrokeColor` — цвет обводки фигур
+- `Color` — общий цвет (устанавливает и заливку, и обводку)
+
+**Поддерживаемые форматы:**
+- Строки: `"Red"`, `"Blue"`, `"#FF0000"`
+- RGB кортежи: `(255, 0, 0)`
+- Целые числа: `0xFF0000`
+- Brush объекты
+
+**ColorType:**
+- Вспомогательная структура для работы с цветами
+- Неявные преобразования из различных типов
+- Создание Brush в UI потоке
+
+#### 8.3. Простые фигуры
+**Файл:** `KID.Library/Graphics/Graphics.SimpleFigures.cs`
+
+**Фигуры:**
+- `Plot(x, y)` — точка размером 1×1 DIP
+- `Circle(x, y, radius)` — круг
+- `Ellipse(x, y, radiusX, radiusY)` — эллипс
+- `Rectangle(x, y, width, height)` — прямоугольник
+- `Line(x1, y1, x2, y2)` — линия
+- `Polygon(Point[] points)` — многоугольник
+- `QuadraticBezier(Point[] points)` — квадратичная кривая Безье (3 точки)
+- `CubicBezier(Point[] points)` — кубическая кривая Безье (4 точки)
+
+**Особенности:**
+- Все методы возвращают созданные фигуры для дальнейшей модификации
+- Поддержка перегрузок с Point
+- Все операции выполняются в UI потоке
+
+#### 8.4. Работа с текстом
+**Файл:** `KID.Library/Graphics/Graphics.Text.cs`
+
+**Функции:**
+- `SetFont(fontName, fontSize)` — установка шрифта
+- `Text(x, y, text)` — вывод текста
+- `SetText(TextBlock, text)` — изменение текста
+
+**Особенности:**
+- Возвращает TextBlock для дальнейшей модификации
+- Использует текущий FillColor для цвета текста
+
+#### 8.5. Работа с изображениями
+**Файл:** `KID.Library/Graphics/Graphics.Image.cs`
+
+**Методы:**
+- `Image(x, y, path, width?, height?)` — загрузка и отрисовка изображений
+- `Image(Point, path, width?, height?)` — перегрузки с Point
+- `SetSource(image, path, width?, height?)` — изменение источника изображения
+
+**Особенности:**
+- Поддержка форматов: PNG, JPG, BMP, GIF, TIFF, ICO
+- Опциональные параметры width/height для изменения размера
+- Возвращает Image для дальнейшей модификации
+- Все операции выполняются в UI потоке
+
+#### 8.6. Методы расширения для элементов
+**Файл:** `KID.Library/Graphics/Graphics.ExtensionMethods.cs`
+
+**Методы позиционирования (для UIElement):**
+- `SetLeftX(x)` — установка X координаты левого края
+- `SetTopY(y)` — установка Y координаты верхнего края
+- `SetLeftTopXY(x, y)` — установка позиции
+
+**Методы центрирования (для FrameworkElement):**
+- `SetCenterX(x)` — установка X координаты центра
+- `SetCenterY(y)` — установка Y координаты центра
+- `SetCenterXY(x, y)` — установка центра
+
+**Методы размеров (для FrameworkElement):**
+- `SetWidth(width)` — установка ширины
+- `SetHeight(height)` — установка высоты
+- `SetSize(width, height)` — установка размера
+
+**Методы цветов (только для Shape):**
+- `SetStrokeColor(color)` — установка цвета обводки
+- `SetFillColor(color)` — установка цвета заливки
+- `SetColor(color)` — установка общего цвета
+
+**Методы управления (для UIElement):**
+- `AddToCanvas()` — добавление на холст
+- `RemoveFromCanvas()` — удаление с холста
+
+**Особенности:**
+- Методы работают для всех элементов, наследуемых от UIElement/FrameworkElement
+- Работают для Shape, Image, TextBlock и других элементов
+- Все методы возвращают элемент для цепочки вызовов
+- Все операции выполняются в UI потоке
+
+## 9. Подсистема Mouse API
+
+### Назначение
+Предоставление API для получения информации о мыши относительно Canvas и подписки на события мыши (перемещение, нажатия, клики).
+
+### Компоненты
+
+#### 9.1. Инициализация и хуки Canvas
+**Файл:** `KID.Library/Mouse/Mouse.System.cs`
+
+**Функции:**
+- `Mouse.Init(Canvas)` — создаёт scope текущей execution и подписывается на события мыши Canvas (Enter/Leave/Move/Down/Up)
+- внутренний `Mouse.ShutdownAsync(environment)` — идемпотентно закрывает вход, снимает подписки и ожидает worker/pulse
+
+#### 9.2. Состояние
+**Файл:** `KID.Library/Mouse/Mouse.State.cs`
+
+**Свойства:**
+- `Mouse.CurrentCursor` — текущая позиция и кнопки (позиция `null`, если курсор вне Canvas)
+- `Mouse.LastActualCursor` — последнее актуальное состояние, когда курсор был на Canvas
+- `Mouse.CurrentClick` — текущий клик как кратковременный «пульс»
+- `Mouse.LastClick` — последний зарегистрированный клик
+
+#### 9.3. События
+**Файл:** `KID.Library/Mouse/Mouse.Events.cs`
+
+**События:**
+- `Mouse.MouseMoveEvent`
+- `Mouse.MousePressButtonEvent`
+- `Mouse.MouseClickEvent`
+
+### Особенности
+- События мыши собираются в UI-потоке, но обработчики пользователя вызываются в фоновом потоке (чтобы не блокировать UI).
+- Очередь, semaphore, linked token и task принадлежат конкретному `MouseExecutionScope`, а не живут между запусками.
+- Cleanup отбрасывает queued handlers, ожидает уже выполняющийся handler, сбрасывает state и очищает три публичных events.
+- `PressButtonStatus` поддерживает комбинации флагов (включая `OutOfArea`).
+- `CurrentClick` автоматически сбрасывается execution-aware pulse-задачей; старый pulse не может изменить новый Run.
+
+## 10. Подсистема Keyboard API
+
+### Назначение
+Предоставление API для получения информации от клавиатуры на уровне окна приложения и подписки на события клавиатуры (нажатия/отпускания клавиш, текстовый ввод, хоткеи).
+
+### Компоненты
+
+#### 10.1. Инициализация и хуки окна
+**Файл:** `KID.Library/Keyboard/Keyboard.System.cs`
+
+**Функции:**
+- `Keyboard.Init(Window)` — создаёт scope текущей execution и подписывается на `Window.PreviewKeyDown/PreviewKeyUp/PreviewTextInput`
+- внутренний `Keyboard.ShutdownAsync(environment)` — идемпотентно закрывает вход, снимает подписки и ожидает worker/pulse
+
+#### 10.2. Состояние
+**Файл:** `KID.Library/Keyboard/Keyboard.State.cs`
+
+**Свойства/методы:**
+- `Keyboard.CurrentState` — снимок состояния клавиатуры (модификаторы, lock-клавиши, зажатые клавиши)
+- `Keyboard.IsDown(key)` / `Keyboard.IsUp(key)` — проверка удержания
+- `Keyboard.WasPressed(key)` / `Keyboard.WasReleased(key)` — edge-методы (consume)
+- `Keyboard.ReadText()` / `Keyboard.ReadChar()` — буфер текстового ввода (consume)
+- `Keyboard.CurrentKeyPress` / `Keyboard.CurrentTextInput` — кратковременные «пульсы»
+
+#### 10.3. События
+**Файл:** `KID.Library/Keyboard/Keyboard.Events.cs`
+
+**События:**
+- `Keyboard.KeyDownEvent`
+- `Keyboard.KeyUpEvent`
+- `Keyboard.TextInputEvent`
+- `Keyboard.ShortcutEvent`
+
+### Особенности
+- События клавиатуры собираются в UI-потоке, но обработчики пользователя вызываются в фоновом потоке (как в Mouse API).
+- Keyboard и Mouse используют общий тип `ExecutionEventWorker`, но разные экземпляры, очереди и linked token в каждой execution.
+- Cleanup сбрасывает polling-state, shortcuts/ID, `CapturePolicy` и очищает четыре публичных events; следующий Run начинает с чистого состояния.
+- `CapturePolicy` помогает не мешать вводу в консоль (по умолчанию клавиатура активна всегда).
+
+## 11. Подсистема Dependency Injection
+
+### Назначение
+Управление зависимостями и жизненным циклом объектов.
+
+### Компоненты
+
+#### 11.1. ServiceCollectionExtensions
+**Файл:** `KID.WPF.IDE/Services/DI/ServiceCollectionExtensions.cs`
+
+**Ответственность:**
+- Регистрация всех сервисов и ViewModels
+- Настройка DI контейнера
+
+**Метод:**
+- `AddKIDServices(IServiceCollection)` — регистрирует все сервисы
+
+**Регистрация:**
+- Все сервисы регистрируются как Singleton
+- Все ViewModels регистрируются как Singleton
+- `IEditorSessionService` → `EditorSessionService`
+- `IUnsavedChangesDialogService` → `UnsavedChangesDialogService`
+- `IKIDCompilationProfileProvider` → `KIDCompilationProfileProvider` как Singleton; его профиль совместно используют RoslynHostService и CSharpCompiler
+- MainWindow регистрируется как Transient (специальный случай)
+
+#### 11.2. ServiceProviderExtension
+**Файл:** `KID.WPF.IDE/Services/DI/ServiceProviderExtension.cs`
+
+**Ответственность:**
+- XAML расширение для получения сервисов из DI контейнера
+- Использование в XAML для привязки ViewModels
+
+**Использование:**
+```xaml
+<Window.DataContext>
+    <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMainViewModel}" />
+</Window.DataContext>
+```
+
+## Взаимодействие подсистем
+
+### Схема взаимодействия
+
+```
+┌─────────────────────┐
+│   MenuViewModel     │
+└──────────┬──────────┘
+           │
+           ├──→ CodeEditorsViewModel ──→ CodeFileService
+           │              │                      │
+           │              │                      ├──→ FileDialogService
+           │              │                      └──→ FileService
+           │              │
+           │              ├──→ EditorSessionService ──→ FileService ──→ editor-session.json
+           │              ├──→ UnsavedChangesDialogService ──→ MessageBox
+           │              ├──→ ICodeEditorFactory (RoslynCodeEditorFactory) ──→ IRoslynHostService, IWindowConfigurationService
+           │              │         IRoslynHostService ──→ IKIDCompilationProfileProvider
+           │              │
+           │              └──→ IWindowConfigurationService (FontSettingsChanged)
+           │
+           ├──→ CodeExecutionService
+           │         │
+           │         ├──→ CSharpCompiler ──→ IKIDCompilationProfileProvider
+           │         └──→ DefaultCodeRunner
+           │
+           ├──→ LocalizationService
+           │
+           └──→ ThemeService
+```
+
+### Потоки данных
+
+1. **Выполнение кода:**
+   - MenuViewModel → CodeExecutionService → CSharpCompiler → DefaultCodeRunner
+   - KIDCompilationProfileProvider → один immutable profile → CSharpCompiler и RoslynHostService
+   - DefaultCodeRunner → Graphics API → Canvas
+   - DefaultCodeRunner → Mouse API → Canvas
+   - DefaultCodeRunner → TextBoxConsole → TextBox (консольный ввод/вывод)
+   - DefaultCodeRunner → Music API → NAudio → Звуковая карта
+
+2. **Консольный ввод/вывод:**
+   - Пользовательский код → Console.WriteLine/ReadLine → TextBoxConsole → TextBox
+   - TextBoxConsole использует Dispatcher captured scope, а `OutputReceived` доставляется per-run event worker
+
+3. **Работа с файлами:**
+   - MenuViewModel → CodeEditorsViewModel → CodeFileService → FileDialogService → FileService
+   - Сохранение/открытие выполняется через CodeEditorsViewModel с учётом активной вкладки
+
+4. **Autosave и восстановление сессии:**
+   - События редактора/вкладок → `ScheduleSessionSave()` → debounce 750 мс или maximum interval 5 секунд
+   - `CodeEditorsViewModel` → `EditorSessionData` → `EditorSessionService` → `FileService` → `%APPDATA%/KID/editor-session.json`
+   - `WindowInitializationService` → `RestoreSessionAsync()` → `EditorSessionService.LoadAsync()` → асинхронное создание вкладок
+   - Autosave не записывает пользовательские `.cs`-файлы; они изменяются только явными Save/Save As
+
+5. **Безопасное закрытие:**
+   - `MainWindow.OnClosing()` → `PrepareForApplicationCloseAsync()` → Save/Discard/Cancel для каждой dirty-вкладки
+   - После подтверждений записывается финальная сессия и выполняется повторный разрешённый `Close()`
+
+6. **Локализация:**
+   - LocalizationService → ResourceManager → .resx файлы
+   - LocalizationMarkupExtension → LocalizationService
+
+7. **Темы:**
+   - ThemeService → ResourceDictionary → XAML файлы тем
+
+8. **Инициализация:**
+   - WindowInitializationService → WindowConfigurationService → FileService → settings.json
+   - WindowInitializationService → ThemeService → Применение темы
+   - WindowInitializationService → LocalizationService → Применение языка
+
+## Расширяемость подсистем
+
+Каждая подсистема может быть расширена:
+
+1. **Code Execution:** Добавление новых компиляторов или раннеров
+2. **Console I/O:** Расширение возможностей ввода/вывода
+3. **Files:** Добавление новых форматов файлов
+4. **Localization:** Добавление новых языков через .resx файлы
+5. **Themes:** Добавление новых тем через XAML файлы
+6. **Graphics API:** Добавление новых методов рисования
+7. **Music API:** Добавление новых методов воспроизведения звуков
+8. **Mouse API:** Добавление новых методов/событий мыши
+
+## 12. Подсистема Sprite API
+
+### Назначение
+Предоставление объектного API для управления группой графических элементов как единым “спрайтом” (видимость, перемещение, столкновения).
+
+### Компоненты
+
+**Расположение:** `KID.Library/Sprite/`
+
+**Классы:**
+- `Sprite` — нестатический класс-обёртка над набором `UIElement` (показ/скрытие/перемещение, детект столкновений). Свойство `Position` (Point) — позиция anchor, чтение и запись. Конструктор `Sprite(double x, double y, string imagePath)` — создание спрайта с одним изображением по пути. Во всех конструкторах инициализация `GraphicElements` унифицирована (фильтрация null, приведение к списку).
+- `Collision` — описание столкновения (пары спрайтов/элементов + дополнительные данные ученика)
+
+### Особенности
+- Работает поверх `Graphics.Canvas` и использует `DispatcherManager.InvokeOnUI()` для потокобезопасности.
+- Перемещение основано на `RenderTransform`, поэтому корректно работает для `Line/Polygon/Path` (и любых `UIElement`).
+- Столкновения в первой версии определяются по пересечению bounding-box графических элементов.
+

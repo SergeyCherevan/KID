@@ -1,0 +1,759 @@
+# Руководство разработчика
+
+## 🔌 Самостоятельная библиотека D005
+
+Для внешнего `net10.0-windows` WPF-хоста используйте
+[KIDRuntimeSession и KIDRuntimeOptions](api/Runtime-API.md), а не внутренние Init.
+[Пример с двумя полями](../checks/probes/KID.Library.StandaloneDemo/README.md) и
+[probe публичного контракта](../checks/probes/KID.Library.StandaloneProbe/README.md)
+собираются отдельно от solution и ссылаются только на KID.Library.
+Открытие выполняется на UI-потоке контролов одного Dispatcher; закрытие ожидает
+задачи хоста и DisposeAsync до shutdown Dispatcher.
+
+IDE-контексты только адаптируют ресурсы к RuntimeSessionOwner. Не переносите
+в них CTS, выдачу execution id, lease, rollback, shutdown компонентов или
+восстановление streams: это ответственность общего владельца библиотеки.
+Координатор удерживает его резервирование до Dispose экземпляра/Unload ALC и
+CompleteAsync; ошибка любого cleanup блокирует также внешний OpenAsync.
+
+Новая графическая команда захватывает Canvas **вместе с исходным scope** до
+постановки в Dispatcher. Вложенные helpers получают то же назначение. Нельзя
+читать Graphics.Canvas заново внутри callback. Методы над существующим элементом
+проверяют Dispatcher объекта и изменяют его независимо от выбранного поля.
+Разметка IDE обслуживается только CanvasLayoutAdapter; библиотека работает
+с обычным Canvas. Смена назначения не меняет MouseCanvas/KeyboardWindow.
+
+Дополнительная приёмка: [ручной сценарий](../checks/manual/standalone-library/README.md).
+Проверки `--verify` примера проходят Window lifecycle, но физический ввод и звук
+проверяются отдельно. Полные результаты — в
+[журнале D005](../work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md).
+
+## Надёжность in-process выполнения (C2/C3, этапы 1–10)
+
+KID рассчитан на доверенный учебный код и сохраняет in-process WPF-модель. Не описывайте
+`Task.Run`, collectible ALC или кооперативный Stop как sandbox: пользовательская программа имеет
+права текущего Windows-пользователя и может обращаться к файлам, сети, реестру и процессам.
+Worker-процесс, restricted token/AppContainer и OS-level ограничения не входят в согласованный scope.
+
+Stop-checkpoint нужно добавлять через существующий Roslyn pipeline или передавать точный session
+token в поддерживающий cancellation API. Нельзя применять `Thread.Abort`, маскировать
+неинструментированный блокирующий код как успешно остановленный или переводить FSM в `Idle` до
+фактического завершения cleanup. Пользовательский `finally` не инструментируется синтетической
+отменой.
+
+Новая пользовательская UI-операция должна проходить через DispatcherManager целиком, включая чтение WPF-свойств. Пользовательский/инструментированный код проверяет Stop через `StopManager`; execution-bound объекты и длинные обходы используют захваченный `scope.Environment.ThrowIfCancellationRequested()`. Не добавляйте новые глобальные способы проверки token и не перехватывайте отмену общим catch с продолжением работы. Host cleanup не использует session token. Scope закрывается только после завершения принятых операций; синхронный Dispatcher.Invoke для ожидания из пользовательского потока не применяется.
+
+Для Keyboard/Mouse нельзя добавлять static очередь, CTS или worker task. Новый input scope должен захватывать исходный `ExecutionEnvironment`, использовать отдельный экземпляр `ExecutionEventWorker`, закрывать вход до WPF-отписки и ожидать текущий handler/pulse в host cleanup. Runtime events, shortcuts и polling-state считаются per-run. Ошибка пользовательского handler не должна останавливать остальных подписчиков или превращаться в cleanup failure.
+
+Для Console публичный API статичен, но одна активная сессия представлена
+`ConsoleExecutionScope`. Любой сохраняемый reader/writer, read request, output item и Dispatcher
+callback обязан захватывать exact scope; нельзя повторно разрешать current scope из retained stream.
+`BeginCleanup` синхронно закрывает admission, а `ShutdownAsync` ожидает UI teardown, readers и
+`ExecutionEventWorker` до release. `RuntimeSessionOwner` владеет process-wide
+`System.Console` streams и восстанавливает каждый из них даже после runtime shutdown failure;
+`TextBoxConsoleContext` передаёт только TextBox и настройку перенаправления.
+
+Для Music нельзя создавать static fire-and-forget playback/fade task или второй registry execution identity. Любой звук должен принадлежать `MusicExecutionScope`, каждая async-операция — получать playback/session token и находиться в task registry, а временный файл — регистрироваться до первой отменяемой записи. Host shutdown закрывает регистрацию синхронно, пытается остановить все outputs и только затем отменяет и ожидает задачи; `SoundPlayerOFF()` этот host-контракт не заменяет.
+
+Из корня: `dotnet restore KID.sln`, `dotnet build KID.sln -c Release --no-restore`, затем
+`dotnet test KID.sln -c Release --no-restore`. Для локальной диагностики используйте focused-наборы
+`TextBoxConsoleSpecifications`, `DispatcherGraphicsTests`, `KeyboardMouseTests`,
+`MusicLifecycleTests`, `Stage9ReliabilityTests` и execution lifecycle/error tests.
+
+STA/audio lifecycle-тесты не открывают видимые окна, не используют звуковое устройство и не выходят в сеть: `IMusicRuntime` подменяет NAudio/HTTP/filesystem. Набор проверяет Stop/Dispose races, normal drain, cleanup faults, input WPF-отписки, stale audio handle, отмену URL-записи, повторные scopes и освобождение пользовательских ALC. Это не заменяет ручную проверку реального аудиоустройства и кодеков ОС.
+
+## Начало работы
+
+### Требования
+
+- **.NET 8.0 SDK** или выше
+- **Visual Studio 2022** или **JetBrains Rider** (рекомендуется)
+- **Windows** (WPF приложение)
+
+### Клонирование и сборка
+
+1. Клонируйте репозиторий
+2. Откройте `KID.sln` в Visual Studio
+3. Восстановите NuGet пакеты
+4. Соберите решение (Build Solution)
+5. Запустите проект (F5)
+
+### Зависимости
+
+Проект использует следующие NuGet пакеты:
+
+- **AvalonEdit** (6.3.1.120) — редактор кода
+- **Microsoft.CodeAnalysis** (5.9.0) — компиляция C#
+- **Microsoft.CodeAnalysis.CSharp** (5.9.0) — парсинг C#
+- **Microsoft.Extensions.DependencyInjection** (10.0.12) — DI контейнер
+
+## Структура проекта
+
+### Основные папки
+
+```
+KID/
+├── KID.WPF.IDE/         # Основное WPF-приложение (UI + MVVM + сервисы)
+│   ├── Models/          # Модели данных
+│   ├── Services/        # Бизнес-логика и сервисы
+│   ├── ViewModels/      # ViewModels (MVVM)
+│   ├── Views/           # XAML представления
+│   ├── Resources/       # Ресурсы (строки, иконки)
+│   └── Themes/          # Темы оформления
+└── KID.Library/         # API для пользовательского кода
+```
+
+## Архитектурные принципы
+
+### MVVM Pattern
+
+Проект следует паттерну Model-View-ViewModel:
+
+- **Model** — модели данных в `Models/`
+- **View** — XAML представления в `Views/`
+- **ViewModel** — логика представления в `ViewModels/`
+
+### Dependency Injection
+
+Все зависимости регистрируются в `ServiceCollectionExtensions.AddKIDServices()`:
+
+```csharp
+services.AddSingleton<IService, Service>();
+```
+
+Сервисы получаются через конструкторы:
+
+```csharp
+public class MyViewModel
+{
+    private readonly IService _service;
+    
+    public MyViewModel(IService service)
+    {
+        _service = service ?? throw new ArgumentNullException(nameof(service));
+    }
+}
+```
+
+### Интерфейсы
+
+Все сервисы и ViewModels имеют интерфейсы:
+
+- Интерфейсы в `Interfaces/` подпапках
+- Реализации в основных папках
+- Регистрация через интерфейсы в DI
+
+## Добавление новых функций
+
+### Добавление нового метода Graphics API
+
+1. Определите, в какой файл добавить метод (SimpleFigures, Text, и т.д.)
+2. Добавьте метод с использованием `DispatcherManager.InvokeOnUI()`:
+
+```csharp
+public static Shape? MyNewMethod(double x, double y)
+{
+    return DispatcherManager.InvokeOnUI(() =>
+    {
+        if (Canvas == null) return null;
+        // Ваш код
+        return shape;
+    });
+}
+```
+
+3. Обновите документацию в `harness/context/api/Graphics-API.md`
+
+### Добавление нового метода Music API
+
+1. Определите, в какой файл добавить метод (Sound.cs, Advanced.cs, и т.д.)
+2. Получите текущую `MusicExecutionScope`; длительные синхронные обходы проверяют её token на каждой итерации:
+
+```csharp
+private static SoundNote[] Snapshot(
+    IEnumerable<SoundNote> notes,
+    CancellationToken cancellationToken)
+{
+    var result = new List<SoundNote>();
+    foreach (var note in notes)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        result.Add(note);
+    }
+    return result.ToArray();
+}
+```
+
+3. Playback/fade запускайте только через `scope.StartPlayback`/`StartAuxiliary`; передавайте token в `Task.Delay`, HTTP и файловые async API.
+4. NAudio, HTTP и filesystem вызывайте через `IMusicRuntime`; временный файл сразу передавайте `scope.TrackTemporaryFile`.
+5. Cleanup не должен держать scope lock во время `await`/чужого `Dispose`; ошибки ресурсов собираются после попытки очистить остальные.
+6. Добавьте сценарий в `MusicLifecycleTests` и обновите `harness/context/api/Music-API.md`.
+
+### Добавление нового метода Mouse API
+
+1. Определите, в какой файл добавить изменения (System / State / Events):
+   - `Mouse.System.cs` — хуки Canvas (Enter/Leave/Move/Down/Up), распознавание кликов
+   - `Mouse.State.cs` — структура публичного состояния (`CurrentCursor`, `LastActualCursor`, `CurrentClick`, `LastClick`)
+   - `Mouse.Events.cs` — публичные события и доставка обработчиков в фоновом потоке
+2. Помните про потоки:
+   - события Canvas приходят в UI-потоке
+   - обработчики пользователя должны вызываться в фоне через `MouseExecutionScope.EventWorker`, чтобы не блокировать UI
+   - каждый подписчик ставится отдельной работой, чтобы исключение одного не пропустило остальных
+3. Для доступа к общему состоянию используйте синхронизацию (например, `lock`) и возвращайте копии структур
+4. Любую новую отложенную задачу регистрируйте в per-run worker и проверяйте scope ownership после ожидания
+5. Добавьте сценарий cleanup/следующего Run в `KeyboardMouseTests` и обновите `harness/context/api/Mouse-API.md`
+
+### Добавление нового языка
+
+1. Создайте файл `Resources/Strings.xx.resx` (например, `Strings.de.resx`)
+2. Скопируйте структуру из существующего файла и задайте собственные
+   `Metadata_CultureCode` (например, `de`) и `Metadata_EnglishName`.
+3. Переведите все строки, включая названия всех доступных языков.
+4. Добавьте объект в массив `KID.WPF.IDE/Resources/AvailableLanguages.json`:
+
+```json
+{
+  "cultureCode": "de",
+  "displayNameKey": "Language_German"
+}
+```
+
+5. Добавьте непустую подпись `Language_German` **во все** `Strings*.resx`,
+   включая новый перевод. Регистр ключа должен точно совпадать с JSON:
+
+```xml
+<data name="Language_German" xml:space="preserve">
+    <value>Немецкий</value>
+</data>
+```
+
+6. Пересоберите приложение и запустите профильные тесты локализации:
+
+```powershell
+dotnet build KID.sln -c Release --nologo
+dotnet KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.Localization -noLogo -noColor
+```
+
+Порядок объектов JSON определяет порядок языков в меню. Каталог встроен в
+основную сборку как `EmbeddedResource` с именем `KID.Resources.AvailableLanguages.json`;
+внешний файл рядом с приложением не нужен. Для обычного добавления языка
+менять C# не требуется. Тест поставки фиксирует текущий перечень: при его
+расширении обновите ожидаемые значения в `LanguageCatalogResourceTests` и
+`LocalizationServiceTests`.
+
+При первом обращении сервис проверяет весь каталог: уникальность культур и
+ключей, собственный `Strings` каждой культуры, `Metadata_CultureCode` и все
+подписи языков в каждом переводе. При любой ошибке он один раз записывает
+`LocalizationFallback` и публикует только `en / Language_English`.
+Конструктор разрешает исходную UI-культуру по каталогу; при отсутствии
+поддерживаемого языка выбирает `en`. Если пользовательского `settings.json`
+ещё нет, `WindowConfigurationService` использует этот начальный
+`LocalizationService.CurrentCulture` для `UILanguage` и сохраняет его.
+Это правило действует и при отсутствии или повреждении
+`DefaultWindowConfiguration.json`; после успешной записи меню получает
+`UILanguageSettingsChanged`, даже если язык сервиса уже совпадает с выбранным.
+Сохранённый поддерживаемый язык пользователя имеет приоритет над языком Windows.
+
+Восстановление существующих настроек использует тот же начальный язык Windows
+с резервом `en`: это относится к отсутствующему, пустому или неподдерживаемому
+`UILanguage` и к ошибке чтения всего пользовательского JSON. Конфигурационный
+сервис запоминает начальный язык в конструкторе, до применения сохранённого
+выбора; последующее переключение UI не меняет этот резерв.
+В модели `WindowConfigurationData` язык по умолчанию пуст: `FileService`
+сохраняет отсутствие выбора, а разрешение выполняет конфигурационный сервис.
+Региональный формат чисел и дат Windows сам по себе не выбирает язык интерфейса:
+исходный выбор определяется `CurrentUICulture`.
+Сценарий и подтверждённые результаты описаны в
+[ручной проверке первого запуска](../checks/manual/first-launch-language/README.md).
+
+Английские строки находятся в базовом `Strings.resx` основной сборки;
+`[assembly: NeutralResourcesLanguage("en")]` задаёт общий английский резерв.
+Русский и украинский находятся в `Strings.ru.resx` и `Strings.uk.resx`.
+Все три файла содержат собственный `Metadata_CultureCode` (`en`, `ru`, `uk`).
+
+Старые региональные настройки (`ru-RU`, `uk-UA`, `en-US`) и другие региональные
+варианты поддерживаемых языков разрешаются через цепочку `CultureInfo.Parent`
+и однократно сохраняются как языковые коды. Ключи меню остаются прежними.
+Ошибка записи миграции распространяется отдельно от ошибки чтения; повторный
+выбор того же языка позволяет повторить неудачное сохранение.
+`SetCultureAsync` отклоняет непустую неподдерживаемую культуру до изменения UI.
+Для форматирования используется связанная региональная культура через
+`CultureInfo.CreateSpecificCulture`; существующее ограничение ambient-культур
+в async-коде остаётся отдельным пунктом LOC-02.
+
+### Добавление новой темы
+
+1. Создайте `Themes/MyTheme.xaml` по образцу полного словаря существующей темы,
+   например `VS2026LightTheme.xaml`. Объявите все используемые цвета/кисти,
+   палитру `CodeEditorClassificationColors` и подключите соответствующие метрики
+   и общие стили внутри `ResourceDictionary.MergedDictionaries` темы.
+2. Добавьте объект в массив `Resources/AvailableThemes.json` в нужной позиции:
+
+```json
+{
+  "localizationKey": "Theme_MyTheme",
+  "resourcePath": "Themes/MyTheme.xaml"
+}
+```
+
+3. Добавьте `Theme_MyTheme` с отображаемым названием в три локализации
+   `Strings.resx`, `Strings.ru.resx`, `Strings.uk.resx`.
+4. Пересоберите приложение. `ThemeProviderService` прочитает каталог; меню
+   строится автоматически в порядке JSON.
+   Изменять `ThemeService.ApplyTheme`, DI или ViewModel для новой записи не нужно.
+   SDK автоматически включает новый XAML; явный `Page Include` не требуется.
+5. Проверьте загрузку словаря, переключение существующих элементов UI,
+   палитры всех открытых редакторов и восстановление выбора после перезапуска.
+
+Каталог встроен как `EmbeddedResource` с именем `KID.Resources.AvailableThemes.json`;
+внешний JSON рядом с приложением не используется. `ThemeCatalog` однократно
+проверяет структуру и кэширует неизменяемый снимок. Ключи уникальны по `Ordinal`,
+пути — относительные URI с расширением `.xaml`. Существующая запись
+`Theme_VS2022Light / Themes/VS2022LightTheme.xaml` обязательна как стартовая тема.
+При ошибке всего каталога используется только эта тема с предупреждением
+`SettingsFallback`. Наличие переводов по точным ключам во всех языках и загрузку
+самих XAML проверяют тесты `KID.Tests.Themes`.
+При расширении состава тем обновите ожидаемые значения в
+`ThemeCatalogResourceTests` и `ThemeProviderServiceTests`.
+
+Размеры имеют тип соответствующего WPF-свойства: например, для `Height`
+используется `double`, а для `RowDefinition.Height` — `GridLength`.
+Изменяемые кисти/метрики/стили в представлениях разрешаются через `DynamicResource`.
+Общие шаблоны сохраняют одну структуру и динамические параметры, поэтому
+захваченный `BasedOn` в меню не удерживает старые цвета и размеры.
+
+Корневые темы: `VS2022LightTheme`, `VS2022DarkTheme`, `VS2026LightTheme`,
+`VS2026DarkTheme`. Старые сохранённые ключи `Theme_Light` / `Theme_Dark`
+разрешаются в VS2022 и после применения сохраняются под каноническими именами.
+Стартовая и резервная тема — `Theme_VS2022Light`.
+
+В `App.xaml` стартовый словарь находится внутри постоянного
+`ThemeResourceContainer`. `ThemeService` заменяет только его единственный
+вложенный словарь, сохраняя остальные подключения и их порядок.
+Независимые ресурсы приложения добавляйте рядом с контейнером в
+`Application.Resources.MergedDictionaries`. У контейнера не должно быть
+собственного `Source`, непосредственных ресурсов или нескольких словарей темы;
+неверная структура отклоняется до замены.
+
+### Добавление шрифта или размера
+
+1. Добавьте название семейства в массив `fonts` объекта
+   `Resources/AvailableFontsAndSizes.json` либо число в массив `fontSizes`.
+   Позиция в массиве задаёт позицию пункта меню; автоматической сортировки нет.
+2. Названия должны быть непустыми, без пробелов по краям и уникальными без учёта
+   регистра. Размеры — уникальные конечные положительные JSON-числа, например
+   `14` или `14.5`; строка `"14"` недопустима. Оба массива должны быть непустыми.
+3. Пересоберите приложение и выполните тесты `KID.Tests.Fonts`. При расширении
+   поставляемого каталога обновите ожидаемый состав в `FontCatalogResourceTests`.
+4. Проверьте меню на компьютере с установленным новым шрифтом. Провайдер
+   возвращает только пересечение каталога с установленными семействами Windows,
+   сравнивая имена без учёта регистра; отсутствие семейства не является ошибкой.
+   При пустом пересечении сохраняется резерв `Consolas`.
+
+JSON встроен в основную сборку с именем `KID.Resources.AvailableFontsAndSizes.json`.
+`FontCatalog` кэширует исходные данные, а фильтрация по установленным шрифтам
+выполняется при каждом запросе. При ошибке структуры или данных отклоняется весь
+каталог: резерв — `Consolas` и размеры `[10, 11, 12, 13, 14, 16, 18, 20]`,
+с одним предупреждением `SettingsFallback`. Ошибка перечисления шрифтов Windows
+обрабатывается отдельно и не заменяет валидные размеры резервными.
+
+Оба каталога используют строгий JSON: точный регистр полей, без неизвестных или
+повторных свойств, комментариев и завершающих запятых. Изменять C#, DI и
+ViewModel при добавлении корректной записи не требуется. Списки меню не
+ограничивают допустимые сохранённые размеры: положительный конечный размер
+вне каталога, например `22`, продолжает восстанавливаться из настроек.
+
+### Добавление нового сервиса
+
+1. Создайте интерфейс в соответствующей папке `Interfaces/`:
+
+```csharp
+public interface IMyService
+{
+    void DoSomething();
+}
+```
+
+2. Создайте реализацию:
+
+```csharp
+public class MyService : IMyService
+{
+    public void DoSomething()
+    {
+        // Реализация
+    }
+}
+```
+
+3. Зарегистрируйте в `ServiceCollectionExtensions`:
+
+```csharp
+services.AddSingleton<IMyService, MyService>();
+```
+
+4. Используйте через DI в нужных местах
+
+### Добавление нового ViewModel
+
+1. Создайте интерфейс в `ViewModels/Interfaces/`:
+
+```csharp
+public interface IMyViewModel
+{
+    string MyProperty { get; set; }
+    ICommand MyCommand { get; }
+}
+```
+
+2. Создайте реализацию, наследуя `ViewModelBase`:
+
+```csharp
+public class MyViewModel : ViewModelBase, IMyViewModel
+{
+    private string myProperty;
+    
+    public string MyProperty
+    {
+        get => myProperty;
+        set => SetProperty(ref myProperty, value);
+    }
+    
+    public ICommand MyCommand { get; }
+    
+    public MyViewModel()
+    {
+        MyCommand = new RelayCommand(ExecuteMyCommand);
+    }
+    
+    private void ExecuteMyCommand()
+    {
+        // Логика команды
+    }
+}
+```
+
+3. Зарегистрируйте в DI:
+
+```csharp
+services.AddSingleton<IMyViewModel, MyViewModel>();
+```
+
+4. Используйте в XAML:
+
+```xaml
+<UserControl.DataContext>
+    <di:ServiceProviderExtension ServiceType="{x:Type viewModelsInterfaces:IMyViewModel}" />
+</UserControl.DataContext>
+```
+
+## Работа с кодом
+
+### Стиль кода
+
+- Используйте **C# naming conventions**
+- **PascalCase** для публичных членов
+- **camelCase** для приватных полей
+- **Async** суффикс для асинхронных методов
+- **Nullable reference types** включены
+
+### Обработка ошибок
+
+Всегда проверяйте на `null`:
+
+```csharp
+if (service == null)
+    throw new ArgumentNullException(nameof(service));
+```
+
+Используйте try-catch для операций, которые могут завершиться ошибкой:
+
+```csharp
+try
+{
+    // Операция
+}
+catch (Exception ex)
+{
+    // Обработка ошибки
+    // Логирование или сообщение пользователю
+}
+```
+
+### Потокобезопасность
+
+Все операции с UI должны выполняться в UI потоке через `DispatcherManager`:
+
+```csharp
+DispatcherManager.InvokeOnUI(() =>
+{
+    // Операции с UI
+});
+```
+
+Для операций с возвратом значения:
+
+```csharp
+var result = DispatcherManager.InvokeOnUI<ReturnType>(() =>
+{
+    // Операции с UI
+    return value;
+});
+```
+
+**Важно:** `CodeExecutionService` сначала резервирует общий RuntimeSessionOwner,
+после чего CanvasGraphicsContext передаёт ему контролы. Владелец подключает Dispatcher
+capability и компоненты. В IDE пользователь не вызывает host-методы подключения;
+внешний хост использует KIDRuntimeSession.OpenAsync.
+
+### Асинхронность
+
+Используйте async/await для длительных операций:
+
+```csharp
+public async Task DoSomethingAsync()
+{
+    await Task.Run(() =>
+    {
+        // Длительная операция
+    });
+}
+```
+
+### Сессия редактора и autosave
+
+При изменении жизненного цикла вкладок соблюдайте следующие инварианты:
+
+- Пользовательские `.cs`-файлы изменяются только явными Save/Save As; autosave пишет отдельный `%APPDATA%/KID/editor-session.json`.
+- Dirty-состояние вычисляется как `CurrentContent != SavedContent`. После успешного сохранения вызывайте `UpdateSavedContent()`.
+- Любое изменение `FilePath`, `CurrentContent`, `SavedContent`, порядка или активного индекса вкладок должно завершаться `ScheduleSessionSave()`.
+- Во время `RestoreSessionAsync()` планирование блокируется флагом `isRestoringSession`, чтобы частичный набор вкладок не затёр полный снимок.
+- Ошибка чтения чистой дисковой вкладки обрабатывается отдельно через `IAsyncOperationErrorHandler`: вкладка создаётся из recovery-снимка, после чего восстановление продолжается.
+- Debounce-таймер перезапускается на каждом событии, а maximum-таймер запускается один раз на серию. Любой `Tick` останавливает оба таймера.
+- При закрытии не полагайтесь на таймеры: остановите их и дождитесь принудительного `IEditorSessionService.SaveAsync()`.
+- `Discard` при закрытии приложения должен вернуть вкладку к `SavedContent` до финального снимка; иначе отвергнутый текст восстановится при следующем запуске.
+
+Если меняется схема `EditorSessionData`, увеличьте `CurrentVersion` и добавьте явную миграцию либо документированный отказ от старой версии. Новые локализованные сообщения добавляйте одновременно в `Strings.ru.resx`, `Strings.resx` и `Strings.uk.resx`.
+
+### Файловое хранилище и настройки
+
+- Все текстовые и JSON-операции IDE проводите через `IFileService`; не дублируйте `File.*` и сериализацию в feature-сервисах.
+- `ReadFileAsync()` возвращает содержимое либо выбрасывает исключение. Отсутствие или недоступность валидного пути не кодируется через `null`; контекстный сервис обязан обработать ошибку подходящим UI-сообщением или явно преобразовать отсутствие в доменный результат.
+- `WriteFileAsync()` допускает пустое содержимое, создаёт отсутствующий родительский каталог и публикует файл через временный файл в том же каталоге с последующим `File.Move(..., overwrite: true)`.
+- `EditorSessionService.LoadAsync()` преобразует отсутствие recovery-файла или каталога в `null`, но не скрывает повреждённый JSON и неподдерживаемую версию схемы.
+- Изменения `WindowConfigurationService.Settings` сохраняйте через async-методы сервиса. `SaveSettingsAsync()` упорядочивает запросы одной очередью, чтобы более старый снимок не перезаписал новый; отдельная ошибка не должна останавливать обработку очереди.
+- При добавлении вызова из синхронного WPF-события направляйте возвращаемую задачу в `IAsyncOperationErrorHandler`. На `App.OnExit` завершения `SaveSettingsAsync()` нужно дождаться через зарегистрированный `JoinableTaskFactory`.
+
+## Тестирование
+
+### Автоматизированные проверки C2/C3
+
+Контрольный прогон ветки 2026-09-17: Release build — 0 warnings/0 errors; Console — 52/52;
+полный suite — 188 passed, 0 skipped, 0 failed. Stage 9 focused-набор ранее повторён 10 раз
+(10/10 PASS). Проверки разделены
+по слоям:
+
+- compiler tests — instrumentation, BCL rewrites, PE/PDB и диагностика строк;
+- execution tests — все формы Main, terminal outcomes, FSM, Run/Stop races и ошибки финализации;
+- library tests — Dispatcher/Graphics, Keyboard/Mouse, Music и ambient execution ownership;
+- lifecycle tests — скомпилированные программы, 50 последовательных Run/Stop и collectible ALC.
+
+Headless runtime smoke подтверждает путь compile → Run → Stop → cleanup → Idle отдельно от
+визуальной проверки. Manual visual acceptance не заменяется STA-тестами и фиксируется отдельным
+результатом пользователя.
+
+### Автоматизированные проверки консоли
+
+`dotnet test harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build --no-restore --filter FullyQualifiedName~KID.Tests.Console`
+проверяет отмену Read/ReadLine без клавиатуры, запрет ввода на UI-потоке, Unicode и клавиши,
+stale scope/read request, FIFO и параллельный output, lifecycle `OutputReceived`, WPF/Dispatcher
+failures и восстановление streams при всех execution-исходах.
+Интеграционные сценарии компилируют настоящие программы для `Clear`, `Read`/`ReadLine` и
+collectible event subscriber. Soak выполняет 50 циклов `Init → Read → Stop → Shutdown` и
+проверяет отписки, readers, worker queue и collectibility scope. STA helper использует настоящий
+WPF Dispatcher без видимых окон.
+Это автоматизированная runtime-проверка, ручная visual acceptance остаётся отдельным шагом.
+
+Для host-кода: IConsoleContext.Init принимает execution id и token явно. IConsoleContext и
+ICodeExecutionContext реализуют IAsyncDisposable; coordinator обязан ожидать DisposeAsync.
+Внутренний `TextBoxConsole.BeginCleanup` начинает безопасную очистку без блокировки UI, а
+`ShutdownAsync` подтверждает отписки, выход readers, завершение event worker и закрытие handles.
+Ошибка графического или console runtime Dispose не должна пропускать восстановление консольных
+потоков.
+
+### Ручное тестирование
+
+1. Запустите приложение
+2. Протестируйте все функции
+3. Проверьте обработку ошибок
+4. Проверьте локализацию
+5. Проверьте темы
+
+### Тестовые сценарии
+
+- Компиляция и выполнение простого кода
+- Компиляция кода с ошибками
+- Выполнение кода с исключениями
+- Остановка выполнения программы
+- Повторные sync/async запуски освобождают collectible `AssemblyLoadContext` после cleanup и bounded GC-циклов
+- Диагностический сценарий с пользовательским background thread удерживает ALC после `Unload()` до выхода потока; `Dispose()` не считается гарантией немедленной выгрузки
+- Многофайловая система: открытие нескольких файлов, переключение вкладок, закрытие вкладок
+- Открытие и сохранение файлов (Save, Save As)
+- Сохранение пустого и состоящего только из пробелов файла
+- Назначить шаблоном по умолчанию (и сохранить)
+- Закрытие dirty-вкладки: Save, Discard, Cancel; отдельная проверка отмены Save As
+- Выход с несколькими dirty-вкладками и разными решениями; Cancel должен оставить окно открытым
+- Обычное восстановление порядка вкладок и активной вкладки после перезапуска
+- Crash recovery: после паузы более 750 мс аварийно завершить тестовый экземпляр и проверить восстановление несохранённого текста
+- Непрерывный ввод более 5 секунд: recovery-снимок должен обновиться до окончания ввода
+- После Discard при выходе отвергнутый текст не должен появиться в следующей сессии
+- Чистый дисковый файл, изменённый вне KID между запусками, должен перечитаться с диска
+- Контекстное меню вкладок (перемещение влево/вправо)
+- Горячие клавиши (Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S, Ctrl+F5, Shift+F5, Ctrl+Z, Ctrl+Y)
+- Переключение языков
+- Локализация диалогов несохранённых изменений и ошибок session save/restore
+- Переключение тем
+- Работа с графикой
+- Работа с мышью (позиция, клики, нажатые кнопки)
+- Консольный ввод/вывод
+
+## Отладка
+
+### Типичные проблемы
+
+1. **Canvas не инициализирован**
+   - Во внешнем хосте проверьте успешное KIDRuntimeSession.OpenAsync с Canvas перед использованием
+   - Проверьте, что Canvas передан в контекст выполнения
+   - В IDE проверьте передачу Canvas через CanvasGraphicsContext общему RuntimeSessionOwner
+
+2. **Ошибки компиляции**
+   - Проверьте версию .NET
+   - Проверьте версии NuGet пакетов
+   - Очистите и пересоберите решение
+
+3. **Проблемы с локализацией**
+   - Проверьте наличие .resx файлов
+   - Проверьте ключи в ресурсах
+   - Проверьте CultureInfo
+
+4. **Проблемы с темами**
+   - Проверьте пути к XAML файлам тем
+   - Проверьте ключи ресурсов в темах
+   - Проверьте загрузку ResourceDictionary
+
+### Логирование
+
+Production-диагностика идёт через `ILogger` и Serilog provider, подключённый в
+`KID.WPF.IDE/App.xaml.cs`. JSONL-журналы находятся в
+`%LOCALAPPDATA%\KID\Logs\kid-YYYYMMDD.jsonl`, crash reports — в том же каталоге как
+`crash-<CrashId>.json`. Файлы ограничены rolling по дню, размером 10 МБ и retention 14
+файлов; provider не должен получать исходный код пользователя, содержимое редактора,
+ввод консоли, токены или переменные окружения.
+
+Для новых событий выбирайте стабильный `DiagnosticEventIds`, записывайте operation/origin
+и `ExecutionId`, когда ошибка относится к запуску. Ожидаемую отмену не логируйте как Error;
+fallback — Warning; неожиданный отказ операции — Error; необработанный отказ приложения —
+fatal + crash report. Внутренние runtime-типы `KID.Library` не зависят от WPF/Serilog:
+`ExecutionEventWorker` передаёт `ExecutionDiagnostic` через host-neutral sink.
+
+`DispatcherUnhandledException`, `AppDomain.UnhandledException` и
+`TaskScheduler.UnobservedTaskException` подключаются в `App`. Crash reporting не может
+гарантировать обработку `StackOverflowException`, `FailFast`, native crash или внезапного
+отключения процесса; удалённая telemetry не используется.
+
+## Документация
+
+### Обновление документации
+
+При добавлении новых функций обновите соответствующую документацию:
+
+- **ARCHITECTURE.md** — архитектурные изменения
+- **SUBSYSTEMS.md** — новые подсистемы или изменения в существующих
+- **Graphics-API.md** — новые методы Graphics API
+- **Music-API.md** — новые методы Music API
+- **Mouse-API.md** — новые методы Mouse API
+- **FEATURES.md** — новые функции
+- **DEVELOPMENT.md** — изменения в процессе разработки
+
+### Комментарии в коде
+
+Используйте XML комментарии для публичных API:
+
+```csharp
+/// <summary>
+/// Создаёт круг на холсте.
+/// </summary>
+/// <param name="x">X координата центра</param>
+/// <param name="y">Y координата центра</param>
+/// <param name="radius">Радиус круга</param>
+/// <returns>Созданный Ellipse объект или null</returns>
+public static Ellipse? Circle(double x, double y, double radius)
+{
+    // ...
+}
+```
+
+## Производительность
+
+### Оптимизации
+
+- Используйте `BeginInvoke` вместо `Invoke` для неблокирующих операций
+- Кэшируйте результаты дорогих операций
+- Избегайте создания лишних объектов в циклах
+- Используйте `StringBuilder` для конкатенации строк
+
+### Профилирование
+
+Используйте встроенные инструменты Visual Studio для профилирования:
+- Performance Profiler
+- Diagnostic Tools
+- Memory Usage
+
+## Безопасность
+
+### Ввод пользователя
+
+Всегда валидируйте ввод пользователя:
+
+```csharp
+if (string.IsNullOrEmpty(input))
+    return;
+
+// Дальнейшая обработка
+```
+
+### Выполнение кода
+
+Код пользователя выполняется через `Task.Run`, но внутри процесса IDE и с правами текущего
+Windows-пользователя:
+
+- session `CancellationToken` обеспечивает кооперативную остановку в инструментированных точках,
+  поддержанных KID API, Console input и известных BCL-ожиданиях;
+- ошибки обычного выполнения классифицируются и запускают обязательный cleanup;
+- файловая система, сеть, реестр и запуск процессов не ограничиваются;
+- collectible `AssemblyLoadContext` позволяет штатную выгрузку, но не является sandbox;
+- произвольный native/сторонний вызов, process-wide API и пользовательский поток без cancellation
+  могут повредить или удерживать IDE и не получают обещания принудительной остановки.
+
+Если Stop не может завершиться кооперативно, сервис остаётся в `StopRequested`, предупреждает о
+задержке и не разрешает новый Run. Ошибка cleanup оставляет `CleaningUp`; она не маскируется
+сообщением об успешной остановке.
+
+## Версионирование
+
+### Семантическое версионирование
+
+Используйте формат `MAJOR.MINOR.PATCH`:
+
+- **MAJOR** — несовместимые изменения API
+- **MINOR** — новая функциональность с обратной совместимостью
+- **PATCH** — исправления ошибок
+
+### Changelog
+
+Ведите список изменений в отдельном файле или в описании релиза.
+
+## Заключение
+
+Следуйте этим принципам при разработке, чтобы поддерживать качество и согласованность кода. При возникновении вопросов обращайтесь к существующему коду как к примеру.
+
