@@ -51,17 +51,23 @@ dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:Standalon
 cleanup failure, rollback failure, отменённого rollback, ошибки host cleanup и
 ошибки cancellation callback. Эти проверки не добавляют friend-доступ probe.
 
-## 🎨 После этапа 3: несколько холстов
+## 🎨 Этап 3: несколько холстов
 
 ```powershell
 dotnet build samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasSwitching
 dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasSwitching
 ```
 
-На этапе 1 этот режим также ожидаемо не собирается. После этапа 2 до реализации
-`Graphics.SetCanvas` он всё ещё может не собираться; это граница этапа 3.
-После этапа 3 обязательны A → B → A, сохранение содержимого и оформления,
-принадлежность задержанной фигуры и `void`-команды `Clear` исходному A.
+На этапах 1–2 этот режим ожидаемо не собирался из-за отсутствующего API.
+После реализации этапа 3 он собирается и проходит: A → B → A, сохранение
+содержимого и оформления, принадлежность задержанной фигуры и `void`-команды
+`Clear` исходному A. `Graphics.SetCanvas` работает с UI и фонового потока,
+сохраняет общий scope и требует тот же Dispatcher. Смена назначения не
+переподключает ввод, музыку и консоль. Целевые `CanvasSwitchingTests`
+дополнительно проверяют ошибки выбора, все варианты создания фигур, размеры,
+порядок оформления, STOP, normal drain и гонку выбора с очисткой. Правила
+фактического родителя элементов/спрайтов и отделение разметки IDE от методов
+размеров относятся к этапу 4.
 Постановка команды синхронизирована через публичные WPF Dispatcher hooks
 и возврат `void`-метода, без случайных задержек. Блокировки UI ограничены пятью
 секундами; при исправной реализации UI освобождается сразу после постановки.

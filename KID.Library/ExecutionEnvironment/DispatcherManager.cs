@@ -39,9 +39,15 @@ public static class DispatcherManager
     {
         ArgumentNullException.ThrowIfNull(action);
         var scope = GetScope();
+        InvokeOnUI(scope, action);
+    }
+
+    internal static void InvokeOnUI(DispatcherScope scope, Action action)
+    {
+        scope.CheckAccess(IsExecuting(scope));
         if (scope.Dispatcher.CheckAccess())
         {
-            _ = InvokeOnUI(() => { action(); return true; });
+            _ = InvokeOnUI(scope, () => { action(); return true; });
             return;
         }
         scope.Post(() => { action(); return true; }, reportFailure: true);

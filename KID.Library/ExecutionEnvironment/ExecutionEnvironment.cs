@@ -40,6 +40,19 @@ internal sealed class ExecutionEnvironment
         lock (capabilityGate) Interlocked.Exchange(ref cleanupStarted, 1);
     }
 
+    // Short synchronous mutations share the admission boundary with BeginCleanup.
+    // Unlike component attachment this can be entered from a worker without touching WPF state.
+    internal Lock.Scope EnterWork()
+    {
+        var admission = capabilityGate.EnterScope();
+        if (!ExecutionEnvironmentManager.IsCurrentAndAccepting(this) || CancellationToken.IsCancellationRequested)
+        {
+            admission.Dispose();
+            throw new ObjectDisposedException(nameof(ExecutionEnvironment));
+        }
+        return admission;
+    }
+
     // Serialize component publication with ingress closure, including legacy public Init calls.
     internal Lock.Scope EnterAttachment(Dispatcher? dispatcher = null)
     {
