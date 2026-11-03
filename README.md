@@ -1,15 +1,5 @@
 # .KID - C#/.NET IDE для детей
 
-## 🔌 KID.Library вне IDE
-
-[Публичная runtime-сессия](harness/context/api/Runtime-API.md) позволяет подключить собственные
-WPF-контролы, переключать несколько Canvas одного Dispatcher и корректно
-завершить ресурсы. Начните с [примера окна](harness/checks/probes/KID.Library.StandaloneDemo/README.md);
-[ручная приёмка](harness/checks/manual/standalone-library/README.md) и
-[внешний probe](harness/checks/probes/KID.Library.StandaloneProbe/README.md) описывают проверки.
-
-Разработка и проверки: [harness](harness/README.md). Учебные материалы: [course](course/).
-
 ## Обзор проекта
 
 **.KID** — это образовательная интегрированная среда разработки (IDE) для обучения детей программированию на языке C#. Проект разработан специально для начинающих программистов и предоставляет упрощённый интерфейс с визуальным выводом графики и консольным выводом.
