@@ -118,7 +118,7 @@ internal sealed class RuntimeSessionOwner
         if (dispatcher != null)
         {
             var scope = DispatcherManager.AttachDispatcher(Environment.ExecutionId, dispatcher);
-            if (options.Canvas != null) Graphics.Init(options.Canvas, scope);
+            if (options.Canvas != null) Graphics.Init(options.Canvas, scope, options.CanvasSizeHandler);
         }
         if (options.MouseCanvas != null) Mouse.Init(options.MouseCanvas, Environment);
         if (options.KeyboardWindow != null) Keyboard.Init(options.KeyboardWindow, Environment);

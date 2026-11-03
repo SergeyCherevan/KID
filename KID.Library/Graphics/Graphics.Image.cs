@@ -56,7 +56,7 @@ namespace KID
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
-            return InvokeOnCanvas(targetCanvas =>
+            return InvokeOnElement(image, () =>
             {
                 if (!File.Exists(path))
                     throw new FileNotFoundException($"Image file not found: {path}");

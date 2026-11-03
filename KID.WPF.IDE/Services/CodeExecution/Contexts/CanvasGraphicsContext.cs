@@ -79,7 +79,7 @@ namespace KID.Services.CodeExecution.Contexts
                 {
                     environment = ExecutionEnvironmentManager.GetCurrent(executionId);
                     scope = DispatcherManager.AttachDispatcher(executionId, dispatcher);
-                    Graphics.Init(canvas, scope);
+                    Graphics.Init(canvas, scope, new CanvasLayoutAdapter(canvas).TrySetSize);
                     initializeRuntime(canvas, environment);
                     initialized = true;
                 }

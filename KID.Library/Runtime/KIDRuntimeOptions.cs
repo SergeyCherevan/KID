@@ -15,4 +15,6 @@ public sealed class KIDRuntimeOptions
 
     /// <summary>May run on any thread. Exceptions from this callback are traced.</summary>
     public Action<KIDRuntimeDiagnostic>? DiagnosticSink { get; init; }
+
+    internal Func<Canvas, CanvasSizeProperty, double, bool>? CanvasSizeHandler { get; init; }
 }

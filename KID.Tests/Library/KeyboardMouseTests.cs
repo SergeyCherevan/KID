@@ -22,6 +22,88 @@ public sealed class KeyboardMouseTests
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
     [Fact]
+    public async Task CanvasSwitching_PreservesExplicitInputSourcesStateAndHandlersThenCleansThem()
+    {
+        await StaTest.RunAsync(async () =>
+        {
+            var a = new Canvas();
+            var b = new Canvas();
+            var keyboardWindow = new Window();
+            var otherWindow = new Window();
+            await using var session = await KIDRuntimeSession.OpenAsync(new KIDRuntimeOptions
+            {
+                Canvas = b, MouseCanvas = a, KeyboardWindow = keyboardWindow
+            }, TestContext.Current.CancellationToken);
+            var mouse = Assert.IsType<MouseExecutionScope>(Mouse.CurrentScope);
+            var keyboard = Assert.IsType<KeyboardExecutionScope>(Keyboard.CurrentScope);
+            var mouseCalls = 0;
+            var keyboardCalls = 0;
+            Mouse.MouseClickEvent += _ => Interlocked.Increment(ref mouseCalls);
+            Keyboard.KeyDownEvent += _ => Interlocked.Increment(ref keyboardCalls);
+            Keyboard.CapturePolicy = KeyboardCapturePolicy.IgnoreWhenTextInputFocused;
+            var shortcut = Keyboard.RegisterShortcut(new Shortcut(new KeyChord(KeyModifiers.None, Key.A)));
+            for (var i = 0; i < 3; i++)
+            {
+                SendMouseButton(a, MouseButton.Left, UIElement.MouseDownEvent);
+                SendKey(keyboardWindow, Key.A, WpfKeyboard.PreviewKeyDownEvent);
+                SendText(keyboardWindow, "a");
+                Graphics.SetCanvas(a);
+                Graphics.SetCanvas(b);
+                Assert.Equal(ClickStatus.OneLeftClick, Mouse.LastClick.Status);
+                Assert.Equal(Key.A, Keyboard.CurrentState.LastKeyDown);
+                Assert.Equal("a", Keyboard.ReadText());
+                SendMouseButton(b, MouseButton.Right, UIElement.MouseDownEvent);
+                SendKey(otherWindow, Key.B, WpfKeyboard.PreviewKeyDownEvent);
+                Assert.Equal(ClickStatus.OneLeftClick, Mouse.LastClick.Status);
+                Assert.Equal(Key.A, Keyboard.CurrentState.LastKeyDown);
+            }
+            await FlushInputAsync(mouse, keyboard);
+            Assert.Equal(3, Volatile.Read(ref mouseCalls));
+            Assert.Equal(3, Volatile.Read(ref keyboardCalls));
+            Assert.Same(mouse, Mouse.CurrentScope);
+            Assert.Same(keyboard, Keyboard.CurrentScope);
+            Assert.Same(a, mouse.Canvas);
+            Assert.Same(keyboardWindow, keyboard.Window);
+            Assert.Equal(KeyboardCapturePolicy.IgnoreWhenTextInputFocused, Keyboard.CapturePolicy);
+            Assert.True(Keyboard.UnregisterShortcut(shortcut));
+
+            await session.DisposeAsync();
+            Assert.True(mouse.EventWorker.Completion.IsCompletedSuccessfully);
+            Assert.True(keyboard.EventWorker.Completion.IsCompletedSuccessfully);
+            SendMouseButton(a, MouseButton.Left, UIElement.MouseDownEvent);
+            SendKey(keyboardWindow, Key.C, WpfKeyboard.PreviewKeyDownEvent);
+            Assert.Equal(ClickStatus.NoClick, Mouse.LastClick.Status);
+            Assert.Equal(Key.None, Keyboard.CurrentState.LastKeyDown);
+
+            await using var next = await KIDRuntimeSession.OpenAsync(new KIDRuntimeOptions
+            {
+                Canvas = a, MouseCanvas = b, KeyboardWindow = otherWindow
+            }, TestContext.Current.CancellationToken);
+            SendMouseButton(a, MouseButton.Left, UIElement.MouseDownEvent);
+            SendKey(keyboardWindow, Key.C, WpfKeyboard.PreviewKeyDownEvent);
+            Assert.Equal(ClickStatus.NoClick, Mouse.LastClick.Status);
+            Assert.Equal(Key.None, Keyboard.CurrentState.LastKeyDown);
+            SendMouseButton(b, MouseButton.Right, UIElement.MouseDownEvent);
+            SendKey(otherWindow, Key.B, WpfKeyboard.PreviewKeyDownEvent);
+            await FlushInputAsync(Mouse.CurrentScope!, Keyboard.CurrentScope!);
+            Assert.Equal(ClickStatus.OneRightClick, Mouse.LastClick.Status);
+            Assert.Equal(Key.B, Keyboard.CurrentState.LastKeyDown);
+            Assert.Equal(3, Volatile.Read(ref mouseCalls));
+            Assert.Equal(3, Volatile.Read(ref keyboardCalls));
+        });
+    }
+
+    private static async Task FlushInputAsync(MouseExecutionScope mouse, KeyboardExecutionScope keyboard)
+    {
+        var mouseDrained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var keyboardDrained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Assert.True(mouse.EventWorker.TryEnqueue(() => mouseDrained.TrySetResult()));
+        Assert.True(keyboard.EventWorker.TryEnqueue(() => keyboardDrained.TrySetResult()));
+        await Task.WhenAll(mouseDrained.Task, keyboardDrained.Task)
+            .WaitAsync(Timeout, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
     public async Task EventWorker_ShutdownWaitsForRunningHandler_DropsQueueAndIsIdempotent()
     {
         using var environmentLease = ExecutionEnvironmentManager.BeginExecution(

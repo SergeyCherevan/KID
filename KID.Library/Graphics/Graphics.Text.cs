@@ -45,7 +45,7 @@ namespace KID
 
         public static TextBlock SetText(this TextBlock textBlock, string text)
         {
-            return InvokeOnCanvas(targetCanvas =>
+            return InvokeOnElement(textBlock, () =>
             {
                 textBlock.Text = text;
                 return textBlock;
@@ -53,7 +53,7 @@ namespace KID
         }
         public static TextBlock SetFont(this TextBlock textBlock, string fontName, double fontSize)
         {
-            return InvokeOnCanvas(targetCanvas =>
+            return InvokeOnElement(textBlock, () =>
             {
                 textBlock.FontFamily = new FontFamily(fontName);
                 textBlock.FontSize = fontSize;

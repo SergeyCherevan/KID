@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using KID.Services.CodeExecution.Contexts;
 using KID.Tests.Execution;
 using KID.Tests.Infrastructure;
 
@@ -290,7 +291,10 @@ public sealed class CanvasSwitchingTests
             window.RegisterName("WorkspaceGrid", workspace);
             window.RegisterName("OutputGrid", output);
             window.RegisterName("GraphicsOutputView", view);
-            await using var session = await OpenAsync(new KIDRuntimeOptions { Canvas = a });
+            await using var session = await OpenAsync(new KIDRuntimeOptions
+            {
+                Canvas = a, CanvasSizeHandler = new CanvasLayoutAdapter(a).TrySetSize
+            });
             // Changing the first dimension also changes the global destination during execution.
             var descriptor = DependencyPropertyDescriptor.FromProperty(
                 ColumnDefinition.MinWidthProperty, typeof(ColumnDefinition))!;
