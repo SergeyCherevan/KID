@@ -5,14 +5,14 @@
 не предоставляется. Здесь нет runtime-заглушек, reflection и обхода `internal`.
 Проект не входит в `KID.sln`, поэтому будущие сценарии не ломают основной build.
 
-Контракт: [D005_KID.Library_STANDALONE_CONTRACT.md](../../docs/agent/plans/D005_KID.Library_STANDALONE_CONTRACT.md).
+Контракт: [D005_KID.Library_STANDALONE_CONTRACT.md](../../../work/contracts/D005_KID.Library_STANDALONE_CONTRACT.md).
 
 ## 🧪 Этап 1: воспроизведение регрессии
 
 Из корня репозитория:
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneProbe -c Release
+dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe -c Release
 ```
 
 Режим по умолчанию — `StandaloneContractStage=Regression`. Exit code `0` и
@@ -25,8 +25,8 @@ dotnet run --project samples/KID.Library.StandaloneProbe -c Release
 ## 🏗️ Этап 2: публичная сессия
 
 ```powershell
-dotnet build samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=Session
-dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=Session
+dotnet build harness/checks/probes/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=Session
+dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=Session
 ```
 
 На этапе 1 сборка этого режима завершалась ошибкой отсутствующего API.
@@ -38,7 +38,7 @@ dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:Standalon
 ## ⛔ Этап 2: ошибка очистки
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=SessionFailure
+dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=SessionFailure
 ```
 
 Отдельный процесс ставит в Dispatcher принятую `void`-команду с ошибкой,
@@ -54,8 +54,8 @@ cleanup failure, rollback failure, отменённого rollback, ошибки
 ## 🎨 Этап 3: несколько холстов
 
 ```powershell
-dotnet build samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasSwitching
-dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasSwitching
+dotnet build harness/checks/probes/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasSwitching
+dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasSwitching
 ```
 
 На этапах 1–2 этот режим ожидаемо не собирался из-за отсутствующего API.
@@ -73,7 +73,7 @@ dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:Standalon
 ## 🧱 Этап 4: объекты, спрайты и размеры
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasObjects
+dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe -c Release -p:StandaloneContractStage=CanvasObjects
 ```
 
 Режим проверяет обычные Width/Height/MinWidth/MinHeight собственного Canvas,

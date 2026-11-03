@@ -7,9 +7,9 @@
 Из корня репозитория на Windows с .NET 10 SDK:
 
 ```powershell
-dotnet restore samples/KID.Library.StandaloneDemo/KID.Library.StandaloneDemo.csproj
-dotnet build samples/KID.Library.StandaloneDemo -c Release --no-restore
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release --no-build
+dotnet restore harness/checks/probes/KID.Library.StandaloneDemo/KID.Library.StandaloneDemo.csproj
+dotnet build harness/checks/probes/KID.Library.StandaloneDemo -c Release --no-restore
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release --no-build
 ```
 
 Окно предоставляет два Canvas одного Dispatcher. В одной сессии worker рисует
@@ -27,7 +27,7 @@ Tone 440 Hz вызывает Music.Sound(440, 500) на worker-потоке. З�
 ## 🖥️ Консоль подключается отдельно
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release --no-build -- --with-console
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release --no-build -- --with-console
 ```
 
 Появляются TextBox и Read line; только этот режим задаёт ConsoleTextBox и
@@ -48,8 +48,8 @@ OpenAsync хост также ожидает открытие. Dispatcher раб
 ## 🧪 Самопроверка окна
 
 ```powershell
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release --no-build -- --verify
-dotnet run --project samples/KID.Library.StandaloneDemo -c Release --no-build -- --verify --with-console
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release --no-build -- --verify
+dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo -c Release --no-build -- --verify --with-console
 ```
 
 Реальный Window проходит Loaded, рисование и повторный Closing. Перед Close
@@ -60,6 +60,6 @@ dotnet run --project samples/KID.Library.StandaloneDemo -c Release --no-build --
 Синхронизация не полагается на Sleep. Самопроверка не воспроизводит звук и не
 подменяет визуальную приёмку и физический ввод.
 
-[Публичный контракт](../../docs/Runtime-API.md) ·
+[Публичный контракт](../../../context/api/Runtime-API.md) ·
 [внешний probe](../KID.Library.StandaloneProbe/README.md) ·
-[ручная проверка](../../docs/testing/STANDALONE_LIBRARY.smoke.md).
+[ручная проверка](../../manual/standalone-library/README.md).

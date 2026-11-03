@@ -49,10 +49,10 @@ WPF-подписки, static events/shortcuts/scopes, Console streams, audio tas
 
 ```powershell
 dotnet build KID.sln -c Release
-dotnet test KID.Tests/KID.Tests.csproj -c Release --no-build
+dotnet test harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build
 ```
 
-Структура production-кода описана в [CodeExecution](../docs/CodeExecution.md). Тестовые каталоги группируют сценарии: `Compiler/`, `Execution/`, `Console/` и `Lifecycle/`. Импорты используют пространства имён соответствующих частей и их подпапок `Interfaces/`.
+Структура production-кода описана в [CodeExecution](../../../context/architecture/CodeExecution.md). Тестовые каталоги группируют сценарии: `Compiler/`, `Execution/`, `Console/` и `Lifecycle/`. Импорты используют пространства имён соответствующих частей и их подпапок `Interfaces/`.
 
 `CompiledProgram_ConsoleClear_UsesConsoleContextBridge` проверяет полный путь от компиляции
 `System.Console.Clear()` до `global::KID.TextBoxConsole.Clear()`, очистки WPF TextBox и вывода

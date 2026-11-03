@@ -517,15 +517,15 @@ demo и обеими его самопроверками окна, а также
 
 ### Этап 3. Перенести тестовые проекты и восстановить сборочный граф
 
-- [ ] Переместить KID.Tests в `harness/checks/automated/`, а StandaloneProbe
+- [x] Переместить KID.Tests в `harness/checks/automated/`, а StandaloneProbe
   и StandaloneDemo — в `harness/checks/probes/`, сохранив исходники и README.
   Генерируемые bin/obj не являются переносимыми исходниками.
-- [ ] Исправить путь KID.Tests в KID.sln и ProjectReference всех трёх проектов
+- [x] Исправить путь KID.Tests в KID.sln и ProjectReference всех трёх проектов
   на четыре уровня `..`; сохранить GUID тестового проекта, сборочные
   конфигурации, имена сборок, namespaces и friend-разрешения.
-- [ ] Обновить действующие команды и ссылки в README проектов и документации;
+- [x] Обновить действующие команды и ссылки в README проектов и документации;
   проверить зависящие от расположения файлов пути внутри тестов и приложений.
-- [ ] Проверить `dotnet sln KID.sln list` и ProjectReference: KID.Tests
+- [x] Проверить `dotnet sln KID.sln list` и ProjectReference: KID.Tests
   ссылается на Library и IDE, оба внешних потребителя — только на Library;
   внешние проекты остаются вне solution.
 
@@ -717,3 +717,18 @@ README и project references обоих внешних проектов, standal
 - Проверены карта переноса, точки входа и diff --check; общая проверка всех
   Markdown-ссылок выполняется после Этапов 3–5. До них ссылки на tests/manual
   и runner указывают на согласованные конечные пути. Production-код не изменён.
+
+### 2026-11-03 — Этап 3
+
+- Перенесены только отслеживаемые исходники KID.Tests и двух внешних проектов;
+  старые игнорируемые bin/obj оставлены на месте. Путь solution изменён без
+  изменения GUID `{A4F41273-98B6-4A37-B937-7E4CF4C196B8}` и конфигураций.
+- Четыре ProjectReference используют четыре уровня `..`. `dotnet sln KID.sln
+  list` и `dotnet list <каждый csproj> reference` подтвердили прежний граф:
+  tests → Library/IDE, probe/demo → только Library; probe/demo вне solution.
+  Все эти команды завершились с code 0.
+- `dotnet restore KID.sln --nologo`, restore csproj probe и demo: code 0,
+  одно окружение SDK/NuGet. README и активные команды обновлены; проверены
+  AppContext.BaseDirectory и отсутствие зависимостей от старого корня.
+  Имена сборок, namespaces, friend-разрешения и C#-код не менялись.
+- Полные build/test, пять probe и demo выполняются через runner на Этапе 6.

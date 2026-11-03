@@ -231,7 +231,7 @@ private static SoundNote[] Snapshot(
 
 ```powershell
 dotnet build KID.sln -c Release --nologo
-dotnet KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.Localization -noLogo -noColor
+dotnet harness\checks\automated\KID.Tests\bin\Release\net10.0-windows\KID.Tests.dll -namespace KID.Tests.Localization -noLogo -noColor
 ```
 
 Порядок объектов JSON определяет порядок языков в меню. Каталог встроен в
