@@ -1,9 +1,9 @@
 # 🧭 Единая структура harness разработки KID
 
-- **Статус:** `in progress`; выполняется последовательная миграция, итоговая приёмка впереди.
+- **Статус:** `completed`; все шесть этапов и обязательная автоматическая приёмка выполнены.
 - **Дата:** 2026-11-02.
-- **Актуализирован:** 2026-11-03, после завершения Этапов 1–6 D005 и слияния
-  результата в `feature/UnifiedHarness` (HEAD `e3b9d9a`).
+- **Актуализирован:** 2026-11-03; миграция выполнена в `feature/UnifiedHarness`.
+  Итоговый Full проверил чистую revision `45a6bc0`; завершающая запись меняет только этот план.
 - **Основание:** обсуждение с автором проекта и инвентаризация текущих каталогов.
 - **Объём:** место документации, решений, планов, тестов, внешних проверок,
   ручных сценариев и общих инструментов. Production-проекты не реорганизуются.
@@ -102,7 +102,7 @@ KID/
 │   │   │       └── Prepare-EditorSessionRecovery.ps1
 │   │   └── evidence/                      # Существенные протоколы проверок
 │   └── tools/
-│       └── Invoke-Harness.ps1              # Будущий общий запуск
+│       └── Invoke-Harness.ps1              # Общий запуск
 └── artifacts/                             # Генерируемые результаты; gitignored
 ```
 
@@ -130,12 +130,12 @@ harness. `.github/`, `.vscode/`, solution и конфигурация SDK сох
   реализация и поведенческие проверки выполнены на Этапе 5.
 
 Корневые входы дают короткие ссылки; harness содержит полную информацию.
-Команды `dotnet` через корневой KID.sln остаются поддерживаемыми. Будущий
-runner использует те же сборки и проверки, не создавая второй реализации.
+Команды `dotnet` через корневой KID.sln остаются поддерживаемыми. Runner
+использует те же сборки и проверки, не создавая второй реализации.
 
 ## ⚙️ Интерфейс Invoke-Harness.ps1
 
-**Статус:** реализован на Этапе 5; поведенческий контракт проверен, полный прогон миграции выполняется на Этапе 6.
+**Статус:** реализован; поведенческий контракт и итоговый Full прошли на Этапах 5–6.
 Пути и примеры ниже относятся к структуре после миграции. Runner рассчитан
 на PowerShell 7+; сборки и проверки WPF выполняются на Windows. SDK выбирается
 по корневому `global.json` (`10.0.100`, `rollForward: latestFeature`, без preview),
@@ -292,7 +292,7 @@ Summary записывается также при отказе и отмене,
 ошибкой среды. Для Full desktop проверяется до начала сборок; при успешной
 предпроверке реальный исход создания/закрытия окна всё равно определяет demo.
 
-### Примеры будущего использования
+### Примеры использования
 
 ```powershell
 ./harness/tools/Invoke-Harness.ps1
@@ -575,28 +575,28 @@ API не изменены. Полные build/test выполняются на �
 
 ### Этап 6. Провести итоговую приёмку и закрыть миграцию
 
-- [ ] Проверить локальные Markdown-ссылки, пути в командах, сборочный граф
+- [x] Проверить локальные Markdown-ссылки, пути в командах, сборочный граф
   и `git diff --check`. Поиск старых путей разобрать по назначениям: действующие
   ссылки исправлены, исторические команды и `git show` сохранены осознанно.
-- [ ] Выполнить Release build/test KID.sln после restore в одном окружении.
+- [x] Выполнить Release build/test KID.sln после restore в одном окружении.
   Сопоставить количество и исход тестов с базой D005 (716 passed); любое
   отличие объяснить, пропуски и потери тестов не считать успешным переносом.
-- [ ] Запустить probe по новому пути с каждым значением
+- [x] Запустить probe по новому пути с каждым значением
   `StandaloneContractStage`: `Regression`, `Session`, `SessionFailure`,
   `CanvasSwitching`, `CanvasObjects`. Каждый процесс должен выдать PASS и code 0.
-- [ ] Выполнить отдельную Release-сборку demo и запуски `--verify` и
+- [x] Выполнить отдельную Release-сборку demo и запуски `--verify` и
   `--verify --with-console`. Оба должны выдать PASS и code 0 после закрытия окна.
-- [ ] Проверить runner на полном согласованном наборе и сопоставить результаты
+- [x] Проверить runner на полном согласованном наборе и сопоставить результаты
   с прямыми командами. Если этот запуск уже выполнил перечисленные выше
   build/test/probe/demo, повторять их без причины не требуется.
-- [ ] Проверить отсутствие отслеживаемых исходников в старых docs/scripts/
+- [x] Проверить отсутствие отслеживаемых исходников в старых docs/scripts/
   samples/KID.Tests и постоянных копий или symlink-зеркал. Оставшиеся локальные
   игнорируемые артефакты не удалять рекурсивно ради соответствия дереву.
-- [ ] Записать в журнал этого плана revision/состав изменений, дату, окружение,
+- [x] Записать в журнал этого плана revision/состав изменений, дату, окружение,
   фактические команды, exit codes, итог тестов и непроверенные ручные пункты.
   Существенный новый ручной протокол при наличии поместить в checks/evidence;
   прежнюю приёмку D005 не объявлять новой приёмкой после переноса.
-- [ ] Отметить выполненные пункты и перевести план в `completed`, только если
+- [x] Отметить выполненные пункты и перевести план в `completed`, только если
   все обязательные проверки прошли. Неуспешные или недоступные проверки
   оставить открытыми с конкретной причиной.
 
@@ -792,3 +792,102 @@ README и project references обоих внешних проектов, standal
   237 локальных Markdown-целей разрешаются; переносимые C#-исходники идентичны.
 - README/DEVELOPMENT описывают команды, окружение, артефакты и exit codes.
   Открытый обязательный пункт: итоговый Full и общая приёмка Этапа 6.
+
+### 2026-11-03 — Этап 6, итоговая приёмка
+
+- Проверенная revision: **`45a6bc061394c67943332faa411ab7d6108b6411`**,
+  `dirty: false`, `feature/UnifiedHarness`. Проверялось всё дерево миграции,
+  включая runner, его проверки, .editorconfig и два обновлённых XAML-комментария.
+  После прогона изменён только этот план для фиксации приёмки.
+- Окружение: Windows 10.0.19045, PowerShell 7.6.9, SDK 10.0.402,
+  Microsoft.Testing.Platform из global.json, доступный Windows desktop.
+  Restore и последующие команды выполнялись в одном разрешённом окружении
+  NuGet. Пользовательские settings/session и конфигурация Git/SDK не менялись.
+- Фактический общий запуск из корня checkout:
+
+  ```powershell
+  pwsh -NoProfile -File ./harness/tools/Invoke-Harness.ps1 -Command check -Profile Full -TimeoutSeconds 900
+  ```
+
+  Начало `2026-11-03T09:47:29.2596416Z`, конец `2026-11-03T09:49:18.4214685Z`.
+  **Runner code 0; 13/13 операций passed; каждый child code 0; not-run нет.**
+  Сводка: `artifacts/harness/20261103T094729266Z-4d6a11c4/summary.json`.
+  Логи 01–13 и `test-results/KID.Tests.trx` находятся в том же каталоге.
+  Аргументы, cwd, статусы и исходные exit codes каждой операции программно
+  сопоставлены со всеми логами. revision/dirty и времена сверены.
+- Последовательность реальных dotnet-команд соответствует прямому запуску
+  ниже (в summary сохранены абсолютные пути и точные аргументы):
+
+  ```powershell
+  dotnet restore KID.sln --nologo
+  dotnet build KID.sln -c Release --no-restore --nologo
+  dotnet test --solution KID.sln -c Release --no-build --no-restore --results-directory artifacts/harness/20261103T094729266Z-4d6a11c4/test-results --report-xunit-trx --report-xunit-trx-filename KID.Tests.trx
+  dotnet restore harness/checks/probes/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj --nologo
+  dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj -c Release --no-restore -p:StandaloneContractStage=Regression
+  dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj -c Release --no-restore -p:StandaloneContractStage=Session
+  dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj -c Release --no-restore -p:StandaloneContractStage=SessionFailure
+  dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj -c Release --no-restore -p:StandaloneContractStage=CanvasSwitching
+  dotnet run --project harness/checks/probes/KID.Library.StandaloneProbe/KID.Library.StandaloneProbe.csproj -c Release --no-restore -p:StandaloneContractStage=CanvasObjects
+  dotnet restore harness/checks/probes/KID.Library.StandaloneDemo/KID.Library.StandaloneDemo.csproj --nologo
+  dotnet build harness/checks/probes/KID.Library.StandaloneDemo/KID.Library.StandaloneDemo.csproj -c Release --no-restore --nologo
+  dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo/KID.Library.StandaloneDemo.csproj -c Release --no-build --no-restore -- --verify
+  dotnet run --project harness/checks/probes/KID.Library.StandaloneDemo/KID.Library.StandaloneDemo.csproj -c Release --no-build --no-restore -- --verify --with-console
+  ```
+
+  Повторять этот набор прямыми командами не потребовалось: runner выполнил
+  именно их; промежуточные прямые restore/sln/reference, fixture build/self-check
+  и реальный runner test описаны выше. Его операция build/test использует
+  тот же граф и Microsoft.Testing.Platform, без альтернативного test runner.
+- Solution Release: **0 warnings, 0 errors**. TRX подтверждает **716 total,
+  executed 716, passed 716, failed/error/timeout/aborted/notExecuted 0**.
+  Потерь/пропусков относительно исторической базы D005 нет.
+- Пять отдельных процессов probe выдали соответствующие PASS:
+  Regression — запрет старого bootstrap без сессии; Session — публичная сессия,
+  optional components/STOP/cleanup/reopen; SessionFailure — необратимый запрет
+  admission после cleanup failure; CanvasSwitching — A → B → A и назначения
+  команд; CanvasObjects — parents/sprites/collisions/Canvas sizing.
+- Demo отдельно собрано: **0 warnings, 0 errors**; `--verify` и
+  `--verify --with-console` выдали `PASS: visible WPF lifecycle` с console=False
+  и True соответственно, оба процесса завершились с code 0 после закрытия окон.
+  Timeout/принудительное закрытие не использовались в успешной приёмке.
+- Статическая приёмка: **238 локальных Markdown-целей**, все существуют; пять
+  ссылок с fragment сверены с heading/HTML id. Все четыре ps1 синтаксически
+  корректны; **12 PowerShell-блоков** пяти ручных README разобраны без выполнения.
+  `git diff --check 5eea349..HEAD`: code 0. Поиск старых путей через git grep
+  разобран: действующие ссылки, .editorconfig и XAML-комментарии исправлены;
+  исходное распределение в этом плане, исторические команды D005 и git show
+  аудита оставлены как свидетельства соответствующих revision. Внешний URL
+  dotnet/runtime/docs в инструкции первого запуска не является старым путём KID.
+- Проверены **111 канонических назначений** исходной карты, отсутствие
+  отслеживаемых файлов в docs/scripts/samples/KID.Tests и symlink-зеркал.
+  Старые локальные игнорируемые bin/obj не удалялись рекурсивно. Один README
+  agent включён в новый общий README; остальные материалы перенесены без копий.
+- Все перенесённые C#-исходники совпадают с `5eea349`; три csproj отличаются
+  только путями четырёх ProjectReference. В solution сохранены GUID/конфигурации,
+  внешние проекты вне solution. AssemblyName результатов: KID.Tests, KID.Library,
+  KID.WPF.IDE, KID.Standalone.ContractProbe.D005, KID.Standalone.Demo.D005; все
+  Version=1.0.0.0, Culture=neutral, PublicKeyToken=null. Production C# и
+  friend-разрешения не менялись; в production XAML изменены только два
+  комментария со ссылкой на reference, значения ресурсов сохранены.
+- После Full lock повторно открыт exclusive handle и освобождён — занятости
+  не осталось. Gitignore artifacts подтверждён; отчёты/бинарники не коммитятся.
+- **Не проверено вручную:** физический Mouse/Keyboard ввод, слышимость звука,
+  IDE Run/Stop/закрытие, быстрое ручное закрытие standalone, первый запуск
+  на разных языках Windows, persistence/editor-session recovery. Это не
+  обязательные условия чистого переноса; прежняя ручная приёмка D005 остаётся
+  историей. У музыкального fixture сохранено исходное предупреждение CA2208;
+  его сборка/self-check прошли, MusicDownloadSmoke в редакторе KID не запускался.
+- **Открытые обязательные проверки: нет.** План переведён в completed после
+  фактического Full и статической приёмки. Существенных отступлений от
+  согласованной структуры/интерфейса нет; новые поведенческие проверки runner
+  размещены в checks/automated/runner. Push не выполнялся.
+
+### Локальные коммиты миграции
+
+- `9cb641f` — docs(harness): record migration baseline and acceptance scope.
+- `aa6c42e` — refactor(harness): relocate project context and work documents.
+- `9c61a54` — refactor(harness): relocate automated checks and external consumers.
+- `6dd521b` — refactor(harness): colocate manual scenarios and recovery fixtures.
+- `45a6bc0` — feat(harness): add repeatable verification runner and process contract checks.
+- Заключительный `docs(harness): record full migration acceptance` фиксирует
+  этот журнал и итоговый статус без изменения проверенной реализации.
