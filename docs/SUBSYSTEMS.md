@@ -1,5 +1,20 @@
 # Подсистемы проекта .KID
 
+## 🔌 Публичная сессия библиотеки
+
+KID.Library/Runtime содержит KIDRuntimeSession, KIDRuntimeOptions,
+KIDRuntimeDiagnostic и общий RuntimeSessionOwner. Внешний WPF-хост и IDE
+разделяют process-wide admission, token/ID и библиотечную очистку. Адаптеры
+контекстов IDE передают ресурсы; coordinator ожидает user code и удерживает
+резервирование до Dispose running instance/Unload ALC и CompleteAsync.
+Ошибка любого ресурсного cleanup блокирует и Run, и внешний OpenAsync.
+
+Компоненты необязательны: музыка не требует UI, консоль и перенаправление
+streams включаются отдельно. Графические поля и остальные контролы имеют один
+Dispatcher; MouseCanvas/KeyboardWindow не следуют Graphics.SetCanvas.
+[Контракт и завершение](Runtime-API.md),
+[внешний пример](../samples/KID.Library.StandaloneDemo/README.md).
+
 ## Обзор подсистем
 
 Проект .KID состоит из нескольких независимых подсистем, каждая из которых отвечает за определённую функциональность. Все подсистемы взаимодействуют через интерфейсы и Dependency Injection.
@@ -9,7 +24,7 @@
 ### Назначение
 Компиляция и выполнение C# кода, написанного пользователем в редакторе.
 
-Код разделён на `Compilation/`, `Runtime/`, `Console/`, `Contexts/` и `Errors/`. Интерфейсы находятся в подпапках `Interfaces/` своих частей. См. [полную структуру и зависимости](CodeExecution.md).
+Код IDE разделён на `Compilation/`, `Runtime/`, `Contexts/` и `Errors/`; console runtime и общий владелец находятся в KID.Library. Интерфейсы находятся в подпапках `Interfaces/` своих частей. См. [полную структуру и зависимости](CodeExecution.md).
 
 Подсистема использует осознанную in-process trust model: учебная программа работает с правами
 текущего пользователя внутри процесса IDE. Она не является sandbox и не запрещает файлы, сеть,
@@ -33,7 +48,7 @@
 - `RequestStop()` — запрашивает кооперативную остановку активной компиляции или выполнения
 
 **Особенности:**
-- Резервирует `ExecutionSession` под `sessionLock`, предотвращая параллельное выполнение
+- Под sessionLock резервирует RuntimeSessionOwner библиотеки; ExecutionSession хранит FSM/completion task без собственного CTS и счётчика ID
 - Отклоняет повторный Run до вызова фабрики контекста
 - Инициализирует контекст перед выполнением
 - Освобождает контекст после выполнения
@@ -122,18 +137,18 @@
 - Получает ExecutionId от coordinator и передаёт id обоим контекстам, а token — консольному
 - DisposeAsync ожидает графику, затем консоль; ошибка графики не мешает восстановлению потоков
 - Содержит `Dispatcher`, который устанавливается через `CanvasTextBoxContextFabric`
-- Передаёт Dispatcher в CanvasGraphicsContext, который подключает capability к текущему environment
+- Передаёт Dispatcher в CanvasGraphicsContext; capability подключает общий RuntimeSessionOwner
 
 **CanvasGraphicsContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/CanvasGraphicsContext.cs`)
 - Инициализирует Graphics API с Canvas
 - Реализует `IGraphicsContext`
-- Сохраняет исходный `ExecutionEnvironment`; при Dispose одновременно закрывает Keyboard/Mouse/Music, независимо ожидает три shutdown, затем освобождает Graphics/Dispatcher
+- Передаёт Canvas, фиксированные источники Mouse/Keyboard, музыку и CanvasLayoutAdapter общему RuntimeSessionOwner; Dispose делегирует ему идемпотентный CleanupAsync
 - Частичная инициализация безопасна: уже подключённые Mouse или Music будут освобождены, даже если следующий runtime-шаг упал
 - Host cleanup не использует отменённый session token для WPF-отписок
 
 **TextBoxConsoleContext** (`KID.WPF.IDE/Services/CodeExecution/Contexts/TextBoxConsoleContext.cs`)
 - Подключает статический `KID.TextBoxConsole` к TextBox и captured `ExecutionEnvironment`
-- Один владеет process-wide перенаправлением и восстановлением `System.Console.In/Out/Error`
+- Передаёт TextBox и настройку перенаправления владельцу; In/Out/Error сохраняет и восстанавливает RuntimeSessionOwner
 - Ожидает runtime shutdown до восстановления streams; ошибка shutdown не пропускает ни один restore-шаг
 - Реализует `IConsoleContext`
 
@@ -178,7 +193,7 @@
 - Console, Dispatcher/Graphics, Keyboard, Mouse и Music очищают per-run ресурсы до выгрузки ALC.
 - Ошибка одного cleanup-шага не отменяет попытки остальных; незавершённая очистка оставляет
   сервис в `CleaningUp` и блокирует новый Run.
-- Release build и 188 automated runtime tests подтверждают поддержанный scope; headless smoke и
+- Исторический Release-прогон C2/C3 (2026-09-17): build и 188 automated runtime tests подтверждали поддержанный scope; headless smoke и
   сообщённая пользователем visual acceptance учитываются отдельными evidence layers.
 - Произвольный native/сторонний вызов или неинструментированный пользовательский поток нельзя
   принудительно завершить безопасно внутри процесса.
@@ -234,13 +249,13 @@
 **Ответственность:**
 - Инициализация статического TextBoxConsole с TextBox из ViewModel и current environment
 - Реализация интерфейса IConsoleContext
-- Владение process-wide `System.Console` streams
+- Адаптация TextBox и перенаправления к общему владельцу (сами streams принадлежат RuntimeSessionOwner)
 
 **Особенности:**
 - Получает TextBox из ConsoleOutputViewModel
-- Создаёт `ConsoleExecutionScope` через статический runtime и получает его scope-bound streams
-- Устанавливает эти streams в качестве стандартных `System.Console.Out/In/Error`
-- Init получает execution id/token явно; DisposeAsync восстанавливает каждый поток даже после частичной инициализации и runtime shutdown failure
+- Передаёт ConsoleTextBox/RedirectSystemConsole в RuntimeSessionOwner.Initialize
+- Общий владелец создаёт scope-bound streams и устанавливает System.Console.Out/In/Error
+- Init проверяет execution id/token; DisposeAsync делегирует общую очистку, которая восстанавливает каждый поток даже после partial Init и runtime shutdown failure
 - IConsoleContext и ICodeExecutionContext реализуют IAsyncDisposable; coordinator ожидает консольную очистку до выгрузки ALC и нового Run
 
 ## 3. Подсистема работы с файлами (Files)
@@ -759,7 +774,10 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 **Файл:** `KID.Library/Graphics/Graphics.System.cs`
 
 **Функции:**
-- Внутренний `Init(Canvas, scope)` — привязка Canvas к execution scope
+- Публичное подключение через KIDRuntimeSession.OpenAsync; внутренний Init(Canvas, scope) вызывает общий владелец
+- SetCanvas(Canvas) выбирает поле того же Dispatcher; операции захватывают Canvas и scope до постановки
+- Методы над элементом работают с ним и фактическим родителем, Sprite пропускает столкновения разных полей
+- SetCanvas* меняет размеры обычного Canvas; IDE-панели обслуживает CanvasLayoutAdapter
 - `Clear()` — очистка холста
 - Использует `DispatcherManager.InvokeOnUI()` для выполнения операций в UI потоке
 
