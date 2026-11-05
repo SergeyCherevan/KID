@@ -92,8 +92,9 @@ try {
         $content = [IO.File]::ReadAllText($path)
         # Three pre-schema historical plans are deliberately grandfathered. New
         # files cannot bypass required fields by omitting the schema marker.
-        $legacy = @('HARNESS_STRUCTURE.plan.md','HARNESS_AUTONOMY.plan.md','D005_KID.Library_STANDALONE_RESTORE.plan.md')
-        if ($file.Name -like '*.plan.md' -and $file.Name -notin $legacy) {
+        $legacy = @('harness/work/plans/HARNESS_STRUCTURE.plan.md','harness/work/plans/HARNESS_AUTONOMY.plan.md','harness/work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md')
+        $relative = [IO.Path]::GetRelativePath($Root, $path).Replace('\', '/')
+        if ($file.Name -like '*.plan.md' -and $relative -notin $legacy) {
             if (-not $content.Contains('<!-- harness-plan:v1 -->')) { Issue $path 1 'Required plan schema marker: harness-plan:v1' }
             foreach ($heading in @('Цель','Статус','Границы','Требования и предложения','Приёмка','Проверки','Открытые решения','Журнал','Продолжение','Следующий шаг')) {
                 $pattern = '(?ms)^## ' + [regex]::Escape($heading) + '\r?\n(.*?)(?=^## |\z)'

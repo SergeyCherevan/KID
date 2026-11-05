@@ -493,3 +493,31 @@ runner и проверки его контракта. Production C#, публи�
 - Внешняя приёмка CI остаётся открытой: фактические GitHub success/failure и
   доступность uploaded diagnostics нельзя подтвердить без публикации, которая
   запрещена текущим запросом. Весь план in progress, scope не пересмотрен.
+### 2026-11-05 — Независимый локальный прогон и финальное ревью
+
+- Revision `0717fc2e27ce73bb1294b035316e38b8b918f94b`, source tree clean.
+  `git clone --no-hardlinks --branch feature/UnifiedHarness 'D:/Visual Studio Projects/KID' <new root>`:
+  новый `artifacts/harness/clean-1fbe64ad`, dirty=false, bin/obj count=0.
+  Baseline: `artifacts/harness/autonomy-discovery/clean-baseline.json`.
+- В clone `./harness/tools/Invoke-CI.ps1`: exit 0, status passed, все 5 шагов
+  (validate/contracts/check Headless/build data smoke/data isolation) exit 0.
+  SDK 10.0.402, PS 7.6.9, Windows 10.0.19045, **724 passed** в Headless.
+  Evidence `artifacts/harness/clean-1fbe64ad/artifacts/harness/ci-20261105T155804736Z-ddf1b3d1/ci-result.json`.
+  Runner contracts 14 групп, static fixtures 9; data smoke/profile hashes PASS.
+  Новый bin/obj, системный NuGet cache reused; его не удаляли.
+- Отдельный собственный clone `artifacts/harness/control-19389ce7` содержит только
+  INTENTIONAL_FAILURE.md с битой ссылкой. Default Invoke-CI: exit 3 dirty refusal;
+  `Invoke-CI.ps1 -AllowDirty`: exit 1, только validate выполнен, файл/строка ошибки
+  указаны, следующие шаги не запускались. CI-result/summary/logs доступны локально:
+  `artifacts/harness/control-19389ce7/artifacts/harness/ci-20261105T160150785Z-713d71ef/`.
+  Это контроль local CI entry point, не утверждение о внешнем GitHub Actions run.
+- Итоговый `./harness/tools/Invoke-Harness.ps1 -Command check -Profile Full` на
+  0717fc2/clean: exit 0, **724 passed, 0 skipped/failed**, пять probe и обе WPF demo;
+  build 0 warnings/errors. `artifacts/harness/20261105T155833082Z-8fb09252/`.
+- Финальное ревью выявило формальный пробел: legacy plans исключались по basename,
+  что позволило бы новому файлу в другом каталоге пропустить поля v1. Исправлено
+  на три точных repo-relative пути; negative lookalike fixture добавлен.
+  Изменение затрагивает только validator/fixtures, production после 53e08ad не менялся.
+- **Следующий шаг:** commit исправления после targeted fixtures/validate, затем
+  повтор чистого CI entry point на обновлённой revision. Внешняя CI-приёмка,
+  hosted desktop и manual остаются открытыми; план не completed.

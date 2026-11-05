@@ -67,6 +67,9 @@ try {
     Verify 'placeholder-plan-fields' 1 'Required plan field'
     Write-File $plan $filled
     Verify 'filled-plan' 0
+    $lookalike = Join-Path $root 'harness/work/plans/new/HARNESS_STRUCTURE.plan.md'
+    Write-File $lookalike '# New plan cannot inherit a historical exception by name'
+    Verify 'legacy-name-at-new-path' 1 'Required plan schema'
     Write-Output "PASS static fixtures; evidence: $workspace"
 }
 finally { Pop-Location }
