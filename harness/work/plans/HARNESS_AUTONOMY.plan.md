@@ -1,11 +1,11 @@
 # 🧭 Улучшение Harness для автономной работы агента
 
-- **Статус:** `in progress`; этапы 1–3 реализованы, приёмка A открыта.
+- **Статус:** `in progress`; контур A принят 2026-11-05; этапы 5–6 выполняются.
 - **Дата:** 2026-11-03.
 - **База обследования:** `feature/UnifiedHarness`, revision `647db81`;
   перед подготовкой документа рабочее дерево чистое.
 - **Основание:** запрос автора подготовить план после разбора ограничений Harness.
-- **Результат этой работы:** план и ссылка на него в общем README Harness.
+- **Исторический результат подготовки:** план и ссылка на него в общем README Harness.
   Создание документа не означает выполнение его этапов.
 
 ## 🎯 1. Цель и наблюдаемые результаты
@@ -206,18 +206,18 @@ runner и проверки его контракта. Production C#, публи�
 
 Работы и приёмка:
 
-- [ ] Провести документальную репетицию: взять новую задачу, найти маршрут,
+- [x] Провести документальную репетицию: взять новую задачу, найти маршрут,
   заполнить краткий план, выбрать проверки, записать следующий шаг и итог.
-- [ ] Перечитать запись без истории чата и подтвердить достаточность для
+- [x] Перечитать запись без истории чата и подтвердить достаточность для
   продолжения; отдельный агент для этой проверки не требуется.
-- [ ] Выполнить новый валидатор, актуальные contract checks и реальный
+- [x] Выполнить новый валидатор, актуальные contract checks и реальный
   `Invoke-Harness.ps1 -Command check -Profile Headless`.
-- [ ] Выполнить `-Command check -Profile Full` для приёмки совместимости
+- [x] Выполнить `-Command check -Profile Full` для приёмки совместимости
   изменённого runner с обеими WPF demo в подходящем desktop-сеансе.
   Недоступный desktop оставить незакрытым пунктом, не заменять Headless PASS.
-- [ ] Сопоставить summary/logs/TRX с командами и текущими изменениями;
+- [x] Сопоставить summary/logs/TRX с командами и текущими изменениями;
   исправления после приёмки повторно проверить по затронутому маршруту.
-- [ ] Сохранить отчёт с явным результатом «контур A принят» и непроверенными
+- [x] Сохранить отчёт с явным результатом «контур A принят» и непроверенными
   условиями контура B. Full не подтверждает физический ввод/звук/recovery.
 
 ### Этап 5. Изолировать данные smoke/recovery
@@ -371,3 +371,33 @@ runner и проверки его контракта. Production C#, публи�
 - **Ближайший исполнимый шаг:** завершить статические fixtures/contract checks,
   затем настоящие Headless и Full; A ещё не принят. Все пункты B остаются открыты.
 - Этап 3: contracts exit 0, 13 групп runner + 9 static fixtures. Summary: artifacts/harness/20261105T153234584Z-6231c38f/summary.json. После добавления проверки отдельной команды contracts выполняется повтор затронутого набора.
+
+### 2026-11-05 — Приёмка контура A (до production-изменений)
+
+- **Контур A принят.** Revision `bd08b51`; Headless стартовал на чистом дереве,
+  Full — dirty (только подготовка CI и конкретизация утверждённого data contract).
+  Production C#, solution, идентичность сборок и границы доступа не менялись;
+  внешние probes остались вне solution. Среда: Windows 10.0.19045, PS 7.6.9,
+  SDK 10.0.402, desktop True. Локальный коммит блока 1–3: `bd08b51`.
+- `./harness/tools/Invoke-Harness.ps1 -Command contracts`: exit 0, 14 групп
+  runner и 9 static fixtures, summary
+  `artifacts/harness/20261105T153612654Z-44682827/summary.json`;
+  fixture evidence `artifacts/harness-runner-contract/20261105T153613661Z-604b8c64`.
+- `./harness/tools/Invoke-Harness.ps1 -Command check -Profile Headless`:
+  exit 0, validate 52 files, build 0 warnings/errors, **716 passed, 0 failed,
+  0 skipped**, все пять probe PASS. Summary/logs/TRX:
+  `artifacts/harness/20261105T153745726Z-7395ea56/`.
+- `./harness/tools/Invoke-Harness.ps1 -Command check -Profile Full`:
+  exit 0, validate 54 files, **716 passed, 0 failed, 0 skipped**, пять probe и
+  demo-Without/demo-With PASS, обе реальные WPF lifecycle self-checks завершены.
+  Summary/logs/TRX: `artifacts/harness/20261105T153931285Z-a16e0fab/`.
+- Отдельный validate exit 0: `artifacts/harness/20261105T153516378Z-648e45c7/summary.json`.
+  Репетиция SDK-задачи перечитана, входы/границы/следующий шаг достаточны без
+  истории чата. Примеры Stop/.csx не являются реализацией продукта.
+- Текущие численные результаты получены заново, не скопированы из исторических
+  188/716. Summary и TRX сопоставлены с логами и командами.
+- Manual: физический ввод, звук и ручные recovery не выполнялись. CI external
+  run, failure и upload не выполнены; конфигурация — только подготовка.
+- **Следующий исполнимый шаг:** этап 5 по утверждённому data contract: общий
+  resolver путей до bootstrap logging, isolated fixtures и regression/smoke.
+  Далее чистый локальный checkout и этап 6. Весь план остаётся in progress.
