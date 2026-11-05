@@ -72,7 +72,8 @@ try {
     )) { $null = Run $parameters 2 }
     Assert (-not (Test-Path (Join-Path $fixture 'artifacts'))) 'Invalid parameters started a working run.'
     Passed 'usage errors precede children and artifacts'
-    $null = Run @('-Command', 'doctor')
+    $doctor = Run @('-Command', 'doctor')
+    $hasDesktop = $doctor.output.Contains('desktop: True')
     $manual = Run @('-Command', 'manual', '-Scenario', 'persistence-recovery')
     Assert ($manual.output.Contains('Fixture README: persistence-recovery')) 'manual did not show the README.'
     $null = Run @('-Command', 'manual')
@@ -95,13 +96,17 @@ try {
     }
     Passed 'Headless/Debug/NoRestore, paths with spaces, foreign cwd, isolated probe order and logs'
 
-    $full = (Run @('-Command', 'check', '-Profile', 'Full')).summary
+    $full = (Run @('-Command', 'check', '-Profile', 'Full') $(if ($hasDesktop) { 0 } else { 3 })).summary
     Assert ($full.operations.Count -eq 14) 'Full did not schedule all 14 validation/restore/build/test/probe/demo operations.'
     Assert (($full.consoleModes -join ',') -eq 'Without,With') 'Full omitted a console mode.'
     Assert (@($full.operations | Where-Object name -eq 'build-solution').Count -eq 1) 'Repeated solution build.'
     Assert (@($full.operations | Where-Object name -eq 'build-demo').Count -eq 1) 'Repeated demo build.'
     Assert ($full.operations[-1].arguments -contains '--with-console') 'With-console argument was lost.'
-    Passed 'Full complete schedule, restore, single solution/demo builds'
+    if (-not $hasDesktop) {
+        Assert (@($full.operations | Where-Object status -ne 'not-run').Count -eq 0) 'Unavailable desktop ran Full operations'
+        Assert ($full.error.Contains('desktop')) 'Unavailable desktop classification was lost'
+    }
+    Passed 'Full complete schedule, single builds; unavailable desktop refuses execution without PASS'
 
     $failure = (Run @('-Command', 'build', '-NoRestore') 1 'fail').summary
     Assert ($failure.operations[0].childExitCode -eq 37 -and $failure.operations[0].status -eq 'failed') 'Original child error lost.'

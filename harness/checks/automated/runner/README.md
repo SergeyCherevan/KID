@@ -18,6 +18,10 @@ Fixture не выполняет продуктовые тесты и не отк
 продукта запускается отдельно: `Invoke-Harness.ps1 -Command check -Profile Full`.
 Тесты runner не входят в историческую базу 716 тестов KID.Tests.
 
+На Windows без desktop fixture подтверждает полный schedule Full и environment
+отказ до исполнения; при desktop выполняются fixture children. Это не продуктовый
+Full PASS. Настоящие WPF demo остаются отдельной проверкой в desktop-сеансе.
+
 Новые проверки: validate как отдельный child и первый шаг check, fail-fast при
 статическом отказе, guard executed > 0 в TRX, непустая MTP выборка, contracts
 как отдельный нерекурсивный набор. Общий запуск:

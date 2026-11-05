@@ -1,0 +1,38 @@
+name: Harness Headless
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  headless:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Validate, contracts and Headless on clean checkout
+        shell: pwsh
+        run: ./harness/tools/Invoke-CI.ps1
+      - name: Keep diagnostics on success and failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: harness-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            artifacts/harness/**/*.log
+            artifacts/harness/**/summary.json
+            artifacts/harness/**/ci-result.json
+            artifacts/harness/data-*/result.json
+            artifacts/harness/data-*/Logs/*.jsonl
+            artifacts/harness/data-*/Logs/crash-*.json
+            artifacts/harness/**/*.trx
+            artifacts/harness-runner-contract/**/result.json
+            artifacts/harness-runner-contract/**/*.log
+            artifacts/harness-runner-contract/**/*.out
+            artifacts/harness-runner-contract/**/*.err
