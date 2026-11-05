@@ -4,10 +4,12 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('Autosave', 'RestoreFixture', 'NullTabs', 'Restore')]
-    [string]$Case
+    [string]$Case,
+    [Parameter(Mandatory = $true)] [string]$DataRoot
 )
 
-$settingsDirectory = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData)) 'KID'
+Import-Module (Join-Path $PSScriptRoot '../../../tools/HarnessData.psm1') -Force
+$settingsDirectory = Assert-HarnessDataRoot $DataRoot
 $sessionPath = Join-Path $settingsDirectory 'editor-session.json'
 $referencePath = Join-Path $settingsDirectory '.codex-manual-session-reference.cs'
 $statePath = Join-Path $settingsDirectory '.codex-manual-session-state.json'

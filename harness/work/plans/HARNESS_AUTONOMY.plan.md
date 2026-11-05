@@ -233,29 +233,29 @@ runner и проверки его контракта. Production C#, публи�
 
 Работы:
 
-- [ ] Определить единый поддержанный способ явного выбора каталога тестовых
+- [x] Определить единый поддержанный способ явного выбора каталога тестовых
   данных. Выбор CLI/env/DI-контракта и охват логов зафиксировать до реализации.
   Подмена process-wide APPDATA не считается готовым решением.
-- [ ] Сохранить пути и приоритеты обычного запуска, форматы пользовательских
+- [x] Сохранить пути и приоритеты обычного запуска, форматы пользовательских
   файлов и поведение persistence/recovery при отсутствии override.
-- [ ] Научить fixtures и тестовый запуск использовать один уникальный каталог
+- [x] Научить fixtures и тестовый запуск использовать один уникальный каталог
   внутри artifacts/harness; явно передавать его через весь сценарий.
-- [ ] Добавить машинно наблюдаемые проверки результата там, где это возможно;
+- [x] Добавить машинно наблюдаемые проверки результата там, где это возможно;
   отделить их от оценки интерфейса, физического ввода и звука.
-- [ ] При cleanup проверять абсолютный путь и границы созданного каталога;
+- [x] При cleanup проверять абсолютный путь и границы созданного каталога;
   удалять только данные своего запуска, не чужие процессы и не рабочий профиль.
 
 Приёмка:
 
-- [ ] Проверены обычный запуск и запуск с override; разные тестовые каталоги
+- [x] Проверены обычный запуск и запуск с override; разные тестовые каталоги
   не разделяют settings/session. Общий lock checkout runner сохраняется.
-- [ ] Успешный, ошибочный и отменённый сценарии не меняют реальные
+- [x] Успешный, ошибочный и отменённый сценарии не меняют реальные
   settings/editor-session пользователя; контроль выполняется до и после.
-- [ ] Относительный/неверный/недоступный путь обработан по зафиксированному
+- [x] Относительный/неверный/недоступный путь обработан по зафиксированному
   контракту без молчаливого fallback на реальные пользовательские данные.
-- [ ] Автоматизируемые случаи повреждения settings/session и повторного
+- [x] Автоматизируемые случаи повреждения settings/session и повторного
   запуска проходят в изоляции; неподдержанные ручные случаи явно перечислены.
-- [ ] Выполнены новые regression tests, Headless и соответствующие WPF smoke;
+- [x] Выполнены новые regression tests, Headless и соответствующие WPF smoke;
   context и ручные инструкции обновлены. Ручной PASS не заявлен без исполнения.
 
 ### Этап 6. Проверять чистый checkout независимо
@@ -401,3 +401,66 @@ runner и проверки его контракта. Production C#, публи�
 - **Следующий исполнимый шаг:** этап 5 по утверждённому data contract: общий
   resolver путей до bootstrap logging, isolated fixtures и regression/smoke.
   Далее чистый локальный checkout и этап 6. Весь план остаётся in progress.
+### 2026-11-05 — Этап 5: реализация и targeted приёмка
+
+- До production-правок A принят и записан коммитом `22e2685`.
+  Контракт KID_TEST_DATA_ROOT/Logs/crash reports утверждён автором, техническая
+  конкретизация marker и fail closed внесена до реализации.
+- Внутренний ApplicationDataPaths фиксирует выбор один раз на процесс; default
+  APPDATA/LOCALAPPDATA и приоритет логов сохранены. Явный root проверяется до
+  best-effort logging; неверный root не допускает чтения/записи реального профиля.
+  Recovery fixtures требуют DataRoot. Process-wide APPDATA не меняется.
+- `dotnet build harness/checks/probes/KID.Data.Smoke/KID.Data.Smoke.csproj -c Release --nologo`:
+  exit 0, 0 warnings/errors. Внешний probe вне solution.
+- `./harness/checks/automated/static/Verify-DataIsolation.ps1 -IncludeWpf`:
+  exit 0. Success/restart/two roots/failure 37/cancelled owned child/restart,
+  corrupt settings/session, invalid relative/missing/root/blocked Logs/reparse,
+  fixture Prepare/Restore, cleanup owner guard, два реальных WPF open-close PASS.
+  Evidence `artifacts/harness/data-a5fc61c1a2ad484caceb0e8de120a5c0/`:
+  result.json, profile-before/after hashes, child logs. Реальные settings/session
+  и существующие файлы логов не изменились. Cancellation здесь — termination
+  только своего процесса после ready; настоящий Ctrl+C проверен runner contracts.
+- Normal launch проверен выбором прежних путей и конструкторами без записи
+  пользовательских настроек. Полный IDE без override не запускался, так как он
+  сохраняет реальные настройки при закрытии; это ограничение проверки явно
+  следует утверждённому контракту. Full runtime и isolated WPF выполняются отдельно.
+- Targeted MTP: первая OR-команда дала 73 passed, но неверный class name исключил
+  EditorSessionServiceTests. После чтения actual namespace исправлена команда:
+  `dotnet test --project harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build --no-restore --filter-class KID.Tests.Persistence.ApplicationDataPathsTests KID.Tests.Initialize.WindowConfigurationServiceTests KID.Tests.Files.EditorSessionServiceTests --minimum-expected-tests 1 --results-directory artifacts/harness/autonomy-discovery/data-regression-correct --report-xunit-trx`:
+  **88 passed, 0 skipped/failed**, exit 0. Включение каждого класса проверяется в
+  TRX; общий nonempty guard не гарантирует вклад каждого OR-фильтра. Карта дополнена.
+- Параллельный validate во время data smoke получил ожидаемый busy lock exit 3,
+  `artifacts/harness/20261105T154541248Z-c83a38ee/summary.json`. Новая гипотеза не
+  нужна продукту: повтор после освобождения lock прошёл, exit 0, 56 files,
+  `artifacts/harness/20261105T154653076Z-1b727d5c/summary.json`.
+- Добавлены точные child arguments/root в smoke result и inaccessible-marker
+  fixture; эти изменения требуют повтора data smoke. Запущен Headless после
+  production-правок. Следующий шаг: завершить его, повторить data smoke и принять
+  этап 5; затем commit, чистый checkout и общий CI entry point.
+
+### 2026-11-05 — Приёмка этапа 5
+
+- Этап 5 принят в автоматизируемых границах утверждённого контракта. Проверка
+  normal paths/constructors не пишет реальный профиль; полный обычный запуск IDE
+  без override не заявлен. Физический ввод, слышимость и manual recovery-dialog/
+  autosave остаются непроверенными, автоматическая приёмка их не подменяет.
+- `./harness/tools/Invoke-Harness.ps1 -Command check -Profile Headless`: exit 0,
+  **724 passed, 0 failed/skipped**, build 0 warnings/errors, пять probe PASS;
+  summary/logs/TRX `artifacts/harness/20261105T154837073Z-15a0311a/`.
+- Финальный external smoke build: exit 0. Итоговый
+  `./harness/checks/automated/static/Verify-DataIsolation.ps1 -IncludeWpf`: exit 0,
+  evidence `artifacts/harness/data-31404eff9b58488d87ae2a85d97102f2/`.
+  Проверено чтение фактически подготовленных NullFontFamily, DuplicateFontSize,
+  NullTabs и двухвкладочного RestoreFixture до Restore, без подмены fixture.
+  Structured jsonl и crash reports находятся внутри root/Logs. Inaccessible owner
+  проверен exclusive file handle, Logs-as-file и reparse root явно отвергаются.
+  Два WPF open/close и restart завершились exit 0. До/после профиль неизменен.
+- Область diff: path resolver и три места использования в IDE; external probe,
+  regression tests, fixtures/helpers/docs. Solution, product assembly names,
+  public signatures и границы доступа сохранены. Данные smoke остаются ignored.
+- Последующие изменения только CI/contract fixture: fixture теперь проверяет
+  Full schedule и ожидаемый environment отказ при недоступном desktop, чтобы
+  hosted Headless job не требовал реального Full. Product Full не пропускается.
+- **Ближайший шаг:** локальный коммит этапа 5, commit CI-конфигурации, новый
+  чистый локальный clone и `Invoke-CI.ps1`; внешний GitHub run заблокирован
+  отсутствием публикации новой revision (push явно запрещён).

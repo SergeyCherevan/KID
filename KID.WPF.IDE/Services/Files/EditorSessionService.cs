@@ -20,9 +20,7 @@ namespace KID.Services.Files
         public EditorSessionService(IFileService fileService)
             : this(
                 fileService,
-                Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                    "KID"))
+                ApplicationDataPaths.SettingsDirectory)
         {
         }
 

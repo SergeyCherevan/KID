@@ -4,16 +4,32 @@
 Скрипт [Prepare-PersistenceRecovery.ps1](Prepare-PersistenceRecovery.ps1)
 поддерживает `-Case NullFontFamily | DuplicateFontSize | Restore`.
 
+## 🧪 Обязательная изоляция
+
+Сначала создайте root в PowerShell 7:
+
+```powershell
+Import-Module ./harness/tools/HarnessData.psm1
+$dataRoot = New-HarnessDataRoot
+```
+
+Все команды подготовки/Restore требуют тот же `-DataRoot $dataRoot`.
+Запускайте IDE с `KID_TEST_DATA_ROOT=$dataRoot` **только в дочернем process
+ environment**; [готовый smoke](../../probes/KID.Data.Smoke/README.md) показывает
+автоматизированный запуск и сравнение профиля. Переменная APPDATA не меняется.
+Путь вне artifacts/harness, без GUID marker или через reparse point отвергается.
+Старые команды ниже были обновлены для изоляции; прежний ручной PASS не заявлен.
+
 ## Подготовка и проверка
 
 Закройте все экземпляры KID. Команды выполняются из корня checkout в PowerShell.
-Подготовка меняет `%APPDATA%/KID/settings.json`, предварительно сохраняя
+Подготовка меняет `settings.json` только в явно переданном owned DataRoot, предварительно сохраняя
 существующий файл в `.codex-manual-settings-backup.json`, а факт его наличия —
 в `.codex-manual-settings-state.json`. Второй активный backup не перезаписывается.
 
 ```powershell
-./harness/checks/manual/persistence-recovery/Prepare-PersistenceRecovery.ps1 -Case NullFontFamily
-dotnet run --project KID.WPF.IDE -c Release
+./harness/checks/manual/persistence-recovery/Prepare-PersistenceRecovery.ps1 -Case NullFontFamily -DataRoot $dataRoot
+./harness/tools/Start-KIDIsolated.ps1 -DataRoot $dataRoot
 ```
 
 `NullFontFamily` записывает `{"FontFamily":null}`, `DuplicateFontSize` —
@@ -24,7 +40,7 @@ dotnet run --project KID.WPF.IDE -c Release
 ## Восстановление
 
 ```powershell
-./harness/checks/manual/persistence-recovery/Prepare-PersistenceRecovery.ps1 -Case Restore
+./harness/checks/manual/persistence-recovery/Prepare-PersistenceRecovery.ps1 -Case Restore -DataRoot $dataRoot
 ```
 
 Restore возвращает исходный файл, а если его не было — удаляет тестовый

@@ -1100,3 +1100,14 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 - Перемещение основано на `RenderTransform`, поэтому корректно работает для `Line/Polygon/Path` (и любых `UIElement`).
 - Столкновения в первой версии определяются по пересечению bounding-box графических элементов.
 
+
+## 🧪 Явные данные smoke/recovery
+
+При явно переданном дочернему процессу `KID_TEST_DATA_ROOT` общий внутренний
+ApplicationDataPaths фиксирует owned root один раз на процесс до bootstrap
+logger. Settings/editor session находятся в root; Logs и crash reports — root/Logs.
+Проверяются абсолютный путь, GUID marker, reparse points, возможность записи;
+ошибка override не переводит процесс к реальным данным. Без переменной прежние
+APPDATA/LOCALAPPDATA пути, форматы и приоритеты сохранены. APPDATA не подменяется.
+[Контракт](../../work/contracts/HARNESS_DATA_ROOT_CONTRACT.md) и
+[smoke](../../checks/probes/KID.Data.Smoke/README.md) описывают границы.

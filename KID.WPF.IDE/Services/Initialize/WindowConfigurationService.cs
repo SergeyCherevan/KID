@@ -56,8 +56,7 @@ namespace KID.Services.Initialize
             _defaultUILanguage = string.IsNullOrEmpty(initialLanguage) ? "en" : initialLanguage;
             Settings.UILanguage = _defaultUILanguage;
 
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            _appDataDirectory = Path.Combine(appDataPath, "KID");
+            _appDataDirectory = KID.Services.Files.ApplicationDataPaths.SettingsDirectory;
             _settingsPath = Path.Combine(_appDataDirectory, "settings.json");
             _defaultConfigurationPath = Path.Combine(
                 AppContext.BaseDirectory,

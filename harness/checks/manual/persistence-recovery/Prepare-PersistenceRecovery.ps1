@@ -4,10 +4,12 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidateSet('NullFontFamily', 'DuplicateFontSize', 'Restore')]
-    [string]$Case
+    [string]$Case,
+    [Parameter(Mandatory = $true)] [string]$DataRoot
 )
 
-$settingsDirectory = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData)) 'KID'
+Import-Module (Join-Path $PSScriptRoot '../../../tools/HarnessData.psm1') -Force
+$settingsDirectory = Assert-HarnessDataRoot $DataRoot
 $settingsPath = Join-Path $settingsDirectory 'settings.json'
 $backupPath = Join-Path $settingsDirectory '.codex-manual-settings-backup.json'
 $statePath = Join-Path $settingsDirectory '.codex-manual-settings-state.json'

@@ -101,3 +101,8 @@ Check начинает с validate; Headless/Full сохраняют полны�
 набор. Contracts запускается отдельно при изменении tools/runner и в CI, никогда
 не вызывает общий check. Все рабочие дочерние процессы используют общий
 lock/timeout/cancel/log/summary. Test требует непустую выборку и TRX с executed > 0.
+Изолированные smoke/recovery: [контракт данных](work/contracts/HARNESS_DATA_ROOT_CONTRACT.md),
+[внешний data smoke](checks/probes/KID.Data.Smoke/README.md). Recovery fixtures
+требуют owned DataRoot; launcher передаёт override только дочернему процессу.
+Обычный запуск без override сохраняет пользовательские пути. Проверки профиля
+до/после и cleanup guard входят в data smoke, manual приёмка остаётся отдельной.

@@ -17,24 +17,19 @@ public static class LoggingConfiguration
 
     public static string LogsDirectory
     {
-        get
-        {
-            var localApplicationData = Environment.GetFolderPath(
-                Environment.SpecialFolder.LocalApplicationData);
-
-            return string.IsNullOrWhiteSpace(localApplicationData)
-                ? Path.Combine(AppContext.BaseDirectory, "Logs")
-                : Path.Combine(localApplicationData, ApplicationFolderName, "Logs");
-        }
+        get => KID.Services.Files.ApplicationDataPaths.LogsDirectory;
     }
 
     public static string LogFilePattern => Path.Combine(LogsDirectory, LogFileName);
 
     public static Serilog.ILogger CreateBootstrapLogger()
     {
+        // Validate an explicit test root outside the best-effort logging catch.
+        // An invalid override must never continue with real profile data.
+        var logsDirectory = LogsDirectory;
         try
         {
-            Directory.CreateDirectory(LogsDirectory);
+            Directory.CreateDirectory(logsDirectory);
 
             return new LoggerConfiguration()
                 .MinimumLevel.Information()
