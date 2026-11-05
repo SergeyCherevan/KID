@@ -586,3 +586,34 @@ runner и проверки его контракта. Production C#, публи�
   revision, затем контрольный failure в отдельной fixture-ветке и доступность
   uploaded logs/summary/TRX; сравнить SDK/revision/команды с этим протоколом.
   До этого внешние чекбоксы этапа 6 остаются открытыми. Push не выполнялся.
+
+### 2026-11-05 — Запрос внешней приёмки: публикация ещё отсутствует
+
+- Запрос автора: принять внешний GitHub Actions после публикации автором.
+  Push остаётся запрещённым; новая внешняя публикация не выполнялась.
+- Локально: feature/UnifiedHarness, HEAD
+  `6a4b9db11f8522b6d76bd4abe0b157647ced9096`, до записи чистое рабочее дерево.
+  Файлы текущей CI-конфигурации, CI entry point, AGENTS и Harness README перечитаны.
+- Connector search_branches подтвердил feature/UnifiedHarness. Fetch файла
+  `.github/workflows/harness.yml` на этой ветке вернул HTTP 404. Ограниченный
+  PR-only список runs коннектора не использован как доказательство отсутствия
+  всех запусков; дополнительно выполнены GET-запросы GitHub CLI:
+  `gh api --method GET repos/SergeyCherevan/KID/branches/feature%2FUnifiedHarness`,
+  `gh api --method GET 'repos/SergeyCherevan/KID/actions/workflows?per_page=100'`,
+  `gh api --method GET 'repos/SergeyCherevan/KID/actions/runs?per_page=100'`,
+  `gh api --method GET repos/SergeyCherevan/KID/commits/6a4b9db11f8522b6d76bd4abe0b157647ced9096`.
+- Результат 2026-11-05 16:20 UTC: удалённая ветка на
+  `647db8160dd9cf1c93d5e13cc764854fc83f9534`; workflows total_count=0,
+  runs total_count=0. Lookup локального commit: HTTP 422, No commit found.
+  GET branch/workflows/runs — exit 0; lookup commit — exit 1 (ожидаемая
+  диагностика отсутствия публикации, не ошибка продукта).
+- JSON-ответы и stderr сохранены в `D:/Visual Studio Projects/KID/artifacts/harness/external-ci-20261105T162040Z`.
+  Внешний success, intentional failure и доступность uploaded artifacts не
+  проверены, так как workflow и проверяемая revision ещё не опубликованы.
+  Исторические локальные PASS остаются отдельными доказательствами.
+- **Статус:** внешняя приёмка этапа 6 открыта; весь план in progress.
+  **Следующий исполнимый шаг:** автор отдельно публикует изменения Harness;
+  затем проверить workflow нужной revision, дождаться результата и прочитать
+  jobs/logs/artifacts. После success требуется внешний контрольный failure.
+  В текущем запросе push, создание внешней fixture-ветки и dispatch отсутствующего
+  workflow не выполняются. Ручные проверки этим запросом не закрываются.
