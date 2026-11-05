@@ -108,5 +108,6 @@ lock/timeout/cancel/log/summary. Test требует непустую выбор
 до/после и cleanup guard входят в data smoke, manual приёмка остаётся отдельной.
 
 [CI-интеграция и чистый checkout](checks/CI.md): единый Invoke-CI.ps1 и GitHub
-Actions Windows Headless с 14-дневной диагностикой. Локальный clean success и
-контрольный отказ подтверждены в плане; внешний run/upload ещё не проверены.
+Actions Windows Headless с 14-дневной диагностикой. Локальные и внешние
+success/intentional failure подтверждены; оба архива диагностики скачаны и
+проверены. Точные revision/run IDs находятся в плане.

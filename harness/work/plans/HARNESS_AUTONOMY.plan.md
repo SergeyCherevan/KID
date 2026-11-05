@@ -1,6 +1,6 @@
 # 🧭 Улучшение Harness для автономной работы агента
 
-- **Статус:** `in progress`; этапы 1–5 приняты в описанных границах; локальная часть 6 выполнена, внешняя приёмка CI открыта.
+- **Статус:** `in progress`; контур A и этап 6 приняты; полный обычный запуск IDE без override (этап 5) остаётся непроверенным.
 - **Дата:** 2026-11-03.
 - **База обследования:** `feature/UnifiedHarness`, revision `647db81`;
   перед подготовкой документа рабочее дерево чистое.
@@ -255,7 +255,7 @@ runner и проверки его контракта. Production C#, публи�
 
 Приёмка:
 
-- [x] Проверены обычный запуск и запуск с override; разные тестовые каталоги
+- [ ] Проверены обычный запуск и запуск с override; разные тестовые каталоги
   не разделяют settings/session. Общий lock checkout runner сохраняется.
 - [x] Успешный, ошибочный и отменённый сценарии не меняют реальные
   settings/editor-session пользователя; контроль выполняется до и после.
@@ -265,6 +265,12 @@ runner и проверки его контракта. Production C#, публи�
   запуска проходят в изоляции; неподдержанные ручные случаи явно перечислены.
 - [x] Выполнены новые regression tests, Headless и соответствующие WPF smoke;
   context и ручные инструкции обновлены. Ручной PASS не заявлен без исполнения.
+
+Уточнение при внешней приёмке 2026-11-05: первый критерий этапа 5 остаётся
+открытым в части полного ordinary IDE запуска без override. Выбор путей и
+конструкторы без записи профиля проверены, но не заменяют этот запуск. Изоляция,
+regression, Headless и WPF smoke с override подтверждены. Историческая отметка
+приёмки автоматизируемой части выше не является полной приёмкой этого критерия.
 
 ### Этап 6. Проверять чистый checkout независимо
 
@@ -288,9 +294,9 @@ runner и проверки его контракта. Production C#, публи�
 
 - [x] Новый чистый checkout проходит обязательный автоматический набор без
   локальных bin/obj, игнорируемых fixtures и пользовательских настроек.
-- [ ] Контрольный отказ теста/валидатора в отдельной проверочной ветке или
+- [x] Контрольный отказ теста/валидатора в отдельной проверочной ветке или
   fixture делает CI неуспешным, при этом диагностика доступна.
-- [ ] Версия SDK, revision, реальные команды и результаты сопоставимы с локальным
+- [x] Версия SDK, revision, реальные команды и результаты сопоставимы с локальным
   запуском. Если есть cache, проверен также холодный прогон без cache.
 - [x] При отсутствии доступа или desktop соответствующий результат обозначен
   непроверенным, а не «CI готов» или «Full пройден».
@@ -617,3 +623,72 @@ runner и проверки его контракта. Production C#, публи�
   jobs/logs/artifacts. После success требуется внешний контрольный failure.
   В текущем запросе push, создание внешней fixture-ветки и dispatch отсутствующего
   workflow не выполняются. Ручные проверки этим запросом не закрываются.
+
+### 2026-11-05 — Фактическая внешняя приёмка GitHub Actions
+
+- **Этап 6 принят.** Автор опубликовал feature/UnifiedHarness на
+  `9c0934848a787aa620bc16cfcce78e422e0a84aa`; исходное локальное дерево чистое,
+  HEAD совпадает с удалённой веткой. В отличие от предыдущей записи workflow
+  и revision теперь реально доступны. Контекст: AGENTS, Harness README,
+  DEVELOPMENT, CI.md, global.json, workflow и Invoke-CI.ps1 перечитаны.
+- [Успешный внешний run 42063766309](https://github.com/SergeyCherevan/KID/actions/runs/42063766309):
+  event push, branch feature/UnifiedHarness, SHA 9c09348, conclusion success,
+  headless job 127372155924. Checkout, setup-dotnet, CI entry point и always-upload
+  завершены success. Полный job занял 3m26s; configured cache отсутствует.
+- Среда GitHub: Windows NT 10.0.26100, image windows-2025-vs2026
+  20261030.294.1, runner 2.338.2, PowerShell 7.6.9, SDK **10.0.403**.
+  Локальный SDK был 10.0.402; оба допустимы global.json 10.0.100/latestFeature.
+  CI-result: dirty=false, правильная revision, все 5 команд exit 0.
+  Validate 58 файлов; runner 14 групп; static 10 fixtures; Headless
+  **724 executed/passed, 0 failed/notExecuted**, пять probe PASS.
+  Isolated data smoke: 21 checks, включая 20 child profile-invariant checks.
+  IncludeWpf=false; product Full/manual этим run не подтверждаются.
+- Артефакт success **13433910536**, 167173 bytes,
+  `harness-9c0934848a787aa620bc16cfcce78e422e0a84aa-1`, expires
+  2026-11-19T16:25:55Z. Коннектор подтвердил доступность скачивания;
+  GitHub CLI скачал и распаковал архив. Проверены 3 summary с expected revision,
+  все operations passed, CI-result, TRX 724/724, 14-group runner result и data
+  result. В архиве 85 *.log и 13 *.json; JSON payloads child smoke с именем
+  result.json отличались от верхнего aggregate, при проверке они разделены.
+- Для intentional failure подготовлен отдельный clone под ignored evidence,
+  ветка `codex/harness-ci-negative-control-20261105`, commit
+  `ef0c6f7d3c57358bbdc736c826194d4e069e3fee`. Единственный diff —
+  harness/INTENTIONAL_CI_FAILURE.md с отсутствующей Markdown-целью. Локальный
+  Invoke-CI дал ожидаемый exit 1. Пользователь отдельно разрешил **push только
+  этой ветки**; аккаунт SergeyCherevan, remote URL, branch и SHA проверены.
+  Выполнен ровно `git push origin HEAD:refs/heads/codex/harness-ci-negative-control-20261105`.
+  Основная feature-ветка не публиковалась агентом и осталась на 9c09348.
+- [Контрольный внешний run 42064757677](https://github.com/SergeyCherevan/KID/actions/runs/42064757677):
+  SHA ef0c6f7, conclusion **failure**, job 127375694123. CI step failed, но
+  Keep diagnostics step success. Скачан артефакт **13433975619**, 2301 bytes,
+  expires 2026-11-19T16:28:34Z. CI-result: clean tree, exit 1, status failed,
+  выполнена только validate. Summary: childExitCode=1. Лог указывает точную
+  причину `INTENTIONAL_CI_FAILURE.md:3: Missing target: THIS_TARGET_INTENTIONALLY_DOES_NOT_EXIST.md`.
+  Это ожидаемый контрольный отказ, не регрессия feature-ветки. Ветка не сливалась
+  и не удалялась; отдельного разрешения на удаление/merge не было.
+- Точные read-only команды: `gh api --method GET` для branch/workflows/runs/commit;
+  `gh run watch 42063766309 --repo SergeyCherevan/KID --exit-status --interval 15`;
+  `gh run download <runId> --repo SergeyCherevan/KID --name <artifactName> --dir <owned evidence directory>`;
+  `gh run view 42064757677 --repo SergeyCherevan/KID --log`.
+  Параметры реальных CI child-команд доступны в скачанных ci-result/summary.
+- Диагностика и машиночитаемая приёмка: `artifacts/harness/external-ci-20261105T162338Z/`.
+  Ключевые файлы: success-acceptance.json, strict-artifact-verification.json,
+  failure-acceptance.json, success/failure-run-final.json, job logs,
+  success-artifact/ и failure-artifact/, negative-control.json и push logs.
+  Локальная дополнительная проверка JSON сначала ошибочно вызвала ContainsKey
+  у PSCustomObject; исправлена на PSObject.Properties с ErrorActionPreference=Stop.
+  Повтор строгой проверки подтвердил 3 summaries, 724 tests, 14/10 fixtures и
+  все 20 profile invariants. Этот локальный parse error не относится к CI run.
+- Наблюдение: Actions выдал предупреждение о Node.js 20 в actions/*@v4 и
+  автоматически исполнил их на Node.js 24; оба uploads и нужные steps прошли.
+  Обновление версий actions в этой приёмке не выполнялось.
+- **Весь план пока in progress.** При аудите чекбоксов уточнён незавершённый
+  критерий этапа 5: полный обычный IDE запуск без override не выполнялся;
+  normal path/constructor checks не объявляются его заменой. Ручные input/audio,
+  recovery-dialog/autosave остаются отдельно непроверенными. Scope не пересмотрен.
+- **Следующий исполнимый шаг:** согласовать и выполнить полную проверку обычного
+  запуска без override в отдельном Windows-профиле/среде, не меняя рабочие
+  настройки автора; до этого первый критерий этапа 5 открыт. Для внешнего CI
+  обязательств больше нет: success, expected failure и доступность обоих архивов
+  подтверждены. Финальная запись создаёт только локальный documentation commit;
+  разрешение на push основной ветки не предоставлялось.
