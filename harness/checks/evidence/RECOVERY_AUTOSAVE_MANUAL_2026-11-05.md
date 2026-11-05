@@ -1,6 +1,6 @@
 # 🛟 Ручная приёмка recovery/autosave — 2026-11-05
 
-Статус: **in progress**. База: feature/UnifiedHarness, `9134e2f`, исходное дерево
+Статус: **completed; пять сценариев PASS**. База: feature/UnifiedHarness, `9134e2f`, исходное дерево
 чистое. Это новая ручная проверка, не повторная атрибуция исторического PASS.
 Ход работы: [план](../../work/plans/RECOVERY_AUTOSAVE_MANUAL_ACCEPTANCE.plan.md).
 
@@ -36,6 +36,17 @@
   после ОК наблюдался StartupCompleted, итоговая сессия содержит рабочую вкладку.
   Fixture Restore выполнен; основной профиль неизменен. Скриншот подтверждает
   сам диалог, а результат после ОК подтверждён отдельно словами автора и файлами.
+- **Autosave — PASS.** Автор вручную вставил
+  `// KID_MANUAL_AUTOSAVE_20261105_73b9b4aa` в начальную NewFile.cs*, без Save.
+  После уточнения зафиксировано: Ctrl+N/вторая вкладка не использовались;
+  начальная вкладка уже была новой и несохранённой. Пользовательский скриншот
+  подтверждает маркер и звёздочку перед прерыванием.
+  Реальный editor-session.json содержал маркер, NewFilePath и Content != SavedContent
+  до kill. Агент намеренно завершил только проверенный PID 31492, exit -1;
+  bytes/hash снимка до и после совпали. Restart с тем же root: PID 14016.
+  Автор подтвердил: «Маркер и * восстановились, окно закрыл без сохранения».
+  Restart завершился exit 0, StartupCompleted и FatalShutdown=false в логе;
+  Discard убрал несохранённый маркер из финального снимка. Restore выполнен.
 
 UX-наблюдение: локализованный префикс ошибки восстановления сопровождается сырыми
 английскими подробностями JSON (Tabs/null, тип модели, Path/LineNumber/BytePosition).
@@ -43,10 +54,26 @@ UX-наблюдение: локализованный префикс ошибк�
 понятном сообщении. В данном прогоне production-код не менялся. Пользовательский
 скриншот сохранён в ignored evidence как NullTabs-user-screenshot.png.
 
-## Пока не приняты
+## Границы и итог
 
-- Autosave: ручной ввод, реальный autosave, kill только своего PID, restart и
-  видимый несохранённый маркер — fixture подготовлен, сценарий ещё не выполнен.
+Все пять сценариев подтверждены текущими ответами автора. Все тестовые процессы
+закрыты, все пять fixtures Restore выполнены; активных state-файлов нет.
+До/после сравнивались также состав и SHA256 всех 17 контролируемых позиций
+рабочих settings/session/Logs автора — unchanged=true. DLL не менялась.
+Computer Use не применялся, production-файлы не менялись, push не выполнялся.
+
+Это базовый manual smoke, а не полная матрица I/O/JSON/аварий. Физический ввод
+в Console, слышимость звука и релизная готовность не подтверждаются. Автоматические
+exit/JSON/log checks и субъективная визуальная оценка автора остаются разными
+источниками доказательств.
+
+Одноразовый safety guard первоначально сравнил JSON DateTime с ISO string;
+отказы до kill сохранены. UTC ticks, PID и executable подтвердили тот же процесс.
+Kill выполнен агентом с этими проверками, а не ошибочной веткой controller.
+Поэтому raw Autosave-initial-result.json имеет failed/forcedCrash=false, exit -1:
+controller не посылал Kill сам. Это ожидаемое прерывание, подтверждённое отдельно
+в autosave-authorized-crash.json и autosave-crash-checkpoint.json, а не crash-баг IDE.
+Исходный raw результат не переписан; guard исправлен только в ignored helper.
 
 ## Диагностика
 
@@ -56,3 +83,8 @@ Session.json содержит отдельные roots/PID/status и марке�
 подтверждённый источник user. Сохранены исходные fixtures, итоговые JSON,
 stdout/stderr, structured logs и baseline hashes. Run-ManualCase.ps1 удерживает
 общий runner.lock, пока соответствующее тестовое окно открыто.
+Итог: acceptance.json, пять case-acceptance.json, author-profile-before/after.json,
+autosave-confirmed-before-crash.json, autosave-crash-checkpoint.json,
+Autosave-user-before-crash.png и NullTabs-user-screenshot.png. Первые четыре
+сценария зафиксированы промежуточным локальным commit bcbda31; финальный commit
+содержит завершение autosave и обновление документации, без публикации.
