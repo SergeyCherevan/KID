@@ -1,6 +1,9 @@
 # 🧭 Улучшение Harness для автономной работы агента
 
-- **Статус:** `in progress`; контур A и этап 6 приняты; полный обычный запуск IDE без override (этап 5) остаётся непроверенным.
+- **Статус:** `completed`; обязательная приёмка всех шести этапов завершена 2026-11-05.
+  Полный ordinary IDE запуск без override принят в отдельном Windows-профиле.
+  Физический ввод, звук и ручная визуальная recovery/autosave приёмка остаются
+  отдельными непроверенными условиями, не объявляются PASS этим планом.
 - **Дата:** 2026-11-03.
 - **База обследования:** `feature/UnifiedHarness`, revision `647db81`;
   перед подготовкой документа рабочее дерево чистое.
@@ -255,7 +258,7 @@ runner и проверки его контракта. Production C#, публи�
 
 Приёмка:
 
-- [ ] Проверены обычный запуск и запуск с override; разные тестовые каталоги
+- [x] Проверены обычный запуск и запуск с override; разные тестовые каталоги
   не разделяют settings/session. Общий lock checkout runner сохраняется.
 - [x] Успешный, ошибочный и отменённый сценарии не меняют реальные
   settings/editor-session пользователя; контроль выполняется до и после.
@@ -266,11 +269,13 @@ runner и проверки его контракта. Production C#, публи�
 - [x] Выполнены новые regression tests, Headless и соответствующие WPF smoke;
   context и ручные инструкции обновлены. Ручной PASS не заявлен без исполнения.
 
-Уточнение при внешней приёмке 2026-11-05: первый критерий этапа 5 остаётся
+Историческое уточнение при внешней приёмке 2026-11-05: первый критерий этапа 5 оставался
 открытым в части полного ordinary IDE запуска без override. Выбор путей и
 конструкторы без записи профиля проверены, но не заменяют этот запуск. Изоляция,
 regression, Headless и WPF smoke с override подтверждены. Историческая отметка
 приёмки автоматизируемой части выше не является полной приёмкой этого критерия.
+Критерий закрыт последующей фактической проверкой отдельного Windows-профиля;
+команды, неуспешные попытки и успешный протокол сохранены в конце журнала.
 
 ### Этап 6. Проверять чистый checkout независимо
 
@@ -323,10 +328,12 @@ regression, Headless и WPF smoke с override подтверждены. Исто
 - CI выбран автором: GitHub Actions, Windows Headless, диагностика 14 дней,
   без configured cache; Full только с пригодным desktop. Подготовлена одна
   конфигурация, внешний CI ранее отсутствовал по ответу автора.
-- Открыто: внешний успешный run, контрольный failure и доступность uploaded
-  artifacts. Новая revision только локальная; push/публикация явно запрещены.
-  Нужна отдельно разрешённая публикация вне текущей задачи или запуск автором
-  после собственной публикации. Это блокер внешней приёмки, не отказ продукта.
+- Внешние success, intentional failure и скачивание обоих архивов подтверждены
+  в журнале 2026-11-05. Автор опубликовал feature revision; отдельное разрешение
+  на push контрольной ветки исполнено точно в его границах.
+- Обычный IDE запуск без override подтверждён двумя полными open/close в
+  уже загруженном отдельном Windows-профиле CodexSandboxOffline. Настройки
+  основного профиля автора не менялись; блокеров обязательной приёмки нет.
 - Непроверенные manual условия: физический ввод, слышимость, визуальная оценка
   recovery и autosave через принудительное закрытие IDE. Автоматические проверки
   не превращают эти условия в PASS. Full hosted job не включён без desktop.
@@ -692,3 +699,75 @@ regression, Headless и WPF smoke с override подтверждены. Исто
   обязательств больше нет: success, expected failure и доступность обоих архивов
   подтверждены. Финальная запись создаёт только локальный documentation commit;
   разрешение на push основной ветки не предоставлялось.
+
+### 2026-11-05 — Обычный IDE запуск без override в отдельном Windows-профиле
+
+- **Последний критерий этапа 5 принят; все шесть этапов completed.** База
+  `d4f5f18eb6e9c679af0a85f1d5c5a8f5e16c0299`, feature/UnifiedHarness,
+  исходное дерево чистое. Production/solution/API не изменялись; source diff
+  KID.WPF.IDE/KID.Library относительно принятого 0717fc2 пуст. Использованы
+  существующие Release-бинарники с SHA256 до/после: binary-hashes.json,
+  ordinary-profile-result.json. Сборки и старые Headless/Full не запускались
+  повторно: новая проверка выполняет именно обычный production lifecycle.
+- Автор разрешил полную проверку в отдельном Windows-профиле. Read-only
+  inventory подтвердил существующий загруженный CodexSandboxOffline, SID
+  `S-1-5-21-3274416240-32604130-887719536-1009`, session 2, UserInteractive=true.
+  Основной пользователь: chere, SID с суффиксом 1002. Новые учётные записи,
+  пароли, registry/profile settings, ACL и системные разрешения не менялись.
+- Важное ограничение executor: sandbox token имеет SID 1009, но наследует
+  APPDATA/LOCALAPPDATA основного chere. Такой старт был отвергнут до запуска IDE.
+  Windows `CreateEnvironmentBlock(current token, inherit=false)` вернула родной
+  полный блок загруженного профиля. В отдельном дочернем PowerShell подтверждены
+  identity/SID, UserProfile, Roaming и Local под C:/Users/CodexSandboxOffline.
+  [Контракт Windows API](https://learn.microsoft.com/en-us/windows/win32/api/userenv/nf-userenv-createenvironmentblock).
+  Произвольные APPDATA значения не задавались; среда родительского процесса и
+  постоянные environment settings не менялись. KID_TEST_DATA_ROOT отсутствует.
+  Сам IDE наследует эту проверенную штатную среду без каких-либо env edits.
+- До первого старта KID-каталоги в отдельном профиле отсутствовали. Во всех
+  повторах оставлены созданные именно этим запуском данные; ничего не удалялось
+  ради чистоты. Штатные пути: Roaming/KID/settings.json, editor-session.json и
+  HelloWorld.cs; Local/KID/Logs/kid-20261105.jsonl. Диагностика/скрипты находятся
+  в ignored `artifacts/harness/ordinary-profile-20261105T165816Z/`.
+- Перечитаны актуальные ApplicationDataPaths, LoggingConfiguration,
+  WindowConfigurationService, EditorSessionService, App startup/exit,
+  MainWindow closing, CodeEditorsViewModel close/restore и соответствующие
+  architecture/DEVELOPMENT/check routing материалы. Бинарники соответствуют
+  неизменённому production-коду ранее принятой сборки.
+- Команды: `./artifacts/harness/ordinary-profile-20261105T165816Z/Verify-OrdinaryProfile.ps1 -InspectOnly`
+  — exit 0, родные KnownFolders и отдельный SID подтверждены, без записи профиля.
+  Затем этот же script без InspectOnly — первоначальный close timeout; вариант
+  `-ResumeOwnedAttempt` сначала ожидал StartupCompleted вместо фиксированных
+  5 секунд, но тоже дал timeout. Новая гипотеза проверена диагностикой окон
+  только собственного PID; третья попытка сохранила before/after/timeout handles.
+- Причина процедуры приёмки: Process.MainWindowHandle может выбрать служебное
+  UAC_InputIndicatorOverlayWnd/UAC Input Indicator вместо настоящего WPF окна
+  процесса другого пользователя. После CloseMainWindow служебное окно исчезло,
+  а WPF HWND оставался enabled и not hung; ошибок приложения в логах не было.
+  Простое ожидание StartupCompleted не устраняло неверный выбор HWND.
+  В финальной процедуре WM_CLOSE направлен ровно в единственное видимое
+  HwndWrapper[KID.WPF.IDE...] с проверенным PID, после его StartupCompleted.
+  Это исправление одноразового acceptance script, не production-изменение.
+- Финальный `Verify-OrdinaryProfile.ps1 -ResumeOwnedAttempt`: **exit 0**,
+  два полных ordinary IDE open/close. PID 12092: HWND 985328, exit 0;
+  PID 17376: HWND 1116220, exit 0. Первый .NET-reported MainWindowHandle
+  был 10291480, отличался от настоящего WPF HWND — причина подтверждена.
+  В обоих процессах лог содержит StartupCompleted и Application exiting с
+  FatalShutdown=false; Error/Fatal entries нет. Проверены JSON settings/session,
+  обычные LocalAppData logs. После restart settings/session SHA256 совпадают.
+- Контроль основного профиля: до/после сравнивались existence и SHA256
+  settings/session и всех существующих файлов Logs, всего 17 позиций. Состав
+  и hashes неизменны; author-profile-after.json: unchanged=true. Сравнение после
+  ранних неудачных попыток также прошло. Чужие процессы не завершались; только
+  собственные timed-out процессы были остановлены и освобождали общий lock.
+- Главные доказательства: acceptance.json (passed), native-profile-environment.json,
+  ordinary-profile-result.json (2 runs exit 0), close-target-1/2.json,
+  final-kid-20261105.jsonl, author-profile-before/after.json, binary-hashes.json.
+  Неуспешные результаты сохранены отдельно как ordinary-profile-result.attempt1/2/3.json,
+  attempt1/2 logs и attempt3 window diagnostics. Генерируемые файлы не коммитятся.
+- **Итог и продолжение:** обязательная приёмка этапов 1–6 закрыта без переноса
+  scope и без новых product изменений. Физический ввод/звук, визуальная оценка
+  recovery-dialog и ручной autosave остаются отдельными непроверенными условиями,
+  как и было оговорено в границах плана; completed не означает их ручной PASS
+  или релизную готовность. Обязательного следующего шага данного плана нет.
+  Итоговые изменения только в документации; validate и diff --check выполняются
+  после записи. Коммит локальный, push основной ветки не разрешён и не выполняется.
