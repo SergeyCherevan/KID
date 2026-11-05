@@ -13,6 +13,8 @@ Harness объединяет контекст продукта, работу н�
   [Миграция harness](work/plans/HARNESS_STRUCTURE.plan.md) ведёт текущий журнал;
   [D005](work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md) хранит историю
   завершённого восстановления самостоятельной библиотеки.
+  [Улучшение автономной работы](work/plans/HARNESS_AUTONOMY.plan.md) — предложенный
+  план развития правил задач, выбора проверок, валидации, smoke-окружения и CI.
 - **checks/** — [тесты](checks/automated/KID.Tests/README.md),
   [проверки runner](checks/automated/runner/README.md),
   [внешний probe](checks/probes/KID.Library.StandaloneProbe/README.md),
