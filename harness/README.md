@@ -106,3 +106,7 @@ lock/timeout/cancel/log/summary. Test требует непустую выбор
 требуют owned DataRoot; launcher передаёт override только дочернему процессу.
 Обычный запуск без override сохраняет пользовательские пути. Проверки профиля
 до/после и cleanup guard входят в data smoke, manual приёмка остаётся отдельной.
+
+[CI-интеграция и чистый checkout](checks/CI.md): единый Invoke-CI.ps1 и GitHub
+Actions Windows Headless с 14-дневной диагностикой. Локальный clean success и
+контрольный отказ подтверждены в плане; внешний run/upload ещё не проверены.
