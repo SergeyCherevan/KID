@@ -17,3 +17,8 @@ production-проектов не изменяются. Нужны права с�
 Fixture не выполняет продуктовые тесты и не открывает WPF demo. Полный прогон
 продукта запускается отдельно: `Invoke-Harness.ps1 -Command check -Profile Full`.
 Тесты runner не входят в историческую базу 716 тестов KID.Tests.
+
+Новые проверки: validate как отдельный child и первый шаг check, fail-fast при
+статическом отказе, guard executed > 0 в TRX, непустая MTP выборка, contracts
+как отдельный нерекурсивный набор. Общий запуск:
+./harness/tools/Invoke-Harness.ps1 -Command contracts

@@ -121,7 +121,8 @@ STA/audio lifecycle-тесты не открывают видимые окна, 
 
 ### Требования
 
-- **.NET 8.0 SDK** или выше
+<!-- harness-sdk-policy: global.json -->
+- **.NET SDK по [global.json](../../global.json)** с указанной roll-forward политикой; проверка выбора: `dotnet --version` из checkout.
 - **Visual Studio 2022** или **JetBrains Rider** (рекомендуется)
 - **Windows** (WPF приложение)
 
@@ -811,4 +812,9 @@ Windows-пользователя:
 ## Заключение
 
 Следуйте этим принципам при разработке, чтобы поддерживать качество и согласованность кода. При возникновении вопросов обращайтесь к существующему коду как к примеру.
+
+
+Статическая проверка: ./harness/tools/Invoke-Harness.ps1 -Command validate.
+Контракты runner/validator: ./harness/tools/Invoke-Harness.ps1 -Command contracts.
+Check начинает со статической валидации; targeted filtering описан в ../checks/CHECK_ROUTING.md.
 

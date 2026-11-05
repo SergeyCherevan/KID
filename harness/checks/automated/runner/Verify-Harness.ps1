@@ -43,6 +43,7 @@ function Passed([string]$name) { $checks.Add($name); Write-Output "PASS $name" }
 
 try {
     Write-File $runner (Get-Content -LiteralPath (Join-Path $repo 'harness/tools/Invoke-Harness.ps1') -Raw)
+    Write-File (Join-Path $fixture 'harness/tools/Test-HarnessStatic.ps1') (Get-Content -LiteralPath (Join-Path $repo 'harness/tools/Test-HarnessStatic.ps1') -Raw)
     Copy-Item -LiteralPath (Join-Path $repo 'global.json') -Destination (Join-Path $fixture 'global.json')
     Copy-Item -LiteralPath (Join-Path $repo 'KID.sln') -Destination (Join-Path $fixture 'KID.sln')
     $projects = @('KID.Library/KID.Library.csproj', 'KID.WPF.IDE/KID.WPF.IDE.csproj',
@@ -66,7 +67,8 @@ try {
     foreach ($parameters in @(
         @('-Command', 'unknown'), @('-Unknown'), @('-Command', 'test', '-Mode', 'Session'),
         @('-Command', 'check', '-Profile', 'Full', '-Mode', 'Regression'), @('-Command', 'build', '-TimeoutSeconds', '0'),
-        @('-Command', 'build', '-TimeoutSeconds', '86401'), @('-Help', '-Configuration', 'Debug'), @('-Command', 'demo', '-ConsoleMode', 'bad')
+        @('-Command', 'build', '-TimeoutSeconds', '86401'), @('-Help', '-Configuration', 'Debug'), @('-Command', 'demo', '-ConsoleMode', 'bad'),
+        @('-Command', 'validate', '-Profile', 'Full'), @('-Command', 'contracts', '-NoRestore')
     )) { $null = Run $parameters 2 }
     Assert (-not (Test-Path (Join-Path $fixture 'artifacts'))) 'Invalid parameters started a working run.'
     Passed 'usage errors precede children and artifacts'
@@ -82,11 +84,11 @@ try {
     Passed 'unavailable SDK exits 3 and keeps mandatory operations not-run'
 
     $headless = (Run @('-Command', 'ChEcK', '-Configuration', 'debug', '-NoRestore')).summary
-    $expected = @('build-solution', 'test-solution', 'probe-Regression', 'probe-Session', 'probe-SessionFailure', 'probe-CanvasSwitching', 'probe-CanvasObjects')
+    $expected = @('validate-static', 'build-solution', 'test-solution', 'probe-Regression', 'probe-Session', 'probe-SessionFailure', 'probe-CanvasSwitching', 'probe-CanvasObjects')
     Assert (($headless.operations.name -join ',') -eq ($expected -join ',')) 'Wrong Headless operation order.'
     Assert ($headless.configuration -eq 'Debug' -and $headless.profile -eq 'Headless') 'Defaults/canonical configuration were lost.'
     foreach ($op in $headless.operations) {
-        Assert ($op.arguments -contains '--no-restore') 'NoRestore lost.'
+        if ($op.name -ne 'validate-static') { Assert ($op.arguments -contains '--no-restore') 'NoRestore lost.' }
         Assert ($op.workingDirectory -eq $fixture -and $op.childExitCode -eq 0 -and $op.status -eq 'passed') 'Incorrect child result or working directory.'
         Assert (Test-Path -LiteralPath $op.log) 'Missing operation log.'
         if ($op.name.StartsWith('probe-')) { Assert ($op.arguments -notcontains '--no-build') 'Probe was not rebuilt.' }
@@ -94,14 +96,14 @@ try {
     Passed 'Headless/Debug/NoRestore, paths with spaces, foreign cwd, isolated probe order and logs'
 
     $full = (Run @('-Command', 'check', '-Profile', 'Full')).summary
-    Assert ($full.operations.Count -eq 13) 'Full did not schedule all 13 restore/build/test/probe/demo operations.'
+    Assert ($full.operations.Count -eq 14) 'Full did not schedule all 14 validation/restore/build/test/probe/demo operations.'
     Assert (($full.consoleModes -join ',') -eq 'Without,With') 'Full omitted a console mode.'
     Assert (@($full.operations | Where-Object name -eq 'build-solution').Count -eq 1) 'Repeated solution build.'
     Assert (@($full.operations | Where-Object name -eq 'build-demo').Count -eq 1) 'Repeated demo build.'
     Assert ($full.operations[-1].arguments -contains '--with-console') 'With-console argument was lost.'
     Passed 'Full complete schedule, restore, single solution/demo builds'
 
-    $failure = (Run @('-Command', 'check', '-NoRestore') 1 'fail').summary
+    $failure = (Run @('-Command', 'build', '-NoRestore') 1 'fail').summary
     Assert ($failure.operations[0].childExitCode -eq 37 -and $failure.operations[0].status -eq 'failed') 'Original child error lost.'
     Assert (@($failure.operations | Select-Object -Skip 1 | Where-Object status -ne 'not-run').Count -eq 0) 'Runner continued after failure.'
     Passed 'child exit 37 preserved; fail-fast leaves remaining checks not-run'
@@ -109,6 +111,24 @@ try {
     $noReport = (Run @('-Command', 'test', '-NoRestore') 4 'no-trx').summary
     Assert ($noReport.operations[-1].status -eq 'failed' -and $noReport.operations[-1].childExitCode -eq 0) 'Missing mandatory TRX was masked by child success.'
     Passed 'missing mandatory TRX exits 4 despite child success'
+
+    $empty = (Run @('-Command', 'test', '-NoRestore') 1 'empty-trx').summary
+    Assert ($empty.error.Contains('no executed tests')) 'Empty selection was accepted.'
+    Passed 'zero executed tests fail acceptance'
+    $static = (Run @('-Command', 'validate')).summary
+    Assert ($static.operations.Count -eq 1 -and $static.operations[0].name -eq 'validate-static') 'validate schedule changed'
+    Write-File (Join-Path $fixture 'harness/broken.md') '[broken](absent.md)'
+    $invalid = (Run @('-Command', 'check', '-NoRestore') 1).summary
+    Assert ($invalid.operations[0].name -eq 'validate-static' -and $invalid.operations[1].status -eq 'not-run') 'Validation failure did not stop general check'
+    Write-File (Join-Path $fixture 'harness/broken.md') '# repaired'
+    Passed 'static child logs, validate command, check fail-fast without recursive contracts'
+    $noSdkValidation = Run @('-Command', 'validate') 0 '' (Join-Path $workspace 'no-dotnet')
+    Assert ($noSdkValidation.summary.operations.Count -eq 1) 'Static validation depends on SDK'
+    Write-File (Join-Path $fixture 'harness/checks/automated/runner/Verify-Harness.ps1') "Write-Output 'contract child'; exit 0"
+    Write-File (Join-Path $fixture 'harness/checks/automated/static/Verify-Static.ps1') "Write-Output 'static fixture child'; exit 0"
+    $contracts = (Run @('-Command', 'contracts')).summary
+    Assert (($contracts.operations.name -join ',') -eq 'contracts-runner,contracts-static') 'contracts command scheduled general check or omitted fixtures'
+    Passed 'validate without SDK and contracts command isolated schedule'
 
     $pids = Join-Path $workspace 'pids.txt'
     $sleeper = Start-Runner @('-Command', 'build', '-NoRestore', '-TimeoutSeconds', '15') 'sleep'

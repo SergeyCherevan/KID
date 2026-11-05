@@ -33,7 +33,9 @@ if (args.FirstOrDefault() == "test" && behavior != "no-trx")
 {
     var folder = args[Array.IndexOf(args, "--results-directory") + 1];
     Directory.CreateDirectory(folder);
-    File.WriteAllText(Path.Combine(folder, "KID.Tests.trx"), "<TestRun />");
+    File.WriteAllText(Path.Combine(folder, "KID.Tests.trx"),
+        behavior == "empty-trx" ? "<TestRun><ResultSummary><Counters executed=\"0\" /></ResultSummary></TestRun>" :
+        "<TestRun><ResultSummary><Counters executed=\"1\" /></ResultSummary></TestRun>");
 }
 return 0;
 

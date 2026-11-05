@@ -8,7 +8,7 @@ $options = @{
 }
 $specified = @{}
 $choices = @{
-    Command = @('help', 'doctor', 'build', 'test', 'probe', 'demo', 'check', 'manual')
+    Command = @('help', 'doctor', 'build', 'test', 'probe', 'demo', 'check', 'manual', 'validate', 'contracts')
     Configuration = @('Release', 'Debug')
     Mode = @('All', 'Regression', 'Session', 'SessionFailure', 'CanvasSwitching', 'CanvasObjects')
     ConsoleMode = @('Both', 'Without', 'With'); Profile = @('Headless', 'Full')
@@ -52,6 +52,7 @@ try {
     if ($command -in @('build', 'test', 'probe', 'demo', 'check')) {
         $allowed += @('Configuration', 'NoRestore', 'TimeoutSeconds')
     }
+    if ($command -in @('validate', 'contracts')) { $allowed += 'TimeoutSeconds' }
     $allowed += switch ($command) { probe { 'Mode' }; demo { 'ConsoleMode' }; check { 'Profile' }; manual { 'Scenario' } }
     foreach ($name in $specified.Keys) {
         if ($name -notin $allowed) { throw "-$name is not valid for $command." }
@@ -75,16 +76,18 @@ INFO KID harness (PowerShell 7+, Windows, SDK selected by root global.json)
 Usage: ./harness/tools/Invoke-Harness.ps1 [-Command <command>] [parameters]
   help    Show this help (default); -Help is also supported. No dotnet required.
   doctor  Inspect PowerShell/Windows, selected SDK, solution, check projects and manual READMEs.
+  validate Static Markdown/fragments, PowerShell, routing paths, v1 plans and SDK policy.
+  contracts Runner and static-validator fixtures (isolated; never calls general check).
   build   Restore and build the solution.
   test    Restore/build the solution, then run all tests without rebuilding/restoring.
   probe   Restore the external probe; rebuild/run each selected mode in a separate process.
   demo    Restore/build demo; open real windows and wait for verification to finish.
-  check   Doctor, solution build, tests and all five probe modes; Full also runs both demos.
+  check   Doctor, static validation, solution build, tests and all five probes; Full adds demos.
   manual  Show scenario README(s) and preparation/restoration commands; does not execute them.
 Parameters (case insensitive):
   -Configuration Release|Debug                         default Release; build/test/probe/demo/check
   -NoRestore                                           same commands; never falls back to restore
-  -TimeoutSeconds 1..86400                              same commands; per process, default 600
+  -TimeoutSeconds 1..86400                              working commands; per process, default 600
   -Mode All|Regression|Session|SessionFailure|CanvasSwitching|CanvasObjects
                                                        probe only, default All (listed order)
   -ConsoleMode Both|Without|With                        demo only, default Both
@@ -229,6 +232,7 @@ catch { [Console]::Error.WriteLine("RUNNER: $($_.Exception.Message)"); exit 4 }
 
 $environmentInfo = [ordered]@{ powershell = $PSVersionTable.PSVersion.ToString(); os = [Environment]::OSVersion.VersionString; dotnet = $null; sdk = $null; desktop = $null; globalJson = (Join-Path $repoRoot 'global.json') }
 function Assert-Environment {
+    if ($command -eq 'validate') { return }
     foreach ($path in @($solution, (Join-Path $repoRoot 'global.json'), $tests, $probe, $demo)) {
         if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Missing required file: $path" }
     }
@@ -273,8 +277,8 @@ $summary = [ordered]@{
     startedUtc = [DateTime]::UtcNow.ToString('o'); endedUtc = $null; status = 'failed'; exitCode = $null
     error = $null; operations = $operations
 }
-function Add-Operation([string]$name, [string[]]$arguments) {
-    $operations.Add([ordered]@{ name = $name; executable = 'dotnet'; arguments = $arguments
+function Add-Operation([string]$name, [string[]]$arguments, [string]$executable = 'dotnet') {
+    $operations.Add([ordered]@{ name = $name; executable = $executable; arguments = $arguments
         workingDirectory = $repoRoot; startedUtc = $null; endedUtc = $null; durationSeconds = $null
         childExitCode = $null; status = 'not-run'; log = (Join-Path $runDirectory ('{0:D2}-{1}.log' -f ($operations.Count + 1), $name)) })
 }
@@ -297,13 +301,20 @@ try {
     }
     catch { $exitCode = 3; throw }
     $config = $options.Configuration
+    if ($command -in @('validate', 'check')) {
+        Add-Operation 'validate-static' @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'Test-HarnessStatic.ps1')) 'pwsh'
+    }
+    if ($command -eq 'contracts') {
+        Add-Operation 'contracts-runner' @('-NoProfile', '-File', (Join-Path $repoRoot 'harness/checks/automated/runner/Verify-Harness.ps1')) 'pwsh'
+        Add-Operation 'contracts-static' @('-NoProfile', '-File', (Join-Path $repoRoot 'harness/checks/automated/static/Verify-Static.ps1')) 'pwsh'
+    }
     if ($command -in @('build', 'test', 'check')) {
         Add-Restore 'solution' $solution
         Add-Operation 'build-solution' @('build', $solution, '-c', $config, '--no-restore', '--nologo')
     }
     if ($command -in @('test', 'check')) {
         Add-Operation 'test-solution' @('test', '--solution', $solution, '-c', $config, '--no-build', '--no-restore',
-            '--results-directory', (Join-Path $runDirectory 'test-results'), '--report-xunit-trx', '--report-xunit-trx-filename', 'KID.Tests.trx')
+            '--minimum-expected-tests', '1', '--results-directory', (Join-Path $runDirectory 'test-results'), '--report-xunit-trx', '--report-xunit-trx-filename', 'KID.Tests.trx')
     }
     if ($selectedModes.Count) {
         Add-Restore 'probe' $probe
@@ -347,11 +358,11 @@ try {
             $exitCode = 3; throw 'The interactive desktop became unavailable before demo.'
         }
         Write-Output "RUN $($operation.name)"
-        $operation.executable = $environmentInfo.dotnet
+        $operation.executable = if ($operation.executable -eq 'pwsh') { (Get-Process -Id $PID).Path } else { $environmentInfo.dotnet }
         $operation.startedUtc = [DateTime]::UtcNow.ToString('o')
         $watch = [Diagnostics.Stopwatch]::StartNew()
         try {
-            $result = [KIDHarness.ProcessHost]::Run($environmentInfo.dotnet, $operation.arguments, $repoRoot, $options.TimeoutSeconds, $operation.log, $true)
+            $result = [KIDHarness.ProcessHost]::Run($operation.executable, $operation.arguments, $repoRoot, $options.TimeoutSeconds, $operation.log, $true)
             $operation.status = $result.Status; $operation.childExitCode = $result.ExitCode
         }
         finally { $operation.endedUtc = [DateTime]::UtcNow.ToString('o'); $operation.durationSeconds = [Math]::Round($watch.Elapsed.TotalSeconds, 3) }
@@ -359,6 +370,14 @@ try {
         if ($exitCode -eq 0 -and $operation.name -eq 'test-solution') {
             $trx = Get-ChildItem -LiteralPath $runDirectory -Recurse -Filter *.trx
             if (-not $trx) { $operation.status = 'failed'; $exitCode = 4; $summary.error = 'Test command did not save the required TRX report.' }
+            else {
+                $executed = 0
+                foreach ($report in $trx) {
+                    [xml]$xml = Get-Content -LiteralPath $report.FullName -Raw
+                    foreach ($counter in $xml.SelectNodes('//*[local-name()="Counters"]')) { $executed += [int]$counter.executed }
+                }
+                if ($executed -lt 1) { $operation.status = 'failed'; $exitCode = 1; $summary.error = 'Test report contains no executed tests.' }
+            }
         }
         Save-Summary
         if ($exitCode -ne 0) { break }
