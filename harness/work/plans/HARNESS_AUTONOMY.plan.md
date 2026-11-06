@@ -4,7 +4,10 @@
   Полный ordinary IDE запуск без override принят в отдельном Windows-профиле.
   Базовая ручная recovery/autosave-приёмка выполнена отдельным запросом:
   [протокол](../../checks/evidence/RECOVERY_AUTOSAVE_MANUAL_2026-11-05.md).
-  Физический ввод и звук остаются отдельными непроверенными условиями.
+  Базовые физический Console ввод и слышимость Music в IDE дополнительно приняты
+  2026-11-06: [Console](../../checks/evidence/CONSOLE_INPUT_MANUAL_2026-11-06.md),
+  [Music](../../checks/evidence/AUDIBLE_MUSIC_MANUAL_2026-11-06.md).
+  Эти результаты не означают проверки всех устройств, кодеков или релизной готовности.
 - **Дата:** 2026-11-03.
 - **База обследования:** `feature/UnifiedHarness`, revision `647db81`;
   перед подготовкой документа рабочее дерево чистое.
@@ -335,9 +338,13 @@ regression, Headless и WPF smoke с override подтверждены. Исто
 - Обычный IDE запуск без override подтверждён двумя полными open/close в
   уже загруженном отдельном Windows-профиле CodexSandboxOffline. Настройки
   основного профиля автора не менялись; блокеров обязательной приёмки нет.
-- Непроверенные manual условия: физический ввод, слышимость, визуальная оценка
-  recovery и autosave через принудительное закрытие IDE. Автоматические проверки
-  не превращают эти условия в PASS. Full hosted job не включён без desktop.
+- Дополнительная manual приёмка выполнена по отдельным запросам автора:
+  [recovery/autosave, пять сценариев](../../checks/evidence/RECOVERY_AUTOSAVE_MANUAL_2026-11-05.md),
+  [Console ввод, Stop/rerun](../../checks/evidence/CONSOLE_INPUT_MANUAL_2026-11-06.md),
+  [Music ноты/WAV, Stop/rerun](../../checks/evidence/AUDIBLE_MUSIC_MANUAL_2026-11-06.md).
+  Ответы автора отделены от машинных checkpoints. Полная матрица устройств,
+  кодеков, ввода и повреждений данных не проверена. Full hosted job не включён
+  без desktop; локальный Full не заменяется Headless.
 ## 🧾 8. Фактический журнал
 
 ### 2026-11-03 — Подготовка плана
@@ -772,3 +779,30 @@ regression, Headless и WPF smoke с override подтверждены. Исто
   или релизную готовность. Обязательного следующего шага данного плана нет.
   Итоговые изменения только в документации; validate и diff --check выполняются
   после записи. Коммит локальный, push основной ветки не разрешён и не выполняется.
+
+### 2026-11-06 — Сверка общей готовности после дополнительных manual проверок
+
+- База сводки: feature/UnifiedHarness, 16ca7a2, дерево до обновления сводки
+  чистое. Сверены статусы и чекбоксы основного и трёх manual планов, сохранённые
+  Headless/Full summaries, ordinary-profile acceptance, внешние success/failure
+  acceptance и strict-artifact-verification, Console/Music verification.json.
+- Все шесть этапов остаются completed, контур A принят. Дополнительно приняты
+  пять recovery/autosave сценариев (69cd648), физический Console ввод (fb87b71)
+  и базовая слышимость Music в IDE (16ca7a2). Обязательных блокеров в этих scope нет.
+- Команда `git -c safe.directory='D:/Visual Studio Projects/KID' diff 0717fc2 HEAD --stat -- KID.Library KID.WPF.IDE KID.sln`
+  дала пустой diff: production/solution после принятого Full не менялись.
+  Full на 0717fc2: 724 tests, пять probe, обе WPF demo PASS. Внешний Headless
+  на 9c09348: 724 tests; контрольный отказ на ef0c6f7 — ожидаемый failure.
+  Архивы обоих runs ранее скачаны и проверены; текущая сводка читает сохранённые
+  доказательства, не заявляет новый внешний прогон последнего HEAD.
+- Текущие header/раздел открытых решений обновлены ссылками на manual протоколы.
+  Исторические записи 2026-11-05 о тогда непроверенном вводе/звуке сохранены.
+  Упрощение recovery-сообщения остаётся предложением вне scope; релиз, все
+  устройства/кодеки и Full hosted CI не объявляются принятыми.
+- Следующего обязательного шага по этим планам нет. Публикация новых локальных
+  коммитов не выполнялась; разрешение на push основной ветки не предоставлялось.
+  После этой записи выполняются validate и staged diff --check; итоговый
+  documentation commit локальный, без запуска Headless/Full/CI заново.
+- Проверка сводки: validate exit 0, 66 Markdown/PowerShell files PASS; summary
+  `artifacts/harness/20261106T190433510Z-bf9ad454/summary.json`.
+  Staged diff --check выполняется перед коммитом; новые runtime проверки не запускались.
