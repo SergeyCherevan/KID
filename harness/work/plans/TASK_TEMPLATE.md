@@ -50,3 +50,20 @@ environment определяется exit 3, usage — 2, artifact/runner — 4.
 открытой. При timed-out/cancelled: проверить summary, cleanup/lock и записать
 незавершённые операции; не выдавать not-run за PASS. Не повторять отказ без
 новой гипотезы. Историческое свидетельство не является текущей приёмкой.
+
+<a id="task-examples"></a>
+
+## Примеры границ и продолжения
+
+- **Stop:** при заданном воспроизведении в scope D008 критерий — Cancelled и
+  завершённый cleanup до следующего Run. Входы: D008, Runtime API, rewriter;
+  проверки Compiler/Execution/Lifecycle, затем Headless/Full. Предложение нового
+  checkpoint отделяется от требования; Thread.Abort/worker-process вне scope.
+- **Исследование .csx:** сначала согласовать globals/references/entrypoint и
+  editor profile, затем проверить samples/diagnostics. Входы: D003/D004,
+  Compiler/CodeEditor/CompilationProfile. Compiler strategy — предложение,
+  реализация .csx этим примером не заявляется.
+
+После завершения задачи уникальные действующие правила и доказательства
+переносятся в context/contracts и checks/evidence; ссылки обновляются,
+завершённый план удаляется. Его полный журнал остаётся в Git-истории.

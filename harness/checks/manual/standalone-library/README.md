@@ -46,8 +46,9 @@ Console.WriteLine/ReadLine и звук; затем STOP во время цикл
 
 ## 🧪 Автоматические дополнения
 
-Release gate и пять режимов probe перечислены в
-[журнале плана](../../../work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md).
+Release gate и пять режимов probe запускаются через
+[общий runner](../../../work/contracts/HARNESS_RUNNER_CONTRACT.md).
+Принятые результаты — в [протоколе D005](../../evidence/D005_STANDALONE_ACCEPTANCE_2026-11-03.md).
 Для окна дополнительно выполните:
 
 ```powershell

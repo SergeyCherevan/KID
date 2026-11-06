@@ -67,9 +67,14 @@ try {
     Verify 'placeholder-plan-fields' 1 'Required plan field'
     Write-File $plan $filled
     Verify 'filled-plan' 0
-    $lookalike = Join-Path $root 'harness/work/plans/new/HARNESS_STRUCTURE.plan.md'
-    Write-File $lookalike '# New plan cannot inherit a historical exception by name'
-    Verify 'legacy-name-at-new-path' 1 'Required plan schema'
+    # Formerly grandfathered canonical paths must now obey the same schema.
+    foreach ($relative in @('HARNESS_STRUCTURE.plan.md','HARNESS_AUTONOMY.plan.md','D005_KID.Library_STANDALONE_RESTORE.plan.md','new/HARNESS_STRUCTURE.plan.md')) {
+        $lookalike = Join-Path $root "harness/work/plans/$relative"
+        Write-File $lookalike '# Former plan names cannot bypass the schema'
+        $name = 'former-name-' + $relative.Replace('/', '-')
+        Verify $name 1 'Required plan schema'
+        Write-File $lookalike $filled
+    }
     Write-Output "PASS static fixtures; evidence: $workspace"
 }
 finally { Pop-Location }

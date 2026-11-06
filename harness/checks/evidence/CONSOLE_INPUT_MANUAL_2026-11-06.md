@@ -2,8 +2,7 @@
 
 Статус: **manual PASS**. База: feature/UnifiedHarness,
 `69cd64883831c3ad8406db60926eca291caea048`; дерево до подготовки сценария было
-чистым. [План](../../work/plans/CONSOLE_INPUT_MANUAL_ACCEPTANCE.plan.md),
-[программа и порядок](../manual/console-input/README.md).
+чистым. [Программа и порядок](../manual/console-input/README.md).
 
 ## Окружение и выполнение
 

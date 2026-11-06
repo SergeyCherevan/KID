@@ -1,40 +1,35 @@
 # 🏗️ Независимая проверка checkout
 
-Автор выбрал GitHub Actions 2026-11-05 и подтвердил отсутствие внешнего CI.
-Read-only API: workflows=0, master check runs=0; пустые статусы отдельного commit
-сами по себе не считались доказательством отсутствия CI.
-Конфигурация: [.github/workflows/harness.yml](../../.github/workflows/harness.yml).
+Конфигурация: [.github/workflows/harness.yml](../../.github/workflows/harness.yml),
+GitHub Actions на push, pull_request и workflow_dispatch, Windows hosted runner.
+SDK/roll-forward выбираются по global.json; configured cache отсутствует.
 
 Единая точка запуска: `./harness/tools/Invoke-CI.ps1`. Требует чистое дерево,
-фиксирует revision/dirty/SDK/OS/PowerShell, выполняет validate, contracts, Headless
-последовательно с текущим runner. Отказ любого шага останавливает набор.
-`-AllowDirty` предназначен только для локального контрольного отказа fixture;
-workflow его не передаёт. Логи и ci-result.json сохраняются даже при отказе.
+фиксирует revision/dirty/SDK/OS/PowerShell и последовательно выполняет:
 
-Windows hosted runner, SDK policy из global.json, cache не настроен. GitHub хранит
-выбранные logs/summary/TRX/результаты contracts 14 дней при успехе и отказе; доступ
-определяется permissions репозитория и Actions. Имена артефактов содержат SHA и
-attempt. Тестовые данные, бинарники и персональные настройки не публикуются.
+1. `Invoke-Harness.ps1 -Command validate`.
+2. `Invoke-Harness.ps1 -Command contracts`.
+3. `Invoke-Harness.ps1 -Command check -Profile Headless`.
+4. Release build внешнего KID.Data.Smoke.
+5. `Verify-DataIsolation.ps1` без IncludeWpf.
 
-Full не подключён к hosted job: нужен подтверждённый desktop, отдельный job
-возможен после появления подходящего runner. Изолированный data smoke подключён после Headless; его внешняя сборка и запуск
-сохраняются отдельными операциями в ci-result.json. Full не означает manual PASS.
+Отказ любого шага останавливает набор. `-AllowDirty` разрешает локальный
+контрольный отказ fixture; workflow его не передаёт. Логи и ci-result.json
+сохраняются также при отказе. Контракты: [runner](../work/contracts/HARNESS_RUNNER_CONTRACT.md),
+[данные](../work/contracts/HARNESS_DATA_ROOT_CONTRACT.md).
 
-## 🕘 Историческое ограничение до публикации
+Always-upload сохраняет logs/summary/TRX/CI/data/contract results 14 дней при
+успехе и отказе. Доступ определяется permissions репозитория и Actions;
+имена архивов содержат SHA и attempt. Тестовые данные, бинарники и персональные
+настройки не публикуются.
 
-Локальная подготовка не доказывает успешный GitHub run. Без разрешённого push
-или уже опубликованной revision нельзя проверить внешний success, контрольный
-failure и загрузку доступной диагностики. Эти обязательства остаются открытыми
-в [основном плане](../work/plans/HARNESS_AUTONOMY.plan.md).
+Full требует пригодный desktop и в hosted job не подключён; Headless не
+подменяет локальный Full или manual PASS. Vulnerability scan и publish
+не добавлены. Релизные условия перечислены в [аудите](../work/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md).
 
 ## ✅ Внешняя приёмка 2026-11-05
 
-[Success на 9c09348](https://github.com/SergeyCherevan/KID/actions/runs/42063766309):
-Windows 2025, SDK 10.0.403, чистый checkout, validate/contracts/Headless/data
-smoke прошли; 724 tests passed. Архив 13433910536 скачан, содержимое проверено.
-[Intentional failure на ef0c6f7](https://github.com/SergeyCherevan/KID/actions/runs/42064757677):
-отдельная разрешённая fixture-ветка, битая ссылка вызывает exit 1 до дальнейших
-проверок. Always-upload прошёл; архив 13433975619 скачан, причина отказа найдена.
-Оба архива имеют срок 14 дней. Full/manual этим не принимаются.
-Предыдущий абзац описывает историческое ограничение до публикации автором;
-внешняя приёмка этапа 6 теперь закрыта. Точный протокол — в основном плане.
+Success на `9c09348`, intentional failure на `ef0c6f7` и скачивание обоих архивов
+подтверждены. Run IDs, окружение, точные результаты, evidence и границы —
+в [постоянном протоколе](evidence/HARNESS_ACCEPTANCE_2026-11-05.md#external-ci).
+Новый внешний прогон текущего HEAD этим не заявляется.

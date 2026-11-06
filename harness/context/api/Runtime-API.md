@@ -130,5 +130,5 @@ CodeExecutionService удерживает резервирование до Disp
 библиотеки или host cleanup оставляет admission заблокированным и FSM в CleaningUp.
 
 Приёмка: [ручной сценарий](../../checks/manual/standalone-library/README.md),
-[план и журнал D005](../../work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md).
+[протокол D005](../../checks/evidence/D005_STANDALONE_ACCEPTANCE_2026-11-03.md).
 App-Window & Console из IDE остаётся отдельным будущим направлением.

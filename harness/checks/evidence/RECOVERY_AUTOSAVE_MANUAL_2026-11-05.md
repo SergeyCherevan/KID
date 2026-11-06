@@ -2,7 +2,8 @@
 
 Статус: **completed; пять сценариев PASS**. База: feature/UnifiedHarness, `9134e2f`, исходное дерево
 чистое. Это новая ручная проверка, не повторная атрибуция исторического PASS.
-Ход работы: [план](../../work/plans/RECOVERY_AUTOSAVE_MANUAL_ACCEPTANCE.plan.md).
+Сценарии: [persistence](../manual/persistence-recovery/README.md),
+[editor session](../manual/editor-session-recovery/README.md).
 
 ## Источники доказательств
 

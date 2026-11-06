@@ -16,16 +16,16 @@ fragments: ATX headings с Unicode letters/numbers, повторяющиеся �
 суффиксом -1, -2; HTML anchors id/name. Каталоги допустимы. Карта хранит все пути
 ссылками, поэтому получает ту же проверку. Ошибка указывает файл и строку.
 
-Явные исключения с причиной:
+Правила и явные исключения:
 
 - Fenced blocks (backticks/tilde), inline code: примеры и исторические команды,
   не активные ссылки. Исторические ссылки вне блоков продолжают проверяться.
 - Course и product prose вне Harness: самостоятельные материалы, вне scope.
 - TASK_TEMPLATE.md: placeholders являются его назначением.
-- HARNESS_STRUCTURE.plan.md, HARNESS_AUTONOMY.plan.md и
-  D005_KID.Library_STANDALONE_RESTORE.plan.md: исходные планы до схемы v1,
-  сохраняют исторический формат. Любой другой новый `*.plan.md` требует marker
+- Каждый `*.plan.md` требует marker
   `harness-plan:v1` и непустые разделы шаблона, без placeholders/TODO/TBD.
+  Исключений для прежних имён/путей нет; fixtures проверяют три бывших канонических
+  пути и одноимённый файл во вложенном каталоге.
 - Setext headings, shortcut references и сложный вложенный Markdown не входят
   в поддерживаемый синтаксис. Используйте ATX headings и явные ссылки.
 

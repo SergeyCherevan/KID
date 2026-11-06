@@ -10,11 +10,9 @@ Harness объединяет контекст продукта, работу н�
   [решения D001–D011](context/decisions/), [Runtime API](context/api/Runtime-API.md)
   и остальные API, [справочные материалы](context/references/).
 - **work/** — [планы](work/plans/), [контракты](work/contracts/), [аудиты](work/audits/).
-  [Миграция harness](work/plans/HARNESS_STRUCTURE.plan.md) ведёт текущий журнал;
-  [D005](work/plans/D005_KID.Library_STANDALONE_RESTORE.plan.md) хранит историю
-  завершённого восстановления самостоятельной библиотеки.
-  [Улучшение автономной работы](work/plans/HARNESS_AUTONOMY.plan.md) — завершённый
-  план развития правил задач, выбора проверок, валидации, smoke-окружения и CI.
+  В plans остаются активные задачи и [шаблон](work/plans/TASK_TEMPLATE.md).
+  Действующие правила runner — в [контракте](work/contracts/HARNESS_RUNNER_CONTRACT.md),
+  принятые результаты — в [evidence](checks/evidence/).
 - **checks/** — [тесты](checks/automated/KID.Tests/README.md),
   [проверки runner](checks/automated/runner/README.md),
   [внешний probe](checks/probes/KID.Library.StandaloneProbe/README.md),
@@ -56,7 +54,7 @@ Help/doctor/manual информационные, без сборки и без �
 gitignored `artifacts/harness/`. Общий lock запрещает одновременные рабочие
 запуски runner в одном checkout. Коды: 0 — выбранный набор прошёл или INFO;
 1 — отказ проверки; 2 — параметры; 3 — окружение/lock; 4 — ошибка runner/результата;
-124 — timeout; 130 — отмена. Полный [контракт](work/plans/HARNESS_STRUCTURE.plan.md)
+124 — timeout; 130 — отмена. Полный [контракт](work/contracts/HARNESS_RUNNER_CONTRACT.md)
 и [операционные инструкции](context/DEVELOPMENT.md) описывают детали.
 
 ## 📌 Актуальность и размещение
@@ -67,8 +65,10 @@ Context описывает текущий продукт. Plans/contracts объ
 `proposed`, `in progress`, `completed`, `superseded`.
 
 Сохраняйте документы с архитектурной ценностью, важными ограничениями или
-полезной историей проверок. Устаревшие черновики и короткие рабочие заметки
-остаются в Git-истории; отдельный archive заранее не создаётся. Материалы,
+полезной историей проверок. При удалении завершённого плана переносите уникальные
+действующие правила в context/contracts, принятые доказательства — в checks/evidence,
+обновляйте ссылки. Этапы и рабочий журнал остаются в Git; отдельный archive
+не нужен. Устаревшие черновики и короткие заметки также остаются в Git. Материалы,
 написанные человеком и агентом, размещаются по одной обязанности.
 
 У каждого материала одно каноническое место. Новые каталоги используют
@@ -88,14 +88,14 @@ Production-проекты и course сохраняют свои корневые
 Для новой задачи используйте [шаблон](work/plans/TASK_TEMPLATE.md), включая
 краткие задачи без многостраничного плана. Выбирайте документы и проверки по
 [канонической карте](checks/CHECK_ROUTING.md). Сохраняйте в блоке продолжения
-выполненное, доказательства, остаток и ближайшую точную команду; примеры и
-[репетиция](work/plans/HARNESS_HANDOFF_REHEARSAL.plan.md) показывают этот порядок.
+выполненное, доказательства, остаток и ближайшую точную команду;
+[примеры](work/plans/TASK_TEMPLATE.md#task-examples) показывают этот порядок.
 Вопрос автору требуется при изменении продуктового контракта, scope или отсутствии
 необходимого внешнего доступа; рутинная работа внутри задачи продолжается.
 
 Реализованные команды: `-Command validate` и `-Command contracts`. Validate —
 статические локальные ссылки/fragments, PowerShell AST, пути карты и поля новых
-планов; templates и три исторических плана имеют явные исключения. Details:
+планов; placeholders разрешены только в шаблоне. Details:
 [контракт валидации](checks/automated/static/README.md).
 Check начинает с validate; Headless/Full сохраняют полный прежний продуктовый
 набор. Contracts запускается отдельно при изменении tools/runner и в CI, никогда
@@ -110,4 +110,4 @@ lock/timeout/cancel/log/summary. Test требует непустую выбор
 [CI-интеграция и чистый checkout](checks/CI.md): единый Invoke-CI.ps1 и GitHub
 Actions Windows Headless с 14-дневной диагностикой. Локальные и внешние
 success/intentional failure подтверждены; оба архива диагностики скачаны и
-проверены. Точные revision/run IDs находятся в плане.
+проверены. Точные revision/run IDs — в [протоколе приёмки](checks/evidence/HARNESS_ACCEPTANCE_2026-11-05.md).

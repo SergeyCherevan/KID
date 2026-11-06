@@ -75,7 +75,7 @@ sandbox не входит в согласованные требования.
 WPF demo self-check. Summary/TRX: `artifacts/harness/20261105T155833082Z-8fb09252/`.
 Diff production-проектов, solution и global.json до базы среза пуст. Invoke-CI
 на чистом `b9cd0ee` также принят: contracts, Headless и isolated data smoke;
-[команды и доказательства](../plans/HARNESS_AUTONOMY.plan.md#2026-11-05--итоговый-протокол-и-блок-продолжения).
+[команды и доказательства](../../checks/evidence/HARNESS_ACCEPTANCE_2026-11-05.md).
 
 **Внешний CI — 2026-11-05:** success на `9c09348` — **724 tests passed**, пять
 probes и data smoke; intentional failure на `ef0c6f7` остановился на битой ссылке.
@@ -83,7 +83,8 @@ probes и data smoke; intentional failure на `ef0c6f7` остановился 
 Hosted Full/manual и внешний run базы среза не подтверждены.
 
 **Обычный запуск и recovery — 2026-11-05:** два запуска/закрытия IDE без override
-в отдельном Windows-профиле приняты, settings/session сохранились после restart.
+в отдельном Windows-профиле приняты, settings/session сохранились после restart
+([протокол](../../checks/evidence/HARNESS_ACCEPTANCE_2026-11-05.md#ordinary-profile)).
 [Ручной recovery smoke](../../checks/evidence/RECOVERY_AUTOSAVE_MANUAL_2026-11-05.md)
 подтвердил NullFontFamily, DuplicateFontSize, RestoreFixture, NullTabs и autosave
 после kill/restart в изолированных roots. Полная матрица повреждений и сохранность

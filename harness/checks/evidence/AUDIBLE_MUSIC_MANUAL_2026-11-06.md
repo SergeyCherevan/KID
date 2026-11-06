@@ -1,8 +1,7 @@
 # 🔊 Слышимость Music в IDE — 2026-11-06
 
 Статус: **manual PASS**, подтверждён текущими ответами автора и отдельными
-машинными проверками. [План](../../work/plans/AUDIBLE_MUSIC_MANUAL_ACCEPTANCE.plan.md),
-[программа и инструкция](../manual/audible-music/README.md).
+машинными проверками. [Программа и инструкция](../manual/audible-music/README.md).
 База: feature/UnifiedHarness, fb87b714ce77286093a7d87c501a9a75922d9ad0,
 чистое дерево до создания сценария. Production/API/runner/solution не менялись.
 

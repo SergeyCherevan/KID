@@ -84,7 +84,7 @@ runtime/runner. Правка текста требует validate, а не об�
 
 - Код: [tools](../tools/), [runner checks](automated/runner/README.md).
 - Контекст: [DEVELOPMENT](../context/DEVELOPMENT.md),
-  [план автономности](../work/plans/HARNESS_AUTONOMY.plan.md).
+  [контракт runner](../work/contracts/HARNESS_RUNNER_CONTRACT.md).
 - Текст: validate. Tools/runner: validate + contracts + Headless + Full.
   Статический валидатор имеет собственные положительные/отрицательные fixtures.
   Contracts используют fixture, не вызывают общий check рекурсивно.
