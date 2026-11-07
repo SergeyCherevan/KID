@@ -7,10 +7,16 @@ Harness объединяет контекст продукта, работу н�
 
 - **context/** — [архитектура](context/architecture/ARCHITECTURE.md),
   [подсистемы](context/architecture/SUBSYSTEMS.md), [выполнение кода](context/architecture/CodeExecution.md),
-  [решения D001–D011](context/decisions/), [Runtime API](context/api/Runtime-API.md)
+  [решения D001–D012](context/decisions/),
+  [выбор Inno Setup для дистрибутива](context/decisions/D012_InnoSetup.md),
+  [Runtime API](context/api/Runtime-API.md)
   и остальные API, [справочные материалы](context/references/).
 - **work/** — [планы](work/plans/), [контракты](work/contracts/), [аудиты](work/audits/).
   В plans остаются активные задачи и [шаблон](work/plans/TASK_TEMPLATE.md).
+  [Общий план дистрибутива](work/plans/DISTRIBUTION.plan.md) описывает этапы,
+  зависимости и критерии приёмки; статус proposed, реализация не начата.
+  Для self-contained подготовлен [проект compilation profile](work/plans/SELF_CONTAINED_COMPILATION_PROFILE.plan.md)
+  со статусом proposed; поддержка ещё не реализована.
   Действующие правила runner — в [контракте](work/contracts/HARNESS_RUNNER_CONTRACT.md),
   принятые результаты — в [evidence](checks/evidence/).
 - **checks/** — [тесты](checks/automated/KID.Tests/README.md),
