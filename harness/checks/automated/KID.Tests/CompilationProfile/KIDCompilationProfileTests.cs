@@ -3,6 +3,7 @@ using System.Reflection.PortableExecutable;
 using System.IO;
 using System.Collections.Immutable;
 using System.Windows;
+using System.Text.Json;
 using KID.Services.CompilationProfile;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -58,6 +59,20 @@ public sealed class KIDCompilationProfileTests
         var actualPaths = GetReferencePaths();
         var netCoreDirectory = GetAssemblyDirectory(typeof(object).Assembly);
         var windowsDesktopDirectory = GetAssemblyDirectory(typeof(Application).Assembly);
+        if (string.Equals(netCoreDirectory, Path.TrimEndingDirectorySeparator(AppContext.BaseDirectory), StringComparison.OrdinalIgnoreCase))
+        {
+            // Independent baseline captured from a matching-patch FDD host, never the manifest under test.
+            var baselinePath = Environment.GetEnvironmentVariable("KID_FRAMEWORK_BASELINE");
+            Assert.False(string.IsNullOrWhiteSpace(baselinePath), "SCD test-host requires independent KID_FRAMEWORK_BASELINE.");
+            using var baseline = JsonDocument.Parse(File.ReadAllText(baselinePath!));
+            var expected = baseline.RootElement.EnumerateArray()
+                .Select(entry => Path.Combine(AppContext.BaseDirectory, Path.GetFileName(entry.GetProperty("path").GetString()!)))
+                .Append(typeof(global::KID.Graphics).Assembly.Location)
+                .Append(typeof(PlaybackState).Assembly.Location)
+                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+            AssertPathsEqual(expected, actualPaths);
+            return;
+        }
         var tpa = Assert.IsType<string>(AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"));
         var expectedPaths = tpa
             .Split(
@@ -249,6 +264,20 @@ public sealed class KIDCompilationProfileTests
         Assert.Same(profile, afterProfile);
         AssertPathsEqual(beforePaths, afterPaths);
         Assert.DoesNotContain("KID.Tests", GetAssemblyNames(afterProfile));
+    }
+
+    [Fact]
+    public void FreshProvider_ExtraAppLocalDllDoesNotExpandReferences()
+    {
+        var before = GetReferencePaths();
+        var extra = Path.Combine(AppContext.BaseDirectory, $"unrelated-{Guid.NewGuid():N}.dll");
+        try
+        {
+            File.Copy(typeof(KIDCompilationProfileTests).Assembly.Location, extra);
+            var fresh = new KIDCompilationProfileProvider().GetProfile();
+            AssertPathsEqual(before, GetReferencePaths(fresh));
+        }
+        finally { File.Delete(extra); }
     }
 
     private static Diagnostic[] GetCompilationErrors(string code)

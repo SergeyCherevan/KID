@@ -68,7 +68,15 @@ Dispatcher; MouseCanvas/KeyboardWindow не следуют Graphics.SetCanvas.
 
 **Особенности:**
 - `KIDCompilationProfileProvider` строит профиль один раз и всегда возвращает ту же identity
-- Framework paths берутся из `TRUSTED_PLATFORM_ASSEMBLIES`, но фильтруются по каталогам текущих двух framework packs
+- FDD paths берутся из `TRUSTED_PLATFORM_ASSEMBLIES` с фильтром двух framework-каталогов.
+  SCD читает versioned `kid-framework-assemblies.v1.json`, сформированный из
+  runtime-pack provenance конкретного publish; TPA проверяет пути, не расширяет allowlist.
+- Manifest проверяет schema/TFM/RID/architecture, owners, PE identities, anchors,
+  TPA correspondence, дубликаты и reparse points. Missing/corrupt/mixed layout
+  даёт явный отказ без fallback к SDK/shared runtime/app-local scan.
+- [Publish targets](../../../build/compilation-profile/KID.CompilationProfile.targets)
+  поддерживают Release/win-x64 file-based SCD без trimming/AOT/ReadyToRun.
+  Полный Desktop приходит transitive (WinForms сохранён); singleton и consumers прежние.
 - Пути абсолютны, уникальны без учёта регистра и отсортированы через `StringComparer.OrdinalIgnoreCase`
 - App-local IDE, RoslynPad, CodeAnalysis, AvalonEdit, DI, VisualStudio.Threading и остальные NAudio assemblies автоматически не добавляются
 - `GlobalImports` изначально пуст: пространства имён становятся доступны только через явные `using` пользовательского документа

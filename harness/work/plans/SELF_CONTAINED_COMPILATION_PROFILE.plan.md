@@ -10,11 +10,10 @@
 
 ## Статус
 
-proposed
+in progress
 
-Проект подготовлен 2026-11-07. Этапы реализации не начаты. Этот статус относится
-к реализации: проектирование запрошено автором, но выбор self-contained как
-окончательного режима дистрибутива ещё не подтверждён.
+Реализация начата 2026-11-07. Автор подтвердил self-contained для первого
+дистрибутива. Техническая и установочная приёмка остаются отдельными gates.
 Этот подплан связан с этапом 2 [общего плана дистрибутива](DISTRIBUTION.plan.md):
 здесь хранятся технические детали profile, там — installer, версия, подпись и
 приёмка поставки. Выполнение одного документа не закрывает другой автоматически.
@@ -194,18 +193,18 @@ publish. Поскольку преобразования отключены, и�
 - [x] Разделены подтверждённые требования и предлагаемые параметры поставки.
 - [x] Статическая валидация проекта и ссылок: exit 0.
 
-### Этапы будущей реализации
+### Этапы реализации
 
-- [ ] **1. SDK spike:** сохранить resolved pack/publish metadata и FDD baseline
+- [x] **1. SDK spike:** сохранить resolved pack/publish metadata и FDD baseline
   в artifacts; проверить WPF/full-desktop состав и порядок targets на SDK,
   реально выбранном global.json. При опровержении гипотез скорректировать проект
   до production-правок.
-- [ ] **2. Resolver:** отделить выбор путей, добавить manifest reader/validation,
+- [x] **2. Resolver:** отделить выбор путей, добавить manifest reader/validation,
   сохранить FDD и отрицательные проверки; не менять consumers/public API.
-- [ ] **3. Generator:** внедрить target, schema v1, fail-fast неподдержанных
+- [x] **3. Generator:** внедрить target, schema v1, fail-fast неподдержанных
   режимов; проверить clean publish, `--no-build`, смену runtime patch и чистый
   выход после неуспешной генерации.
-- [ ] **4. Интеграция:** выполнить targeted profile/editor/compiler tests,
+- [x] **4. Интеграция:** выполнить targeted profile/editor/compiler tests,
   Headless и Full. Обновить current context только после реализации.
 - [ ] **5. Publish:** независимо сверить manifest с runtime-pack provenance и
   фактическими файлами; выполнить self-contained test-host и реальный IDE smoke.
@@ -238,7 +237,7 @@ publish. Поскольку преобразования отключены, и�
 
 После реализации — `check -Profile Headless`, затем `check -Profile Full`;
 если меняются Harness tools/runner, также `contracts` по карте.
-Текущая задача меняет только документацию: достаточно `validate` и diff review.
+Реализация требует validate/contracts, targeted, Headless/Full и независимую publish матрицу; результаты ниже.
 
 Оба publish создаются отдельно; proposed self-contained команда:
 
@@ -248,7 +247,7 @@ dotnet publish KID.WPF.IDE/KID.WPF.IDE.csproj -c Release -r win-x64 --self-conta
 
 Перед повторением выбрать новый пустой output; не переиспользовать эту примерную
 папку поверх неудачного кандидата. FDD baseline публикуется отдельно с
-`--self-contained false`. Команды ещё не выполнялись.
+`--self-contained false`. Фактические команды/outputs зафиксированы в журнале реализации ниже.
 
 Автоматическая process-проверка: опубликовать существующий
 [KID.Tests](../../checks/automated/KID.Tests/KID.Tests.csproj) как self-contained
@@ -269,12 +268,9 @@ IntelliSense, Console/Graphics/PlaybackState, Run/Stop и следующий Run
 
 ## Открытые решения
 
-- Self-contained как режим выпуска, поддерживаемые Windows/RID и ответственность
-  за обновление включённого runtime требуют продуктового решения.
+- Автор подтвердил SCD/Windows 11 x64/offline; обновление включённого runtime новым выпуском. Конкретные Windows builds и VM-приёмка открыты.
 - Внешняя чистая Windows/VM и физическая UI-приёмка пока не подтверждены.
-- Источник pack metadata и порядок генерации предложены по SDK targets/source,
-  но ещё не проверены на фактическом self-contained publish .KID. Это технические
-  гипотезы этапа 1, а не блокировка текущего проектирования.
+- SDK spike и независимые pack/publish проверки выполнены; подробности и исправление no-build conflicts ниже.
 
 ## Журнал
 
@@ -296,17 +292,16 @@ IntelliSense, Console/Graphics/PlaybackState, Run/Stop и следующий Run
 
 ## Продолжение
 
-Подготовлены архитектура, этапы и проверки; production-код не изменён.
-Validate прошёл, результат записан в журнале. Реализацию начинать с этапа 1:
-снять фактические MSBuild items в изолированный artifacts-каталог и сверить
-FDD/full-desktop baseline до разработки resolver. Выбор режима финальной
-поставки и доступ к чистой Windows остаются отдельными решениями.
+Resolver/generator реализованы. SDK spike, negative fixtures, независимая
+RuntimeList матрица, FDD targeted и общие проверки прошли. Опубликованный
+SCD host 10.0.13 прошёл 53/4/38 tests; новый release runtime 10.0.14 прошёл 54/14/38 tests и shell IDE smoke
+после scan отказа старого runtime. Стадия 5 остаётся частично открытой,
+стадия 6 (чистая Windows без SDK/shared runtime) не выполнена.
 
 ## Следующий шаг
 
-Выполнить SDK spike этапа 1:
-получить runtime-pack/publish metadata `win-x64` и сравнить framework identities
-с FDD на одинаковых patch versions, сохранив команды и результаты в журнале.
+Получить чистую Windows 11 x64 VM без SDK/shared runtime и провести оставшуюся
+manual IDE приёмку по этапам 5–6. Автоматические test-host14 и owned smoke прошли.
 
 ## Источники проектирования
 
@@ -315,3 +310,58 @@ FDD/full-desktop baseline до разработки resolver. Выбор реж�
 - [SDK framework reference targets v10.0.402](https://github.com/dotnet/sdk/blob/v10.0.402/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.Sdk.FrameworkReferenceResolution.targets).
 - [SDK publish targets v10.0.402](https://github.com/dotnet/sdk/blob/v10.0.402/src/Tasks/Microsoft.NET.Build.Tasks/targets/Microsoft.NET.Publish.targets).
 - [Single-file и файловые пути assembly](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview).
+
+## Реализация 2026-11-07
+
+Старт: feature/Distribution, чистый HEAD 314eed2ded1798c5810b5f0b3c26d43d437809f8.
+SDK 10.0.402, Windows 10.0.19045, PowerShell 7; техническая матрица win-x64.
+[Контракт поставки](../contracts/DISTRIBUTION_CONTRACT.md) подтверждён автором:
+SCD/offline, Windows 11 x64, per-user/all-users, 0.1.0, SPDX 2.2 и scan policy.
+Лицензия/правообладатель/contact/подпись/канал/VM пока неизвестны автору.
+SDK spike выполняется до изменения provider. Первый FDD publish exit 1:
+NU1900, NuGet vulnerability source недоступен; это не scan PASS.
+Лог: artifacts/harness/distribution-20261107/spike/fdd.log.
+
+- SDK spike: SDK 10.0.402, FDD host/runtime packs 10.0.13: 227 уникальных
+  framework identities совпадают. TPA повторяет CoreLib: baseline нормализован
+  по уникальным paths. Полный Desktop уже transitive; WinForms присутствует.
+  Три Core facade перекрываются Desktop; RuntimeList verifier учитывает precedence.
+  ComputeFilesToPublish → KIDGenerateFrameworkManifest → copy подтверждён diag log.
+- SCD implementation-4 publish exit 0, 0 warnings/errors, manifest 227 assets.
+  Verify-FrameworkPublish exit 0 по независимому RuntimeList + PE + byte hashes.
+  Логи и comparison: artifacts/harness/distribution-20261107. Targeted FDD exit 0,
+  fixtures проверяют missing/broken/duplicate JSON, schema/TFM/RID/owners/paths,
+  identities, TPA, mixed layout, empty Location и reparse directory.
+
+- 2026-11-07, база 8c570ab, dirty implementation: publish-matrix-1 отказал на
+  no-build из-за сохранённых в RuntimePackAsset трёх проигравших Core facades.
+  SDK conflict targets подтверждены; генератор теперь сопоставляет финальный
+  publish source с единственным asset разрешённого pack, без app-local fallback.
+- Test-CompilationPublish.ps1 -OutputDirectory artifacts/harness/distribution-20261107/publish-matrix-2:
+  exit 0. Clean/repeat/no-build (включая poisoned obj), patch 10.0.12→10.0.13,
+  4 unsupported transforms и 8 generator fixtures прошли. Stale output удаляется
+  при ошибочной генерации. result.json содержит точные args/exit/log каждого child.
+- Headless exit 0: 753/753, пять probes, summary
+  artifacts/harness/20261107T082135828Z-41f1239c/summary.json.
+- После добавления shared editor/compiler type matrix и extra-DLL fixture Full
+  exit 0: 764/764, пять probes и две WPF self-check; 0 warnings/errors. Summary/TRX:
+  artifacts/harness/20261107T083419282Z-6372ebf6. Это не физическая/manual приёмка.
+- Scan выявил две High в runtime pack 10.0.13; release publish переключён на
+  10.0.14. Независимый framework verifier нового payload exit 0, 227 assemblies;
+  scan-2 сохранил отказ, candidate-14-1/scan — актуальный PASS без exceptions.
+
+- Актуальный test-host-14 publish exit 0; собственный manifest проверен по
+  RuntimeList и hashes (test-host-14-framework.json). Прямой xUnit apphost:
+  -namespace KID.Tests.CompilationProfile / CodeEditor / Compiler, -result-trx;
+  соответственно 54/54, 14/14, 38/38, exits 0. TRX: targeted-scd-14.
+  MTP --filter-namespace для прямого apphost дал exit 3; --help показал standalone
+  синтаксис, скорректирован до повторения. Пустые выборки проверяются по TRX.
+- Test-PublishedIDE.ps1 на candidate-14-1/publish exit 0: четыре window-open/normal
+  close цикла, repeat settings/session, другой cwd и Cyrillic/spaces copy.
+  owned roots и snapshots реального профиля: ide-smoke-14-1/result.json,
+  profile-before.json/profile-after.json. Run/Stop/physical/IntelliSense/manual
+  и чистая Windows остаются открытыми; этап 5 целиком не отмечается завершённым.
+- Contracts exit 0: 14 runner groups плюс static fixtures,
+  artifacts/harness/20261107T083952145Z-0afdfc02/summary.json.
+  Targeted FDD повторены после новых tests: 54/14/38, exit 0,
+  artifacts/harness/distribution-20261107/targeted-final-fdd.

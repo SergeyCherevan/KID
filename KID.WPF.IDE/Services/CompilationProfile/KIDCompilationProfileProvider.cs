@@ -38,58 +38,11 @@ namespace KID.Services.CompilationProfile
 
         private static KIDCompilationProfile CreateProfile()
         {
-            var netCoreDirectory = GetAssemblyDirectory(
-                typeof(object).Assembly,
-                "Microsoft.NETCore.App");
-            var windowsDesktopDirectory = GetAssemblyDirectory(
-                typeof(System.Windows.Application).Assembly,
-                "Microsoft.WindowsDesktop.App");
-            var applicationDirectory = NormalizeDirectory(AppContext.BaseDirectory);
-
-            if (AreSameDirectory(netCoreDirectory, applicationDirectory) ||
-                AreSameDirectory(windowsDesktopDirectory, applicationDirectory))
-            {
-                throw new InvalidOperationException(
-                    "Self-contained layout is not supported because framework and app-local assemblies share AppContext.BaseDirectory.");
-            }
-
-            var trustedPlatformAssemblies = AppContext.GetData(TrustedPlatformAssembliesKey) as string;
-            if (string.IsNullOrWhiteSpace(trustedPlatformAssemblies))
-            {
-                throw new InvalidOperationException(
-                    $"AppContext data '{TrustedPlatformAssembliesKey}' is missing or empty.");
-            }
-
-            var referencePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var netCoreReferenceCount = 0;
-            var windowsDesktopReferenceCount = 0;
-
-            foreach (var candidate in trustedPlatformAssemblies.Split(
-                         Path.PathSeparator,
-                         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var path = Path.GetFullPath(candidate);
-                var isNetCoreReference = IsPathWithinDirectory(path, netCoreDirectory);
-                var isWindowsDesktopReference = IsPathWithinDirectory(path, windowsDesktopDirectory);
-                if (!isNetCoreReference && !isWindowsDesktopReference)
-                    continue;
-
-                if (!File.Exists(path))
-                    throw new InvalidOperationException($"Runtime reference file does not exist: '{path}'.");
-
-                if (!HasManagedMetadata(path) || !referencePaths.Add(path))
-                    continue;
-
-                if (isNetCoreReference)
-                    netCoreReferenceCount++;
-                if (isWindowsDesktopReference)
-                    windowsDesktopReferenceCount++;
-            }
-
-            if (netCoreReferenceCount == 0)
-                throw new InvalidOperationException($"No managed references were found in Microsoft.NETCore.App directory '{netCoreDirectory}'.");
-            if (windowsDesktopReferenceCount == 0)
-                throw new InvalidOperationException($"No managed references were found in Microsoft.WindowsDesktop.App directory '{windowsDesktopDirectory}'.");
+            var referencePaths = new HashSet<string>(FrameworkReferenceResolver.Resolve(
+                AppContext.BaseDirectory,
+                typeof(object).Assembly.Location,
+                typeof(System.Windows.Application).Assembly.Location,
+                AppContext.GetData(TrustedPlatformAssembliesKey) as string), StringComparer.OrdinalIgnoreCase);
 
             AddRequiredReference(
                 referencePaths,
@@ -117,30 +70,6 @@ namespace KID.Services.CompilationProfile
             return new KIDCompilationProfile(
                 references,
                 ImmutableArray<string>.Empty);
-        }
-
-        private static string GetAssemblyDirectory(Assembly assembly, string frameworkName)
-        {
-            if (string.IsNullOrWhiteSpace(assembly.Location))
-                throw new InvalidOperationException($"Cannot resolve {frameworkName}: assembly '{assembly.FullName}' has no file location.");
-
-            var directory = Path.GetDirectoryName(Path.GetFullPath(assembly.Location));
-            if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
-                throw new InvalidOperationException($"Cannot resolve {frameworkName} directory from '{assembly.Location}'.");
-
-            return NormalizeDirectory(directory);
-        }
-
-        private static string NormalizeDirectory(string directory) =>
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
-
-        private static bool AreSameDirectory(string left, string right) =>
-            string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
-
-        private static bool IsPathWithinDirectory(string path, string directory)
-        {
-            var directoryPrefix = directory + Path.DirectorySeparatorChar;
-            return path.StartsWith(directoryPrefix, StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool HasManagedMetadata(string path)

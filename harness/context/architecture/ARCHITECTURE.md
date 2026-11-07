@@ -144,6 +144,9 @@ KeyboardWindow фиксированы. Sprite использует фактич�
 - Строится singleton-провайдером один раз из managed assemblies текущих `Microsoft.NETCore.App` и `Microsoft.WindowsDesktop.App`, а также явных `KID.Library` и `NAudio.Core`
 - Нормализует, устраняет дубликаты и сортирует абсолютные пути; отклоняет отсутствующие обязательные references и конфликтующие assembly identities
 - Не использует состояние загруженных assembly и не расширяется после поздней загрузки DLL
+- FDD сохраняет TPA/framework-directory алгоритм; файловый SCD использует
+  SDK-generated manifest с проверкой runtime-pack происхождения, identities,
+  anchors и TPA paths. Ошибка manifest не допускает fallback/сканирование DLL.
 - Не является sandbox: framework references включают файловую систему, сеть, reflection, P/Invoke, WPF и WinForms текущего runtime
 
 **CSharpCompiler** (`Compilation/CSharpCompiler.cs`)

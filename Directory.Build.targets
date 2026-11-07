@@ -1,0 +1,4 @@
+<Project>
+  <Import Project="build/compilation-profile/KID.CompilationProfile.targets"
+          Condition="'$(MSBuildProjectName)' == 'KID.WPF.IDE' or '$(MSBuildProjectName)' == 'KID.Tests'" />
+</Project>

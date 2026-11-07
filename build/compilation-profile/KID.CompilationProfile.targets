@@ -1,0 +1,37 @@
+<Project>
+  <UsingTask TaskName="KID.Build.GenerateFrameworkManifest" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Assets ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <Packs ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <PublishFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <TargetFramework ParameterType="System.String" Required="true" />
+      <RuntimeIdentifier ParameterType="System.String" Required="true" />
+      <OutputPath ParameterType="System.String" Required="true" />
+    </ParameterGroup>
+    <Task>
+      <Code Type="Class" Language="cs" Source="$(MSBuildThisFileDirectory)GenerateFrameworkManifest.cs" />
+    </Task>
+  </UsingTask>
+  <Target Name="KIDValidateCompilationPublish" BeforeTargets="PrepareForPublish"
+          Condition="'$(SelfContained)' == 'true'">
+    <Error Condition="'$(RuntimeIdentifier)' != 'win-x64' or '$(TargetFramework)' != 'net10.0-windows' or '$(Configuration)' != 'Release'"
+           Text="KID compilation profile supports only Release/net10.0-windows/win-x64 self-contained publish." />
+    <Error Condition="'$(PublishSingleFile)' == 'true' or '$(PublishTrimmed)' == 'true' or '$(PublishAot)' == 'true' or '$(PublishReadyToRun)' == 'true'"
+           Text="KID compilation profile requires file-based, untrimmed IL publish without AOT or ReadyToRun." />
+  </Target>
+  <Target Name="KIDGenerateFrameworkManifest" AfterTargets="ComputeFilesToPublish"
+          DependsOnTargets="ResolveRuntimePackAssets" Condition="'$(SelfContained)' == 'true'">
+    <PropertyGroup>
+      <_KIDFrameworkManifest>$(IntermediateOutputPath)kid-framework-assemblies.v1.json</_KIDFrameworkManifest>
+    </PropertyGroup>
+    <KID.Build.GenerateFrameworkManifest Assets="@(RuntimePackAsset)" Packs="@(ResolvedRuntimePack)"
+          PublishFiles="@(ResolvedFileToPublish)" TargetFramework="$(TargetFramework)"
+          RuntimeIdentifier="$(RuntimeIdentifier)" OutputPath="$(_KIDFrameworkManifest)" />
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(_KIDFrameworkManifest)" RelativePath="kid-framework-assemblies.v1.json"
+                             CopyToPublishDirectory="Always" />
+      <FileWrites Include="$(_KIDFrameworkManifest)" />
+    </ItemGroup>
+  </Target>
+</Project>
