@@ -15,7 +15,8 @@ sandbox не входит в согласованные требования.
 
 1. **CI — частично закрыто.** GitHub Actions на push/PR выполняет validate,
    contracts, restore, Release build, test, probes и isolated data smoke.
-   Остаются отдельный vulnerability scan и publish: явных шагов для них нет.
+   Подготовлен opt-in unsigned release job со scan/publish; внешний прогон
+   нового пути и signed release пока не подтверждены.
    Закрытие — воспроизводимый релизный gate; [контракт CI](../../checks/CI.md).
 2. **Настройки и повреждённые данные.** Валидация JSON и миграция старых кодов
    `UILanguage` реализованы; первый запуск и восстановление используют начальный
@@ -28,10 +29,11 @@ sandbox не входит в согласованные требования.
    Остаются реализация и приёмка установщика, версионирование и code signing,
    SBOM, third-party notices и корневые LICENSE, SECURITY, CHANGELOG.
    [План реализации](../plans/DISTRIBUTION.plan.md) подготовлен 2026-11-07,
-   статус proposed; реализация и приёмка ещё не выполнены.
+   статус in progress: manifest/resolver, versioning, unsigned Inno script и
+   release tools реализованы; production-подпись/документы/VM/внешний CI открыты.
    [README](../../../README.md) и [карта разработки](../../README.md) существуют.
-   Нужны подтверждения версии, подписи и состава поставки. Self-contained требует
-   доработки `KIDCompilationProfileProvider`, отвергающего такое размещение.
+   Нужны подтверждения версии, подписи и состава поставки. Self-contained profile реализован
+   и прошёл targeted/publish проверки; чистая Windows без runtime ещё не принята.
 4. **Release smoke.** Проверить новый publish на чистой Windows с .NET 10 Desktop Runtime:
    cold start, Run/Stop, сохранение, закрытие и восстановление вкладок. Успех этих
    сценариев должен относиться именно к распространяемому артефакту. Принятые
@@ -147,3 +149,20 @@ focus, Stop при частичном вводе и следующий Run бе�
 - **URL-аудио:** без явного лимита размер не ограничен; body timeout и общая квота
   параллельных загрузок не добавлены. Эти ограничения и непроверенные сочетания
   не объявляются новыми подтверждёнными дефектами.
+
+## 📦 Дополнение 2026-11-07: distribution implementation
+
+На feature/Distribution (база 314eed2, затем локальный 8c570ab + dirty
+implementation) автор подтвердил SCD/offline Windows 11 x64, scopes и 0.1.0.
+Headless: 753/753, Full после дополнительных fixtures: 764/764, пять probes и
+две WPF self-check, exit 0. Publish matrix прошла, framework verifier сравнил
+227 managed assets с RuntimeList.xml и final byte hashes. Все эти результаты
+не являются установочной/manual приёмкой подписанного артефакта.
+
+Scan runtime 10.0.13 выявил две High; release policy обновлена до 10.0.14,
+новый payload scan прошёл без exceptions. Диагностика:
+artifacts/harness/distribution-20261107/scan-2 и candidate-14-1/scan.
+Unsigned Inno compiler PASS; правовые сведения, финальные notices/SBOM,
+production signing, новый внешний CI и VM/manual remain open. Общий No-Go
+сохраняется, остальные условия аудита этим не закрыты. Канонический журнал —
+[общий план](../plans/DISTRIBUTION.plan.md) и связанный подплан.

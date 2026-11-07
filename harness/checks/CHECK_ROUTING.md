@@ -89,6 +89,26 @@ runtime/runner. Правка текста требует validate, а не об�
   Статический валидатор имеет собственные положительные/отрицательные fixtures.
   Contracts используют fixture, не вызывают общий check рекурсивно.
 
+## Distribution и self-contained publish
+
+- Build: [profile targets](../../build/compilation-profile/),
+  [версия](../../build/Version.props), [Inno и policy](../../build/distribution/).
+- Контекст: [D012](../context/decisions/D012_InnoSetup.md),
+  [контракт первой поставки](../work/contracts/DISTRIBUTION_CONTRACT.md).
+- [Publish matrix](automated/distribution/Test-CompilationPublish.ps1): clean,
+  repeat, no-build, stale manifest, patch changes, generator negative fixtures.
+- [Framework verifier](automated/distribution/Verify-FrameworkPublish.ps1):
+  независимый RuntimeList.xml, final PE identities и pack hashes.
+- [Payload verifier](automated/distribution/Verify-Payload.ps1): inventory,
+  обязательные файлы, запрет developer data, binary versions/SHA/assembly identity.
+- [Release](../tools/Invoke-Release.ps1), [scan](../tools/Test-ReleaseVulnerabilities.ps1),
+  [notices inventory](../tools/New-DistributionInventory.ps1).
+- Compilation changes: отдельные CompilationProfile/CodeEditor/Compiler targeted,
+  Headless/Full; crash versions: Diagnostics. Tools: validate/contracts.
+- Installer install/uninstall, signature chain/timestamp, SBOM schema/completeness
+  и same-artifact smoke — отдельные gates, Headless их не заменяет:
+  [release acceptance](manual/distribution/README.md).
+
 ## Targeted интерфейс
 
 Целевой запуск — `dotnet test --project harness/checks/automated/KID.Tests/KID.Tests.csproj -c Release --no-build --no-restore` с xUnit MTP

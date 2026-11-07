@@ -24,8 +24,37 @@ Always-upload сохраняет logs/summary/TRX/CI/data/contract results 14 д
 настройки не публикуются.
 
 Full требует пригодный desktop и в hosted job не подключён; Headless не
-подменяет локальный Full или manual PASS. Vulnerability scan и publish
-не добавлены. Релизные условия перечислены в [аудите](../work/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md).
+подменяет локальный Full или manual PASS. Push/PR gate остаётся прежним.
+Релизные условия перечислены в [аудите](../work/audits/PRODUCTION_READINESS_AUDIT_2026-08-05.md).
+
+## 📦 Release candidate
+
+Тот же workflow имеет opt-in workflow_dispatch `candidate=true`. Job candidate
+зависит от headless и проверяет его ci-result revision/dirty/status. Секреты
+подписи в push/PR или unsigned job не передаются. SDK release job закреплён
+10.0.402; runtime policy — [release-policy.json](../../build/distribution/release-policy.json).
+
+[Invoke-Release.ps1](../tools/Invoke-Release.ps1) использует существующий runner,
+затем его общий lock для publish/release операций. Новый output обязателен.
+Порядок: clean checks → SCD publish → independent framework/payload checks →
+NuGet/runtime scan → notices → staging/symbols/course → собственная подпись
+(Signed adapter) → SBOM → Inno SignTool → hashes/release manifest → candidate.zip.
+Архив не означает приёмку или разрешение распространения. Signed mode запрещает
+AllowDirty/SkipChecks, требует LICENSE/SECURITY и утверждённые author metadata,
+notices/material review и provisioned signing backend. Windows cert-store
+signtool adapter подготовлен; сервис/сертификат/издатель ещё не выбраны.
+Внешний signed workflow не подключается до выбора backend и защиты credentials.
+
+Unsigned job не создаёт GitHub Release и не публикует установщик пользователям.
+Always-upload сохраняет candidate.zip, manifest, release result, scan evidence и
+логи 14 дней: это временная диагностика, не утверждённая retention канала.
+При отказе готового candidate.zip нет.
+
+Полный SBOM требует supplier/namespace и review; preliminary inventory не SBOM.
+Runtime 10.0.13 заблокирован текущим scan, для новых release outputs выбран
+10.0.14. Новый внешний run/скачанный архив пока не подтверждены; локальные
+commits не отправляются автоматически. Full/VM/manual/signed acceptance остаются
+по [протоколу](manual/distribution/README.md).
 
 ## ✅ Внешняя приёмка 2026-11-05
 

@@ -51,11 +51,11 @@
 - **Runtime:** Inno Setup не определяет выбор framework-dependent или self-contained.
   Self-contained был предложен для удобства первого запуска, но требует отдельной
   реализации и приёмки. Текущий [KIDCompilationProfileProvider](../../../KID.WPF.IDE/Services/CompilationProfile/KIDCompilationProfileProvider.cs)
-  явно отвергает такое размещение. Простое удаление запрета не сохраняет
+  теперь использует проверяемый SDK-generated manifest для файлового SCD. Простое удаление прежнего запрета не сохраняло
   действующий состав references редактора и компилятора.
   [Проект поддержки self-contained](../../work/plans/SELF_CONTAINED_COMPILATION_PROFILE.plan.md)
-  от 2026-11-07 описывает предлагаемые manifest/resolver и приёмку; реализация
-  не начата и режим финального дистрибутива этим проектом не утверждён.
+  от 2026-11-07 содержит реализацию manifest/resolver и незакрытую VM-приёмку.
+  Автор отдельно подтвердил SCD для первой поставки в контракте дистрибутива.
 - **Поддерживаемая среда:** архитектуры, версии Windows, offline-режим и способ
   предоставления .NET ещё предстоит определить.
 - **Версия и состав:** единый источник версии, SBOM, third-party notices,
@@ -103,3 +103,7 @@ publish, подписанный установщик и release smoke отсут
 - [Управление Win32-приложениями в Intune](https://learn.microsoft.com/en-us/intune/app-management/deployment/win32).
 - [Обновления MSIX через App Installer](https://learn.microsoft.com/en-us/windows/msix/app-installer/auto-update-and-repair--overview).
 - [Файлы и данные упакованных desktop-приложений](https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes).
+
+2026-11-07: resolver/generator и unsigned Inno build реализованы; контракт
+SCD/Windows 11 x64/offline/scopes подтверждён. Подпись, правовые сведения, внешний
+CI и чистая Windows остаются gates; актуальные результаты — в связанных планах.

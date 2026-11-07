@@ -14,9 +14,9 @@ Harness объединяет контекст продукта, работу н�
 - **work/** — [планы](work/plans/), [контракты](work/contracts/), [аудиты](work/audits/).
   В plans остаются активные задачи и [шаблон](work/plans/TASK_TEMPLATE.md).
   [Общий план дистрибутива](work/plans/DISTRIBUTION.plan.md) описывает этапы,
-  зависимости и критерии приёмки; статус proposed, реализация не начата.
+  зависимости и критерии приёмки; статус in progress, подпись/VM/внешний CI открыты.
   Для self-contained подготовлен [проект compilation profile](work/plans/SELF_CONTAINED_COMPILATION_PROFILE.plan.md)
-  со статусом proposed; поддержка ещё не реализована.
+  со статусом in progress; resolver/generator реализованы, чистая Windows ещё не принята.
   Действующие правила runner — в [контракте](work/contracts/HARNESS_RUNNER_CONTRACT.md),
   принятые результаты — в [evidence](checks/evidence/).
 - **checks/** — [тесты](checks/automated/KID.Tests/README.md),
@@ -117,3 +117,6 @@ lock/timeout/cancel/log/summary. Test требует непустую выбор
 Actions Windows Headless с 14-дневной диагностикой. Локальные и внешние
 success/intentional failure подтверждены; оба архива диагностики скачаны и
 проверены. Точные revision/run IDs — в [протоколе приёмки](checks/evidence/HARNESS_ACCEPTANCE_2026-11-05.md).
+
+Подготовка release-кандидата: [RELEASING](context/RELEASING.md); signed/unsigned,
+scan, notices/SBOM и installer имеют отдельные gates от Headless/Full.

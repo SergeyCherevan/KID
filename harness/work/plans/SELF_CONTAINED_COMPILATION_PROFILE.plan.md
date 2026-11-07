@@ -20,7 +20,7 @@ in progress
 
 ## Границы
 
-В scope будущей реализации: provider, внутренний resolver framework paths,
+В scope реализации: provider, внутренний resolver framework paths,
 генерация publish manifest, проверки обоих layouts и опубликованной IDE.
 Сохранить public API, assembly names, friend-доступ, DI lifetime и модель
 доверенного in-process выполнения. Installer определяется [D012](../../context/decisions/D012_InnoSetup.md)
@@ -41,7 +41,7 @@ AOT и ReadyToRun не входят в первоначальную приёмк
 - Inno Setup выбран для первого установщика; реализация упаковки ещё открыта.
 - Существующее поведение production и границы доступа сохраняются.
 
-### Проверено по текущим исходникам
+### Исходное состояние на 314eed2
 
 - [Provider](../../../KID.WPF.IDE/Services/CompilationProfile/KIDCompilationProfileProvider.cs)
   берёт `TRUSTED_PLATFORM_ASSEMBLIES` (TPA) и фильтрует по каталогам
@@ -130,7 +130,9 @@ Target выполняется `AfterTargets=ComputeFilesToPublish`, имеет �
 итоговым `@(ResolvedFileToPublish)` и добавляет JSON в эту коллекцию до копирования.
 Использовать финальные destination paths и проверить PE identity; отсутствующий,
 конфликтующий или подменённый app-local источником framework asset останавливает
-publish. Поскольку преобразования отключены, источник pack и финальный файл
+publish. Для подтверждённых SDK facade conflicts при no-build допускается только
+финальный источник с единственным provenance в разрешённых packs; проигравший
+asset не добавляется. Поскольку преобразования отключены, источник pack и финальный файл
 должны описывать одну сборку; это проверяется, а не предполагается.
 
 Генерировать manifest заново на каждом self-contained publish, включая

@@ -11,9 +11,9 @@
 
 ## Статус
 
-proposed
+in progress
 
-План подготовлен по запросу автора 2026-11-07. Реализация этапов не начата.
+Реализация начата 2026-11-07 на feature/Distribution. Контракт подтверждён автором; подпись и внешняя приёмка открыты.
 Выбор Inno Setup уже принят в [D012](../../context/decisions/D012_InnoSetup.md).
 Оформление плана и существующий проект self-contained не являются подтверждением
 работоспособности установщика или готовности релиза.
@@ -42,10 +42,10 @@ MSIX, собственный автообновлятор, дополнител�
 - Автор выбрал Inno Setup и запросил поэтапный план с критериями приёмки.
 - Нужны подтверждения версии, подписи и состава поставляемого артефакта.
 - Запрошен и подготовлен [проект self-contained profile](SELF_CONTAINED_COMPILATION_PROFILE.plan.md).
-  Поддержка ещё не реализована; окончательный режим поставки не утверждён.
+  SCD выбран автором для первой поставки; техническая реализация и приёмка ведутся отдельно.
 - Коммиты локальные, английские Conventional Commits; push только по запросу.
 
-### Предлагаемая первая конфигурация
+### Конфигурация, подтверждённая автором 2026-11-07
 
 - Release, `win-x64`, обычная файловая self-contained поставка внутри EXE.
 - Явно отключить single-file, trimming, AOT и ReadyToRun в начальной матрице.
@@ -54,7 +54,7 @@ MSIX, собственный автообновлятор, дополнител�
 - Сохранять исходные файлы ученика, настройки и recovery при обновлении/удалении.
 - Полный offline payload без загрузки .NET во время установки.
 
-Это рекомендации для этапа 0, а не дополнительные согласованные требования.
+Этот пакет подтверждён автором в текущей задаче; Windows 11 x64, версия 0.1.0, кандидаты rc.N. Полный контракт: [DISTRIBUTION_CONTRACT](../contracts/DISTRIBUTION_CONTRACT.md).
 Если выбран framework-dependent, явно определить Desktop Runtime prerequisite,
 проверку его наличия, способ установки, права и offline-комплект. Не считать
 такой вариант запуском без установленного .NET. Режим runtime и Inno Setup —
@@ -73,15 +73,15 @@ MSIX, собственный автообновлятор, дополнител�
 
 Зависимости: D012, решения автора о поддерживаемом сценарии.
 
-- [ ] Записать режим runtime, RID, поддерживаемые Windows и offline-требования.
-- [ ] Определить домашний/школьный режимы, пути и права, необходимость silent
+- [x] Записать режим runtime, RID, поддерживаемые Windows и offline-требования.
+- [x] Определить домашний/школьный режимы, пути и права, необходимость silent
   install, правила обнаружения версии и сосуществования режимов.
-- [ ] Определить политику обновления/downgrade, действия при работающей IDE,
+- [x] Определить политику обновления/downgrade, действия при работающей IDE,
   сохранность исходников, настроек и recovery при upgrade/uninstall/reinstall.
-- [ ] Определить включение course/примеров и локальных symbol-файлов.
+- [x] Определить включение course/примеров и локальных symbol-файлов.
 - [ ] Получить решения о лицензии .KID, правообладателе, издателе подписи,
   действительном приватном канале security reports и канале получения установщика.
-- [ ] Зафиксировать правила оценки vulnerability scan: набор источников,
+- [x] Зафиксировать правила оценки vulnerability scan: набор источников,
   порог отказа, недоступность источника и оформление исключений.
 
 **Выход:** каждый параметр имеет явное значение либо явно ограничивает готовность
@@ -93,13 +93,13 @@ MSIX, собственный автообновлятор, дополнител�
 
 Зависимости: политика версий из этапа 0; возможна доработка параллельно publish.
 
-- [ ] Ввести централизованные `Version`, `FileVersion`, `InformationalVersion`
+- [x] Ввести централизованные `Version`, `FileVersion`, `InformationalVersion`
   и отдельную политику `AssemblyVersion` для production-проектов.
-- [ ] Согласовать формат prerelease, числовую версию установщика и Git SHA;
+- [x] Согласовать формат prerelease, числовую версию установщика и Git SHA;
   не выводить release version из даты или времени неявно.
 - [ ] Передавать одну версию в publish, Inno Setup, SBOM и release manifest;
   в changelog указывать соответствующий выпуск.
-- [ ] Проверить необходимость добавления informational version/SHA в
+- [x] Проверить необходимость добавления informational version/SHA в
   [crash report](../../../KID.WPF.IDE/Services/Diagnostics/CrashReportWriter.cs),
   сохранив читаемость существующей диагностики.
 - [ ] Проверить metadata готовых EXE/DLL и соответствие installer/tag/revision;
@@ -112,15 +112,15 @@ build metadata не меняет имена сборок и действующи
 
 Зависимости: выбранные runtime/RID/Windows из этапа 0 и версия из этапа 1.
 
-- [ ] Получить framework-dependent publish как контрольную точку.
+- [x] Получить framework-dependent publish как контрольную точку.
 - [ ] При выборе self-contained выполнить этапы связанного
   [плана compilation profile](SELF_CONTAINED_COMPILATION_PROFILE.plan.md).
   Технические детали manifest/resolver и их проверки канонически хранятся там.
-- [ ] Зафиксировать publish profile/команду, выбранный SDK, runtime pack versions
+- [x] Зафиксировать publish profile/команду, выбранный SDK, runtime pack versions
   и параметры. Каждого кандидата создавать в новом пустом каталоге artifacts.
 - [ ] Проверить запуск из другого working directory, пути с пробелами/кириллицей
   и отсутствие обращений к SDK/NuGet cache на конечной машине.
-- [ ] Выполнить актуальные targeted и общие проверки по затронутому коду.
+- [x] Выполнить актуальные targeted и общие проверки по затронутому коду.
 
 **Выход:** есть publish-кандидат с однозначной версией и поддерживаемым layout.
 Для self-contained отдельно подтверждено сохранение reference profile и запуск
@@ -157,11 +157,11 @@ build metadata не меняет имена сборок и действующи
 Зависимости: контракт режимов, версия и состав payload. Разработку неподписанного
 установщика можно выполнять до появления production-сертификата.
 
-- [ ] Закрепить версию Inno Setup, условия использования и воспроизводимую
+- [x] Закрепить версию Inno Setup, условия использования и воспроизводимую
   CLI-сборку из проверенного publish; не собирать payload заново внутри installer.
-- [ ] Реализовать только согласованные режимы, ярлыки, uninstall registration,
+- [x] Реализовать только согласованные режимы, ярлыки, uninstall registration,
   paths и ACL. Настройки каждого ученика создаёт IDE, а не SYSTEM/admin installer.
-- [ ] Реализовать согласованные silent install/uninstall, exit codes, логи
+- [x] Реализовать согласованные silent install/uninstall, exit codes, логи
   и обнаружение версии для школьного развёртывания.
 - [ ] Реализовать upgrade, отказ/поддержку downgrade и сценарий работающей IDE.
   Не полагаться на принудительное закрытие процесса без подтверждения сохранности
@@ -200,12 +200,12 @@ production-подписи явно отмечено и не позволяет �
 Зависимости: локальные команды этапов 1–5. Возможна подготовка unsigned job
 без внешнего доступа к ключу; это не заменяет signed job.
 
-- [ ] Расширить существующий [CI-контракт](../../checks/CI.md) отдельным release
+- [x] Расширить существующий [CI-контракт](../../checks/CI.md) отдельным release
   путём: чистый checkout → проверки/scan → publish → подпись payload → SBOM/
   notices → installer/подпись → финальные hashes/manifest → архив кандидата.
-- [ ] Сохранить текущий push/PR gate и read-only permissions там, где запись
+- [x] Сохранить текущий push/PR gate и read-only permissions там, где запись
   не требуется. Секреты подписи не использовать в недоверенном PR-контексте.
-- [ ] Закрепить применяемые инструменты и фиксировать реально выбранный SDK
+- [x] Закрепить применяемые инструменты и фиксировать реально выбранный SDK
   с учётом roll-forward global.json. Повторяемость команд не означает побитовое
   равенство timestamped подписей двух независимо подписанных сборок.
 - [ ] Scan должен учитывать production transitive graph/runtime и согласованную
@@ -251,8 +251,8 @@ production-подписи явно отмечено и не позволяет �
 
 ## Проверки
 
-Для текущей документационной правки по [карте проверок](../../checks/CHECK_ROUTING.md):
-`./harness/tools/Invoke-Harness.ps1 -Command validate` и `git diff --check`.
+Реализация использует [карту проверок](../../checks/CHECK_ROUTING.md),
+validate/contracts, targeted, Headless/Full и отдельные release/publish проверки.
 
 При реализации выбирать объединение маршрутов:
 
@@ -276,11 +276,13 @@ executed count, параметры кандидата и непройденны�
 
 ## Открытые решения
 
-1. Runtime/SCD, Windows/RID, offline и домашний/школьный режимы.
-2. Нумерация и совместимость версий, upgrade/downgrade и политика данных.
-3. Лицензия .KID/правообладатель, действительный security contact, course/symbols.
+Параметры runtime/Windows/RID/offline/scopes/версии/данных/SBOM/scan подтверждены в контракте.
+
+1. Конкретные Windows 11 builds и результаты VM-приёмки.
+2. Фактическая установочная приёмка upgrade/downgrade и сохранности данных.
+3. Лицензия .KID/правообладатель, действительный security contact, права на материалы. Course включён, symbols отдельно — подтверждено.
 4. Издатель, средство подписи, credentials и доступ release job.
-5. SBOM tool/format, политика scan и исключений, канал и retention кандидатов.
+5. Supplier/namespace для финального SBOM, канал и retention. Tool/format и scan policy подтверждены, pinned tool 4.1.5/SPDX 2.2.
 6. Чистые Windows/VM и участие автора в физической/UI-приёмке.
 
 Вопросы не требуют повторного подтверждения уже принятого Inno Setup.
@@ -305,14 +307,85 @@ executed count, параметры кандидата и непройденны�
 
 ## Продолжение
 
-Подготовлен общий порядок этапов 0–7 и зависимость от self-contained подплана.
-Реализация не начата. Документация прошла validate, результат записан в журнале;
-ближайший рабочий этап — заполнение контракта поставки без повторного
-выбора инструмента. Подготовка manifest/resolver ведётся по связанному плану,
-а не дублируется в этом документе.
+Контракт этапа 0 подтверждён, кроме правовых/издательских сведений и внешнего
+доступа. Этап 1: версия/crash SHA реализованы. Этап 2: FDD baseline и SCD
+resolver/generator/publish проверки прошли, чистая Windows открыта. Этап 3:
+changelog/README, payload inventory и license texts подготовлены; LICENSE,
+SECURITY и final SBOM требуют авторских сведений/review. Этап 4: Inno script и
+unsigned compile работают, установочная матрица не выполнена. Этап 5: signing
+adapter/gates подготовлены, production trust не подтверждён. Этап 6: opt-in
+unsigned workflow подготовлен, внешний run отсутствует. Этап 7: не выполнен.
+
+Оба плана остаются in progress. Исторические команды сохранены ниже; новые
+results/log/TRX — artifacts/harness/distribution-20261107. Никакого принятого
+подписанного кандидата пока нет. Незакрытые обязательства не перенесены/не исключены.
 
 ## Следующий шаг
 
-Составить конкретный контракт этапа 0: runtime, Windows/RID,
-offline, install scopes, обновление и сохранность данных; отделить технические
-значения по умолчанию от вопросов автору о лицензии, издателе и канале.
+Завершить локальную end-to-end unsigned сборку из чистого commit через
+Invoke-Release.ps1 и сохранить manifest/hash/evidence. Для signed/VM приёмки
+нужны author metadata, signing backend и доступ к Windows 11 VM.
+
+## Реализация 2026-11-07
+
+Старт: feature/Distribution, чистый HEAD 314eed2ded1798c5810b5f0b3c26d43d437809f8.
+SDK 10.0.402, Windows 10.0.19045, PowerShell 7; техническая матрица win-x64.
+[Контракт поставки](../contracts/DISTRIBUTION_CONTRACT.md) подтверждён автором:
+SCD/offline, Windows 11 x64, per-user/all-users, 0.1.0, SPDX 2.2 и scan policy.
+Лицензия/правообладатель/contact/подпись/канал/VM пока неизвестны автору.
+SDK spike выполняется до изменения provider. Первый FDD publish exit 1:
+NU1900, NuGet vulnerability source недоступен; это не scan PASS.
+Лог: artifacts/harness/distribution-20261107/spike/fdd.log.
+
+- SDK spike: FDD/SCD publish exit 0 с network access; SDK 10.0.402, packs 10.0.13.
+  Независимый FDD host дал 227 уникальных identities, SCD совпал (WinForms включён
+  transitive graph, UseWindowsForms не добавлялся). comparison.json и binlog в
+  artifacts/harness/distribution-20261107/spike. Сбой no-restore NETSDK1047
+  устранён новым restore; sandbox WPF obj ACL потребовал elevated build.
+- Version.props: 0.1.0-rc.1 / FileVersion 0.1.0.1 / AssemblyVersion 1.0.0.0.
+  Crash report получил дополнительное informationalVersion; старые поля сохранены.
+- Harness build-2 exit 0, 0 warnings/errors; targeted FDD каждый namespace отдельно
+  exit 0 (CompilationProfile/CodeEditor/Compiler/Diagnostics), TRX под
+  artifacts/harness/distribution-20261107/targeted-fdd. Исправлены CA1869 и
+  конфликт System.Console namespace; старые неуспешные логи сохранены.
+
+- Автор подтвердил два предложенных пакета решений. Правообладатель, лицензия,
+  security contact, издатель/подпись, канал и VM пока неизвестны; эти поля не
+  заполнены фиктивными сведениями. Корневые LICENSE/SECURITY поэтому не создаются.
+- Source commits: 8c570ab (контракт/версия), beb2a40 (SCD resolver/generator).
+  Никаких reset/rewrite/push не выполнялось.
+- Full exit 0: 764/764 tests, пять probes, обе WPF self-check, 0 warnings/errors;
+  summary/TRX: artifacts/harness/20261107T083419282Z-6372ebf6. Contracts exit 0:
+  14 runner groups + static fixtures, 20261107T083952145Z-0afdfc02.
+- Targeted FDD/SCD14 по отдельным namespace: 54 profile, 14 editor, 38 compiler,
+  все passed; Diagnostics 3/3. TRX targeted-final-fdd и targeted-scd-14.
+- candidate-14-1/publish: 684 файла, version 0.1.0-rc.1 + 8c570ab, dirty=true,
+  file 0.1.0.1, assembly 1.0.0.0, RID win-x64, packs 10.0.14. Framework/payload
+  verifier exit 0. Scan 10.0.13 (scan-2) выявил две High, 10.0.14 scan PASS,
+  без исключений. Scan errors/источники/hashes сохранены в соответствующих results.
+- Inno 6.7.3 official portable; installer-unsigned-2 compile exit 0. Первый
+  кандидат14 также compiled, но release gate отказал из-за padding версии Inno;
+  исправлено Trim, failed output не считается готовой поставкой.
+- Test-ReleaseGates exit 0: valid payload и ожидаемые отказы wrong version,
+  missing/unexpected files, unsigned signature, invalid SBOM. Нативный SBOM Tool
+  probe отказал без обязательного supplier; это не положительная SBOM-приёмка.
+- Inventory-final-14: 53 компонента из publish deps, license texts собраны для
+  всех; upstream commits берутся из nuspec. Elfie MIT: явная декларация/copyright
+  nuspec + pinned SPDX 3.27.0 текст. Final review и права course остаются открытыми.
+- Shell IDE smoke14 exit 0: четыре open/normal-close/persistence цикла, другой cwd,
+  Cyrillic/spaces copy, owned DataRoot, реальные profile hashes не изменились.
+  ide-smoke-14-1/result.json; это не Run/Stop/physical/manual/clean Windows PASS.
+- Remote read-only ls-remote exit 0, feature/Distribution отсутствует в origin;
+  лог remote-branch.txt пуст. Нужный код локален, внешний CI без push недоступен.
+  Push не разрешён и не выполнялся. Hyper-V module доступен, но Get-VM сообщил
+  отсутствие разрешения host authorization policy; inventory VM не получен.
+- Validate-5 exit 0 (80 files), summary 20261107T084433585Z-493c02f7.
+  Попытка validate во время release получила exit 3 (общий lock), затем после
+  освобождения успешно повторена. Существующий lock/timeout/cancel contract сохранён.
+
+- Workflow проверен actionlint 1.7.12, exit 0 (официальный asset SHA-256 проверен).
+  Python YAML probe не выполнялся из-за отсутствия PyYAML; actionlint заменил
+  эту проверку. Publish-only SBOM input содержит 53 библиотеки, целый solution
+  detector не получает. Положительный final SBOM остаётся заблокирован supplier.
+- Self-contained текущего кода: отдельный локальный commit beb2a40. Правки
+  дальнейшего release pipeline/документов не объявляют подплан completed.

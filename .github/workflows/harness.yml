@@ -3,6 +3,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      candidate:
+        description: Build an unsigned, unaccepted candidate after the existing gate
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -36,3 +41,38 @@ jobs:
             artifacts/harness-runner-contract/**/*.log
             artifacts/harness-runner-contract/**/*.out
             artifacts/harness-runner-contract/**/*.err
+  candidate:
+    if: github.event_name == 'workflow_dispatch' && inputs.candidate
+    needs: headless
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.402
+      - uses: actions/download-artifact@v4
+        with:
+          name: harness-${{ github.sha }}-${{ github.run_attempt }}
+          path: artifacts/harness/upstream-ci
+      - name: Build unsigned candidate from the verified revision
+        shell: pwsh
+        run: |
+          $results = @(Get-ChildItem artifacts/harness/upstream-ci -Recurse -Filter ci-result.json)
+          if ($results.Count -ne 1) { throw 'Expected one upstream CI result' }
+          ./harness/tools/Invoke-Release.ps1 -Mode Unsigned -CIResult $results[0].FullName
+      - name: Keep candidate and diagnostics without publishing a release
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-candidate-${{ github.sha }}-${{ github.run_attempt }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            artifacts/harness/release-*/candidate.zip
+            artifacts/harness/release-*/symbols.zip
+            artifacts/harness/release-*/release-manifest.json
+            artifacts/harness/release-*/release-result.json
+            artifacts/harness/release-*/*.log
+            artifacts/harness/release-*/scan/*
+            artifacts/harness/release-*/*result.json

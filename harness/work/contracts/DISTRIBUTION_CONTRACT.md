@@ -26,6 +26,8 @@ Inno Setup утверждён в [D012](../../context/decisions/D012_InnoSetup.m
   Installer не создаёт данные ученика; их создаёт приложение при запуске ученика.
 - Первый выпуск 0.1.0, кандидаты 0.1.0-rc.N; FileVersion 0.1.0.N;
   AssemblyVersion 1.0.0.0 сохраняет существующую идентичность KID.Library.
+  Четвёртый компонент FileVersion монотонен, включая переход rc→stable;
+  для stable убрать suffix, сохранив более высокий числовой installer revision.
 - Course/примеры включены после проверки прав; symbols отдельным архивом.
 - Microsoft SBOM Tool, SPDX 2.2; версию инструмента закрепить после проверки.
 - Scan production transitive NuGet + runtime: High/Critical и недоступный источник
