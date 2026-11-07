@@ -322,9 +322,11 @@ results/log/TRX — artifacts/harness/distribution-20261107. Никакого п
 
 ## Следующий шаг
 
-Завершить локальную end-to-end unsigned сборку из чистого commit через
-Invoke-Release.ps1 и сохранить manifest/hash/evidence. Для signed/VM приёмки
-нужны author metadata, signing backend и доступ к Windows 11 VM.
+Получить реальные author metadata (лицензия/правообладатель/security contact,
+supplier/namespace, издатель/способ подписи, канал/retention) и доступ к Windows 11
+VM. Затем выполнить Signed path и обязательную установочную/manual приёмку.
+Локальный clean unsigned candidate и его архив уже проверены; не перепаковывать
+их ради распространения и не считать signed release.
 
 ## Реализация 2026-11-07
 
@@ -389,3 +391,38 @@ NU1900, NuGet vulnerability source недоступен; это не scan PASS.
   detector не получает. Положительный final SBOM остаётся заблокирован supplier.
 - Self-contained текущего кода: отдельный локальный commit beb2a40. Правки
   дальнейшего release pipeline/документов не объявляют подплан completed.
+
+## Финальная локальная проверка 2026-11-07
+
+- Source commit d4cf96ebd4f4ccdd9301a66d286d4107d58389dd, dirty=false.
+  Invoke-CI.ps1 exit 0: validate/contracts/Headless 764/764 + пять probes +
+  data isolation. ci-result: artifacts/harness/ci-20261107T085121405Z-c6ce572b.
+- Invoke-Release.ps1 -Mode Unsigned -CIResult указанного clean run -ToolsDirectory
+  artifacts/harness/distribution-20261107/tools -OutputDirectory
+  artifacts/harness/distribution-20261107/candidate-clean-d4cf96e: exit 0,
+  checksSkipped=false, built-not-accepted. Exact arguments/child exits/logs —
+  release-result.json. SDK 10.0.402, PowerShell 7.6.9, Windows 10.0.19045 x64.
+- Version 0.1.0-rc.1 / FileVersion 0.1.0.1 / AssemblyVersion 1.0.0.0;
+  RID win-x64, Core/Desktop packs 10.0.14. 684 raw publish files прошли payload
+  и source-byte checks (20 native assets); framework manifest — 227 entries.
+  53 компонента с license texts; staging 823 files, 2 PDB в отдельном symbols.zip.
+- Installer SHA-256:
+  340cb56ee0aee73a3d4ab181b5123d804ec2b08b63f5050e0d504a1319a02dc3.
+  release-manifest.json находится в candidate-clean-d4cf96e, accepted=false.
+  Authenticode NotSigned. Принятого к распространению артефакта нет.
+- Verify-CleanArchive.ps1 exit 0: каждый payload entry, installer и embedded
+  manifest совпадают по hash; extra entries отсутствуют, symbols отдельны.
+  candidate.zip SHA-256:
+  b1db54b4ff4b3f29485701d8d3c31e3927546211b6f9aebd6dcd25e223ce029e.
+- IDE smoke именно финального payload exit 0, четыре window cycles с другим cwd
+  и Cyrillic/spaces copy; реальные profile hashes не изменились. Результат:
+  artifacts/harness/distribution-20261107/ide-smoke-clean-d4cf96e/result.json.
+- [Постоянный протокол](../../checks/evidence/DISTRIBUTION_IMPLEMENTATION_2026-11-07.md)
+  сохраняет версии/команды/results/границы. Artifacts не коммитятся.
+  Этапы 0–7 не объявлены завершёнными; внешние и авторские блокеры выше сохраняются.
+
+- Последний guard запрещает self-signed leaf даже при локальном Windows trust.
+  Он не меняет production C# или байты candidate d4cf96e. Contracts повторены:
+  exit 0, 14 runner groups + static fixtures, 20261107T090546025Z-18a71fdd.
+  Release-gates-final на clean payload: exit 0. Положительная production подпись
+  по-прежнему not-run, не выводится из этих отрицательных fixtures.

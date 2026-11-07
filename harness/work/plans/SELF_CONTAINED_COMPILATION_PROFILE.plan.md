@@ -305,6 +305,12 @@ SCD host 10.0.13 прошёл 53/4/38 tests; новый release runtime 10.0.14 
 Получить чистую Windows 11 x64 VM без SDK/shared runtime и провести оставшуюся
 manual IDE приёмку по этапам 5–6. Автоматические test-host14 и owned smoke прошли.
 
+Финальный clean candidate d4cf96e также прошёл ограниченный shell smoke:
+`artifacts/harness/distribution-20261107/ide-smoke-clean-d4cf96e/result.json`,
+четыре startup/normal-close/persistence цикла, exit 0. Эта проверка не закрывает
+manual IntelliSense/Run/Stop и чистую Windows. Постоянные доказательства:
+[implementation evidence](../../checks/evidence/DISTRIBUTION_IMPLEMENTATION_2026-11-07.md).
+
 ## Источники проектирования
 
 - [TPA содержит platform и application assemblies](https://learn.microsoft.com/en-us/dotnet/core/dependency-loading/default-probing).

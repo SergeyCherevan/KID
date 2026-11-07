@@ -30,6 +30,7 @@ function Invoke-ReleaseProcess([string]$Executable, [string[]]$Arguments, [strin
 function Assert-Authenticode([string]$Path, [string]$Subject, [string]$SignTool, [string]$Log) {
     $signature=Get-AuthenticodeSignature -LiteralPath $Path
     if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -ne $Subject -or !$signature.TimeStamperCertificate) { throw "Invalid publisher/trust/timestamp: $Path" }
+    if ($signature.SignerCertificate.Subject -eq $signature.SignerCertificate.Issuer) { throw "Self-signed release certificate is not production trust: $Path" }
     Invoke-ReleaseProcess $SignTool @('verify','/pa','/all','/tw','/v',$Path) $Log
     if ((Get-Content -LiteralPath $Log -Raw) -notmatch '(?i)sha256') { throw "SHA-256 signature evidence missing: $Path" }
 }

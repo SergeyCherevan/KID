@@ -49,21 +49,23 @@
 ## 🧩 Границы решения и открытые вопросы
 
 - **Runtime:** Inno Setup не определяет выбор framework-dependent или self-contained.
-  Self-contained был предложен для удобства первого запуска, но требует отдельной
-  реализации и приёмки. Текущий [KIDCompilationProfileProvider](../../../KID.WPF.IDE/Services/CompilationProfile/KIDCompilationProfileProvider.cs)
+  Self-contained реализован как отдельная техническая возможность; чистая Windows
+  и release-приёмка остаются открытыми. Текущий [KIDCompilationProfileProvider](../../../KID.WPF.IDE/Services/CompilationProfile/KIDCompilationProfileProvider.cs)
   теперь использует проверяемый SDK-generated manifest для файлового SCD. Простое удаление прежнего запрета не сохраняло
   действующий состав references редактора и компилятора.
   [Проект поддержки self-contained](../../work/plans/SELF_CONTAINED_COMPILATION_PROFILE.plan.md)
   от 2026-11-07 содержит реализацию manifest/resolver и незакрытую VM-приёмку.
   Автор отдельно подтвердил SCD для первой поставки в контракте дистрибутива.
-- **Поддерживаемая среда:** архитектуры, версии Windows, offline-режим и способ
-  предоставления .NET ещё предстоит определить.
-- **Версия и состав:** единый источник версии, SBOM, third-party notices,
-  корневые LICENSE, SECURITY и CHANGELOG остаются отдельными задачами.
+- **Поддерживаемая среда:** автор подтвердил Windows 11 x64, offline SCD;
+  конкретные builds и чистая VM-приёмка ещё открыты.
+- **Версия и состав:** единый источник версии и CHANGELOG реализованы, inventory/
+  license texts подготовлены. Final SBOM/notices review и корневые LICENSE/SECURITY
+  требуют реальных авторских сведений; подготовка не является разрешением выпуска.
 - **Подпись:** имя издателя, способ code signing, timestamp и проверка доверия
   ещё не выбраны. Выбор Inno Setup не является подтверждением подписи.
-- **Сопровождение:** закреплённая версия инструмента, применимые условия его
-  использования, обновление, downgrade и сосуществование режимов требуют решения.
+- **Сопровождение:** Inno 6.7.3 закреплён; ручное обновление и запрет downgrade
+  подтверждены. Применимость условий использования и вся установочная матрица,
+  включая сосуществование scopes/профили/SYSTEM, ещё требуют приёмки.
 - **Совместимость:** public API, assembly names и friend-доступ не меняются
   ради выбора установщика. Модель доверенного in-process выполнения сохраняется.
 

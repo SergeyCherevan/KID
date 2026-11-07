@@ -119,7 +119,7 @@ focus, Stop при частичном вводе и следующий Run бе�
 файлов при успехе, ошибке и отмене. Слышимость MP3, другие устройства/кодеки
 и сбой дисковой записи посередине загрузки не подтверждены.
 
-**Publish:** последнее подтверждение — 2026-10-24 (`a5ccc28`), satellite-сборки
+**Исторический publish до distribution:** подтверждение 2026-10-24 (`a5ccc28`), satellite-сборки
 `ru / uk`; источник — § 11 плана в
 `git show 5ad166e:docs/agent/plans/NEUTRAL_LANGUAGE_CULTURES.plan.md`.
 Подпись, FileVersion, cold start на чистой машине и publish текущего кода
@@ -163,6 +163,11 @@ Scan runtime 10.0.13 выявил две High; release policy обновлена
 новый payload scan прошёл без exceptions. Диагностика:
 artifacts/harness/distribution-20261107/scan-2 и candidate-14-1/scan.
 Unsigned Inno compiler PASS; правовые сведения, финальные notices/SBOM,
-production signing, новый внешний CI и VM/manual remain open. Общий No-Go
+production signing, новый внешний CI и VM/manual остаются открытыми. Общий No-Go
 сохраняется, остальные условия аудита этим не закрыты. Канонический журнал —
 [общий план](../plans/DISTRIBUTION.plan.md) и связанный подплан.
+
+Clean-source d4cf96e: локальный Invoke-CI PASS (764/764, contracts, probes,
+isolated data smoke), unsigned candidate и archive hashes проверены, текущий
+payload прошёл owned window smoke. Signed/installed/clean-Windows acceptance
+отсутствует. [Постоянный протокол](../../checks/evidence/DISTRIBUTION_IMPLEMENTATION_2026-11-07.md).
