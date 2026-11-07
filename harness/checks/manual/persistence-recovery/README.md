@@ -22,7 +22,7 @@ $dataRoot = New-HarnessDataRoot
 
 ## Подготовка и проверка
 
-Закройте все экземпляры KID. Команды выполняются из корня checkout в PowerShell.
+Закройте все экземпляры .KID. Команды выполняются из корня checkout в PowerShell.
 Подготовка меняет `settings.json` только в явно переданном owned DataRoot, предварительно сохраняя
 существующий файл в `.codex-manual-settings-backup.json`, а факт его наличия —
 в `.codex-manual-settings-state.json`. Второй активный backup не перезаписывается.

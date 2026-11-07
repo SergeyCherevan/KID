@@ -182,7 +182,7 @@ KeyboardWindow фиксированы. Sprite использует фактич�
 
 #### Trust model и граница Stop
 
-KID выполняет доверенный учебный код внутри `KID.WPF.IDE.exe` с обычными правами текущего
+.KID выполняет доверенный учебный код внутри `KID.WPF.IDE.exe` с обычными правами текущего
 Windows-пользователя. Отдельный worker-процесс, restricted token/AppContainer, запреты файловой
 системы или сети в архитектуру не входят. Collectible `AssemblyLoadContext` даёт execution-scoped
 загрузку и штатную выгрузку, но не является security sandbox.

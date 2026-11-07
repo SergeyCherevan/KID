@@ -1,4 +1,4 @@
-# 🧭 Работа в KID
+# 🧭 Работа в .KID
 
 - Обзор продукта: [README.md](README.md). Карта разработки и правила
   актуальности: [harness/README.md](harness/README.md).

@@ -73,7 +73,7 @@ Dispatcher; MouseCanvas/KeyboardWindow не следуют Graphics.SetCanvas.
 - App-local IDE, RoslynPad, CodeAnalysis, AvalonEdit, DI, VisualStudio.Threading и остальные NAudio assemblies автоматически не добавляются
 - `GlobalImports` изначально пуст: пространства имён становятся доступны только через явные `using` пользовательского документа
 - Ошибка построения приводит к fail-fast; fallback к загруженным assembly отсутствует
-- Allowlist не является security boundary: KID остаётся trusted in-process executor
+- Allowlist не является security boundary: .KID остаётся trusted in-process executor
 
 #### 1.3. CSharpCompiler
 **Файл:** `KID.WPF.IDE/Services/CodeExecution/Compilation/CSharpCompiler.cs`
@@ -532,7 +532,7 @@ variables. Ограничения `StackOverflowException`, `FailFast`, native c
 - При неизвестной или повреждённой теме использует Light-fallback
 
 **Доступные темы:**
-- Visual Studio 2022 — светлая / тёмная (сохранённое оформление KID)
+- Visual Studio 2022 — светлая / тёмная (сохранённое оформление .KID)
 - Visual Studio 2026 — светлая / тёмная
 - Канонические ключи: `Theme_VS2022Light`, `Theme_VS2022Dark`, `Theme_VS2026Light`, `Theme_VS2026Dark`; default/fallback — VS2022 Light
 

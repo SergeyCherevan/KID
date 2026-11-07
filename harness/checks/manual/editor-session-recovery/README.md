@@ -1,7 +1,7 @@
 # 🛟 Восстановление сессии редактора
 
 [Prepare-EditorSessionRecovery.ps1](Prepare-EditorSessionRecovery.ps1) принимает
-`-Case Autosave | RestoreFixture | NullTabs | Restore`. Закройте KID перед
+`-Case Autosave | RestoreFixture | NullTabs | Restore`. Закройте .KID перед
 подготовкой и перед восстановлением. Команды выполняются из корня checkout.
 
 ## 🧪 Обязательная изоляция
@@ -29,7 +29,7 @@ $dataRoot = New-HarnessDataRoot
 
 - `Autosave` убирает текущий editor-session.json после backup. Откройте IDE,
   введите уникальный маркер в новой несохранённой вкладке, подождите минимум
-  6 секунд и завершите процесс KID через диспетчер задач. При повторном запуске
+  6 секунд и завершите процесс .KID через диспетчер задач. При повторном запуске
   ожидаются маркер и индикатор изменённой вкладки.
 - `RestoreFixture` создаёт две вкладки: несохранённую с
   `KID_SESSION_UNSAVED_TAB_MARKER` и дисковую с `KID_SESSION_DISK_TAB_MARKER`.
