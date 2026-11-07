@@ -29,6 +29,7 @@ public sealed class CrashReportWriterTests
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         Assert.Equal("UnitTest", document.RootElement.GetProperty("source").GetString());
         Assert.Equal(77, document.RootElement.GetProperty("executionId").GetInt64());
+        Assert.False(string.IsNullOrWhiteSpace(document.RootElement.GetProperty("informationalVersion").GetString()));
         Assert.Contains("boom", document.RootElement.GetProperty("exception").GetString());
 
         Directory.Delete(directory, recursive: true);

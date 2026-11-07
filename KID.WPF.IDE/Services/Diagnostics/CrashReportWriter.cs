@@ -64,7 +64,9 @@ public sealed class CrashReportWriter
                 "Fatal",
                 LoggingConfiguration.LogFilePattern,
                 executionId,
-                exception.ToString());
+                exception.ToString(),
+                Assembly.GetEntryAssembly()?
+                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion);
 
             var json = JsonSerializer.Serialize(
                 report,
@@ -103,5 +105,6 @@ public sealed class CrashReportWriter
         [property: JsonPropertyName("applicationState")] string ApplicationState,
         [property: JsonPropertyName("logFilePattern")] string LogFilePattern,
         [property: JsonPropertyName("executionId")] long? ExecutionId,
-        [property: JsonPropertyName("exception")] string Exception);
+        [property: JsonPropertyName("exception")] string Exception,
+        [property: JsonPropertyName("informationalVersion")] string? InformationalVersion);
 }

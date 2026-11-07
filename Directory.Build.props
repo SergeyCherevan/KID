@@ -1,0 +1,4 @@
+<Project>
+  <Import Project="build/Version.props"
+          Condition="'$(MSBuildProjectName)' == 'KID.WPF.IDE' or '$(MSBuildProjectName)' == 'KID.Library'" />
+</Project>
