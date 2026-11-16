@@ -29,6 +29,17 @@ SDK, runtime и инструменты закреплены в [policy](../../bu
 Runtime 10.0.13 из SDK default заблокирован двумя High advisory; release policy
 переходит на 10.0.14, каждая новая версия требует повторной publish/scan приёмки.
 
+## Канал распространения
+
+Автор выбрал 2026-11-16
+[GitHub Releases репозитория SergeyCherevan/KID](https://github.com/SergeyCherevan/KID/releases)
+для официальных установщиков. Это решение о площадке, а не подтверждение
+публикации или приёмки. Invoke-Release по-прежнему только готовит локальный
+комплект. Для отклонённых/заменённых rc и их диагностических архивов автор выбрал
+180 дней с момента отклонения/замены (`retentionDays = 180`). Действующий кандидат
+и принятые выпуски вне этого правила. Автоматическая очистка ещё не реализована;
+выбор срока не запускает удаление существующих файлов.
+
 ## Состав и подпись
 
 Исходный publish проверяется по ResolvedFileToPublish, framework — независимо по
@@ -38,18 +49,33 @@ course, changelog и third-party metadata/texts. Тексты upstream LICENSE �
 Apache-2.0 и правообладатель Сергей Черевань подтверждены автором 2026-11-16
 отдельно для .KID IDE, KID.Library и course. Их LICENSE/NOTICE копируются
 в одноимённые каталоги payload и в unsigned, и в signed mode; общий LICENSE
-поставляется в корне. SECURITY пока требует реального security contact.
+поставляется в корне. Для SECURITY автор выбрал
+`CherevanSergeyKharkov@gmail.com` (2026-11-16); сам документ ещё не подготовлен.
+
+Целевая схема подписи изменена автором 2026-11-16: издатель Сергей Черевань
+как частное лицо, локальный самоподписанный Authenticode, бесплатно и без KYC.
+Подлинность открытого ключа/отпечатка должна передаваться пользователям по ещё
+не определённому протоколу. Автоматическое доверие Windows/SmartScreen не обещано.
+Ключ/сертификат пока не создавались. Текущий Signed path ниже реализует прежние
+требования, включая явный отказ self-signed; перед выпуском его нужно отдельно
+адаптировать и проверить. Решение не разрешает просто отключить проверку подписи.
 
 Unsigned сборка допускает отсутствие финального SBOM и документов, явно отмечает
 это и предназначена для разработки. Signed mode требует авторские metadata
 через внешний JSON: publisherSubject, certificateThumbprint, timestampUrl,
 supplier, namespaceUri, license, copyrightHolder, securityContact,
 distributionChannel, retentionDays, noticesReviewed и materialRightsReviewed.
-Подтверждённые значения: license = `Apache-2.0`, copyrightHolder = `Сергей Черевань`.
-Они не определяют имя издателя сертификата и supplier автоматически.
+Подтверждённые значения: license = `Apache-2.0`, copyrightHolder = `Сергей Черевань`,
+securityContact = `CherevanSergeyKharkov@gmail.com`, supplier = `Sergey Cherevan`,
+distributionChannel = `https://github.com/SergeyCherevan/KID/releases`,
+retentionDays = `180`, namespaceUri = `https://github.com/SergeyCherevan/KID/sbom`.
+namespaceUri передаётся как база (`-nsb`); уникальный namespace конкретного
+SBOM создаёт инструмент. Веб-страница по базовому адресу не требуется.
+Имя издателя сертификата берётся из фактического сертификата отдельно.
 Не хранить в нём ключи/пароли. Для подготовленного Windows cert-store adapter
 нужен provisioned сертификат и `KID_SIGNTOOL_PATH`; выбор реального backend ещё
-открыт. Не помещать подпись в недоверенный PR или обходить trust self-signed ключом.
+открыт. Не помещать подпись в недоверенный PR. Импорт сертификата в доверенные
+хранилища разработчика не доказывает доверие на компьютерах пользователей.
 
 Порядок: sign own payload → final notices/SBOM с текущими hashes → Inno SignTool
 (setup/uninstaller/temporary copies) → verify trust/publisher/SHA256/timestamp →
@@ -69,5 +95,6 @@ Inno Setup 6.7.3 извлекается официальным portable mode в 
 также uninstaller и временные copies. Microsoft SBOM Tool 4.1.5/SPDX 2.2 требует
 supplier: отсутствие сведений не заменяется фиктивной организацией.
 
-Внешний CI, загрузка его архива, доверенная подпись и VM/manual ещё не подтверждены.
+Внешний CI, загрузка его архива, выбранная self-signed схема и VM/manual
+ещё не подтверждены фактической приёмкой.
 Не объявлять дистрибутив готовым по наличию unsigned installer.
