@@ -464,3 +464,15 @@ NU1900, NuGet vulnerability source недоступен; это не scan PASS.
   - `git diff --check`: PASS. Product build/test, publish, installer, signing,
     SBOM, GUI и VM-приёмка в этой задаче не выполнялись. Исторический unsigned
     candidate не изменялся; коммит, push и публикация не выполнялись.
+
+### 2026-11-16 - bilingual copyright lines in NOTICE
+
+- [x] At the author's request, added `Copyright 2026 Sergey Cherevan` after
+  the existing Russian copyright line in the `.KID IDE`, `KID.Library` and
+  `course` NOTICE files. Both lines identify the same copyright holder.
+- [x] Read-back verification passed for all three NOTICE files: both lines
+  are present; all other content, UTF-8 without BOM and existing line endings
+  are preserved, including the mixed line endings in the original files.
+- [x] `git diff --check`: PASS.
+- Scope: NOTICE files and this plan entry. Build, publish, installer and manual
+  acceptance were not run; existing release gates remain open.
