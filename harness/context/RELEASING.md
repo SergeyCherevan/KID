@@ -35,13 +35,18 @@ Runtime 10.0.13 из SDK default заблокирован двумя High adviso
 RuntimeList.xml. Staging исключает PDB в отдельный symbols каталог, включает
 course, changelog и third-party metadata/texts. Тексты upstream LICENSE можно
 получить на commit из nuspec; неподтверждённые права/лицензии остаются блокерами.
-Корневые LICENSE/SECURITY не создаются с вымышленными сведениями.
+Apache-2.0 и правообладатель Сергей Черевань подтверждены автором 2026-11-16
+отдельно для .KID IDE, KID.Library и course. Их LICENSE/NOTICE копируются
+в одноимённые каталоги payload и в unsigned, и в signed mode; общий LICENSE
+поставляется в корне. SECURITY пока требует реального security contact.
 
 Unsigned сборка допускает отсутствие финального SBOM и документов, явно отмечает
 это и предназначена для разработки. Signed mode требует авторские metadata
 через внешний JSON: publisherSubject, certificateThumbprint, timestampUrl,
 supplier, namespaceUri, license, copyrightHolder, securityContact,
 distributionChannel, retentionDays, noticesReviewed и materialRightsReviewed.
+Подтверждённые значения: license = `Apache-2.0`, copyrightHolder = `Сергей Черевань`.
+Они не определяют имя издателя сертификата и supplier автоматически.
 Не хранить в нём ключи/пароли. Для подготовленного Windows cert-store adapter
 нужен provisioned сертификат и `KID_SIGNTOOL_PATH`; выбор реального backend ещё
 открыт. Не помещать подпись в недоверенный PR или обходить trust self-signed ключом.

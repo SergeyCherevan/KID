@@ -79,8 +79,10 @@ MSIX, собственный автообновлятор, дополнител�
 - [x] Определить политику обновления/downgrade, действия при работающей IDE,
   сохранность исходников, настроек и recovery при upgrade/uninstall/reinstall.
 - [x] Определить включение course/примеров и локальных symbol-файлов.
-- [ ] Получить решения о лицензии .KID, правообладателе, издателе подписи,
-  действительном приватном канале security reports и канале получения установщика.
+- [x] Определить отдельные лицензии .KID IDE, KID.Library и course: Apache-2.0;
+  правообладатель каждой части — Сергей Черевань (решение 2026-11-16).
+- [ ] Получить решения об издателе подписи, действительном приватном канале
+  security reports и канале получения установщика.
 - [x] Зафиксировать правила оценки vulnerability scan: набор источников,
   порог отказа, недоступность источника и оформление исключений.
 
@@ -131,8 +133,11 @@ build metadata не меняет имена сборок и действующи
 
 Зависимости: production graph и publish этапа 2; лицензия и канал reports этапа 0.
 
-- [ ] Добавить корневые LICENSE, SECURITY.md и CHANGELOG.md; README должен
-  описывать фактическую установку и требования, не только сборку разработчиком.
+- [x] Добавить общий LICENSE и отдельные LICENSE/NOTICE для .KID IDE,
+  KID.Library и course; описать границы в README и включить документы в staging.
+- [ ] Добавить SECURITY.md с реальным контактом; README должен описывать
+  фактическую установку и требования, не только сборку разработчиком.
+  CHANGELOG.md уже создан; полнота релизных документов остаётся открытой.
 - [ ] Подготовить THIRD-PARTY-NOTICES и необходимые тексты лицензий для прямых
   и транзитивных компонентов, реально включённых в payload; проверить права
   на распространяемые ресурсы/материалы.
@@ -280,7 +285,7 @@ executed count, параметры кандидата и непройденны�
 
 1. Конкретные Windows 11 builds и результаты VM-приёмки.
 2. Фактическая установочная приёмка upgrade/downgrade и сохранности данных.
-3. Лицензия .KID/правообладатель, действительный security contact, права на материалы. Course включён, symbols отдельно — подтверждено.
+3. Действительный security contact и проверенные права на сторонние материалы. Для .KID IDE, KID.Library и course выбрана Apache-2.0; правообладатель — Сергей Черевань (2026-11-16). Course включён, symbols отдельно — подтверждено.
 4. Издатель, средство подписи, credentials и доступ release job.
 5. Supplier/namespace для финального SBOM, канал и retention. Tool/format и scan policy подтверждены, pinned tool 4.1.5/SPDX 2.2.
 6. Чистые Windows/VM и участие автора в физической/UI-приёмке.
@@ -310,8 +315,10 @@ executed count, параметры кандидата и непройденны�
 Контракт этапа 0 подтверждён, кроме правовых/издательских сведений и внешнего
 доступа. Этап 1: версия/crash SHA реализованы. Этап 2: FDD baseline и SCD
 resolver/generator/publish проверки прошли, чистая Windows открыта. Этап 3:
-changelog/README, payload inventory и license texts подготовлены; LICENSE,
-SECURITY и final SBOM требуют авторских сведений/review. Этап 4: Inno script и
+changelog/README, payload inventory и third-party license texts подготовлены;
+отдельные Apache-2.0 LICENSE/NOTICE трёх частей и общий LICENSE добавлены
+2026-11-16, их staging проверен. SECURITY и final SBOM требуют оставшихся
+авторских сведений/review. Этап 4: Inno script и
 unsigned compile работают, установочная матрица не выполнена. Этап 5: signing
 adapter/gates подготовлены, production trust не подтверждён. Этап 6: opt-in
 unsigned workflow подготовлен, внешний run отсутствует. Этап 7: не выполнен.
@@ -322,7 +329,7 @@ results/log/TRX — artifacts/harness/distribution-20261107. Никакого п
 
 ## Следующий шаг
 
-Получить реальные author metadata (лицензия/правообладатель/security contact,
+Получить оставшиеся author metadata (security contact,
 supplier/namespace, издатель/способ подписи, канал/retention) и доступ к Windows 11
 VM. Затем выполнить Signed path и обязательную установочную/manual приёмку.
 Локальный clean unsigned candidate и его архив уже проверены; не перепаковывать
@@ -426,3 +433,34 @@ NU1900, NuGet vulnerability source недоступен; это не scan PASS.
   exit 0, 14 runner groups + static fixtures, 20261107T090546025Z-18a71fdd.
   Release-gates-final на clean payload: exit 0. Положительная production подпись
   по-прежнему not-run, не выводится из этих отрицательных fixtures.
+
+### 2026-11-16 — отдельные лицензии частей продукта
+
+- Автор выбрал Apache-2.0 независимо для `.KID IDE`, `KID.Library` и `course`;
+  правообладатель всех трёх частей — Сергей Черевань. Использован 2026 год,
+  совпадающий с текущим годом и первым годом истории этих частей в Git.
+- Добавлены стандартные LICENSE и собственные NOTICE в каждый каталог, общий
+  экземпляр LICENSE в корень, карта лицензий в README и README курса.
+- Исторические записи 2026-11-07 о неизвестной лицензии сохранены как история;
+  актуальные открытые решения и контракт обновлены. SECURITY, third-party review,
+  supplier, подпись, внешний CI и VM-приёмка остаются открытыми.
+- Release staging сохраняет LICENSE/NOTICE каждой части в одноимённом каталоге
+  payload и общий LICENSE в корне независимо от режима Signed/Unsigned.
+  Требование SECURITY и остальные release gates сохранены.
+- Проверки 2026-11-16, база e7a0430 с текущими незакоммиченными правками:
+  - Все четыре экземпляра LICENSE совпадают побайтово с официальным
+    [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0.txt), SHA-256:
+    `cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`.
+  - Из реального AST Invoke-Release исполнены блоки staging лицензионных
+    документов: 9/9 файлов совпали с исходниками; NOTICE всех трёх частей
+    содержат `Copyright 2026 Сергей Черевань`. Результат:
+    `artifacts/harness/licensing-20261116-e965faeb/result.json`.
+  - `./harness/tools/Invoke-Harness.ps1 -Command validate`: PASS, exit 0,
+    81 Markdown/PowerShell files; summary:
+    `artifacts/harness/20261116T101421724Z-2012efa3/summary.json`.
+  - `./harness/tools/Invoke-Harness.ps1 -Command contracts`: PASS, exit 0,
+    14 runner groups + static fixtures; summary:
+    `artifacts/harness/20261116T101426595Z-710a6cca/summary.json`.
+  - `git diff --check`: PASS. Product build/test, publish, installer, signing,
+    SBOM, GUI и VM-приёмка в этой задаче не выполнялись. Исторический unsigned
+    candidate не изменялся; коммит, push и публикация не выполнялись.

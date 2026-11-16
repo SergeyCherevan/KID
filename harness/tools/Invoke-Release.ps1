@@ -46,7 +46,7 @@ try {
         }
         if ($metadata.certificateThumbprint -notmatch '^[0-9a-fA-F]{40}$' -or
             ([Uri]$metadata.timestampUrl).Scheme -ne 'https' -or ([Uri]$metadata.namespaceUri).Scheme -ne 'https') { throw 'Invalid signing/SBOM metadata' }
-        foreach ($name in @('LICENSE','SECURITY.md')) { if (!(Test-Path (Join-Path $repo $name))) { throw "Required approved document missing: $name" } }
+        foreach ($name in @('LICENSE','KID.WPF.IDE/LICENSE','KID.WPF.IDE/NOTICE','KID.Library/LICENSE','KID.Library/NOTICE','course/LICENSE','course/NOTICE','SECURITY.md')) { if (!(Test-Path (Join-Path $repo $name))) { throw "Required approved document missing: $name" } }
         if (!$metadata.noticesReviewed -or !$metadata.materialRightsReviewed) { throw 'Final license/notices/material rights review required' }
         if (!$env:KID_SIGNTOOL_PATH -or !(Test-Path -LiteralPath $env:KID_SIGNTOOL_PATH)) { throw 'Provision the selected signing backend; Windows signtool adapter is available but not preconfigured' }
     }
@@ -93,7 +93,14 @@ try {
             if (Test-Path (Join-Path $lesson.FullName $directory)) { Copy-Item -LiteralPath (Join-Path $lesson.FullName $directory) -Destination $lessonOutput -Recurse }
         }
     }
-    Copy-Item -LiteralPath (Join-Path $repo 'CHANGELOG.md') -Destination $stage
+    # Keep each component's license and attribution when distributed together or separately.
+    foreach ($component in @('KID.WPF.IDE','KID.Library','course')) {
+        $componentOutput=Join-Path $stage $component
+        New-Item -ItemType Directory -Force $componentOutput | Out-Null
+        Copy-Item -LiteralPath (Join-Path $repo ($component+'/LICENSE')),(Join-Path $repo ($component+'/NOTICE')) -Destination $componentOutput
+    }
+    Copy-Item -LiteralPath (Join-Path $repo 'course/README.md') -Destination (Join-Path $stage 'course')
+    Copy-Item -LiteralPath (Join-Path $repo 'LICENSE'),(Join-Path $repo 'CHANGELOG.md') -Destination $stage
     Copy-Item -LiteralPath (Join-Path $output 'notices-review') -Destination (Join-Path $stage 'third-party') -Recurse
     Copy-Item -LiteralPath (Join-Path $output 'notices-review/THIRD-PARTY-NOTICES.txt') -Destination $stage
     if ($Mode -eq 'Signed') {
@@ -102,7 +109,7 @@ try {
         foreach ($notice in @((Join-Path $stage 'THIRD-PARTY-NOTICES.txt'),(Join-Path $stage 'third-party/THIRD-PARTY-NOTICES.txt'))) {
             (Get-Content -LiteralPath $notice -Raw).Replace('Licensing review is required before distribution.','License texts and attribution reviewed for this candidate.') | Set-Content -LiteralPath $notice
         }
-        Copy-Item -LiteralPath (Join-Path $repo 'LICENSE'),(Join-Path $repo 'SECURITY.md') -Destination $stage
+        Copy-Item -LiteralPath (Join-Path $repo 'SECURITY.md') -Destination $stage
         foreach ($name in @('KID.WPF.IDE.exe','KID.WPF.IDE.dll','KID.Library.dll','ru/KID.WPF.IDE.resources.dll','uk/KID.WPF.IDE.resources.dll')) {
             $path=Join-Path $stage $name
             Invoke-ReleaseProcess $env:KID_SIGNTOOL_PATH @('sign','/sha1',$metadata.certificateThumbprint,'/fd','SHA256','/tr',$metadata.timestampUrl,'/td','SHA256',$path) (Join-Path $output ($name.Replace('/','-')+'.sign.log'))

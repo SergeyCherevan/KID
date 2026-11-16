@@ -1,0 +1,10 @@
+KID.Library
+Copyright 2026 Сергей Черевань
+
+The runtime library for programs written with .KID and standalone WPF hosts.
+
+This component is independently licensed under the Apache License, Version 2.0.
+See the accompanying LICENSE file.
+
+Third-party components and materials retain their own copyright notices and
+license terms. This notice does not relicense third-party works.
